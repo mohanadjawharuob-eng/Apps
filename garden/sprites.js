@@ -18,7 +18,9 @@
   }
   function set(g, x, y, c) {
     x = Math.round(x); y = Math.round(y);
-    if (x < 0 || y < 0 || x >= W || y >= H || !c) return;
+    // NaN fails every comparison, so it would slip past a plain range check and
+    // then blow up on g[NaN][x]. Test for a real integer first.
+    if (!(x >= 0 && x < W && y >= 0 && y < H) || !c) return;
     g[y][x] = c;
   }
   function clear(g, x, y) {
@@ -253,35 +255,54 @@
     }
   };
 
-  // Queen of the Night - flat scalloped pads, and the one bloom that matters
+  // Queen of the Night - flat scalloped pads, and the one bloom that matters.
+  // The flower is hand-drawn rather than generated: it opens one night a year
+  // and it is the reason this app exists, so it gets to be the best thing on
+  // the screen. Everything else here is procedural.
+  var BLOOM = [
+    ".....p.....",
+    "..p..p..p..",
+    "...ppppp...",
+    "...pwwwp...",
+    ".ppwwwwwpp.",
+    ".pwwwYwwwp.",
+    ".ppwwwwwpp.",
+    "...pwwwp...",
+    "...ppppp...",
+    "..p..p..p..",
+    ".....p....."
+  ];
   ARCH.pad = function (g, P, t) {
     var n = [1, 2, 3][t], i, y;
+    // pads: wide flat blades with a lit midrib and a notched, scalloped edge
     for (i = 0; i < n; i++) {
       var lean = (i - (n - 1) / 2) * 4;
-      var bx = CX + Math.round(lean);
-      var bt = [7, 5, 3][t] + Math.abs(Math.round(lean / 2));
-      var hw = 2;
-      for (y = bt; y < SOIL - 2; y++) {
-        var tip = (y === bt), foot = (y >= SOIL - 4);
-        var w = tip ? hw - 1 : hw;
+      var bx = CX - 4 + Math.round(lean);
+      var bt = [6, 4, 3][t] + Math.abs(Math.round(lean / 2));
+      for (y = bt; y < SOIL - 1; y++) {
+        var tip = (y === bt);
+        var notch = !tip && y < SOIL - 3 && (y - bt) % 3 === 2;
+        var w = tip ? 1 : notch ? 1 : 2;
         hline(g, bx - w, bx + w, y, P.leaf);
-        set(g, bx - w, y, P.dark); set(g, bx + w, y, P.dark);
-        set(g, bx, y, P.light);                     // midrib
-        if (!tip && !foot && (y - bt) % 3 === 2) {  // scalloped edge
-          clear(g, bx - w, y); clear(g, bx + w, y);
-          set(g, bx - w + 1, y, P.dark); set(g, bx + w - 1, y, P.dark);
-        }
+        set(g, bx - w, y, P.dark);
+        set(g, bx + w, y, P.dark);
+        set(g, bx, y, P.light);
       }
       set(g, bx, bt - 1, P.dark);
     }
     if (t === 2 && P.accent) {
-      var fx = CX + 4, fy = 3;
-      blob(g, fx, fy, 3, 3, P.accent);                    // pink outer petals
-      blob(g, fx, fy, 2, 2, P.light2 || "#f2e9d6");       // white inner petals
-      set(g, fx, fy, P.accent2 || "#e8c35a");             // stamens
-      var rays = [[-4, 0], [4, 0], [0, -4], [0, 4], [-3, -3], [3, -3], [-3, 3], [3, 3]];
-      for (i = 0; i < rays.length; i++) set(g, fx + rays[i][0], fy + rays[i][1], P.accent);
-      vline(g, fx, fy + 4, SOIL - 6, P.dark);             // the flower stalk
+      var fx = CX + 5, fy = 5;                 // centre of the bloom
+      var col = { p: P.accent, P: P.accent2 || "#b8547a",
+                  w: P.light2 || "#f2e9d6", Y: P.accent2 || "#e8c35a" };
+      // stalk first, so the flower head sits on top of it
+      for (y = fy + 5; y < SOIL - 2; y++) set(g, fx - (y - fy - 5), y, P.dark);
+      for (y = 0; y < BLOOM.length; y++) {
+        for (var x = 0; x < BLOOM[y].length; x++) {
+          var ch = BLOOM[y].charAt(x);
+          if (ch === ".") continue;
+          set(g, fx - 5 + x, fy - 5 + y, col[ch]);
+        }
+      }
     }
   };
 
@@ -385,11 +406,43 @@
     return g;
   }
 
-  function toCanvas(cv, sp, stage, scale) {
-    var g = draw(sp, stage), ctx = cv.getContext("2d"), x, y;
-    cv.width = W * scale; cv.height = H * scale;
+  var OUTLINE = "#2a1c10";
+
+  // Dilate the silhouette by one cell and paint the ring behind the art.
+  function outline(g) {
+    var out = [], y, x, add = [];
+    for (y = 0; y < H + 2; y++) { out[y] = []; for (x = 0; x < W + 2; x++) out[y][x] = null; }
+    for (y = 0; y < H; y++) for (x = 0; x < W; x++) out[y + 1][x + 1] = g[y][x];
+    for (y = 0; y < H + 2; y++) for (x = 0; x < W + 2; x++) {
+      if (out[y][x]) continue;
+      var touch = false;
+      for (var dy = -1; dy <= 1 && !touch; dy++) for (var dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        var ny = y + dy, nx = x + dx;
+        if (ny < 0 || nx < 0 || ny >= H + 2 || nx >= W + 2) continue;
+        if (out[ny][nx]) { touch = true; break; }
+      }
+      if (touch) add.push([x, y]);
+    }
+    for (var i = 0; i < add.length; i++) out[add[i][1]][add[i][0]] = OUTLINE;
+    return out;
+  }
+
+  function toCanvas(cv, sp, stage, scale, opts) {
+    opts = opts || {};
+    var g = opts.outline === false ? draw(sp, stage) : outline(draw(sp, stage));
+    var GH = g.length, GW = g[0].length;
+    var ctx = cv.getContext("2d"), x, y;
+    cv.width = GW * scale; cv.height = GH * scale;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
+    if (opts.shadow) {                       // a soft ellipse so it sits on a surface
+      ctx.fillStyle = "rgba(43,29,18,0.16)";
+      var sh = Math.max(2, Math.round(scale * 1.2));
+      ctx.beginPath();
+      ctx.ellipse(cv.width / 2, cv.height - sh, GW * scale * 0.26, sh / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (y = 0; y < GH; y++) for (x = 0; x < GW; x++) {
       if (!g[y][x]) continue;
       ctx.fillStyle = g[y][x];
       ctx.fillRect(x * scale, y * scale, scale, scale);
@@ -397,6 +450,6 @@
     return cv;
   }
 
-  root.Sprites = { W: W, H: H, SOIL: SOIL, draw: draw, toCanvas: toCanvas,
+  root.Sprites = { W: W, H: H, SOIL: SOIL, draw: draw, outline: outline, toCanvas: toCanvas,
                    archetypes: Object.keys(ARCH) };
 })(typeof window !== "undefined" ? window : global);

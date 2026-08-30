@@ -15,8 +15,24 @@
   }
   function sprite(sp, stage, px) {
     var c = document.createElement("canvas");
-    Sprites.toCanvas(c, sp, stage, Math.max(2, Math.round((px || 48) / Sprites.W)));
+    // the grid grows by 2 once outlined, so scale against that
+    Sprites.toCanvas(c, sp, stage, Math.max(2, Math.round((px || 48) / (Sprites.W + 2))), { shadow: true });
+    c.setAttribute("role", "img");
+    c.setAttribute("aria-label", sp.en + ", " + (STAGE[stage] || "").toLowerCase());
     return c;
+  }
+  function iconTo(cv, name, scale) {
+    var I = window.BustanIcons; if (!I) return cv;
+    var g = I.draw(name), N = I.N;
+    cv.width = N * scale; cv.height = N * scale;
+    var ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+      if (!g[y][x]) continue;
+      ctx.fillStyle = g[y][x];
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+    return cv;
   }
   function name(sp) { return sp.en; }
   function arName(sp) { return S.prefs.arabic && sp.ar ? sp.ar : ""; }
@@ -29,25 +45,108 @@
   dlg.addEventListener("click", function (e) { if (e.target === dlg) closeSheet(); });
 
   /* ================= header ================= */
+  // Is tonight the night? If so the whole app changes clothes.
+  function bloomNight() {
+    var w = B.bloomWatch();
+    for (var i = 0; i < w.length; i++) if (w[i].open) return w[i];
+    return null;
+  }
+
+  /* A window, with the day outside it and the sill you keep pots on. This is
+     where most of the app's art lives — it is the difference between a tool
+     and somewhere you are standing. */
   function paintHeader() {
-    var k = B.season(), s = B.SEASONS[k];
-    document.documentElement.setAttribute("data-season", k);
-    document.getElementById("hSeason").textContent = s.en;
-    document.getElementById("hAr").textContent = S.prefs.arabic ? s.ar : "";
-    var bits = [], st = B.staleness();
+    var k = B.season(), s = B.SEASONS[k], night = !!bloomNight();
+    var root = document.documentElement;
+    root.setAttribute("data-season", k);
+    if (night) root.setAttribute("data-night", "1"); else root.removeAttribute("data-night");
+
     var d = B.forecastFor(B.today());
-    if (d && d.tmax !== null) bits.push(Math.round(d.tmin) + "–" + Math.round(d.tmax) + "°C");
+    var bits = [];
+    if (d && d.tmax !== null) bits.push(Math.round(d.tmin) + "–" + Math.round(d.tmax) + "°");
     if (S.loc && S.loc.label) bits.push(S.loc.label);
+    var st = B.staleness();
     if (st === null) bits.push("no forecast yet");
     else if (st > 36) bits.push("forecast " + Math.round(st / 24) + "d old");
-    document.getElementById("hSub").textContent = bits.length ? bits.join("  ·  ") : s.note;
+
+    var sky = night
+      ? ['#232a4e', '#2b3358', '#39406b']
+      : ['var(--sky1)', 'var(--sky2)', 'var(--sky3)'];
+    var land = night ? '#3d4570' : 'var(--land)';
+    // A stepped disc rather than a rect crescent: carving one rectangle out of
+    // another gave an L-shape, not a moon.
+    var orb = night
+      ? '<g fill="#f2eeff">' +
+          '<rect x="300" y="20" width="16" height="4"/><rect x="296" y="24" width="24" height="4"/>' +
+          '<rect x="294" y="28" width="28" height="12"/><rect x="296" y="40" width="24" height="4"/>' +
+          '<rect x="300" y="44" width="16" height="4"/></g>' +
+        '<g fill="#cfd8f5"><rect x="74" y="26" width="3" height="3"/><rect x="140" y="46" width="3" height="3"/>' +
+          '<rect x="206" y="22" width="3" height="3"/><rect x="112" y="62" width="3" height="3"/>' +
+          '<rect x="252" y="54" width="3" height="3"/></g>'
+      : '<g fill="#f8efc8">' +
+          '<rect x="300" y="18" width="16" height="4"/><rect x="296" y="22" width="24" height="4"/>' +
+          '<rect x="294" y="26" width="28" height="12"/><rect x="296" y="38" width="24" height="4"/>' +
+          '<rect x="300" y="42" width="16" height="4"/>' +
+          '<rect x="286" y="30" width="6" height="4"/><rect x="324" y="30" width="6" height="4"/>' +
+          '<rect x="306" y="10" width="4" height="6"/><rect x="306" y="48" width="4" height="6"/></g>' +
+        '<g fill="#ffffff" opacity="0.7"><rect x="60" y="34" width="50" height="9"/>' +
+          '<rect x="74" y="26" width="28" height="8"/><rect x="164" y="54" width="38" height="8"/></g>';
+
+    // 390x118: a window opening set into the wall, with the sill below it.
+    var svg =
+      '<svg viewBox="0 0 390 118" width="390" height="118" aria-hidden="true">' +
+        '<rect x="0" y="0" width="390" height="118" fill="var(--wood)"/>' +
+        '<rect x="20" y="8" width="350" height="96" fill="' + sky[0] + '"/>' +
+        '<rect x="20" y="44" width="350" height="26" fill="' + sky[1] + '"/>' +
+        '<rect x="20" y="70" width="350" height="34" fill="' + sky[2] + '"/>' +
+        orb +
+        '<g fill="' + land + '"><rect x="20" y="86" width="350" height="18"/>' +
+          '<rect x="48" y="78" width="80" height="8"/><rect x="230" y="74" width="100" height="12"/>' +
+          '<rect x="256" y="70" width="44" height="4"/></g>' +
+        // frame last so it sits over the view
+        '<g fill="var(--wood)"><rect x="14" y="2" width="362" height="8"/>' +
+          '<rect x="14" y="102" width="362" height="8"/><rect x="14" y="2" width="8" height="108"/>' +
+          '<rect x="368" y="2" width="8" height="108"/><rect x="192" y="2" width="6" height="108"/></g>' +
+        '<g fill="rgba(43,29,18,0.30)"><rect x="14" y="102" width="362" height="3"/></g>' +
+      '</svg>';
+
+    var hdr = document.getElementById("hdr");
+    hdr.innerHTML = svg;
+    var cap = el("div", "cap");
+    var h1 = el("h1", null, night ? "Tonight" : s.en);
+    cap.appendChild(h1);
+    if (S.prefs.arabic && !night) cap.appendChild(el("span", "ar", s.ar));
+    cap.appendChild(el("span", "sub", bits.length ? bits.join("  ·  ") : s.note));
+    hdr.appendChild(cap);
   }
 
   /* ================= TODAY ================= */
   function viewToday(v) {
     var t = B.today();
 
-    // bloom watch first - it is the thing that cannot wait
+    // The one night a year. Nothing else on this screen matters tonight, so
+    // nothing else is on it.
+    var tonight = bloomNight();
+    if (tonight) {
+      var sp0 = BYID[tonight.p.sid];
+      var bn = el("div", "bloomnight");
+      bn.appendChild(el("div", "glow"));
+      bn.appendChild(sprite(sp0, 4, 176));
+      bn.appendChild(el("h3", null, (tonight.p.nick || sp0.en) + " is opening"));
+      bn.appendChild(el("p", "muted", "Day " + tonight.age + " since the bud. Fully open near midnight, gone by dawn."));
+      var r0 = el("div", "rowflex"); r0.style.marginTop = ".3rem";
+      var b1 = el("button", "pri", "It opened");
+      b1.onclick = function () { logEvent(tonight.p, "bloom", "Opened"); tonight.p.bud = null; render(); };
+      var b2 = el("button", null, "Not tonight");
+      b2.onclick = function () { tonight.p.bud = B.addDays(tonight.p.bud, -1); B.save(); render(); };
+      r0.appendChild(b1); r0.appendChild(b2);
+      bn.appendChild(r0);
+      v.appendChild(bn);
+      v.appendChild(el("p", "tiny", "Everything else can wait until morning."));
+      return;
+    }
+
+    // otherwise the countdown sits at the top, quietly
     B.bloomWatch().forEach(function (b) {
       var sp = BYID[b.p.sid], c = el("div", "bloomcard");
       c.appendChild(el("h3", null, b.p.nick || sp.en));
@@ -72,10 +171,17 @@
     var al = B.alerts();
     if (al.length) {
       v.appendChild(el("div", "sec", "Warnings"));
+      var ICON = { frost: "moon", freeze: "moon", heat: "sun", khamsin: "wind",
+                   storm: "wind", uv: "sun", rain: "drop", firstrain: "drop" };
       al.forEach(function (a) {
         var c = el("div", "alert a-" + a.k);
-        c.appendChild(el("h3", null, a.t));
-        c.appendChild(el("p", null, a.d));
+        var ic = document.createElement("canvas");
+        iconTo(ic, ICON[a.k] || "leaf", 2);
+        c.appendChild(ic);
+        var tx = el("div");
+        tx.appendChild(el("h3", null, a.t));
+        tx.appendChild(el("p", null, a.d));
+        c.appendChild(tx);
         v.appendChild(c);
       });
     }
@@ -620,16 +726,10 @@
     });
   }
 
-  // little pixel glyphs on the nav, drawn the same way as everything else
   function navIcons() {
-    var specs = [
-      { arch: "bush", art: { leaf: "#7fc257", dark: "#3a6b3a", light: "#c9e89a", stem: "#3a6b3a", pot: "#a85f37", potDark: "#6d4028" } },
-      { arch: "rosette", art: { leaf: "#7fc257", dark: "#3a6b3a", light: "#c9e89a", stem: "#3a6b3a", pot: "#a85f37", potDark: "#6d4028" } },
-      { arch: "needle", art: { leaf: "#e0a93f", dark: "#8a6a2a", light: "#f0d68a", stem: "#8a6a2a", pot: "#a85f37", potDark: "#6d4028" } },
-      { arch: "succulent", art: { leaf: "#6fa8d6", dark: "#3f6280", light: "#b8d8ee", stem: "#3f6280", pot: "#a85f37", potDark: "#6d4028" } }
-    ];
+    var names = ["leaf", "sun", "moon", "sparkle"];
     Array.prototype.forEach.call(document.querySelectorAll("nav .ic"), function (cv, i) {
-      Sprites.toCanvas(cv, specs[i], 4, 1);
+      iconTo(cv, names[i], 2);
     });
   }
 

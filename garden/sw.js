@@ -5,10 +5,11 @@
    (a stale forecast is worse than none) and never cached either. The app keeps
    its own copy of the last good forecast in storage, which is what makes it
    work offline. */
-var CACHE = 'pwa-garden-v2';
+var CACHE = 'pwa-garden-v3';
 var PRECACHE = [
   "./",
   "./sprites.js",
+  "./icons.js",
   "./species.js",
   "./app.js",
   "./ui.js",
