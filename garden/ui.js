@@ -654,8 +654,14 @@
     }
   }
 
+  // Register immediately, NOT on window.load. This app is the only one here
+  // that pulls a webfont, and window.load waits on it: on a network where
+  // fonts.googleapis.com is slow or filtered, load fires late or not at all,
+  // the worker never registers, and Chrome offers "Add to Home screen" (a
+  // bookmark) instead of "Install app". Registration is async anyway, so
+  // there is nothing to gain by waiting.
   if ("serviceWorker" in navigator &&
       (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-    window.addEventListener("load", function () { navigator.serviceWorker.register("./sw.js").catch(function () {}); });
+    navigator.serviceWorker.register("./sw.js").catch(function () {});
   }
 })();

@@ -11,7 +11,10 @@
 <link rel="apple-touch-icon" sizes="192x192" href="../icons/garden-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<!-- Non-blocking: the pixel face is a nicety, and a hung font request must never
+     hold up first paint or the load event. Falls back to a monospace stack. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap"></noscript>
 <style>
 /* Seasonal palettes. The whole app recolours on the turn of the season -
    the one Stardew habit that carries over completely intact. */
