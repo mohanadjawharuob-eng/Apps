@@ -1,0 +1,17 @@
+{
+  "id": "/Apps/garden/",
+  "name": "Bustan — Plant Care & Seasonal Almanac",
+  "short_name": "Bustan",
+  "description": "Track your plants, water them by real weather, and know what to sow each month.",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#22301f",
+  "theme_color": "#2f4a33",
+  "icons": [
+    { "src": "../icons/garden-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/garden-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/garden-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
