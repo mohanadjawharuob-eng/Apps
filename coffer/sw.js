@@ -1,5 +1,5 @@
 /* Offline shell for Coffer. Scope: /Apps/coffer/ */
-var CACHE = 'pwa-coffer-v1';
+var CACHE = 'pwa-coffer-v4';
 var PRECACHE = [
   "./",
   "../icons/coffer-192.png",
@@ -42,7 +42,33 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
+
   if (url.origin !== self.location.origin) return;
+
+  // The app itself is network-first: cache-first on the HTML meant a shipped
+  // change could sit unseen behind a stale copy for days, which is exactly
+  // what happened. Online you always get the current app; offline you get the
+  // last good one. Everything else stays cache-first, because it is small,
+  // unchanging and wanted instantly.
+  var isDoc = req.mode === 'navigate' ||
+              (req.headers.get('accept') || '').indexOf('text/html') > -1;
+
+  if (isDoc) {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(CACHE).then(function (c) { c.put(req, copy); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (hit) {
+          return hit || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(req).then(function (hit) {

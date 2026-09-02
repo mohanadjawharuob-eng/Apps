@@ -352,6 +352,10 @@
   .day-out { color:var(--loss); margin-left:0.7rem; font-weight:600; }
   .day-in { color:var(--gain); margin-left:0.7rem; font-weight:600; }
   .dayrow td { position:sticky; left:0; }
+  .row.pocket { padding-left:1.6rem; background:var(--raised); }
+  .row.pocket .row-title { font-size:0.86rem; font-weight:500; }
+  .row.pocket::before { content:"\u203a"; position:absolute; left:0.75rem; color:var(--faint); }
+  .row.pocket { position:relative; }
   .grp-head { display:flex; align-items:baseline; gap:0.5rem; padding:0.55rem 1rem 0.3rem;
     background:var(--raised); border-top:1px solid var(--rule); }
   .grp-name { font-weight:650; font-size:0.86rem; letter-spacing:0.01em; }
@@ -1069,15 +1073,61 @@
   }
   resetMemo();
 
+  /* ---------------- pockets ----------------
+     A pocket is a named subdivision INSIDE one account — "Cyprus" and
+     "Savings" living in the same bank balance. Pockets are a view of that
+     one balance, never a separate pot: the account total is always its
+     opening plus its transactions, and each pocket holds whatever share of
+     it has been assigned. Whatever is left over is Unallocated. That way the
+     pockets can never quietly stop adding up to the account.
+
+     An account choice is passed around as a reference string: "a1" for the
+     account itself, "a1|p2" for a pocket inside it.
+     ------------------------------------------------- */
+  function pocketsOf(acc) { return (acc && acc.pockets) || []; }
+  function pocketById(acc, pid) {
+    var ps = pocketsOf(acc);
+    for (var i = 0; i < ps.length; i++) if (ps[i].id === pid) return ps[i];
+    return null;
+  }
+  function acctRef(accountId, pocketId) { return pocketId ? accountId + "|" + pocketId : accountId; }
+  function parseRef(ref) {
+    var bits = String(ref || "").split("|");
+    return { accountId: bits[0] || null, pocketId: bits[1] || null };
+  }
+  // what one pocket holds: its own opening plus everything filed to it
+  function pocketBalance(acc, p, onOrBefore) {
+    var b = num(p.opening);
+    for (var i = 0; i < state.transactions.length; i++) {
+      var t = state.transactions[i];
+      if (t.pocketId !== p.id) continue;
+      if (onOrBefore && t.date > onOrBefore) continue;
+      if (t.type === "transfer") {
+        if (t.accountId === acc.id) b -= txBase(t);
+        if (t.toAccountId === acc.id) b += txBase(t);
+      } else if (t.accountId === acc.id) {
+        b += t.type === "income" ? txBase(t) : -txBase(t);
+      }
+    }
+    return b;
+  }
+  function unallocatedOf(acc) {
+    return balanceOf(acc) - pocketsOf(acc).reduce(function (n, p) { return n + pocketBalance(acc, p); }, 0);
+  }
+
   function accountById(id) {
     for (var i = 0; i < state.accounts.length; i++) if (state.accounts[i].id === id) return state.accounts[i];
     return null;
   }
-  function accountName(id) {
+  function accountName(id, pocketId) {
     if (!memo.accName) {
       memo.accName = {};
-      state.accounts.forEach(function (a) { memo.accName[a.id] = a.name; });
+      state.accounts.forEach(function (a) {
+        memo.accName[a.id] = a.name;
+        pocketsOf(a).forEach(function (p) { memo.accName[a.id + "|" + p.id] = a.name + " \u203a " + p.name; });
+      });
     }
+    if (pocketId && memo.accName[id + "|" + pocketId]) return memo.accName[id + "|" + pocketId];
     var n = memo.accName[id];
     return n == null ? "(removed account)" : n;
   }
@@ -2362,13 +2412,36 @@
 
     function accountRow(a) {
       var bal = balanceOf(a);
-      return '<div class="row"><div class="row-main">' +
+      var pockets = pocketsOf(a);
+      var html = '<div class="row"><div class="row-main">' +
         '<div class="row-title">' + esc(a.name) + "</div>" +
-        '<div class="row-sub">' + esc(a.type) + "</div></div>" +
+        '<div class="row-sub">' + esc(a.type) +
+        (pockets.length ? " · " + pockets.length + (pockets.length === 1 ? " pocket" : " pockets") : "") + "</div></div>" +
         '<div class="row-end"><span class="row-fig' + (bal < 0 ? " loss" : "") + '">' + fmt(bal) + "</span>" +
+        '<button class="ibtn" data-act="pocket-add" data-id="' + a.id + '" aria-label="Add a pocket to ' + esc(a.name) + '" title="Add a pocket">+</button>' +
         '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit ' + esc(a.name) + '" title="Edit">\u270e</button>' +
         '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">\u2715</button>' +
         "</div></div>";
+      if (pockets.length) {
+        var left = unallocatedOf(a);
+        html += pockets.map(function (p) {
+          var pb = pocketBalance(a, p);
+          return '<div class="row pocket"><div class="row-main">' +
+            '<div class="row-title">' + esc(p.name) + "</div></div>" +
+            '<div class="row-end"><span class="row-fig' + (pb < 0 ? " loss" : "") + '">' + fmt(pb) + "</span>" +
+            '<button class="ibtn" data-act="pocket-edit" data-id="' + a.id + "|" + p.id + '" aria-label="Edit ' + esc(p.name) + '" title="Edit">\u270e</button>' +
+            '<button class="ibtn danger" data-act="pocket-del" data-id="' + a.id + "|" + p.id + '" aria-label="Remove ' + esc(p.name) + '" title="Remove">\u2715</button>' +
+            "</div></div>";
+        }).join("");
+        // the leftover is shown rather than hidden, so the pockets always
+        // visibly add up to the account
+        if (Math.abs(left) > 0.005) {
+          html += '<div class="row pocket"><div class="row-main">' +
+            '<div class="row-title" style="color:var(--dim)">Unallocated</div></div>' +
+            '<div class="row-end"><span class="row-fig' + (left < 0 ? " loss" : "") + '" style="color:var(--dim)">' + fmt(left) + "</span></div></div>";
+        }
+      }
+      return html;
     }
 
     var rows;
@@ -2415,7 +2488,10 @@
       : '<p class="empty">Nothing due in the next two weeks.' +
         (state.recurring.length ? "" : " <strong>Add your rent, subscriptions and bills</strong> to see them tracked here.") + "</p>";
 
+    // The two recurring cards live on Budgets, which is not where anyone looks
+    // for their salary — give this card a way through to them.
     return '<div class="card"><div class="card-head"><h3>Due soon</h3>' +
+      '<button class="btn sm" data-tab="budgets">Bills &amp; income</button>' +
       '<span class="sub">' + (load.expense > 0 || load.income > 0
         ? [load.expense > 0 ? fmt(load.expense, { round: true }) + "/mo out" : "",
            load.income > 0 ? fmt(load.income, { round: true }) + "/mo in" : ""].filter(Boolean).join(" · ")
@@ -2481,8 +2557,8 @@
       html += page.map(function (t) {
         var isTransfer = t.type === "transfer";
         var acc = isTransfer
-          ? esc(accountName(t.accountId)) + " → " + esc(accountName(t.toAccountId))
-          : esc(accountName(t.accountId));
+          ? esc(accountName(t.accountId, t.pocketId)) + " → " + esc(accountName(t.toAccountId, t.toPocketId))
+          : esc(accountName(t.accountId, t.pocketId));
         var base = txBase(t);
         var amt = isTransfer ? fmt(base) : (t.type === "income" ? "+" : "−") + fmt(base).replace("-", "");
         // a foreign entry shows the amount you actually handed over, small,
@@ -3263,18 +3339,33 @@
      ============================================================ */
 
   function accountOptions() {
-    return state.accounts.map(function (a) { return { value: a.id, label: a.name }; });
+    var out = [];
+    state.accounts.forEach(function (a) {
+      out.push({ value: a.id, label: a.name });
+      pocketsOf(a).forEach(function (p) {
+        out.push({ value: acctRef(a.id, p.id), label: a.name + " \u203a " + p.name });
+      });
+    });
+    return out;
   }
   // Only offered once at least one rate exists, so a single-currency book
   // never sees it.
+  // Always shown. It used to hide itself until a rate existed, which meant the
+  // whole feature was invisible to anyone who had not already found the
+  // Exchange rates card — you cannot discover a currency picker that only
+  // appears once you have configured a currency.
   function currencyField(value) {
     var codes = Object.keys(state.settings.rates || {}).filter(function (c) {
       return c !== baseCode() && num(state.settings.rates[c]) > 0;
     });
-    if (!codes.length) return [];
-    return [{ key: "currency", label: "Currency", type: "select",
-              options: [baseCode()].concat(codes), value: value || baseCode(),
-              hint: "converted at today's rate and kept at that rate" }];
+    return [{
+      key: "currency", label: "Currency", type: "select",
+      options: [baseCode()].concat(codes),
+      value: value || baseCode(),
+      hint: codes.length
+        ? "kept at today's rate, so this entry never re-values later"
+        : "only " + baseCode() + " so far — add rates under Settings \u203a Exchange rates to log in another currency"
+    }];
   }
 
   // Places accounts are held — whatever you have already used, so the list
@@ -3430,7 +3521,9 @@
             var cur = v.currency || baseCode();
             state.transactions.push({
               id: uid(), date: v.date || today(), desc: v.desc.trim(),
-              type: v.type, category: v.category, accountId: v.account, amount: v.amount,
+              type: v.type, category: v.category,
+              accountId: parseRef(v.account).accountId, pocketId: parseRef(v.account).pocketId,
+              amount: v.amount,
               // the rate is frozen here, on purpose — see the currency block above
               currency: cur, rate: rateFor(cur)
             });
@@ -3471,8 +3564,8 @@
           fields: [
             { key: "date", label: "Date", type: "date", value: t.date },
             { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 },
-            { key: "from", label: "From", type: "select", options: accountOptions(), value: t.accountId },
-            { key: "to", label: "To", type: "select", options: accountOptions(), value: t.toAccountId },
+            { key: "from", label: "From", type: "select", options: accountOptions(), value: acctRef(t.accountId, t.pocketId) },
+            { key: "to", label: "To", type: "select", options: accountOptions(), value: acctRef(t.toAccountId, t.toPocketId) },
             { key: "desc", label: "Note", value: t.desc, span: true }
           ].concat(currencyField(t.currency)),
           validate: function (v) {
@@ -3483,7 +3576,9 @@
             var wasCur = t.currency || baseCode(), nowCur = v.currency || baseCode();
             t.currency = nowCur;
             if (nowCur !== wasCur || !(num(t.rate) > 0)) t.rate = rateFor(nowCur);
-            t.date = v.date; t.amount = v.amount; t.accountId = v.from; t.toAccountId = v.to; t.desc = v.desc.trim();
+            t.date = v.date; t.amount = v.amount; t.desc = v.desc.trim();
+            t.accountId = parseRef(v.from).accountId; t.pocketId = parseRef(v.from).pocketId;
+            t.toAccountId = parseRef(v.to).accountId; t.toPocketId = parseRef(v.to).pocketId;
             save(); render(); toast("Transfer updated.");
           }
         });
@@ -3498,7 +3593,7 @@
           { key: "desc", label: "Description", value: t.desc, span: true },
           { key: "category", label: "Category", type: "select", catKind: "auto", options: catOptions(t.type).concat(
               catOptions(t.type).indexOf(t.category) === -1 ? [t.category] : []), value: t.category },
-          { key: "account", label: "Account", type: "select", options: accountOptions(), value: t.accountId },
+          { key: "account", label: "Account", type: "select", options: accountOptions(), value: acctRef(t.accountId, t.pocketId) },
           { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 }
         ].concat(currencyField(t.currency)),
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
@@ -3510,7 +3605,8 @@
           t.currency = nowCur;
           if (nowCur !== wasCur || !(num(t.rate) > 0)) t.rate = rateFor(nowCur);
           t.type = v.type; t.date = v.date || t.date; t.desc = v.desc.trim();
-          t.category = v.category; t.accountId = v.account; t.amount = v.amount;
+          t.category = v.category; t.amount = v.amount;
+          t.accountId = parseRef(v.account).accountId; t.pocketId = parseRef(v.account).pocketId;
           save(); render(); toast("Transaction updated.");
         }
       });
@@ -3552,11 +3648,13 @@
         onConfirm: function (v) {
           state.transactions.push({
             id: uid(), date: v.date || today(), desc: v.desc.trim() || "Transfer",
-            type: "transfer", category: "Transfer", accountId: v.from, toAccountId: v.to, amount: v.amount,
+            type: "transfer", category: "Transfer", amount: v.amount,
+            accountId: parseRef(v.from).accountId, pocketId: parseRef(v.from).pocketId,
+            toAccountId: parseRef(v.to).accountId, toPocketId: parseRef(v.to).pocketId,
             currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
           });
           save(); render();
-          toast(fmt(v.amount) + " moved to " + accountName(v.to) + ".");
+          toast(fmt(v.amount) + " moved to " + accountName(parseRef(v.to).accountId, parseRef(v.to).pocketId) + ".");
         }
       });
     },
@@ -3595,6 +3693,84 @@
       delete state.budgets[cat];
       save(); render();
       toast(cat + " budget removed.", function () { state.budgets[cat] = prev; });
+    },
+
+    /* ---- pockets ---- */
+    "pocket-add": function (id) {
+      var a = accountById(id);
+      if (!a) return;
+      openModal({
+        title: "New pocket in " + a.name,
+        message: "A pocket is a slice of this one account — a way of saying what part of the balance is for. " +
+          "The account total does not change; whatever is not in a pocket shows as Unallocated.",
+        fields: [
+          { key: "name", label: "Name", placeholder: "e.g. Cyprus, Savings", span: true },
+          { key: "opening", label: "Starting amount", type: "number", value: 0,
+            hint: "how much of the current balance is already this pocket's" }
+        ],
+        confirmLabel: "Add pocket",
+        validate: function (v) {
+          if (!v.name.trim()) return "Give the pocket a name.";
+          var clash = pocketsOf(a).filter(function (p) {
+            return p.name.toLowerCase() === v.name.trim().toLowerCase();
+          })[0];
+          if (clash) return "There is already a pocket called that.";
+        },
+        onConfirm: function (v) {
+          if (!a.pockets) a.pockets = [];
+          a.pockets.push({ id: uid(), name: v.name.trim(), opening: num(v.opening) });
+          save(); render();
+          toast(v.name.trim() + " added to " + a.name + ".");
+        }
+      });
+    },
+
+    "pocket-edit": function (ref) {
+      var r = parseRef(ref), a = accountById(r.accountId);
+      var p = a && pocketById(a, r.pocketId);
+      if (!p) return;
+      openModal({
+        title: "Edit " + p.name,
+        message: "Holding " + fmt(pocketBalance(a, p)) + " of " + a.name + "'s " + fmt(balanceOf(a)) + ".",
+        fields: [
+          { key: "name", label: "Name", value: p.name, span: true },
+          { key: "opening", label: "Starting amount", type: "number", value: p.opening }
+        ],
+        validate: function (v) { if (!v.name.trim()) return "Give the pocket a name."; },
+        onConfirm: function (v) {
+          p.name = v.name.trim(); p.opening = num(v.opening);
+          save(); render(); toast("Pocket updated.");
+        }
+      });
+    },
+
+    "pocket-del": function (ref) {
+      var r = parseRef(ref), a = accountById(r.accountId);
+      var p = a && pocketById(a, r.pocketId);
+      if (!p) return;
+      var filed = state.transactions.filter(function (t) { return t.pocketId === p.id; });
+      confirmAction({
+        title: "Remove " + p.name + "?",
+        message: filed.length
+          ? "<b>" + filed.length + "</b> " + (filed.length === 1 ? "entry sits" : "entries sit") + " in this pocket. " +
+            "They stay in " + esc(a.name) + " and keep their amounts — they just stop being filed under a pocket, " +
+            "so the money moves to Unallocated. Nothing is deleted."
+          : "Nothing is filed in it yet.",
+        confirmLabel: "Remove pocket"
+      }, function () {
+        var idx = a.pockets.indexOf(p);
+        a.pockets.splice(idx, 1);
+        var touched = [];
+        state.transactions.forEach(function (t) {
+          if (t.pocketId === p.id) { t.pocketId = null; touched.push(t); }
+          if (t.toPocketId === p.id) { t.toPocketId = null; }
+        });
+        save(); render();
+        toast(p.name + " removed.", function () {
+          a.pockets.splice(idx, 0, p);
+          touched.forEach(function (t) { t.pocketId = p.id; });
+        });
+      });
     },
 
     /* ---- receipt photos ---- */
@@ -3706,7 +3882,8 @@
           onConfirm: function (v) {
             state.recurring.push({
               id: uid(), name: v.name.trim(), type: v.type, category: v.category,
-              accountId: v.account, amount: v.amount, frequency: v.frequency,
+              accountId: parseRef(v.account).accountId, pocketId: parseRef(v.account).pocketId,
+              amount: v.amount, frequency: v.frequency,
               nextDate: v.nextDate || today(),
               currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
             });
@@ -3743,7 +3920,7 @@
           { key: "amount", label: "Amount", type: "number", value: r.amount, min: 0 },
           { key: "category", label: "Category", type: "select", catKind: "auto",
             options: catOptions(r.type === "income" ? "income" : "expense"), value: r.category },
-          { key: "account", label: "Account", type: "select", options: accountOptions(), value: r.accountId },
+          { key: "account", label: "Account", type: "select", options: accountOptions(), value: acctRef(r.accountId, r.pocketId) },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: r.frequency },
           { key: "nextDate", label: "Next due", type: "date", value: r.nextDate }
         ].concat(currencyField(r.currency)),
@@ -3753,7 +3930,8 @@
         },
         onConfirm: function (v) {
           r.name = v.name.trim(); r.type = v.type; r.amount = v.amount; r.category = v.category;
-          r.accountId = v.account; r.frequency = v.frequency; r.nextDate = v.nextDate;
+          r.accountId = parseRef(v.account).accountId; r.pocketId = parseRef(v.account).pocketId;
+          r.frequency = v.frequency; r.nextDate = v.nextDate;
           if (v.currency) { r.currency = v.currency; r.rate = rateFor(v.currency); }
           save(); render(); toast("Updated.");
         }
@@ -3778,7 +3956,7 @@
       var loggedDate = r.nextDate > today() ? today() : r.nextDate;
       var tx = {
         id: uid(), date: loggedDate, desc: r.name, type: r.type,
-        category: r.category, accountId: r.accountId, amount: num(r.amount),
+        category: r.category, accountId: r.accountId, pocketId: r.pocketId || null, amount: num(r.amount),
         currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
       };
       var prevDate = r.nextDate;
@@ -4262,7 +4440,7 @@
       function log(amount, date) {
         var tx = {
           id: uid(), date: date || today(), desc: q.label, type: q.type || "expense",
-          category: q.category, accountId: accId, amount: amount,
+          category: q.category, accountId: accId, pocketId: q.pocketId || null, amount: amount,
           currency: q.currency || baseCode(), rate: rateFor(q.currency || baseCode())
         };
         state.transactions.push(tx);
@@ -4372,7 +4550,8 @@
         onConfirm: function (v) {
           state.quick.push({
             id: uid(), label: v.label.trim(), category: v.category, type: v.type,
-            accountId: v.accountId, amount: v.amount > 0 ? v.amount : 0,
+            accountId: parseRef(v.accountId).accountId, pocketId: parseRef(v.accountId).pocketId,
+            amount: v.amount > 0 ? v.amount : 0,
             currency: v.currency || baseCode()
           });
           save(); render();

@@ -5,7 +5,7 @@
    (a stale forecast is worse than none) and never cached either. The app keeps
    its own copy of the last good forecast in storage, which is what makes it
    work offline. */
-var CACHE = 'pwa-garden-v3';
+var CACHE = 'pwa-garden-v4';
 var PRECACHE = [
   "./",
   "./sprites.js",
@@ -56,16 +56,38 @@ self.addEventListener('fetch', function (e) {
   // back to the copy it already holds in storage.
   if (url.hostname.indexOf('open-meteo.com') > -1) return;
 
-  // The pixel typeface lives on Google's CDN. Cache it once so the app still
-  // looks like itself offline; if it never arrives the CSS falls back to a
-  // monospace stack and nothing breaks.
   var isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !isFont) return;
+
+  // The app itself is network-first: cache-first on the HTML meant a shipped
+  // change could sit unseen behind a stale copy for days, which is exactly
+  // what happened. Online you always get the current app; offline you get the
+  // last good one. Everything else stays cache-first, because it is small,
+  // unchanging and wanted instantly.
+  var isDoc = req.mode === 'navigate' ||
+              (req.headers.get('accept') || '').indexOf('text/html') > -1;
+
+  if (isDoc) {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(CACHE).then(function (c) { c.put(req, copy); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (hit) {
+          return hit || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {
-        if (res && (res.ok || res.type === 'opaque')) {
+        if (res && res.ok) {
           var copy = res.clone();
           caches.open(CACHE).then(function (c) { c.put(req, copy); });
         }
