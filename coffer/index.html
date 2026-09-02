@@ -298,6 +298,7 @@
   .row-title { font-size: 0.9rem; font-weight: 550; overflow-wrap: anywhere; }
   .row-sub { font-size: 0.73rem; color: var(--faint); margin-top: 0.1rem; }
   .row-end { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+  .fx { display:block; font-size:0.72rem; color:var(--faint); font-variant-numeric:tabular-nums; }
   .row-fig { font-size: 0.9rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .row-fig.gain { color: var(--gain); }
   .row-fig.loss { color: var(--loss); }
@@ -711,7 +712,7 @@
   function blank() {
     return {
       version: 2,
-      settings: { currency: "$", lock: null },
+      settings: { currency: "$", lock: null, base: "USD", rates: {} },
       categories: { expense: DEFAULT_CATS.expense.slice(), income: DEFAULT_CATS.income.slice() },
       accounts: [],
       transactions: [],
@@ -741,7 +742,7 @@
       var effects = 0;
       s.transactions.forEach(function (t) {
         if (t.accountId !== a.id) return;
-        effects += t.type === "income" ? t.amount : -t.amount;
+        effects += t.type === "income" ? num(t.amount) : -num(t.amount);
       });
       return { id: a.id || uid(), name: a.name || "Account", type: a.type || "Checking", opening: num(a.balance) - effects };
     });
@@ -780,7 +781,14 @@
       if (raw) {
         var p = JSON.parse(raw);
         var s = blank();
-        if (p.settings) { s.settings.currency = p.settings.currency || "$"; s.settings.lock = p.settings.lock || null; }
+        if (p.settings) {
+          s.settings.currency = p.settings.currency || "$";
+          s.settings.lock = p.settings.lock || null;
+          // absent in every backup written before multi-currency: default to a
+          // single-currency book, which is exactly what those files describe
+          s.settings.base = p.settings.base || "USD";
+          s.settings.rates = (p.settings.rates && typeof p.settings.rates === "object") ? p.settings.rates : {};
+        }
         if (p.categories) {
           if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
           if (Array.isArray(p.categories.income) && p.categories.income.length) s.categories.income = p.categories.income;
@@ -816,6 +824,47 @@
   }
 
   /* ---------------- money ---------------- */
+
+  /* ---------------- currency ----------------
+     Amounts are stored in the currency they happened in, together with the
+     rate that was true at that moment. Converting at display time with
+     today's rate would silently rewrite history — with the lira that is not
+     a rounding error, it is the difference between 30,000 LBP meaning $20
+     and meaning $0.33. So the rate travels with the transaction.
+
+     A rate is "units of this currency per 1 unit of base". Base is 1.
+     ------------------------------------------------- */
+  var CURRENCIES = ["USD", "EUR", "LBP", "GBP", "JOD", "AED", "SAR", "TRY", "EGP"];
+  var SYMBOLS = { USD: "$", EUR: "\u20ac", LBP: "LL", GBP: "\u00a3", JOD: "JD",
+                  AED: "AED", SAR: "SAR", TRY: "\u20ba", EGP: "E\u00a3" };
+
+  function baseCode() { return (state.settings && state.settings.base) || "USD"; }
+  function rateFor(code) {
+    if (!code || code === baseCode()) return 1;
+    var r = num((state.settings.rates || {})[code]);
+    return r > 0 ? r : 1;   // an unset rate must not silently zero the figure
+  }
+  function symbolFor(code) {
+    if (!code || code === baseCode()) return state.settings.currency;
+    return SYMBOLS[code] || (code + "\u00a0");
+  }
+  // what this record is worth in base currency, using the rate it carries
+  function toBase(amount, code, rate) {
+    var a = num(amount);
+    if (!code || code === baseCode()) return a;
+    var r = num(rate) > 0 ? num(rate) : rateFor(code);
+    return r > 0 ? a / r : a;
+  }
+  function txBase(t) { return toBase(t.amount, t.currency, t.rate); }
+  function acctOpeningBase(a) { return toBase(a.opening, a.currency, a.rate); }
+  // an amount shown in its own currency, for the ledger row
+  function fmtIn(n, code) {
+    n = num(n);
+    var digits = (code === "LBP" || code === "TRY") ? 0 : 2;
+    var body = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return (n < 0 ? "-" : "") + symbolFor(code) + body;
+  }
+  function isForeign(code) { return !!code && code !== baseCode(); }
 
   function fmt(n, opts) {
     n = num(n);
@@ -862,12 +911,12 @@
   // effect of one transaction on one account
   function effectOn(t, accId) {
     if (t.type === "transfer") {
-      if (t.accountId === accId) return -t.amount;
-      if (t.toAccountId === accId) return t.amount;
+      if (t.accountId === accId) return -txBase(t);
+      if (t.toAccountId === accId) return txBase(t);
       return 0;
     }
     if (t.accountId !== accId) return 0;
-    return t.type === "income" ? t.amount : -t.amount;
+    return t.type === "income" ? txBase(t) : -txBase(t);
   }
 
   function balanceOf(acc, onOrBefore) {
@@ -887,15 +936,15 @@
     if (memo.assets[key] != null) return memo.assets[key];
     // one pass over the ledger for every account at once
     var totals = {};
-    state.accounts.forEach(function (a) { totals[a.id] = num(a.opening); });
+    state.accounts.forEach(function (a) { totals[a.id] = acctOpeningBase(a); });
     for (var i = 0; i < state.transactions.length; i++) {
       var t = state.transactions[i];
       if (onOrBefore && t.date > onOrBefore) continue;
       if (t.type === "transfer") {
-        if (totals[t.accountId] != null) totals[t.accountId] -= num(t.amount);
-        if (totals[t.toAccountId] != null) totals[t.toAccountId] += num(t.amount);
+        if (totals[t.accountId] != null) totals[t.accountId] -= txBase(t);
+        if (totals[t.toAccountId] != null) totals[t.toAccountId] += txBase(t);
       } else if (totals[t.accountId] != null) {
-        totals[t.accountId] += (t.type === "income" ? 1 : -1) * num(t.amount);
+        totals[t.accountId] += (t.type === "income" ? 1 : -1) * txBase(t);
       }
     }
     var sum = 0;
@@ -915,7 +964,7 @@
     return out;
   }
   function sumOf(list, type) {
-    return list.reduce(function (s, t) { return t.type === type ? s + num(t.amount) : s; }, 0);
+    return list.reduce(function (s, t) { return t.type === type ? s + txBase(t) : s; }, 0);
   }
   function monthSummary(mk) {
     if (memo.msum[mk]) return memo.msum[mk];
@@ -935,7 +984,7 @@
     var out = {};
     monthTx(mk).forEach(function (t) {
       if (t.type !== "expense") return;
-      out[t.category] = (out[t.category] || 0) + num(t.amount);
+      out[t.category] = (out[t.category] || 0) + txBase(t);
     });
     memo.cats[mk] = out;
     return out;
@@ -995,7 +1044,8 @@
   function recurringMonthlyLoad() {
     var out = { expense: 0, income: 0 };
     state.recurring.forEach(function (r) {
-      out[r.type === "income" ? "income" : "expense"] += monthlyEquivalent(num(r.amount), r.frequency);
+      out[r.type === "income" ? "income" : "expense"] +=
+        monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
     });
     return out;
   }
@@ -1851,12 +1901,13 @@
 
     // largest single expense
     var big = monthTx(mk).filter(function (t) { return t.type === "expense"; })
-      .sort(function (a, b) { return b.amount - a.amount; })[0];
-    if (big && cur.expense > 0 && big.amount / cur.expense > 0.25) {
+      .sort(function (a, b) { return txBase(b) - txBase(a); })[0];
+    var bigBase = big ? txBase(big) : 0;
+    if (big && cur.expense > 0 && bigBase / cur.expense > 0.25) {
       notes.push({
         tone: "info", mark: "◆",
-        html: "One expense — <b>" + esc(big.desc || big.category) + "</b> at <span class=\"fig\">" + fmt(big.amount, { round: true }) +
-          "</span> — is <b>" + Math.round(big.amount / cur.expense * 100) + "%</b> of the month's spending."
+        html: "One expense — <b>" + esc(big.desc || big.category) + "</b> at <span class=\"fig\">" + fmt(bigBase, { round: true }) +
+          "</span> — is <b>" + Math.round(bigBase / cur.expense * 100) + "%</b> of the month's spending."
       });
     }
 
@@ -2071,7 +2122,8 @@
             '<div class="row-title">' + esc(r.name) + "</div>" +
             '<div class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) + " · " + esc(accountName(r.accountId)) + "</div></div>" +
             '<div class="row-end"><span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
-            (r.type === "income" ? "+" : "−") + fmt(r.amount).replace("-", "") + "</span>" +
+            (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
+            (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
             '<span class="pill ' + tone + '">' + when + "</span>" +
             '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
             "</div></div>";
@@ -2107,8 +2159,8 @@
   // Summary line and table are separate so the search box can refresh just
   // the rows without rebuilding (and re-parsing) the whole screen.
   function ledgerSummaryHtml(rows) {
-    var shownIn = rows.reduce(function (s, t) { return t.type === "income" ? s + num(t.amount) : s; }, 0);
-    var shownOut = rows.reduce(function (s, t) { return t.type === "expense" ? s + num(t.amount) : s; }, 0);
+    var shownIn = rows.reduce(function (s, t) { return t.type === "income" ? s + txBase(t) : s; }, 0);
+    var shownOut = rows.reduce(function (s, t) { return t.type === "expense" ? s + txBase(t) : s; }, 0);
     return "In " + fmt(shownIn, { round: true }) +
       " · Out " + fmt(shownOut, { round: true }) +
       " · Net " + fmt(shownIn - shownOut, { round: true, signed: true }) +
@@ -2133,7 +2185,14 @@
         var acc = isTransfer
           ? esc(accountName(t.accountId)) + " → " + esc(accountName(t.toAccountId))
           : esc(accountName(t.accountId));
-        var amt = isTransfer ? fmt(t.amount) : (t.type === "income" ? "+" : "−") + fmt(t.amount).replace("-", "");
+        var base = txBase(t);
+        var amt = isTransfer ? fmt(base) : (t.type === "income" ? "+" : "−") + fmt(base).replace("-", "");
+        // a foreign entry shows the amount you actually handed over, small,
+        // under the converted figure — otherwise the ledger stops matching
+        // the receipt in your pocket
+        if (isForeign(t.currency)) {
+          amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
+        }
         return '<tr><td style="white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(t.date) + "</td>" +
           "<td>" + esc(t.desc || "—") + "</td>" +
           "<td>" + (isTransfer
@@ -2284,14 +2343,15 @@
         var d = daysUntil(r.nextDate);
         var tone = d < 0 ? "bad" : d <= 3 ? "warn" : "mute";
         var when = d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "due today" : "in " + d + "d";
-        var permo = monthlyEquivalent(num(r.amount), r.frequency);
+        var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
         return '<div class="row"><div class="row-main">' +
           '<div class="row-title">' + esc(r.name) + "</div>" +
           '<div class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) +
           (r.frequency !== "monthly" ? " (" + fmt(permo, { round: true }) + "/mo)" : "") +
           " · " + esc(accountName(r.accountId)) + " · next " + esc(r.nextDate) + "</div></div>" +
           '<div class="row-end"><span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
-          (r.type === "income" ? "+" : "−") + fmt(r.amount).replace("-", "") + "</span>" +
+          (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
+          (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
           '<span class="pill ' + tone + '">' + when + "</span>" +
           '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
           '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit" title="Edit">✎</button>' +
@@ -2529,7 +2589,7 @@
     var totals = {}, monthsCounted = {};
     state.transactions.forEach(function (t) {
       if (t.type !== "expense") return;
-      totals[t.category] = (totals[t.category] || 0) + num(t.amount);
+      totals[t.category] = (totals[t.category] || 0) + txBase(t);
       monthsCounted[t.category] = monthsCounted[t.category] || {};
       monthsCounted[t.category][monthOf(t.date)] = true;
     });
@@ -2559,13 +2619,13 @@
 
     /* biggest single expenses */
     var biggest = state.transactions.filter(function (t) { return t.type === "expense"; })
-      .sort(function (a, b) { return b.amount - a.amount; }).slice(0, 8);
+      .sort(function (a, b) { return txBase(b) - txBase(a); }).slice(0, 8);
     if (biggest.length) {
       html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Largest expenses on record</h3></div>' +
         '<div class="card-body flush"><div class="rows">' + biggest.map(function (t) {
           return '<div class="row"><div class="row-main"><div class="row-title">' + esc(t.desc || t.category) + "</div>" +
             '<div class="row-sub">' + esc(t.date) + " · " + esc(t.category) + " · " + esc(accountName(t.accountId)) + "</div></div>" +
-            '<span class="row-fig">' + fmt(t.amount) + "</span></div>";
+            '<span class="row-fig">' + fmt(txBase(t)) + "</span></div>";
         }).join("") + "</div></div></div>";
     }
 
@@ -2601,12 +2661,37 @@
       "your browser blocks downloads. Restoring replaces everything currently in this browser, after a confirmation.</p></div></div>";
 
     /* currency */
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Currency</h3></div><div class="card-body">' +
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Currency</h3>' +
+      '<span class="sub">everything totals in ' + esc(baseCode()) + '</span></div><div class="card-body">' +
       '<div class="fields" style="max-width:340px"><div class="field"><label class="label" for="cur_sel">Symbol</label>' +
       '<select id="cur_sel">' + ["$", "€", "£", "¥", "₹", "₩", "₪", "₺", "R$", "kr", "CHF", "A$", "C$"].map(function (c) {
         return '<option value="' + esc(c) + '"' + (c === state.settings.currency ? " selected" : "") + ">" + esc(c) + "</option>";
       }).join("") + "</select></div></div>" +
       '<p class="hint" style="margin-top:0.6rem">Amounts are formatted with your device\'s number conventions.</p></div></div>';
+
+    /* exchange rates — yours, not the official ones */
+    var rateCodes = CURRENCIES.filter(function (c) { return c !== baseCode(); });
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Exchange rates</h3>' +
+      '<button class="btn sm" data-act="rate-edit">Set a rate</button></div><div class="card-body">' +
+      '<p class="hint" style="margin-bottom:0.75rem">How many of each currency you actually get for one ' +
+      esc(baseCode()) + '. Use the rate you really trade at, not the official one. ' +
+      '<b>Changing a rate only affects what you log next</b> — anything already recorded keeps the rate it ' +
+      'was logged at, so your history never rewrites itself.</p>';
+    var setRates = rateCodes.filter(function (c) { return num((state.settings.rates || {})[c]) > 0; });
+    if (!setRates.length) {
+      html += '<p class="empty">No rates set. Everything is treated as ' + esc(baseCode()) + '.</p>';
+    } else {
+      html += '<div class="rows">' + setRates.map(function (c) {
+        var r = num(state.settings.rates[c]);
+        return '<div class="row"><div class="row-main"><div class="row-title">' + esc(c) + "</div>" +
+          '<div class="row-sub">1 ' + esc(baseCode()) + " = " + r.toLocaleString() + " " + esc(c) + "</div></div>" +
+          '<div class="row-end">' +
+          '<button class="ibtn" data-act="rate-set" data-id="' + esc(c) + '" aria-label="Edit" title="Edit">✎</button>' +
+          '<button class="ibtn danger" data-act="rate-del" data-id="' + esc(c) + '" aria-label="Remove" title="Remove">✕</button>' +
+          "</div></div>";
+      }).join("") + "</div>";
+    }
+    html += "</div></div>";
 
     /* categories */
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Categories</h3>' +
@@ -2808,7 +2893,7 @@
     render();
     var box = document.getElementById("omniBox");
     if (box) box.focus();
-    toast(esc0(tx.desc) + " · " + fmt(tx.amount) + " logged to " + accountName(tx.accountId) + ".", function () {
+    toast(esc0(tx.desc) + " · " + fmt(txBase(tx)) + " logged to " + accountName(tx.accountId) + ".", function () {
       state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
     });
   }
@@ -2824,6 +2909,18 @@
   function accountOptions() {
     return state.accounts.map(function (a) { return { value: a.id, label: a.name }; });
   }
+  // Only offered once at least one rate exists, so a single-currency book
+  // never sees it.
+  function currencyField(value) {
+    var codes = Object.keys(state.settings.rates || {}).filter(function (c) {
+      return c !== baseCode() && num(state.settings.rates[c]) > 0;
+    });
+    if (!codes.length) return [];
+    return [{ key: "currency", label: "Currency", type: "select",
+              options: [baseCode()].concat(codes), value: value || baseCode(),
+              hint: "converted at today's rate and kept at that rate" }];
+  }
+
   function catOptions(kind) {
     return state.categories[kind === "income" ? "income" : "expense"].slice();
   }
@@ -2926,7 +3023,7 @@
           { key: "category", label: "Category", type: "select", options: catOptions(k), catKind: "auto" },
           { key: "account", label: "Account", type: "select", options: accountOptions() },
           { key: "amount", label: "Amount", type: "number", min: 0 }
-        ];
+        ].concat(currencyField());
       }
       function open(k) {
         openModal({
@@ -2939,11 +3036,17 @@
             if (v.type !== k) { reopen(v.type); return " "; }
           },
           onConfirm: function (v) {
+            var cur = v.currency || baseCode();
             state.transactions.push({
               id: uid(), date: v.date || today(), desc: v.desc.trim(),
-              type: v.type, category: v.category, accountId: v.account, amount: v.amount
+              type: v.type, category: v.category, accountId: v.account, amount: v.amount,
+              // the rate is frozen here, on purpose — see the currency block above
+              currency: cur, rate: rateFor(cur)
             });
-            save(); render(); toast("Transaction added.");
+            save(); render();
+            toast(isForeign(cur)
+              ? "Added — " + fmtIn(v.amount, cur) + " is " + fmt(toBase(v.amount, cur, rateFor(cur))) + "."
+              : "Transaction added.");
           }
         });
         // reflect a type change immediately by reopening with the right categories
@@ -2952,7 +3055,7 @@
       }
       function reopen(k) {
         var keep = {};
-        ["date", "desc", "amount", "account"].forEach(function (key) {
+        ["date", "desc", "amount", "account", "currency"].forEach(function (key) {
           var el = document.getElementById("mf_" + key);
           if (el) keep[key] = el.value;
         });
@@ -3089,6 +3192,49 @@
       toast(cat + " budget removed.", function () { state.budgets[cat] = prev; });
     },
 
+    /* ---- exchange rates ---- */
+    "rate-edit": function () { actions["rate-set"](""); },
+    "rate-set": function (code) {
+      var rates = state.settings.rates || (state.settings.rates = {});
+      var codes = CURRENCIES.filter(function (c) { return c !== baseCode(); });
+      openModal({
+        title: code ? "Rate for " + code : "Set an exchange rate",
+        fields: [
+          { key: "code", label: "Currency", type: "select", options: codes, value: code || codes[0] },
+          { key: "rate", label: "Units per 1 " + baseCode(), type: "number", min: 0,
+            value: code ? rates[code] : "", hint: "e.g. 1 " + baseCode() + " = 89000 LBP" }
+        ],
+        confirmLabel: "Save rate",
+        validate: function (v) {
+          if (!(num(v.rate) > 0)) return "Enter a rate above zero.";
+        },
+        onConfirm: function (v) {
+          rates[v.code] = num(v.rate);
+          save(); render();
+          toast("1 " + baseCode() + " = " + num(v.rate).toLocaleString() + " " + v.code + ".");
+        }
+      });
+    },
+    "rate-del": function (code) {
+      var rates = state.settings.rates || {};
+      if (!(code in rates)) return;
+      var prev = rates[code];
+      var used = state.transactions.filter(function (t) { return t.currency === code; }).length;
+      confirmAction({
+        title: "Remove the " + code + " rate?",
+        message: used
+          ? "<b>" + used + "</b> recorded " + (used === 1 ? "entry uses" : "entries use") + " " + code +
+            ". They keep the rate they were logged at and their values do not change \u2014 you just will not be " +
+            "able to log anything new in " + code + " until you set a rate again."
+          : "Nothing is recorded in " + code + " yet.",
+        confirmLabel: "Remove"
+      }, function () {
+        delete rates[code];
+        save(); render();
+        toast(code + " rate removed.", function () { rates[code] = prev; });
+      });
+    },
+
     /* ---- recurring ---- */
     "recur-add": function () {
       if (needAccount()) return;
@@ -3103,7 +3249,7 @@
           { key: "account", label: "Account", type: "select", options: accountOptions() },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: "monthly" },
           { key: "nextDate", label: "Next due", type: "date", value: today() }
-        ],
+        ].concat(currencyField()),
         confirmLabel: "Add",
         validate: function (v) {
           if (!v.name.trim()) return "Give it a name.";
@@ -3112,7 +3258,8 @@
         onConfirm: function (v) {
           state.recurring.push({
             id: uid(), name: v.name.trim(), type: v.type, category: v.category,
-            accountId: v.account, amount: v.amount, frequency: v.frequency, nextDate: v.nextDate || today()
+            accountId: v.account, amount: v.amount, frequency: v.frequency, nextDate: v.nextDate || today(),
+            currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
           });
           save(); render(); toast(v.name.trim() + " scheduled.");
         }
@@ -3133,7 +3280,7 @@
           { key: "account", label: "Account", type: "select", options: accountOptions(), value: r.accountId },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: r.frequency },
           { key: "nextDate", label: "Next due", type: "date", value: r.nextDate }
-        ],
+        ].concat(currencyField(r.currency)),
         validate: function (v) {
           if (!v.name.trim()) return "Give it a name.";
           if (v.amount <= 0) return "Enter an amount above zero.";
@@ -3141,6 +3288,7 @@
         onConfirm: function (v) {
           r.name = v.name.trim(); r.type = v.type; r.amount = v.amount; r.category = v.category;
           r.accountId = v.account; r.frequency = v.frequency; r.nextDate = v.nextDate;
+          if (v.currency) { r.currency = v.currency; r.rate = rateFor(v.currency); }
           save(); render(); toast("Updated.");
         }
       });
@@ -3161,7 +3309,8 @@
       if (!r) return;
       var tx = {
         id: uid(), date: r.nextDate, desc: r.name, type: r.type,
-        category: r.category, accountId: r.accountId, amount: num(r.amount)
+        category: r.category, accountId: r.accountId, amount: num(r.amount),
+        currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
       };
       var prevDate = r.nextDate;
       state.transactions.push(tx);
@@ -3409,10 +3558,13 @@
     },
 
     "export-csv": function () {
-      var rows = [["Date", "Description", "Type", "Category", "Account", "To account", "Amount"]];
+      var rows = [["Date", "Description", "Type", "Category", "Account", "To account",
+                   "Amount (" + baseCode() + ")", "Currency", "Original amount", "Rate"]];
       filteredTx().forEach(function (t) {
         rows.push([t.date, t.desc, t.type, t.category, accountName(t.accountId),
-          t.toAccountId ? accountName(t.toAccountId) : "", num(t.amount).toFixed(2)]);
+          t.toAccountId ? accountName(t.toAccountId) : "",
+          txBase(t).toFixed(2), t.currency || baseCode(), num(t.amount).toFixed(2),
+          (num(t.rate) > 0 ? num(t.rate) : rateFor(t.currency)).toString()]);
       });
       var csv = rows.map(function (r) {
         return r.map(function (c) {
@@ -3439,6 +3591,9 @@
           if (incoming.settings) {
             fresh.settings.currency = incoming.settings.currency || "$";
             fresh.settings.lock = incoming.settings.lock || null;
+            fresh.settings.base = incoming.settings.base || "USD";
+            fresh.settings.rates = (incoming.settings.rates && typeof incoming.settings.rates === "object")
+              ? incoming.settings.rates : {};
           }
           if (incoming.categories) {
             if (Array.isArray(incoming.categories.expense) && incoming.categories.expense.length) fresh.categories.expense = incoming.categories.expense;
@@ -3683,7 +3838,7 @@
         var k = t.desc.toLowerCase() + "|" + t.category;
         freq[k] = freq[k] || { label: t.desc, category: t.category, n: 0, sum: 0, type: t.type, accountId: t.accountId };
         freq[k].n++;
-        freq[k].sum += num(t.amount);
+        freq[k].sum += txBase(t);
       });
       var have = {};
       state.quick.forEach(function (q) { have[q.label.toLowerCase()] = 1; });
