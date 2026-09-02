@@ -1799,6 +1799,15 @@
       }
     }
 
+    // a currency code anywhere in the line, e.g. "8900000 lbp salary"
+    var cur = baseCode(), curRe = null;
+    Object.keys(state.settings.rates || {}).forEach(function (code) {
+      if (!(num(state.settings.rates[code]) > 0)) return;
+      var re = new RegExp("(^|\\s)" + code + "(\\s|$)", "i");
+      if (!curRe && re.test(text)) { cur = code; curRe = re; }
+    });
+    if (curRe) text = text.replace(curRe, " ").replace(/\s+/g, " ").trim();
+
     var d = extractDate(text);
     var a = extractAmount(d.rest);
     var ac = extractAccount(a.rest);
@@ -1819,7 +1828,9 @@
       category: g.category,
       why: g.why,
       accountId: ac.accountId || (state.accounts[0] ? state.accounts[0].id : null),
-      accountExplicit: !!ac.accountId
+      accountExplicit: !!ac.accountId,
+      currency: cur,
+      currencyExplicit: !!curRe
     };
   }
 
@@ -3120,7 +3131,10 @@
       '<input id="omni_date" type="date" value="' + esc(date) + '" /></div>' +
       "</div>" +
       '<div class="btn-row" style="margin-top:0.75rem">' +
-      '<button class="btn primary" data-act="omni-commit">Add ' + fmt(p.amount).replace("-", "") + "</button>" +
+      '<button class="btn primary" data-act="omni-commit">Add ' +
+        (p.currencyExplicit
+          ? esc(fmtIn(p.amount, p.currency)) + " (" + fmt(toBase(p.amount, p.currency, rateFor(p.currency))).replace("-", "") + ")"
+          : fmt(p.amount).replace("-", "")) + "</button>" +
       '<button class="btn quiet" data-act="omni-clear">Clear</button>' +
       "</div></div>";
   }
@@ -3133,7 +3147,8 @@
     return '<div class="chips">' + state.quick.map(function (q) {
       var amt = num(q.amount);
       return '<button class="chip quick" data-act="quick-log" data-id="' + q.id + '" ' +
-        'title="' + esc(q.label + " · " + q.category + (amt > 0 ? " · " + fmt(amt) : " · asks for the amount")) + '">' +
+        'title="' + esc(q.label + " · " + q.category +
+          (amt > 0 ? " · " + (isForeign(q.currency) ? fmtIn(amt, q.currency) : fmt(amt)) : " · asks for the amount")) + '">' +
         '<span class="cat-dot" style="background:' + catColor(q.category) + '"></span>' +
         "<b>" + esc(q.label) + "</b>" +
         '<span style="color:var(--faint);font-variant-numeric:tabular-nums">' +
@@ -3221,7 +3236,9 @@
       type: p.type,
       category: cat,
       accountId: omni.touched.accountId || p.accountId,
-      amount: p.amount
+      amount: p.amount,
+      currency: p.currency || baseCode(),
+      rate: rateFor(p.currency || baseCode())
     };
     if (!tx.accountId) { toast("Add an account first."); return; }
     state.transactions.push(tx);
@@ -3313,12 +3330,13 @@
           { key: "type", label: "Type", type: "select", options: typeOptions(), catKind: "free",
             newLabel: "New type\u2026", newPlaceholder: "e.g. Joint, Pension", value: "Checking" },
           { key: "opening", label: "Opening balance", type: "number", value: 0 }
-        ],
+        ].concat(currencyField()),
         confirmLabel: "Add account",
         validate: function (v) { if (!v.name.trim()) return "Give the account a name."; },
         onConfirm: function (v) {
           state.accounts.push({ id: uid(), name: v.name.trim(), group: (v.group || "").trim() || null,
-            type: v.type, opening: v.opening });
+            type: v.type, opening: v.opening,
+            currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode()) });
           save(); render();
           toast(v.name.trim() + " added.");
         }
@@ -3338,10 +3356,14 @@
           { key: "type", label: "Type", type: "select", options: typeOptions(a.type), catKind: "free",
             newLabel: "New type\u2026", newPlaceholder: "e.g. Joint, Pension", value: a.type },
           { key: "opening", label: "Opening balance", type: "number", value: a.opening }
-        ],
+        ].concat(currencyField(a.currency)),
         validate: function (v) { if (!v.name.trim()) return "Give the account a name."; },
         onConfirm: function (v) {
           a.name = v.name.trim(); a.type = v.type; a.opening = v.opening;
+          a.group = (v.group || "").trim() || null;   // was dropped on every edit
+          var wasCur = a.currency || baseCode(), nowCur = v.currency || baseCode();
+          a.currency = nowCur;
+          if (nowCur !== wasCur || !(num(a.rate) > 0)) a.rate = rateFor(nowCur);
           save(); render(); toast("Account updated.");
         }
       });
@@ -3452,12 +3474,15 @@
             { key: "from", label: "From", type: "select", options: accountOptions(), value: t.accountId },
             { key: "to", label: "To", type: "select", options: accountOptions(), value: t.toAccountId },
             { key: "desc", label: "Note", value: t.desc, span: true }
-          ],
+          ].concat(currencyField(t.currency)),
           validate: function (v) {
             if (v.amount <= 0) return "Enter an amount above zero.";
             if (v.from === v.to) return "Pick two different accounts.";
           },
           onConfirm: function (v) {
+            var wasCur = t.currency || baseCode(), nowCur = v.currency || baseCode();
+            t.currency = nowCur;
+            if (nowCur !== wasCur || !(num(t.rate) > 0)) t.rate = rateFor(nowCur);
             t.date = v.date; t.amount = v.amount; t.accountId = v.from; t.toAccountId = v.to; t.desc = v.desc.trim();
             save(); render(); toast("Transfer updated.");
           }
@@ -3475,9 +3500,15 @@
               catOptions(t.type).indexOf(t.category) === -1 ? [t.category] : []), value: t.category },
           { key: "account", label: "Account", type: "select", options: accountOptions(), value: t.accountId },
           { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 }
-        ],
+        ].concat(currencyField(t.currency)),
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
         onConfirm: function (v) {
+          // Keep the rate this entry was logged at unless the currency itself
+          // changed — editing a description must never silently re-value a
+          // past transaction at today's rate.
+          var wasCur = t.currency || baseCode(), nowCur = v.currency || baseCode();
+          t.currency = nowCur;
+          if (nowCur !== wasCur || !(num(t.rate) > 0)) t.rate = rateFor(nowCur);
           t.type = v.type; t.date = v.date || t.date; t.desc = v.desc.trim();
           t.category = v.category; t.accountId = v.account; t.amount = v.amount;
           save(); render(); toast("Transaction updated.");
@@ -3512,7 +3543,7 @@
           { key: "from", label: "From", type: "select", options: accountOptions(), value: state.accounts[0].id },
           { key: "to", label: "To", type: "select", options: accountOptions(), value: state.accounts[1].id },
           { key: "desc", label: "Note", placeholder: "optional", span: true }
-        ],
+        ].concat(currencyField()),
         confirmLabel: "Transfer",
         validate: function (v) {
           if (v.amount <= 0) return "Enter an amount above zero.";
@@ -3521,7 +3552,8 @@
         onConfirm: function (v) {
           state.transactions.push({
             id: uid(), date: v.date || today(), desc: v.desc.trim() || "Transfer",
-            type: "transfer", category: "Transfer", accountId: v.from, toAccountId: v.to, amount: v.amount
+            type: "transfer", category: "Transfer", accountId: v.from, toAccountId: v.to, amount: v.amount,
+            currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
           });
           save(); render();
           toast(fmt(v.amount) + " moved to " + accountName(v.to) + ".");
@@ -4204,7 +4236,8 @@
           if (!p || !p.ok) return;
           var tx = {
             id: uid(), date: p.date, desc: p.desc, type: p.type,
-            category: p.category, accountId: p.accountExplicit ? p.accountId : accId, amount: p.amount
+            category: p.category, accountId: p.accountExplicit ? p.accountId : accId, amount: p.amount,
+            currency: p.currency || baseCode(), rate: rateFor(p.currency || baseCode())
           };
           state.transactions.push(tx);
           added.push(tx.id);
@@ -4229,13 +4262,14 @@
       function log(amount, date) {
         var tx = {
           id: uid(), date: date || today(), desc: q.label, type: q.type || "expense",
-          category: q.category, accountId: accId, amount: amount
+          category: q.category, accountId: accId, amount: amount,
+          currency: q.currency || baseCode(), rate: rateFor(q.currency || baseCode())
         };
         state.transactions.push(tx);
         // remember the last amount so the button gets smarter
         if (!num(q.amount)) q.lastAmount = amount;
         save(); render();
-        toast(q.label + " · " + fmt(amount) + " logged.", function () {
+        toast(q.label + " · " + fmt(txBase(tx)) + " logged.", function () {
           state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
         });
       }
@@ -4332,13 +4366,14 @@
           { key: "category", label: "Category", type: "select", options: allCats, catKind: "auto" },
           { key: "accountId", label: "Account", type: "select", options: accountOptions() },
           { key: "amount", label: "Amount", type: "number", placeholder: "leave blank to ask", min: 0 }
-        ],
+        ].concat(currencyField()),
         confirmLabel: "Add button",
         validate: function (v) { if (!v.label.trim()) return "Give the button a label."; },
         onConfirm: function (v) {
           state.quick.push({
             id: uid(), label: v.label.trim(), category: v.category, type: v.type,
-            accountId: v.accountId, amount: v.amount > 0 ? v.amount : 0
+            accountId: v.accountId, amount: v.amount > 0 ? v.amount : 0,
+            currency: v.currency || baseCode()
           });
           save(); render();
           toast(v.label.trim() + " added.");
