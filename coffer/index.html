@@ -270,6 +270,32 @@
   @media (max-width: 900px) { .cols-2, .cols-3 { grid-template-columns: minmax(0, 1fr); } }
 
   /* ---------------- hero (net worth) ---------------- */
+  /* One line of the thing people open the app to see. The full picture —
+     the 12-month curve and the accounts behind it — is a tap away on Worth. */
+  .worth-strip {
+    display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
+    width: 100%; text-align: left; cursor: pointer;
+    padding: 0.85rem 1.1rem; margin-bottom: 1rem;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .worth-strip:hover { border-color: var(--rule-mid); }
+  .worth-label {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--faint); flex: none;
+  }
+  .worth-fig {
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 600;
+    color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .worth-fig.loss { color: var(--loss); }
+  .worth-meta { font-size: 0.78rem; color: var(--dim); margin-left: auto; }
+  .worth-meta .gain { color: var(--gain); font-weight: 600; }
+  .worth-meta .loss { color: var(--loss); font-weight: 600; }
+  @media (max-width: 460px) {
+    .worth-meta { margin-left: 0; flex-basis: 100%; }
+  }
+
   .hero {
     background: var(--surface);
     border: 1px solid var(--rule);
@@ -710,7 +736,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02g";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-02h";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -3527,11 +3553,36 @@
 
   /* ---- the six tabs ---- */
 
+  function netWorthStrip() {
+    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
+    var startOfMonth = totalAssets(lastDayOf(monthShift(viewMonth, -1))) - debt;
+    var nowValue = totalAssets(viewMonth === thisMonth() ? null : lastDayOf(viewMonth)) - debt;
+    var moved = nowValue - startOfMonth;
+    // freeAssets() is about reach, not solvency — it does not net off debt. Put
+    // beside net worth it read as larger than net worth, which is nonsense. Say
+    // what is spoken for instead; that is unambiguous next to either figure.
+    var spokenFor = committedTotal();
+
+    return '<button class="worth-strip" data-tab="worth" aria-label="Net worth — open the Worth tab">' +
+      '<span class="worth-label">Net worth</span>' +
+      '<span class="worth-fig' + (net < 0 ? " loss" : "") + '">' + fmt(net) + "</span>" +
+      '<span class="worth-meta">' +
+      (Math.abs(moved) < 0.005
+        ? "level in " + esc(monthName(viewMonth, true))
+        : '<span class="' + (moved > 0 ? "gain" : "loss") + '">' + (moved > 0 ? "\u25b2 " : "\u25bc ") +
+          fmt(Math.abs(moved), { round: true }) + "</span> in " + esc(monthName(viewMonth, true))) +
+      (debt > 0 ? " \u00b7 after " + fmt(debt, { round: true }) + " owed" : "") +
+      (spokenFor > 0.5 ? " \u00b7 " + fmt(spokenFor, { round: true }) + " already spoken for" : "") +
+      "</span></button>";
+  }
+
   function renderToday() {
     if (!state.accounts.length && !state.transactions.length) {
       return pageHead("Today", "Log what you spend, and see where the month is going.") + firstRunCard();
     }
     var html = pageHead("Today", null, monthStepper());
+
+    html += netWorthStrip();
 
     // logging comes first: it is done many times a day, everything else is
     // read occasionally

@@ -54,6 +54,9 @@ expenses. None of those hold for contract work paid in a currency that moves, so
 - **Plan scenarios** (`extends`), **confidence on income** (`at 40%`),
   **`review_by`**, **sub-budgets** (`Subscriptions > Spotify`), and a
   **close-out** comparing projected against real once a plan's period ends.
+- **Net worth on the first screen** — one line at the top of Today with the
+  month's movement, what is owed and what is spoken for. The 12-month curve and
+  the accounts behind it stay on Worth, a tap away.
 
 ### Next
 - **Split transactions** — one shop trip across two categories.
