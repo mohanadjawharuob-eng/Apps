@@ -354,7 +354,11 @@
   .dayrow td { position:sticky; left:0; }
   .row.pocket { padding-left:1.6rem; background:var(--raised); }
   .row.pocket .row-title { font-size:0.86rem; font-weight:500; }
-  .row.pocket::before { content:"\u203a"; position:absolute; left:0.75rem; color:var(--faint); }
+  /* CSS escapes are hex and carry no "u": "\u203a" is read as the letter u
+     followed by the text 203a, which is what was printing over every pocket
+     name. The hex form is also pure ASCII, so no encoding can mangle it. */
+  .row.pocket::before { content:"\203A"; position:absolute; left:0.8rem; top:0.55rem;
+    color:var(--faint); font-size:0.9rem; line-height:1; pointer-events:none; }
   .row.pocket { position:relative; }
   .grp-head { display:flex; align-items:baseline; gap:0.5rem; padding:0.55rem 1rem 0.3rem;
     background:var(--raised); border-top:1px solid var(--rule); }
