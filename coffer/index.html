@@ -332,6 +332,32 @@
   .btn.sm { padding: 0.33rem 0.6rem; font-size: 0.77rem; }
   .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+  .today-row { display:flex; gap:1.2rem; align-items:flex-start; flex-wrap:wrap; }
+  .today-main { flex:1 1 140px; }
+  .today-side { flex:0 0 auto; }
+  .today-fig { font-size:1.9rem; font-weight:650; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;
+    line-height:1.1; margin-top:0.1rem; }
+  .today-side .today-fig { font-size:1.15rem; }
+  .today-fig.quiet { color:var(--dim); }
+  .today-fig.gain { color:var(--gain); }
+  .dayrow td { background:var(--raised); border-top:1px solid var(--rule-mid);
+    padding:0.45rem 0.65rem; }
+  .dayrow td > span { display:inline-block; vertical-align:baseline; }
+  .day-name { font-weight:650; font-size:0.82rem; }
+  .day-n { font-size:0.7rem; color:var(--faint); margin-left:0.5rem; }
+  /* Not float:right — the table is wider than a phone, so a right-floated
+     total lands off the edge of the horizontal scroll where it is never seen.
+     Keep it beside the count, at the left where the eye already is. */
+  .day-figs { font-variant-numeric:tabular-nums; font-size:0.8rem; }
+  .day-out { color:var(--loss); margin-left:0.7rem; font-weight:600; }
+  .day-in { color:var(--gain); margin-left:0.7rem; font-weight:600; }
+  .dayrow td { position:sticky; left:0; }
+  .grp-head { display:flex; align-items:baseline; gap:0.5rem; padding:0.55rem 1rem 0.3rem;
+    background:var(--raised); border-top:1px solid var(--rule); }
+  .grp-name { font-weight:650; font-size:0.86rem; letter-spacing:0.01em; }
+  .grp-sub { font-size:0.72rem; color:var(--faint); }
+  .grp-fig { margin-left:auto; font-variant-numeric:tabular-nums; font-weight:600; font-size:0.88rem; }
+  .grp-fig.loss { color:var(--loss); }
   .ibtn.on { color: var(--brass); border-color: var(--brass); }
   .ibtn {
     width: 30px; height: 30px; border-radius: 6px;
@@ -672,6 +698,16 @@
   }
   function today() { return iso(new Date()); }
   function parseISO(s) { return new Date(s + "T00:00:00"); }
+  function dayLabel(dateStr) {
+    var t = today();
+    if (dateStr === t) return "Today";
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    if (dateStr === iso(y)) return "Yesterday";
+    var d = parseISO(dateStr);
+    var opts = { weekday: "short", day: "numeric", month: "short" };
+    if (dateStr.slice(0, 4) !== t.slice(0, 4)) opts.year = "numeric";
+    return d.toLocaleDateString(undefined, opts);
+  }
   function monthOf(dateStr) { return dateStr.slice(0, 7); }
   function thisMonth() { return today().slice(0, 7); }
 
@@ -1328,11 +1364,11 @@
             return '<option value="' + esc(val) + '"' + (String(val) === String(f.value) ? " selected" : "") + ">" + esc(lab) + "</option>";
           }).join("") +
             // let the list grow instead of being stuck with the ones I picked
-            (f.catKind ? '<option value="' + NEW_CAT + '">\uFF0B New category\u2026</option>' : "") +
+            (f.catKind ? '<option value="' + NEW_CAT + '">\uFF0B ' + esc(f.newLabel || "New category\u2026") + "</option>" : "") +
             "</select>" +
             (f.catKind
-              ? '<input id="' + id + '_new" type="text" placeholder="Name it, e.g. Childcare" ' +
-                'autocomplete="off" aria-label="New category name" style="display:none;margin-top:0.4rem" />'
+              ? '<input id="' + id + '_new" type="text" placeholder="' + esc(f.newPlaceholder || "Name it, e.g. Childcare") + '" ' +
+                'autocomplete="off" aria-label="' + esc(f.newLabel || "New category name") + '" style="display:none;margin-top:0.4rem" />'
               : "");
         } else {
           inner = '<input id="' + id + '" type="' + (f.type || "text") + '"' +
@@ -1380,6 +1416,11 @@
       var i, nc;
       for (i = 0; i < vals.__newCats.length; i++) {
         nc = vals.__newCats[i];
+        if (nc.kind === "free") {
+          if (!nc.name) { toast("Type a name first."); return; }
+          nc.added = false;   // nothing to register; the typed value is the value
+          continue;
+        }
         nc.kind = nc.kind === "auto" ? (vals.type === "income" ? "income" : "expense") : nc.kind;
         if (!nc.name) { toast("Type a name for the new category."); return; }
         // typing one that already exists just picks it, rather than duplicating
@@ -2166,6 +2207,44 @@
       '<span class="hint">' + monthName(histMonths[histMonths.length - 1], true) + "</span></div>" +
       "</div></div>";
 
+    /* today */
+    var t0 = today();
+    var todayTx = state.transactions.filter(function (t) { return t.date === t0; });
+    var todayOut = todayTx.reduce(function (n, t) { return t.type === "expense" ? n + txBase(t) : n; }, 0);
+    var todayIn = todayTx.reduce(function (n, t) { return t.type === "income" ? n + txBase(t) : n; }, 0);
+    // a fair yardstick: what an average day this month has cost, so far
+    var elapsedDays = Math.max(1, monthOf(t0) === viewMonth ? new Date().getDate() : daysInMonth(viewMonth));
+    var avgDay = monthSummary(monthOf(t0)).expense / elapsedDays;
+    var vsAvg = avgDay > 0 ? todayOut / avgDay : null;
+
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Today</h3>' +
+      '<span class="sub">' + esc(dayLabel(t0)) + " · " + esc(new Date().toLocaleDateString(undefined, { day: "numeric", month: "long" })) + "</span></div>" +
+      '<div class="card-body"><div class="today-row">' +
+      '<div class="today-main"><span class="label">Spent today</span>' +
+      '<div class="today-fig' + (todayOut > 0 ? "" : " quiet") + '">' + fmt(todayOut) + "</div>" +
+      '<div class="tile-foot">' + (
+        !todayTx.length ? "nothing logged yet"
+        : vsAvg == null ? todayTx.length + (todayTx.length === 1 ? " entry" : " entries")
+        : (vsAvg <= 1
+            ? '<span class="pill ok">' + Math.round((1 - vsAvg) * 100) + "% under</span> a typical day"
+            : '<span class="pill warn">' + Math.round((vsAvg - 1) * 100) + "% over</span> a typical day")
+      ) + "</div></div>" +
+      (todayIn > 0 ? '<div class="today-side"><span class="label">In today</span>' +
+        '<div class="today-fig gain">+' + fmt(todayIn) + "</div></div>" : "") +
+      '<div class="today-side"><span class="label">Typical day</span>' +
+      '<div class="today-fig quiet">' + fmt(avgDay, { round: true }) + "</div>" +
+      '<div class="tile-foot">this month so far</div></div>' +
+      "</div>" +
+      (todayTx.length
+        ? '<div class="rows" style="margin-top:0.7rem">' + todayTx.slice(0, 4).map(function (t) {
+            return '<div class="row"><div class="row-main"><div class="row-title">' + esc(t.desc || t.category) + "</div>" +
+              '<div class="row-sub">' + esc(t.category) + "</div></div>" +
+              '<span class="row-fig' + (t.type === "income" ? " gain" : "") + '">' +
+              (t.type === "income" ? "+" : "\u2212") + fmt(txBase(t)).replace("-", "") + "</span></div>";
+          }).join("") + "</div>"
+        : "") +
+      "</div></div>";
+
     /* stat tiles */
     var rateTxt = cur.rate == null ? "—" : Math.round(cur.rate * 100) + "%";
     var sparkIn = dataWindow(6, viewMonth).map(function (mk) {
@@ -2229,18 +2308,48 @@
   }
 
   function accountsCard() {
-    var rows = state.accounts.length
-      ? '<div class="rows">' + state.accounts.map(function (a) {
-          var bal = balanceOf(a);
-          return '<div class="row"><div class="row-main">' +
-            '<div class="row-title">' + esc(a.name) + "</div>" +
-            '<div class="row-sub">' + esc(a.type) + "</div></div>" +
-            '<div class="row-end"><span class="row-fig' + (bal < 0 ? " loss" : "") + '">' + fmt(bal) + "</span>" +
-            '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit ' + esc(a.name) + '" title="Edit">✎</button>' +
-            '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">✕</button>' +
-            "</div></div>";
-        }).join("") + "</div>"
-      : '<p class="empty">No accounts yet.</p>';
+    // Accounts are grouped by where they are held, so a bank with three
+    // accounts reads as one place with three lines under it rather than
+    // three unrelated rows. Anything without a place falls under "Other".
+    var groups = [], byGroup = {};
+    state.accounts.forEach(function (a) {
+      var g = (a.group || "").trim() || "\u2014";
+      if (!byGroup[g]) { byGroup[g] = []; groups.push(g); }
+      byGroup[g].push(a);
+    });
+    groups.sort(function (x, y) {
+      if (x === "\u2014") return 1;          // loose accounts sit last
+      if (y === "\u2014") return -1;
+      return x.localeCompare(y);
+    });
+
+    function accountRow(a) {
+      var bal = balanceOf(a);
+      return '<div class="row"><div class="row-main">' +
+        '<div class="row-title">' + esc(a.name) + "</div>" +
+        '<div class="row-sub">' + esc(a.type) + "</div></div>" +
+        '<div class="row-end"><span class="row-fig' + (bal < 0 ? " loss" : "") + '">' + fmt(bal) + "</span>" +
+        '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit ' + esc(a.name) + '" title="Edit">\u270e</button>' +
+        '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">\u2715</button>' +
+        "</div></div>";
+    }
+
+    var rows;
+    if (!state.accounts.length) {
+      rows = '<p class="empty">No accounts yet.</p>';
+    } else if (groups.length === 1 && groups[0] === "\u2014") {
+      // nothing is grouped yet, so do not impose a heading on a single list
+      rows = '<div class="rows">' + state.accounts.map(accountRow).join("") + "</div>";
+    } else {
+      rows = groups.map(function (g) {
+        var list = byGroup[g];
+        var sub = list.reduce(function (t, a) { return t + balanceOf(a); }, 0);
+        return '<div class="grp-head"><span class="grp-name">' + esc(g === "\u2014" ? "Elsewhere" : g) + "</span>" +
+          '<span class="grp-sub">' + esc(list.length + (list.length === 1 ? " account" : " accounts")) + "</span>" +
+          '<span class="grp-fig' + (sub < 0 ? " loss" : "") + '">' + fmt(sub) + "</span></div>" +
+          '<div class="rows">' + list.map(accountRow).join("") + "</div>";
+      }).join("");
+    }
 
     return '<div class="card"><div class="card-head"><h3>Accounts</h3>' +
       '<div class="btn-row"><button class="btn sm" data-act="transfer-add">Transfer</button>' +
@@ -2309,12 +2418,23 @@
     var rows = filteredTx();
     var page = rows.slice(0, ledgerLimit);
 
+    // Grouped by day rather than stacked flat: a date heading carries the
+    // day's in and out, so scrolling gives you shape instead of a wall.
+    var dayTotals = {};
+    rows.forEach(function (t) {
+      var d = dayTotals[t.date] || (dayTotals[t.date] = { inc: 0, out: 0, n: 0 });
+      if (t.type === "income") d.inc += txBase(t);
+      else if (t.type === "expense") d.out += txBase(t);
+      d.n++;
+    });
+    var lastDay = null;
+
     var html = '<div class="tscroll"><table>' +
-      "<thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Account</th>" +
+      "<thead><tr><th>Description</th><th>Category</th><th>Account</th>" +
       '<th class="num">Amount</th><th></th></tr></thead><tbody>';
 
     if (!rows.length) {
-      html += '<tr><td colspan="6"><p class="empty">' +
+      html += '<tr><td colspan="5"><p class="empty">' +
         (state.transactions.length ? "Nothing matches these filters." : "No transactions yet — add your first one above.") +
         "</p></td></tr>";
     } else {
@@ -2331,7 +2451,19 @@
         if (isForeign(t.currency)) {
           amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
         }
-        return '<tr><td style="white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(t.date) + "</td>" +
+        var head = "";
+        if (t.date !== lastDay) {
+          lastDay = t.date;
+          var d = dayTotals[t.date] || { inc: 0, out: 0, n: 0 };
+          var bits = [];
+          if (d.out > 0) bits.push('<span class="day-out">\u2212' + fmt(d.out).replace("-", "") + "</span>");
+          if (d.inc > 0) bits.push('<span class="day-in">+' + fmt(d.inc) + "</span>");
+          head = '<tr class="dayrow"><td colspan="5">' +
+            '<span class="day-name">' + esc(dayLabel(t.date)) + "</span>" +
+            '<span class="day-n">' + d.n + (d.n === 1 ? " entry" : " entries") + "</span>" +
+            '<span class="day-figs">' + bits.join("") + "</span></td></tr>";
+        }
+        return head + '<tr>' +
           "<td>" + esc(t.desc || "—") + "</td>" +
           "<td>" + (isTransfer
             ? '<span class="pill mute">Transfer</span>'
@@ -3076,6 +3208,28 @@
               hint: "converted at today's rate and kept at that rate" }];
   }
 
+  // Places accounts are held — whatever you have already used, so the list
+  // grows with you instead of being fixed by me.
+  function groupOptions() {
+    var seen = {}, out = [];
+    state.accounts.forEach(function (a) {
+      if (a.group && !seen[a.group.toLowerCase()]) { seen[a.group.toLowerCase()] = 1; out.push(a.group); }
+    });
+    out.sort();
+    // a blank option reads as a glitch; name the "not filed anywhere" case
+    return out.map(function (g) { return { value: g, label: g }; })
+              .concat([{ value: "", label: "Elsewhere" }]);
+  }
+  function typeOptions(extra) {
+    var seen = {}, out = [];
+    ACCOUNT_TYPES.concat(state.accounts.map(function (a) { return a.type; }))
+      .concat(extra ? [extra] : [])
+      .forEach(function (t) {
+        if (t && !seen[t.toLowerCase()]) { seen[t.toLowerCase()] = 1; out.push(t); }
+      });
+    return out;
+  }
+
   function catOptions(kind) {
     return state.categories[kind === "income" ? "income" : "expense"].slice();
   }
@@ -3101,13 +3255,18 @@
         message: "The opening balance is what this account held before any transaction you log here.",
         fields: [
           { key: "name", label: "Name", placeholder: "e.g. Everyday current", span: true },
-          { key: "type", label: "Type", type: "select", options: ACCOUNT_TYPES, value: "Checking" },
+          { key: "group", label: "Held at", type: "select", options: groupOptions(), catKind: "free",
+            newLabel: "New place\u2026", newPlaceholder: "e.g. Bank of Cyprus", value: groupOptions()[0],
+            hint: "the bank, wallet or place this sits in" },
+          { key: "type", label: "Type", type: "select", options: typeOptions(), catKind: "free",
+            newLabel: "New type\u2026", newPlaceholder: "e.g. Joint, Pension", value: "Checking" },
           { key: "opening", label: "Opening balance", type: "number", value: 0 }
         ],
         confirmLabel: "Add account",
         validate: function (v) { if (!v.name.trim()) return "Give the account a name."; },
         onConfirm: function (v) {
-          state.accounts.push({ id: uid(), name: v.name.trim(), type: v.type, opening: v.opening });
+          state.accounts.push({ id: uid(), name: v.name.trim(), group: (v.group || "").trim() || null,
+            type: v.type, opening: v.opening });
           save(); render();
           toast(v.name.trim() + " added.");
         }
@@ -3122,7 +3281,10 @@
         message: "Current balance is " + fmt(balanceOf(a)) + ", derived from the opening figure plus every transaction.",
         fields: [
           { key: "name", label: "Name", value: a.name, span: true },
-          { key: "type", label: "Type", type: "select", options: ACCOUNT_TYPES, value: a.type },
+          { key: "group", label: "Held at", type: "select", options: groupOptions(), catKind: "free",
+            newLabel: "New place\u2026", newPlaceholder: "e.g. Bank of Cyprus", value: a.group || "" },
+          { key: "type", label: "Type", type: "select", options: typeOptions(a.type), catKind: "free",
+            newLabel: "New type\u2026", newPlaceholder: "e.g. Joint, Pension", value: a.type },
           { key: "opening", label: "Opening balance", type: "number", value: a.opening }
         ],
         validate: function (v) { if (!v.name.trim()) return "Give the account a name."; },
