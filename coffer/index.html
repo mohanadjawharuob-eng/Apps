@@ -1987,7 +1987,22 @@
     var isCurrent = mk === thisMonth();
     var progress = monthProgress(mk);
 
-    if (!state.transactions.length) return notes;
+    // With an empty ledger most notes would be computed from nothing — but the
+    // recurring ones are not derived from transactions at all, and someone who
+    // has just set up their salary and rent deserves to see something.
+    if (!state.transactions.length) {
+      var load0 = recurringMonthlyLoad();
+      if (load0.expense > 0) notes.push({
+        tone: "info", mark: "↻",
+        html: "<span class=\"fig\">" + fmt(load0.expense, { round: true }) + "/mo</span> of bills is scheduled. " +
+          "Log one when it is paid and it starts appearing in your figures."
+      });
+      if (load0.income > 0) notes.push({
+        tone: "info", mark: "↻",
+        html: "<span class=\"fig\">" + fmt(load0.income, { round: true }) + "/mo</span> of income is scheduled."
+      });
+      return notes;
+    }
 
     // pace projection
     if (isCurrent && cur.expense > 0 && progress > 0.12) {
@@ -2052,12 +2067,23 @@
     // recurring commitments
     var load = recurringMonthlyLoad();
     if (load.expense > 0) {
-      var incomeRef = cur.income > 0 ? cur.income : avgMonthlySaving(3) + burn;
+      // Prefer committed income as the denominator: if the salary is itself a
+      // recurring item, guessing from logged history is both unnecessary and
+      // wrong on the first of the month.
+      var incomeRef = load.income > 0 ? load.income : (cur.income > 0 ? cur.income : avgMonthlySaving(3) + burn);
+      var refName = load.income > 0 ? "your committed income" : "your income";
       var share = incomeRef > 0 ? load.expense / incomeRef : null;
       notes.push({
         tone: share != null && share > 0.6 ? "warn" : "info", mark: "↻",
         html: "<span class=\"fig\">" + fmt(load.expense, { round: true }) + "/mo</span> is already committed to recurring bills" +
-          (share != null ? " — about <b>" + Math.round(share * 100) + "%</b> of your income." : ".")
+          (share != null ? " — about <b>" + Math.round(share * 100) + "%</b> of " + refName + "." : ".")
+      });
+    }
+    if (load.income > 0) {
+      notes.push({
+        tone: "info", mark: "↻",
+        html: "<span class=\"fig\">" + fmt(load.income, { round: true }) + "/mo</span> is scheduled to arrive. " +
+          "It reaches your charts when you log it, not when it is due."
       });
     }
 
@@ -2379,7 +2405,10 @@
         (state.recurring.length ? "" : " <strong>Add your rent, subscriptions and bills</strong> to see them tracked here.") + "</p>";
 
     return '<div class="card"><div class="card-head"><h3>Due soon</h3>' +
-      '<span class="sub">' + (load.expense > 0 ? fmt(load.expense, { round: true }) + "/mo committed" : "next 14 days") + "</span></div>" +
+      '<span class="sub">' + (load.expense > 0 || load.income > 0
+        ? [load.expense > 0 ? fmt(load.expense, { round: true }) + "/mo out" : "",
+           load.income > 0 ? fmt(load.income, { round: true }) + "/mo in" : ""].filter(Boolean).join(" · ")
+        : "next 14 days") + "</span></div>" +
       '<div class="card-body flush">' + body + "</div></div>";
   }
 
@@ -2598,41 +2627,64 @@
     }
     html += "</div></div>";
 
-    /* recurring */
+    /* recurring — split in two, because a bill and a wage are not the same
+       kind of number. A bill is a commitment that eats what is safe to spend;
+       income is the thing it is measured against. One array underneath, so
+       every existing backup still loads untouched. */
     var load = recurringMonthlyLoad();
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Recurring commitments</h3>' +
-      '<div class="btn-row">' +
-      (load.expense > 0 ? '<span class="pill mute">' + fmt(load.expense, { round: true }) + "/mo out</span>" : "") +
-      (load.income > 0 ? '<span class="pill ok">' + fmt(load.income, { round: true }) + "/mo in</span>" : "") +
-      '<button class="btn sm primary" data-act="recur-add">Add</button></div></div><div class="card-body flush">';
 
-    if (!state.recurring.length) {
-      html += '<p class="empty">Nothing scheduled. <strong>Add rent, subscriptions, salary</strong> — anything on a repeating ' +
-        "cycle. Coffer counts the monthly cost, warns you before each is due, and logs it to the ledger when you mark it paid.</p>";
-    } else {
-      html += '<div class="rows">' + state.recurring.slice().sort(function (a, b) {
-        return a.nextDate.localeCompare(b.nextDate);
-      }).map(function (r) {
-        var d = daysUntil(r.nextDate);
-        var tone = d < 0 ? "bad" : d <= 3 ? "warn" : "mute";
-        var when = d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "due today" : "in " + d + "d";
-        var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
-        return '<div class="row"><div class="row-main">' +
-          '<div class="row-title">' + esc(r.name) + "</div>" +
-          '<div class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) +
-          (r.frequency !== "monthly" ? " (" + fmt(permo, { round: true }) + "/mo)" : "") +
-          " · " + esc(accountName(r.accountId)) + " · next " + esc(r.nextDate) + "</div></div>" +
-          '<div class="row-end"><span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
-          (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
-          (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
-          '<span class="pill ' + tone + '">' + when + "</span>" +
-          '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
-          '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit" title="Edit">✎</button>' +
-          '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete" title="Delete">✕</button>' +
-          "</div></div>";
-      }).join("") + "</div>";
+    function recurRow(r) {
+      var d = daysUntil(r.nextDate);
+      var tone = d < 0 ? "bad" : d <= 3 ? "warn" : "mute";
+      var when = d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "due today" : "in " + d + "d";
+      var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
+      return '<div class="row"><div class="row-main">' +
+        '<div class="row-title">' + esc(r.name) + "</div>" +
+        '<div class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) +
+        (r.frequency !== "monthly" ? " (" + fmt(permo, { round: true }) + "/mo)" : "") +
+        " · " + esc(accountName(r.accountId)) + " · next " + esc(r.nextDate) + "</div></div>" +
+        '<div class="row-end"><span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
+        (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
+        (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
+        '<span class="pill ' + tone + '">' + when + "</span>" +
+        '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
+        '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit" title="Edit">✎</button>' +
+        '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete" title="Delete">✕</button>' +
+        "</div></div>";
     }
-    html += "</div></div>";
+    function byDate(a, b) { return a.nextDate.localeCompare(b.nextDate); }
+
+    function recurCard(kind, title, blurb, figure, pillClass) {
+      var list = state.recurring.filter(function (r) {
+        return (kind === "income" ? r.type === "income" : r.type !== "income");
+      }).sort(byDate);
+      return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>' + esc(title) + "</h3>" +
+        '<div class="btn-row">' +
+        (figure > 0 ? '<span class="pill ' + pillClass + '">' + fmt(figure, { round: true }) + "/mo</span>" : "") +
+        '<button class="btn sm primary" data-act="recur-add" data-kind="' + kind + '">Add</button>' +
+        "</div></div><div class=\"card-body flush\">" +
+        (list.length
+          ? '<div class="rows">' + list.map(recurRow).join("") + "</div>"
+          : '<p class="empty">' + blurb + "</p>") +
+        "</div></div>";
+    }
+
+    html += recurCard("expense", "Bills and subscriptions",
+      "Nothing scheduled. <strong>Add rent, subscriptions and bills</strong> — Coffer counts the monthly cost, " +
+      "warns you before each is due, and logs it to the ledger when you mark it paid.", load.expense, "mute");
+
+    html += recurCard("income", "Regular income",
+      "Nothing scheduled. <strong>Add your salary or anything else that arrives on a cycle</strong> — it is what " +
+      "your committed bills are measured against.", load.income, "ok");
+
+    if (load.expense > 0 && load.income > 0) {
+      var share = load.expense / load.income;
+      html += '<p class="hint" style="margin-top:0.6rem">' +
+        "Your committed bills take <b>" + Math.round(share * 100) + "%</b> of your committed income — " +
+        fmt(load.expense, { round: true }) + " out against " + fmt(load.income, { round: true }) + " in, " +
+        "leaving " + fmt(load.income - load.expense, { round: true }) + " a month before anything else.</p>";
+    }
+
     return html;
   }
 
@@ -3594,34 +3646,58 @@
     },
 
     /* ---- recurring ---- */
-    "recur-add": function () {
+    "recur-add": function (id, el) {
       if (needAccount()) return;
-      openModal({
-        title: "Add a recurring item",
-        fields: [
-          { key: "name", label: "Name", placeholder: "e.g. Rent", span: true },
-          { key: "type", label: "Type", type: "select", options: ["expense", "income"], value: "expense" },
+      var kind = (el && el.getAttribute("data-kind")) === "income" ? "income" : "expense";
+      function fieldsFor(k) {
+        return [
+          { key: "name", label: "Name", placeholder: k === "income" ? "e.g. Salary" : "e.g. Rent", span: true },
+          { key: "type", label: "Type", type: "select", options: ["expense", "income"], value: k },
           { key: "amount", label: "Amount", type: "number", min: 0 },
-          { key: "category", label: "Category", type: "select", catKind: "auto",
-            options: catOptions("expense").concat(catOptions("income")) },
+          { key: "category", label: "Category", type: "select", catKind: "auto", options: catOptions(k) },
           { key: "account", label: "Account", type: "select", options: accountOptions() },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: "monthly" },
-          { key: "nextDate", label: "Next due", type: "date", value: today() }
-        ].concat(currencyField()),
-        confirmLabel: "Add",
-        validate: function (v) {
-          if (!v.name.trim()) return "Give it a name.";
-          if (v.amount <= 0) return "Enter an amount above zero.";
-        },
-        onConfirm: function (v) {
-          state.recurring.push({
-            id: uid(), name: v.name.trim(), type: v.type, category: v.category,
-            accountId: v.account, amount: v.amount, frequency: v.frequency, nextDate: v.nextDate || today(),
-            currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
-          });
-          save(); render(); toast(v.name.trim() + " scheduled.");
-        }
-      });
+          { key: "nextDate", label: k === "income" ? "Next expected" : "Next due", type: "date", value: today() }
+        ].concat(currencyField());
+      }
+      function open(k) {
+        openModal({
+          title: k === "income" ? "Add regular income" : "Add a bill",
+          fields: fieldsFor(k),
+          confirmLabel: "Add",
+          validate: function (v) {
+            if (!v.name.trim()) return "Give it a name.";
+            if (v.amount <= 0) return "Enter an amount above zero.";
+            // changing the type needs the matching category list
+            if (v.type !== k) { reopen(v.type); return " "; }
+          },
+          onConfirm: function (v) {
+            state.recurring.push({
+              id: uid(), name: v.name.trim(), type: v.type, category: v.category,
+              accountId: v.account, amount: v.amount, frequency: v.frequency,
+              nextDate: v.nextDate || today(),
+              currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
+            });
+            save(); render(); toast(v.name.trim() + " scheduled.");
+          }
+        });
+        var sel = document.getElementById("mf_type");
+        if (sel) sel.addEventListener("change", function () { reopen(sel.value); });
+      }
+      function reopen(k) {
+        var keep = {};
+        ["name", "amount", "account", "frequency", "nextDate", "currency"].forEach(function (key) {
+          var e2 = document.getElementById("mf_" + key);
+          if (e2) keep[key] = e2.value;
+        });
+        closeModal();
+        open(k);
+        Object.keys(keep).forEach(function (key) {
+          var e2 = document.getElementById("mf_" + key);
+          if (e2 && keep[key]) e2.value = keep[key];
+        });
+      }
+      open(kind);
     },
 
     "recur-edit": function (id) {
@@ -3634,7 +3710,7 @@
           { key: "type", label: "Type", type: "select", options: ["expense", "income"], value: r.type },
           { key: "amount", label: "Amount", type: "number", value: r.amount, min: 0 },
           { key: "category", label: "Category", type: "select", catKind: "auto",
-            options: catOptions("expense").concat(catOptions("income")), value: r.category },
+            options: catOptions(r.type === "income" ? "income" : "expense"), value: r.category },
           { key: "account", label: "Account", type: "select", options: accountOptions(), value: r.accountId },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: r.frequency },
           { key: "nextDate", label: "Next due", type: "date", value: r.nextDate }
@@ -3665,8 +3741,11 @@
     "recur-pay": function (id) {
       var r = state.recurring.filter(function (x) { return x.id === id; })[0];
       if (!r) return;
+      // Never file a future date. Logging early means it happened today;
+      // logging late keeps the day it was actually due.
+      var loggedDate = r.nextDate > today() ? today() : r.nextDate;
       var tx = {
-        id: uid(), date: r.nextDate, desc: r.name, type: r.type,
+        id: uid(), date: loggedDate, desc: r.name, type: r.type,
         category: r.category, accountId: r.accountId, amount: num(r.amount),
         currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
       };
