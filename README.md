@@ -8,7 +8,7 @@ no account, no server, nothing sent anywhere.
 | App | What it does | Data key |
 |---|---|---|
 | [Daybook](./daybook/) | Tasks, today's focus, habit streaks | `daybook.v2` |
-| [Coffer](./coffer/) | Budgets, goals, debts, plain-text ledger | `coffer.v2` |
+| [Coffer](./coffer/) | Ledger, budgets, plans, goals, debts | `coffer.v2` |
 | [Kitchen](./kitchen/) | Weekly meal plan, one merged shopping list | `kitchen.v1` |
 | [Timesheet](./timesheet/) | Hours per client, then invoice them | `timesheet.v1` |
 | [Bustan](./garden/) | Plants, watering by real weather, seasonal almanac | `bustan.v1` |
@@ -41,7 +41,14 @@ plain text you can write in Word or a notes app; it is documented in
 [`coffer/PLAN-FORMAT.md`](./coffer/PLAN-FORMAT.md) and inside the import dialog
 itself. Nothing is applied until a preview has shown every line, and a line
 whose currency, account or date cannot be resolved blocks the import rather than
-being guessed at.
+being guessed at. To have an AI write one for you, paste
+[`coffer/PLAN-PROMPT.md`](./coffer/PLAN-PROMPT.md) into it.
+
+Coffer is organised as six tabs, one question each: **Today** (log something,
+and see where the day and month are going) · **Ledger** (what happened) ·
+**Plan** (what you intend — budgets, bills, income, goals and the plan itself) ·
+**Worth** (accounts, pockets, debts, net worth) · **Insights** (patterns across
+the whole ledger) · **Settings**.
 
 ## Bustan
 

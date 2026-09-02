@@ -21,6 +21,14 @@ in the same commit that ships the change, so it cannot drift from the code.
 - **Financial plans**: write a year as text, import it, and score real spending
   against it on the Plan tab. See `coffer/PLAN-FORMAT.md`.
 - Self-updating service worker, and a build marker in Settings.
+- **Six tabs instead of eight**, each answering one question: Today (log and
+  right now) · Ledger (what happened) · Plan (what you intend — budgets, bills,
+  income, goals and the imported plan, on sub-tabs) · Worth (accounts, pockets,
+  debts, net worth) · Insights (patterns) · Settings. Overview's seven stacked
+  blocks are gone, Goals and Debts no longer own near-empty tabs, and the
+  cashflow chart that rendered on two tabs now renders on one.
+- A written prompt (`coffer/PLAN-PROMPT.md`) that makes any AI emit a plan file
+  Coffer will accept.
 
 ### Next
 - **Split transactions** — one shop trip across two categories.
@@ -28,6 +36,7 @@ in the same commit that ships the change, so it cannot drift from the code.
   hold different currencies.
 - **Latching save warning** — a failed save currently only toasts once.
 - **Search by amount** in the ledger.
+- **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Budget rollover** — carry an underspend into next month.
 - **Self-filling goals** — a goal that fills from transactions in a category
   instead of being topped up by hand.

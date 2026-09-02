@@ -194,6 +194,39 @@
   .page-head p { margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--dim); max-width: 58ch; }
 
   /* month stepper */
+  /* Second-level navigation inside one tab. Scrolls sideways instead of
+     wrapping, so a narrow phone keeps it on one line. */
+  /* A row whose detail line is too long to sit beside its buttons: name and
+     figure on one line, everything else on the next, so the text gets the
+     full width instead of a two-word column. */
+  .row.stacked { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+  .row.stacked .stack-top { display: flex; align-items: baseline; gap: 0.6rem; }
+  .row.stacked .stack-top .row-title { flex: 1; min-width: 0; }
+  .row.stacked .stack-foot { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .row.stacked .stack-foot .row-sub { flex: 1 0 100%; }
+  .row.stacked .stack-foot .pill { margin-left: auto; }
+  .row.stacked .stack-foot .pill ~ .btn,
+  .row.stacked .stack-foot .pill ~ .ibtn { margin-left: 0; }
+  /* no pill on this row: the first button takes over pushing the group right */
+  .row.stacked .stack-foot > .btn:first-of-type { margin-left: auto; }
+  .row.stacked .stack-foot > .pill ~ .btn:first-of-type { margin-left: 0; }
+
+  .subnav {
+    display: flex; gap: 0.25rem; margin: 0.9rem 0 0;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid var(--rule); padding-bottom: 0.5rem;
+  }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subnav button {
+    flex: none; padding: 0.35rem 0.7rem; border-radius: 999px;
+    font-size: 0.84rem; font-weight: 600; color: var(--dim);
+    white-space: nowrap; border: 1px solid transparent;
+  }
+  .subnav button:hover { color: var(--ink); background: var(--raised); }
+  .subnav button.on {
+    color: var(--ink); background: var(--raised); border-color: var(--rule-mid);
+  }
+
   .stepper { display: flex; align-items: center; gap: 0.15rem; }
   .stepper button {
     width: 32px; height: 32px; border-radius: 6px;
@@ -671,7 +704,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02e";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-02f";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -683,13 +716,13 @@
     income: ["Salary", "Freelance", "Investment", "Gift", "Other income"]
   };
 
+  // Six tabs, one question each: what is happening now, what happened, what I
+  // intend, what I hold and owe, what I keep missing, and how it is set up.
   var TABS = [
-    { id: "overview", label: "Overview", ico: "◈" },
+    { id: "today", label: "Today", ico: "◈" },
     { id: "ledger", label: "Ledger", ico: "≡" },
-    { id: "budgets", label: "Budgets", ico: "◫" },
-    { id: "goals", label: "Goals", ico: "◎" },
     { id: "plan", label: "Plan", ico: "◇" },
-    { id: "debts", label: "Debts", ico: "▽" },
+    { id: "worth", label: "Worth", ico: "◆" },
     { id: "insights", label: "Insights", ico: "◐" },
     { id: "settings", label: "Settings", ico: "⚙" }
   ];
@@ -867,10 +900,17 @@
   }
 
   var state = load();
-  var view = "overview";
+  var view = "today";
   var viewMonth = thisMonth();
   var filters = { text: "", type: "all", category: "all", account: "all", from: "", to: "" };
   var debtStrategy = "avalanche";
+  // which group of the Plan tab is showing; an imported plan opens on its own
+  // scoring, otherwise the budgets you are most likely to be setting up
+  var planTab = null;
+  function currentPlanTab() {
+    if (planTab) return planTab;
+    return state.plan ? "plan" : "budgets";
+  }
   var LEDGER_PAGE = 60;
   var ledgerLimit = LEDGER_PAGE;
 
@@ -2932,15 +2972,14 @@
      OVERVIEW
      ============================================================ */
 
-  function renderOverview() {
-    if (!state.accounts.length && !state.transactions.length) {
-      return pageHead("Overview", "Your money at a glance — balances, cashflow, and what needs attention.") + firstRunCard();
-    }
+  /* The old Overview held seven blocks at once — quick-add, net worth, today,
+     four tiles, two charts, five insights, then accounts and bills — with the
+     thing checked most often sitting last. It is broken up here into pieces
+     the tabs compose, so each screen answers one question instead of all of
+     them. The markup inside each piece is unchanged. */
 
+  function worthHero() {
     var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
-    var cur = monthSummary(viewMonth), prev = monthSummary(monthShift(viewMonth, -1));
-
-    // 12-month balance history, derived by unwinding transactions
     var histMonths = dataWindow(12, viewMonth);
     var histPoints = histMonths.map(function (mk) {
       var v = totalAssets(lastDayOf(mk));
@@ -2948,14 +2987,8 @@
     });
     var monthStartAssets = totalAssets(lastDayOf(monthShift(viewMonth, -1)));
     var assetsNow = totalAssets(viewMonth === thisMonth() ? null : lastDayOf(viewMonth));
+    var html = "";
 
-    var html = pageHead("Overview", null, monthStepper());
-
-    /* quick entry sits first — it is the thing used most often */
-    var qa = quickAddCard();
-    if (qa) html += qa + '<div style="height:1rem"></div>';
-
-    /* hero */
     html += '<div class="hero"><div class="hero-left">' +
       '<span class="label">Net worth</span>' +
       '<div class="hero-fig">' + fmt(net) + "</div>" +
@@ -2977,7 +3010,13 @@
       '<span class="hint">' + monthName(histMonths[histMonths.length - 1], true) + "</span></div>" +
       "</div></div>";
 
-    /* today */
+    return html;
+  }
+
+  function todayCard() {
+    var t0 = today();
+    var html = "";
+
     var t0 = today();
     var todayTx = state.transactions.filter(function (t) { return t.date === t0; });
     var todayOut = todayTx.reduce(function (n, t) { return t.type === "expense" ? n + txBase(t) : n; }, 0);
@@ -3015,7 +3054,13 @@
         : "") +
       "</div></div>";
 
-    /* stat tiles */
+    return html;
+  }
+
+  function monthTilesCard() {
+    var cur = monthSummary(viewMonth), prev = monthSummary(monthShift(viewMonth, -1));
+    var html = "";
+
     var rateTxt = cur.rate == null ? "—" : Math.round(cur.rate * 100) + "%";
     var sparkIn = dataWindow(6, viewMonth).map(function (mk) {
       var s = monthSummary(mk);
@@ -3055,25 +3100,85 @@
       }), "var(--c4)") + "</div></div>" +
       "</div>";
 
-    /* donut + cashflow */
-    var byCat = spendByCategory(viewMonth);
-    var donut = donutChart(byCat, cur.expense);
-    html += '<div class="cols-2" style="margin-top:1rem">' +
-      '<div class="card"><div class="card-head"><h3>Where it went</h3><span class="sub">' + monthName(viewMonth, true) + "</span></div>" +
-      '<div class="card-body">' + (donut || '<p class="empty">No spending logged for ' + monthName(viewMonth, true) + " yet.</p>") + "</div></div>" +
-      '<div class="card"><div class="card-head"><h3>In and out</h3><span class="sub">last 6 months</span></div>' +
-      '<div class="card-body">' + cashflowChart(dataWindow(6, viewMonth).map(function (mk) { return monthSummary(mk); })) + "</div></div>" +
-      "</div>";
+    return html;
+  }
 
-    /* insights */
-    var notes = buildInsights(viewMonth);
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>What stands out</h3>' +
+  // Both of these used to render on Overview *and* on Insights. They belong to
+  // Insights: they are about a pattern, not about right now.
+  function whereItWentCard() {
+    var cur = monthSummary(viewMonth);
+    var donut = donutChart(spendByCategory(viewMonth), cur.expense);
+    return '<div class="card"><div class="card-head"><h3>Where it went</h3><span class="sub">' +
+      monthName(viewMonth, true) + "</span></div>" +
+      '<div class="card-body">' + (donut || '<p class="empty">No spending logged for ' +
+        monthName(viewMonth, true) + " yet.</p>") + "</div></div>";
+  }
+
+  /* ---- the six tabs ---- */
+
+  function renderToday() {
+    if (!state.accounts.length && !state.transactions.length) {
+      return pageHead("Today", "Log what you spend, and see where the month is going.") + firstRunCard();
+    }
+    var html = pageHead("Today", null, monthStepper());
+
+    // logging comes first: it is done many times a day, everything else is
+    // read occasionally
+    var qa = quickAddCard();
+    if (qa) html += qa + '<div style="height:1rem"></div>';
+
+    html += todayCard();
+    html += monthTilesCard();
+    html += '<div class="cols-2" style="margin-top:1rem">' + billsCard() +
+      '<div class="card"><div class="card-head"><h3>What stands out</h3>' +
       '<button class="btn sm quiet" data-act="go-insights">All insights →</button></div>' +
-      '<div class="card-body flush">' + notesHtml(notes.slice(0, 5), "Log a few transactions and observations will appear here.") + "</div></div>";
+      '<div class="card-body flush">' +
+      notesHtml(buildInsights(viewMonth).slice(0, 3), "Log a few transactions and observations will appear here.") +
+      "</div></div></div>";
+    return html;
+  }
 
-    /* accounts + bills */
-    html += '<div class="cols-2" style="margin-top:1rem">' + accountsCard() + billsCard() + "</div>";
+  function renderWorth() {
+    if (!state.accounts.length && !state.debts.length) {
+      return pageHead("Worth", "Everything you hold, and everything you owe.") + firstRunCard();
+    }
+    return pageHead("Worth", null, monthStepper()) +
+      worthHero() +
+      '<div style="height:1rem"></div>' +
+      accountsCard() +
+      debtsBody();
+  }
 
+  var PLAN_TABS = [
+    { id: "budgets", label: "Budgets" },
+    { id: "bills", label: "Bills" },
+    { id: "income", label: "Income" },
+    { id: "goals", label: "Goals" },
+    { id: "plan", label: "The plan" }
+  ];
+
+  function renderPlanTab() {
+    var sub = currentPlanTab();
+    var blurb = {
+      budgets: "Monthly limits per category. The marker on each bar shows how far through the month you are — " +
+        "a bar past its marker is running hot.",
+      bills: "What you have committed to paying, and what it costs a month.",
+      income: "What arrives on a cycle. It is what your committed bills are measured against.",
+      goals: "What you're saving toward, and whether your current pace gets you there.",
+      plan: "A written plan, scored against what actually happened."
+    }[sub];
+
+    var right = sub === "goals" ? '<button class="btn primary" data-act="goal-add">Add a goal</button>'
+      : sub === "plan" ? "" : monthStepper();
+
+    var html = pageHead("Plan", blurb, right) +
+      subNav("plan-tab", PLAN_TABS, sub);
+
+    if (sub === "budgets") html += budgetsBody();
+    else if (sub === "bills") html += billsBody();
+    else if (sub === "income") html += incomeBody();
+    else if (sub === "goals") html += goalsBody();
+    else html += planBody();
     return html;
   }
 
@@ -3230,7 +3335,7 @@
     // The two recurring cards live on Budgets, which is not where anyone looks
     // for their salary — give this card a way through to them.
     return '<div class="card"><div class="card-head"><h3>Due soon</h3>' +
-      '<button class="btn sm" data-tab="budgets">Bills &amp; income</button>' +
+      '<button class="btn sm" data-act="plan-tab" data-id="bills">Manage bills</button>' +
       '<span class="sub">' + (load.expense > 0 || load.income > 0
         ? [load.expense > 0 ? fmt(load.expense, { round: true }) + "/mo out" : "",
            load.income > 0 ? fmt(load.income, { round: true }) + "/mo in" : ""].filter(Boolean).join(" · ")
@@ -3403,16 +3508,19 @@
      BUDGETS (+ recurring commitments)
      ============================================================ */
 
-  function renderBudgets() {
+  /* Budgets, bills and regular income were one screen. They are three
+     separate answers to "what do I intend", so each is now its own body that
+     the Plan tab shows one at a time. The markup is unchanged — only who
+     calls it. */
+
+  function budgetsBody() {
     var rows = budgetRows(viewMonth);
     var progress = monthProgress(viewMonth);
     var totalLimit = rows.reduce(function (s, b) { return s + b.limit; }, 0);
     var totalSpent = rows.reduce(function (s, b) { return s + b.spent; }, 0);
     var cur = monthSummary(viewMonth);
     var unbudgeted = cur.expense - totalSpent;
-
-    var html = pageHead("Budgets", "Monthly limits per category. The marker on each bar shows how far through the month you are — " +
-      "a bar past its marker is running hot.", monthStepper());
+    var html = "";
 
     html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
       '<div class="tile"><span class="label">Budgeted</span><div class="tile-fig">' + fmt(totalLimit, { round: true }) + "</div>" +
@@ -3456,55 +3564,59 @@
     }
     html += "</div></div>";
 
-    /* recurring — split in two, because a bill and a wage are not the same
-       kind of number. A bill is a commitment that eats what is safe to spend;
-       income is the thing it is measured against. One array underneath, so
-       every existing backup still loads untouched. */
+    return html;
+  }
+
+  /* recurring — split in two, because a bill and a wage are not the same
+     kind of number. A bill is a commitment that eats what is safe to spend;
+     income is the thing it is measured against. One array underneath, so
+     every existing backup still loads untouched. */
+
+  function recurRow(r) {
+    var d = daysUntil(r.nextDate);
+    var tone = d < 0 ? "bad" : d <= 3 ? "warn" : "mute";
+    var when = d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "due today" : "in " + d + "d";
+    var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
+    return '<div class="row stacked">' +
+      '<div class="stack-top">' +
+      '<span class="row-title">' + esc(r.name) + "</span>" +
+      '<span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
+      (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
+      (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
+      "</div>" +
+      '<div class="stack-foot">' +
+      '<span class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) +
+      (r.frequency !== "monthly" ? " (" + fmt(permo, { round: true }) + "/mo)" : "") +
+      " · " + esc(accountName(r.accountId)) + "</span>" +
+      '<span class="pill ' + tone + '">' + when + "</span>" +
+      '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
+      '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit" title="Edit">✎</button>' +
+      '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete" title="Delete">✕</button>' +
+      "</div></div>";
+  }
+  function byDate(a, b) { return a.nextDate.localeCompare(b.nextDate); }
+
+  function recurCard(kind, title, blurb, figure, pillClass) {
+    var list = state.recurring.filter(function (r) {
+      return (kind === "income" ? r.type === "income" : r.type !== "income");
+    }).sort(byDate);
+    return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>' + esc(title) + "</h3>" +
+      '<div class="btn-row">' +
+      (figure > 0 ? '<span class="pill ' + pillClass + '">' + fmt(figure, { round: true }) + "/mo</span>" : "") +
+      '<button class="btn sm primary" data-act="recur-add" data-kind="' + kind + '">Add</button>' +
+      "</div></div><div class=\"card-body flush\">" +
+      (list.length
+        ? '<div class="rows">' + list.map(recurRow).join("") + "</div>"
+        : '<p class="empty">' + blurb + "</p>") +
+      "</div></div>";
+  }
+
+
+  function billsBody() {
     var load = recurringMonthlyLoad();
-
-    function recurRow(r) {
-      var d = daysUntil(r.nextDate);
-      var tone = d < 0 ? "bad" : d <= 3 ? "warn" : "mute";
-      var when = d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "due today" : "in " + d + "d";
-      var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
-      return '<div class="row"><div class="row-main">' +
-        '<div class="row-title">' + esc(r.name) + "</div>" +
-        '<div class="row-sub">' + esc(r.category) + " · " + esc(r.frequency) +
-        (r.frequency !== "monthly" ? " (" + fmt(permo, { round: true }) + "/mo)" : "") +
-        " · " + esc(accountName(r.accountId)) + " · next " + esc(r.nextDate) + "</div></div>" +
-        '<div class="row-end"><span class="row-fig ' + (r.type === "income" ? "gain" : "") + '">' +
-        (r.type === "income" ? "+" : "−") + fmt(toBase(r.amount, r.currency, r.rate)).replace("-", "") +
-        (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") + "</span>" +
-        '<span class="pill ' + tone + '">' + when + "</span>" +
-        '<button class="btn sm" data-act="recur-pay" data-id="' + r.id + '">Log</button>' +
-        '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit" title="Edit">✎</button>' +
-        '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete" title="Delete">✕</button>' +
-        "</div></div>";
-    }
-    function byDate(a, b) { return a.nextDate.localeCompare(b.nextDate); }
-
-    function recurCard(kind, title, blurb, figure, pillClass) {
-      var list = state.recurring.filter(function (r) {
-        return (kind === "income" ? r.type === "income" : r.type !== "income");
-      }).sort(byDate);
-      return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>' + esc(title) + "</h3>" +
-        '<div class="btn-row">' +
-        (figure > 0 ? '<span class="pill ' + pillClass + '">' + fmt(figure, { round: true }) + "/mo</span>" : "") +
-        '<button class="btn sm primary" data-act="recur-add" data-kind="' + kind + '">Add</button>' +
-        "</div></div><div class=\"card-body flush\">" +
-        (list.length
-          ? '<div class="rows">' + list.map(recurRow).join("") + "</div>"
-          : '<p class="empty">' + blurb + "</p>") +
-        "</div></div>";
-    }
-
-    html += recurCard("expense", "Bills and subscriptions",
+    var html = recurCard("expense", "Bills and subscriptions",
       "Nothing scheduled. <strong>Add rent, subscriptions and bills</strong> — Coffer counts the monthly cost, " +
       "warns you before each is due, and logs it to the ledger when you mark it paid.", load.expense, "mute");
-
-    html += recurCard("income", "Regular income",
-      "Nothing scheduled. <strong>Add your salary or anything else that arrives on a cycle</strong> — it is what " +
-      "your committed bills are measured against.", load.income, "ok");
 
     if (load.expense > 0 && load.income > 0) {
       var share = load.expense / load.income;
@@ -3513,8 +3625,14 @@
         fmt(load.expense, { round: true }) + " out against " + fmt(load.income, { round: true }) + " in, " +
         "leaving " + fmt(load.income - load.expense, { round: true }) + " a month before anything else.</p>";
     }
-
     return html;
+  }
+
+  function incomeBody() {
+    var load = recurringMonthlyLoad();
+    return recurCard("income", "Regular income",
+      "Nothing scheduled. <strong>Add your salary or anything else that arrives on a cycle</strong> — it is what " +
+      "your committed bills are measured against.", load.income, "ok");
   }
 
   /* ============================================================
@@ -3542,12 +3660,11 @@
     return (plan.lines || []).filter(function (l) { return l.section === sec; });
   }
 
-  function renderPlan() {
+  function planBody() {
     var plan = state.plan;
 
     if (!plan) {
-      return pageHead("Plan", "What you meant to do, kept next to what you actually did.") +
-        '<div class="card"><div class="card-body"><p class="empty">' +
+      return '<div class="card" style="margin-top:1rem"><div class="card-body"><p class="empty">' +
         "No plan yet. <strong>Write your year down once</strong> — the budgets you want to hold to, the income you " +
         "expect, the commitments you have to cover and what you are saving toward — and Coffer will set it all up " +
         "and then show you, month by month, where reality parted from it." +
@@ -3594,12 +3711,13 @@
     else if (gap > 0) verdict = "<b>" + fmt(gap, { round: true }) + " better than planned</b> so far this month.";
     else verdict = "<b>" + fmt(-gap, { round: true }) + " behind plan</b> so far this month.";
 
-    var html = pageHead(esc(plan.name),
-      (plan.from ? "Covers " + esc(plan.from) + (plan.to ? " to " + esc(plan.to) : "") + ". " : "") +
-      "Imported " + esc(plan.importedAt) + ". Figures were converted at the rates set that day and do not move.",
-      monthStepper());
+    var html = '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>' + esc(plan.name) + "</h3>" +
+      '<span class="sub">' + (plan.from ? "covers " + esc(plan.from) + (plan.to ? " to " + esc(plan.to) : "") + " · " : "") +
+      "imported " + esc(plan.importedAt) + "</span>" + monthStepper() + "</div>" +
+      '<div class="card-body"><p class="hint">Figures were converted at the rates set on the day the plan was ' +
+      "imported and do not move.</p></div></div>";
 
-    html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
+    html += '<div class="tiles" style="margin-top:1rem" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
       '<div class="tile"><span class="label">Planned to keep</span><div class="tile-fig">' +
       fmt(plannedKeep, { round: true }) + "</div>" +
       '<div class="tile-foot">' + fmt(plannedIn, { round: true }) + " in, " + fmt(plannedOut, { round: true }) + " out</div></div>" +
@@ -3713,10 +3831,9 @@
     return out.join("\n") + "\n";
   }
 
-  function renderGoals() {
+  function goalsBody() {
     var pace = avgMonthlySaving(3);
-    var html = pageHead("Goals", "What you're saving toward, and whether your current pace gets you there.",
-      '<button class="btn primary" data-act="goal-add">Add a goal</button>');
+    var html = "";
 
     if (!state.goals.length) {
       return html + '<div class="card"><div class="card-body"><p class="empty">' +
@@ -3782,16 +3899,24 @@
      DEBTS
      ============================================================ */
 
-  function renderDebts() {
-    var html = pageHead("Debts", "What you owe, and the cheapest order to clear it.",
-      '<button class="btn primary" data-act="debt-add">Add a debt</button>');
-
+  function debtsBody() {
+    // Debts sit under Worth now, alongside accounts: both are positions, and
+    // net worth is one minus the other. When there are none, this collapses to
+    // a single quiet card rather than the empty tab it used to be.
     if (!state.debts.length) {
-      return html + '<div class="card"><div class="card-body"><p class="empty">' +
-        "Nothing tracked here — <strong>skip this screen if you're debt-free</strong>. Otherwise add each balance with its APR " +
+      return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Debts</h3>' +
+        '<button class="btn sm primary" data-act="debt-add">Add a debt</button></div>' +
+        '<div class="card-body"><p class="empty">' +
+        "Nothing tracked here — <strong>skip this if you're debt-free</strong>. Otherwise add each balance with its APR " +
         "and minimum payment, and Coffer will compare payoff strategies and show what the interest is really costing you." +
-        '</p><button class="btn primary" data-act="debt-add">Add a debt</button></div></div>';
+        "</p></div></div>";
     }
+
+    // Under Worth these tiles arrive below the accounts card, so they need to
+    // say what they are counting.
+    var html = '<div class="grp-head" style="margin-top:1.4rem"><span class="grp-name">Debts</span>' +
+      '<span class="grp-sub">' + state.debts.length + (state.debts.length === 1 ? " balance" : " balances") + "</span>" +
+      '<span class="grp-fig loss">\u2212' + fmt(totalDebt()) + "</span></div>";
 
     var total = totalDebt();
     var monthlyInterest = state.debts.reduce(function (s, d) { return s + num(d.balance) * num(d.rate) / 100 / 12; }, 0);
@@ -3861,16 +3986,20 @@
 
     /* balances */
     var sorted = state.debts.slice().sort(function (a, b) { return num(b.rate) - num(a.rate); });
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Balances</h3>' +
-      '<span class="sub">highest rate first</span></div><div class="card-body flush"><div class="rows">' +
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>What you owe</h3>' +
+      '<span class="sub">highest rate first</span>' +
+      '<button class="btn sm primary" data-act="debt-add">Add a debt</button></div>' +
+      '<div class="card-body flush"><div class="rows">' +
       sorted.map(function (d) {
         var mi = num(d.balance) * num(d.rate) / 100 / 12;
         var covers = num(d.minPayment) > mi;
-        return '<div class="row"><div class="row-main">' +
-          '<div class="row-title">' + esc(d.name) + "</div>" +
-          '<div class="row-sub">' + num(d.rate).toFixed(2) + "% APR · min " + fmt(d.minPayment, { round: true }) +
-          "/mo · " + fmt(mi) + " interest this month" + (covers ? "" : " — minimum doesn't cover it") + "</div></div>" +
-          '<div class="row-end"><span class="row-fig loss">' + fmt(d.balance) + "</span>" +
+        return '<div class="row stacked">' +
+          '<div class="stack-top">' +
+          '<span class="row-title">' + esc(d.name) + "</span>" +
+          '<span class="row-fig loss">' + fmt(d.balance) + "</span></div>" +
+          '<div class="stack-foot">' +
+          '<span class="row-sub">' + num(d.rate).toFixed(2) + "% APR · min " + fmt(d.minPayment, { round: true }) +
+          "/mo · " + fmt(mi) + " interest this month" + (covers ? "" : " — minimum doesn't cover it") + "</span>" +
           (covers ? "" : '<span class="pill bad">growing</span>') +
           '<button class="btn sm" data-act="debt-pay" data-id="' + d.id + '">Log payment</button>' +
           '<button class="ibtn" data-act="debt-edit" data-id="' + d.id + '" aria-label="Edit" title="Edit">✎</button>' +
@@ -3887,6 +4016,7 @@
 
   function renderInsights() {
     var html = pageHead("Insights", "Patterns across your whole ledger, not just this month.", monthStepper());
+
 
     if (state.transactions.length < 2) {
       return html + '<div class="card"><div class="card-body"><p class="empty">' +
@@ -3924,12 +4054,16 @@
     });
 
     html += '<div class="cols-2" style="margin-top:1rem">' +
+      whereItWentCard() +
       '<div class="card"><div class="card-head"><h3>Savings rate</h3><span class="sub">share of income kept, 12 months</span></div>' +
       '<div class="card-body">' + areaChart(ratePts, { cssHeight: 120, height: 40, color: "var(--c4)", aria: "Savings rate over 12 months" }) +
       axisRow([ratePts[0], ratePts[ratePts.length - 1]]) + "</div></div>" +
-      '<div class="card"><div class="card-head"><h3>In and out</h3><span class="sub">12 months</span></div>' +
-      '<div class="card-body">' + cashflowChart(dataWindow(12, viewMonth).map(function (mk) { return monthSummary(mk); })) + "</div></div>" +
       "</div>";
+
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>In and out</h3>' +
+      '<span class="sub">12 months</span></div>' +
+      '<div class="card-body">' + cashflowChart(dataWindow(12, viewMonth).map(function (mk) { return monthSummary(mk); })) +
+      "</div></div>";
 
     /* category league table */
     var totals = {}, monthsCounted = {};
@@ -4355,6 +4489,7 @@
 
     /* ---- navigation ---- */
     "go-insights": function () { view = "insights"; render(); },
+    "plan-tab": function (id) { planTab = id; view = "plan"; render(); },
     "month-prev": function () { viewMonth = monthShift(viewMonth, -1); render(); },
     "month-next": function () { if (viewMonth < thisMonth()) { viewMonth = monthShift(viewMonth, 1); render(); } },
     "month-today": function () { viewMonth = thisMonth(); render(); },
@@ -5985,6 +6120,16 @@
 
   var viewEl = document.getElementById("view");
 
+  // A second, lighter level of navigation, used where one tab holds several
+  // card groups that answer the same question. Scrolls sideways rather than
+  // wrapping, so it stays one line on a narrow phone.
+  function subNav(act, tabs, current) {
+    return '<div class="subnav">' + tabs.map(function (t) {
+      return '<button data-act="' + act + '" data-id="' + t.id + '"' +
+        (t.id === current ? ' class="on" aria-current="page"' : "") + ">" + esc(t.label) + "</button>";
+    }).join("") + "</div>";
+  }
+
   function renderNav() {
     document.getElementById("nav").innerHTML = TABS.map(function (t) {
       return '<button class="tab" data-tab="' + t.id + '"' + (t.id === view ? ' aria-current="page"' : "") + ">" +
@@ -5996,12 +6141,10 @@
     resetMemo();
     renderNav();
     var html;
-    if (view === "overview") html = renderOverview();
+    if (view === "today") html = renderToday();
     else if (view === "ledger") html = renderLedger();
-    else if (view === "budgets") html = renderBudgets();
-    else if (view === "goals") html = renderGoals();
-    else if (view === "plan") html = renderPlan();
-    else if (view === "debts") html = renderDebts();
+    else if (view === "plan") html = renderPlanTab();
+    else if (view === "worth") html = renderWorth();
     else if (view === "insights") html = renderInsights();
     else html = renderSettings();
     viewEl.innerHTML = html;

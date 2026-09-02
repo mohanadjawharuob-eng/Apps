@@ -35,6 +35,13 @@ no package.json. What is in the repo is what runs.
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure.
 
+## Coffer's shape
+
+Six tabs, one question each: Today, Ledger, Plan, Worth, Insights, Settings. A
+tab that grows past about three cards has stopped answering one question — split
+it, or give it a `subNav` the way Plan does. Overview was allowed to reach seven
+blocks and became the thing everybody scrolled past.
+
 ## Testing
 
 Playwright against a local server, driving the real app:
