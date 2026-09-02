@@ -1,3 +1,4 @@
+<meta charset="utf-8" />
 <title>Coffer — Personal Finance, Fully Local</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#eef1ec" media="(prefers-color-scheme: light)" />
@@ -670,7 +671,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02d";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-02e";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -687,6 +688,7 @@
     { id: "ledger", label: "Ledger", ico: "≡" },
     { id: "budgets", label: "Budgets", ico: "◫" },
     { id: "goals", label: "Goals", ico: "◎" },
+    { id: "plan", label: "Plan", ico: "◇" },
     { id: "debts", label: "Debts", ico: "▽" },
     { id: "insights", label: "Insights", ico: "◐" },
     { id: "settings", label: "Settings", ico: "⚙" }
@@ -768,6 +770,9 @@
       debts: [],
       recurring: [],
       quick: [],
+      // What you meant to do, kept next to what you actually did. null until a
+      // plan is imported; see parsePlanText for its shape.
+      plan: null,
       extraDebtPayment: 0
     };
   }
@@ -845,6 +850,9 @@
         });
         if (p.budgets && typeof p.budgets === "object") s.budgets = p.budgets;
         if (p.photoIndex && typeof p.photoIndex === "object") s.photoIndex = p.photoIndex;
+        // absent from every backup written before plans existed, which is fine:
+        // no plan is a valid state, so there is nothing to migrate
+        if (p.plan && typeof p.plan === "object") s.plan = p.plan;
         s.extraDebtPayment = num(p.extraDebtPayment);
         return s;
       }
@@ -1871,6 +1879,645 @@
   }
 
   // The whole pipeline. Returns null when there's nothing usable yet.
+
+  /* ============================================================
+     Financial plans
+
+     A plan is what you meant to do. The app already records what you
+     actually did, so the only new idea here is keeping the intention
+     next to the outcome and scoring one against the other.
+
+     The parsing rule throughout: be strict wherever a mistake would
+     cost money, and forgiving only where it cannot. A parser that
+     guesses at a currency or an account and gets it wrong is worse
+     than one that refuses and says why — so every guess is either
+     shown in the preview before it is applied, or is not made.
+     ============================================================ */
+
+  var PLAN_VERSION = 1;
+
+  var PLAN_SECTIONS = {
+    budget: "budgets", budgets: "budgets",
+    income: "income", incomes: "income", earnings: "income",
+    commitment: "commitments", commitments: "commitments",
+    bill: "commitments", bills: "commitments", expense: "commitments", expenses: "commitments",
+    goal: "goals", goals: "goals"
+  };
+  var PLAN_SECTION_LABEL = {
+    budgets: "Budgets", income: "Income", commitments: "Commitments", goals: "Goals"
+  };
+
+  // Anything that is a real frequency but not one Coffer keeps. Naming them
+  // beats "unknown frequency", because the user wrote something reasonable.
+  var FREQ_ALIAS = { annually: "yearly", annual: "yearly", yearly: "yearly", monthly: "monthly", weekly: "weekly" };
+  var FREQ_UNSUPPORTED = ["fortnightly", "biweekly", "quarterly", "daily", "hourly", "bimonthly"];
+
+  function planSlug(s) {
+    return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+  function planKeyFor(section, name) { return section + "|" + planSlug(name); }
+
+  function isIsoDate(s) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    var d = new Date(s + "T00:00:00");
+    return !isNaN(d.getTime()) && iso(d) === s;
+  }
+
+  /* ---- syntax: one written line to raw fields, no state consulted ---- */
+
+  function planLineToRaw(text, lineNo) {
+    var raw = { line: lineNo, text: text, section: null };
+    var body = text.replace(/^\s*[-*•]\s*/, "").trim();
+
+    var colon = body.indexOf(":");
+    if (colon < 0) {
+      raw.problem = "Write it as “Name: amount” — there is no colon on this line.";
+      return raw;
+    }
+    raw.name = body.slice(0, colon).trim();
+    var rest = " " + body.slice(colon + 1).trim() + " ";
+    if (!raw.name) { raw.problem = "This line has no name before the colon."; return raw; }
+
+    // 1. date. "from" introduces both a date and an account, so it only counts
+    //    as a date when an actual date follows it.
+    var dm = rest.match(/\s(?:by|from|on|next|starting|due)\s+(\d{4}-\d{2}-\d{2})\s/i);
+    if (dm) { raw.date = dm[1]; rest = rest.replace(dm[0], " "); }
+    else {
+      var bare = rest.match(/\s(\d{4}-\d{2}-\d{2})\s/);
+      if (bare) { raw.date = bare[1]; rest = rest.replace(bare[0], " "); }
+    }
+    // A written-out date is the single most likely way to be silently wrong,
+    // so it is caught and named rather than ignored as noise.
+    var wordy = rest.match(/\s(?:by|due|starting)\s+((?:next\s+)?[A-Za-z]{3,}[^,]*)/i);
+    if (!raw.date && wordy) {
+      raw.problem = "“" + wordy[1].trim() + "” is not a date I can read. Write it as 2027-02-28.";
+      return raw;
+    }
+
+    // 2. frequency
+    var fm = rest.match(/\s(annually|annual|yearly|monthly|weekly|fortnightly|biweekly|quarterly|daily|hourly|bimonthly)\s/i);
+    if (fm) {
+      var word = fm[1].toLowerCase();
+      if (FREQ_UNSUPPORTED.indexOf(word) >= 0) {
+        raw.problem = "Coffer only keeps weekly, monthly and yearly — it cannot do " + word + ".";
+        return raw;
+      }
+      raw.frequency = FREQ_ALIAS[word];
+      rest = rest.replace(fm[0], " ");
+    }
+
+    // 3. account, bounded by a comma or the end of the line
+    var am = rest.match(/\s(?:into|from|out of|in)\s+([^,]+?)\s*(?=,|$)/i);
+    if (am) { raw.account = am[1].trim(); rest = rest.replace(am[0], " "); }
+
+    // 4. the amount, taking the grouped form first so the commas inside
+    //    "45,000,000" are never mistaken for the comma before a category
+    var nm = rest.match(/(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)/);
+    if (nm) { raw.amountText = nm[1]; rest = rest.replace(nm[1], " "); }
+    else { raw.amountText = ""; raw.unreadable = rest.replace(/\s+/g, " ").trim(); }
+
+    // 5. a currency code, then whatever survives is the category
+    var cm = rest.match(/\b([A-Za-z]{3})\b/);
+    if (cm && CURRENCIES.indexOf(cm[1].toUpperCase()) >= 0) {
+      raw.currency = cm[1].toUpperCase();
+      rest = rest.replace(cm[0], " ");
+    }
+    var leftover = rest.replace(/[,$€£¥₹₪₺]/g, " ").replace(/\s+/g, " ").trim();
+    if (leftover) raw.category = leftover;
+    return raw;
+  }
+
+  function planAmount(s) {
+    var t = String(s || "").replace(/[^\d.,\-]/g, "");
+    // thousands separators only; a decimal comma would be ambiguous next to
+    // them, so it is not accepted and the number simply fails to parse
+    t = t.replace(/,/g, "");
+    if (!/^-?\d*\.?\d+$/.test(t)) return null;
+    var n = parseFloat(t);
+    return isFinite(n) ? n : null;
+  }
+
+  /* ---- the whole document ---- */
+
+  function parsePlanText(input) {
+    var out = { name: "", from: "", to: "", raws: [], problems: [] };
+    var lines = String(input || "").split(/\r?\n/);
+    var section = null;
+
+    lines.forEach(function (line, i) {
+      var no = i + 1;
+      var t = line.trim();
+      if (!t || /^(\/\/|#{1,6}\s*$)/.test(t)) return;
+
+      var h = t.match(/^#{1,6}\s*(.+)$/);
+      if (h) {
+        var title = h[1].trim();
+        var named = title.match(/^plan\s*:\s*(.+)$/i);
+        if (named) { out.name = named[1].trim(); section = null; return; }
+        var key = PLAN_SECTIONS[title.toLowerCase().replace(/[^a-z]/g, "")];
+        if (key) { section = key; return; }
+        // a heading we do not recognise is a title, not an error
+        if (!out.name) out.name = title;
+        section = null;
+        return;
+      }
+
+      var cov = t.match(/^covers?\s*:\s*(\d{4}-\d{2})\s*(?:to|–|-|until)\s*(\d{4}-\d{2})\s*$/i);
+      if (cov) { out.from = cov[1]; out.to = cov[2]; return; }
+      if (/^(name|plan)\s*:/i.test(t) && !section) { out.name = t.split(":").slice(1).join(":").trim(); return; }
+
+      if (!section) {
+        out.problems.push({ line: no, text: t,
+          problem: "This is not under a section. Put it below ## Budgets, ## Income, ## Commitments or ## Goals." });
+        return;
+      }
+      var raw = planLineToRaw(t, no);
+      raw.section = section;
+      out.raws.push(raw);
+    });
+
+    if (!out.raws.length && !out.problems.length) {
+      out.problems.push({ line: 0, text: "",
+        problem: "Nothing found. A plan needs at least one ## section with a line under it." });
+    }
+    return out;
+  }
+
+  function parsePlanJson(obj) {
+    var out = { name: obj.name || "", from: obj.from || "", to: obj.to || "", raws: [], problems: [] };
+    ["budgets", "income", "commitments", "goals"].forEach(function (sec) {
+      var list = obj[sec];
+      if (list == null) return;
+      if (!Array.isArray(list)) {
+        out.problems.push({ line: 0, text: sec, problem: "“" + sec + "” must be a list." });
+        return;
+      }
+      list.forEach(function (e, i) {
+        if (!e || typeof e !== "object") {
+          out.problems.push({ line: 0, text: sec + "[" + i + "]", problem: "Each entry must be an object." });
+          return;
+        }
+        out.raws.push({
+          line: 0, section: sec,
+          text: sec + "[" + i + "] " + (e.name || e.category || ""),
+          name: e.name || e.category || "",
+          amountText: e.amount == null ? "" : String(e.amount),
+          currency: e.currency ? String(e.currency).toUpperCase() : null,
+          frequency: e.frequency ? String(e.frequency).toLowerCase() : null,
+          account: e.account || null,
+          category: e.category || null,
+          date: e.date || e.due || e.by || e.next || null
+        });
+      });
+    });
+    if (!out.raws.length && !out.problems.length) {
+      out.problems.push({ line: 0, text: "", problem: "No budgets, income, commitments or goals in this file." });
+    }
+    return out;
+  }
+
+  function parsePlanInput(input) {
+    var t = String(input || "").trim();
+    if (!t) return { name: "", from: "", to: "", raws: [], problems: [] };
+    if (t.charAt(0) === "{") {
+      var obj;
+      try { obj = JSON.parse(t); }
+      catch (e) {
+        return { name: "", from: "", to: "", raws: [],
+          problems: [{ line: 0, text: "", problem: "That starts like JSON but is not valid JSON: " + e.message }] };
+      }
+      return parsePlanJson(obj);
+    }
+    return parsePlanText(t);
+  }
+
+  /* ---- meaning: raw fields resolved against this ledger ----------------
+     Everything that could be silently wrong is decided here, with the
+     ledger in front of it: does that account exist, is there a rate for
+     that currency, does that category need creating.
+     --------------------------------------------------------------------- */
+
+  function matchAccountRef(nameRaw) {
+    var want = String(nameRaw || "").toLowerCase().replace(/\s+/g, " ").trim();
+    if (!want) return null;
+    var hit = null;
+    state.accounts.forEach(function (a) {
+      if (hit) return;
+      if (a.name.toLowerCase().trim() === want) { hit = { ref: a.id, label: a.name, closed: !!a.closed }; return; }
+      pocketsOf(a).forEach(function (p) {
+        if (hit) return;
+        var full = (a.name + " › " + p.name).toLowerCase();
+        var alt = (a.name + " > " + p.name).toLowerCase();
+        var dash = (a.name + " - " + p.name).toLowerCase();
+        if (want === full || want === alt || want === dash) {
+          hit = { ref: acctRef(a.id, p.id), label: a.name + " › " + p.name, closed: !!a.closed };
+        }
+      });
+    });
+    return hit;
+  }
+  function accountNamesForHelp() {
+    var names = openAccounts().map(function (a) { return a.name; });
+    return names.length ? names.join(", ") : "none yet — add an account first";
+  }
+
+  function resolvePlanEntries(raws) {
+    var known = planIndex();
+    var openList = openAccounts();
+
+    return raws.map(function (r) {
+      var e = {
+        line: r.line, text: r.text, section: r.section, name: (r.name || "").trim(),
+        key: planKeyFor(r.section, r.name), problem: r.problem || null, notes: [], newCategory: null
+      };
+      if (e.problem) return e;
+      if (!e.name) { e.problem = "This entry has no name."; return e; }
+
+      // amount
+      var amt = planAmount(r.amountText);
+      if (amt == null) {
+        e.problem = (r.amountText || r.unreadable)
+          ? "“" + (r.amountText || r.unreadable) + "” is not a number I can read. Write it in digits, e.g. 400."
+          : "No amount on this line.";
+        return e;
+      }
+      if (!(amt > 0)) { e.problem = "The amount has to be above zero."; return e; }
+      e.amount = Math.round(amt * 100) / 100;
+
+      // currency, frozen at import exactly as a transaction freezes its own
+      e.currency = r.currency || baseCode();
+      if (e.currency !== baseCode() && !(num((state.settings.rates || {})[e.currency]) > 0)) {
+        e.problem = "No rate set for " + e.currency + ". Add one under Settings › Exchange rates first, " +
+          "so this is converted at a rate you chose rather than one I invented.";
+        return e;
+      }
+      e.rate = rateFor(e.currency);
+      e.baseAmount = toBase(e.amount, e.currency, e.rate);
+
+      // date
+      if (r.date) {
+        if (!isIsoDate(r.date)) { e.problem = "“" + r.date + "” is not a real date. Use YYYY-MM-DD."; return e; }
+        e.date = r.date;
+      }
+
+      if (r.section === "budgets") {
+        // a budget line's name IS its category
+        e.category = e.name;
+        if (state.categories.expense.indexOf(e.category) < 0) {
+          var near = state.categories.expense.filter(function (c) {
+            return c.toLowerCase() === e.category.toLowerCase();
+          })[0];
+          if (near) { e.category = near; e.name = near; e.key = planKeyFor("budgets", near); }
+          else { e.newCategory = { kind: "expense", name: e.category };
+                 e.notes.push("“" + e.category + "” is a new category"); }
+        }
+        if (r.frequency && r.frequency !== "monthly") e.notes.push("budgets are monthly; the frequency was ignored");
+      } else if (r.section === "goals") {
+        if (e.date && e.date < today()) e.notes.push("that date has already passed");
+      } else {
+        // income and commitments both become recurring records
+        e.type = r.section === "income" ? "income" : "expense";
+        e.frequency = r.frequency || "monthly";
+        if (FREQ.indexOf(e.frequency) < 0) { e.problem = "Frequency must be weekly, monthly or yearly."; return e; }
+
+        if (r.account) {
+          var hit = matchAccountRef(r.account);
+          if (!hit) {
+            e.problem = "No account called “" + r.account + "”. You have: " + accountNamesForHelp() + ".";
+            return e;
+          }
+          if (hit.closed) { e.problem = "“" + hit.label + "” is closed, so nothing new can be filed there."; return e; }
+          e.accountRef = hit.ref; e.accountLabel = hit.label;
+        } else if (openList.length === 1) {
+          e.accountRef = openList[0].id; e.accountLabel = openList[0].name;
+          e.notes.push("no account named, so " + openList[0].name);
+        } else if (!openList.length) {
+          e.problem = "There are no open accounts to attach this to.";
+          return e;
+        } else {
+          e.problem = "Say which account, e.g. “" +
+            (r.section === "income" ? "into " : "from ") + openList[0].name + "”.";
+          return e;
+        }
+
+        var bucket = e.type === "income" ? "income" : "expense";
+        var named = state.categories[bucket].filter(function (c) {
+          return c.toLowerCase() === String(r.category || e.name).toLowerCase();
+        })[0];
+
+        if (r.category) {
+          var match = state.categories[bucket].filter(function (c) {
+            return c.toLowerCase() === r.category.toLowerCase();
+          })[0];
+          if (match) e.category = match;
+          else {
+            e.category = String(r.category).trim();
+            e.newCategory = { kind: bucket, name: e.category };
+            e.notes.push("“" + e.category + "” is a new category");
+          }
+        } else if (named) {
+          e.category = named;
+          e.notes.push("filed under " + named + ", from its name");
+        } else {
+          var g = guessCategory(e.name, e.type);
+          e.category = g.category;
+          e.notes.push("filed under " + g.category + (g.why ? " — " + g.why : " — a guess; add “, Category” to be sure"));
+        }
+
+        e.date = e.date || today();
+      }
+
+      e.existing = known[e.key] || null;
+      e.action = e.existing ? "update" : "create";
+      return e;
+    });
+  }
+
+  // Every record this app has already created from a plan, by its plan key.
+  function planIndex() {
+    var out = {};
+    state.goals.forEach(function (g) { if (g.planKey) out[g.planKey] = { kind: "goal", id: g.id }; });
+    state.recurring.forEach(function (r) { if (r.planKey) out[r.planKey] = { kind: "recurring", id: r.id }; });
+    Object.keys(state.budgets).forEach(function (cat) {
+      out[planKeyFor("budgets", cat)] = { kind: "budget", id: cat };
+    });
+    return out;
+  }
+
+
+  var PLAN_TEMPLATE =
+    "# Plan: my year\n" +
+    "covers: 2026-09 to 2027-08\n" +
+    "\n" +
+    "## Budgets\n" +
+    "- Groceries: 400\n" +
+    "- Transport: 120\n" +
+    "\n" +
+    "## Income\n" +
+    "- Salary: 2500 monthly into ACCOUNT from 2026-09-25\n" +
+    "\n" +
+    "## Commitments\n" +
+    "- Rent: 700 monthly from ACCOUNT, Housing, from 2026-09-01\n" +
+    "\n" +
+    "## Goals\n" +
+    "- Emergency fund: 5000 by 2027-06-30\n";
+
+  function planTemplate() {
+    var a = openAccounts()[0];
+    return PLAN_TEMPLATE.replace(/ACCOUNT/g, a ? a.name : "my account");
+  }
+
+  var PLAN_FORMAT_HELP =
+    '<p class="hint">Four sections, any of them optional. One entry per line, written ' +
+    '<b>- Name: amount</b> and then whatever else applies, in any order:</p>' +
+    '<ul class="hint" style="margin:0.4rem 0 0.6rem 1.1rem;padding:0;line-height:1.7">' +
+    "<li><b>amount</b> — required. <code>400</code>, <code>45,000,000</code> and <code>$400</code> all read the same.</li>" +
+    "<li><b>currency</b> — a three-letter code after the amount. It must already have a rate under " +
+    "Settings › Exchange rates, or the line is refused rather than guessed at.</li>" +
+    "<li><b>frequency</b> — <code>weekly</code>, <code>monthly</code> or <code>yearly</code>. Monthly if you leave it out.</li>" +
+    "<li><b>account</b> — <code>into Wallet</code> for income, <code>from Wallet</code> for a commitment. " +
+    "A pocket is <code>from Bank › Cyprus</code>.</li>" +
+    "<li><b>category</b> — after a comma: <code>, Housing</code>.</li>" +
+    "<li><b>date</b> — <code>from 2026-09-01</code> or <code>by 2027-06-30</code>. Always YYYY-MM-DD; " +
+    "“next March” is refused, because a date I guess at is a date that is quietly wrong.</li>" +
+    "</ul>" +
+    '<p class="hint">A budget line\'s name is its category. Re-importing an edited plan updates the ' +
+    "same entries instead of making second copies of them, so it is safe to run twice. " +
+    "A JSON file with the same four keys works too.</p>";
+
+  function planImportDialog(existing) {
+    closeModal();
+    overlay.innerHTML = '<div class="scrim" data-scrim="1"><div class="modal" style="max-width:660px" role="dialog" aria-modal="true" aria-label="Import a plan">' +
+      '<div class="modal-head"><h3>' + (existing ? "Replace the plan" : "Import a plan") + "</h3>" +
+      "<p>Paste the plan below, or pick a .txt, .md or .json file. Nothing is changed until you have " +
+      "seen every line here and pressed Import.</p></div>" +
+      '<div class="modal-body">' +
+      '<textarea id="plText" rows="9" spellcheck="false" placeholder="' + esc(planTemplate()) + '" ' +
+      'style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.78rem;padding:0.6rem;' +
+      'border-radius:8px;border:1px solid var(--rule-mid);background:var(--surface);color:var(--ink);resize:vertical"></textarea>' +
+      '<div class="btn-row" style="margin-top:0.5rem">' +
+      '<button class="btn sm quiet" id="plFmt">Show the format</button>' +
+      '<button class="btn sm quiet" id="plFill">Paste a starting template</button></div>' +
+      '<div id="plHelp" style="display:none;margin-top:0.6rem;padding:0.7rem;border:1px solid var(--rule);border-radius:8px">' +
+      PLAN_FORMAT_HELP + "</div>" +
+      '<div id="plPreview" style="margin-top:0.8rem"></div></div>' +
+      '<div class="modal-foot"><button class="btn quiet" data-mclose="1">Cancel</button>' +
+      '<label class="btn" style="cursor:pointer">Choose a file' +
+      '<input type="file" id="plFile" accept=".json,.txt,.md,application/json,text/plain,text/markdown" style="display:none" /></label>' +
+      '<button class="btn primary" id="plGo" disabled>Import</button></div></div></div>';
+
+    var ta = document.getElementById("plText");
+    var prev = document.getElementById("plPreview");
+    var go = document.getElementById("plGo");
+    var current = null;
+
+    function paint() {
+      var parsed = parsePlanInput(ta.value);
+      var entries = resolvePlanEntries(parsed.raws);
+      var blocked = entries.filter(function (e) { return e.problem; }).length + parsed.problems.length;
+      var newCats = {};
+      entries.forEach(function (e) { if (!e.problem && e.newCategory) newCats[e.newCategory.kind + "|" + e.newCategory.name] = e.newCategory; });
+      var catList = Object.keys(newCats).map(function (k) { return newCats[k]; });
+
+      current = { parsed: parsed, entries: entries, blocked: blocked, newCats: catList };
+
+      if (!ta.value.trim()) {
+        prev.innerHTML = '<p class="hint">Nothing pasted yet.</p>';
+        go.disabled = true; go.textContent = "Import";
+        return;
+      }
+
+      var html = "";
+      if (parsed.name || parsed.from) {
+        html += '<div class="grp-head"><span class="grp-name">' + esc(parsed.name || "Untitled plan") + "</span>" +
+          '<span class="grp-sub">' + esc(parsed.from ? parsed.from + " to " + parsed.to : "no period given") + "</span></div>";
+      }
+
+      // document-level problems first: they are usually one mistake that
+      // explains several missing lines
+      if (parsed.problems.length) {
+        html += '<div class="rows">' + parsed.problems.map(function (p) {
+          return planProblemRow(p.line, p.text, p.problem);
+        }).join("") + "</div>";
+      }
+
+      ["budgets", "income", "commitments", "goals"].forEach(function (sec) {
+        var list = entries.filter(function (e) { return e.section === sec; });
+        if (!list.length) return;
+        html += '<div class="grp-head"><span class="grp-name">' + esc(PLAN_SECTION_LABEL[sec]) + "</span>" +
+          '<span class="grp-sub">' + list.length + "</span></div>";
+        html += '<div class="rows">' + list.map(planEntryRow).join("") + "</div>";
+      });
+
+      if (catList.length) {
+        html += '<label class="row" style="cursor:pointer"><input type="checkbox" id="plCats" checked ' +
+          'style="margin-right:0.6rem" /><div class="row-main"><div class="row-title" style="font-size:0.85rem">Create ' +
+          catList.length + " new " + (catList.length === 1 ? "category" : "categories") + "</div>" +
+          '<div class="row-sub">' + esc(catList.map(function (c) { return c.name; }).join(", ")) +
+          " — untick and those lines are skipped</div></div></label>";
+      }
+
+      var ok = entries.filter(function (e) { return !e.problem; });
+      var creates = ok.filter(function (e) { return e.action === "create"; }).length;
+      var updates = ok.length - creates;
+      html += '<p class="hint" style="margin-top:0.6rem">' +
+        creates + " to add, " + updates + " to update" +
+        (blocked ? ', <b style="color:var(--warn)">' + blocked + " blocked</b> — fix " +
+          (blocked === 1 ? "it" : "them") + " and this will unlock" : "") + ".</p>";
+
+      prev.innerHTML = html;
+      go.disabled = blocked > 0 || !ok.length;
+      go.textContent = blocked ? "Fix " + blocked + " first" : (ok.length ? "Import " + ok.length : "Import");
+    }
+
+    function planProblemRow(line, text, problem) {
+      return '<div class="row" style="padding:0.4rem 0">' +
+        '<span class="note-mark warn" style="width:18px;height:18px;font-size:0.65rem;flex:none">!</span>' +
+        '<div class="row-main"><div class="row-title" style="font-size:0.84rem;color:var(--faint)">' +
+        (line ? "line " + line + " · " : "") + esc(esc0(String(text).replace(/^\s*[-*•]\s*/, ""))) + "</div>" +
+        '<div class="row-sub" style="color:var(--warn)">' + esc(problem) + "</div></div></div>";
+    }
+
+    function planEntryRow(e) {
+      if (e.problem) return planProblemRow(e.line, e.text, e.problem);
+      var bits = [];
+      if (e.frequency) bits.push(e.frequency);
+      if (e.accountLabel) bits.push((e.section === "income" ? "into " : "from ") + e.accountLabel);
+      if (e.category && e.section !== "budgets") bits.push(e.category);
+      if (e.date) bits.push((e.section === "goals" ? "by " : "from ") + e.date);
+      e.notes.forEach(function (nt) { bits.push(nt); });
+      var money = isForeign(e.currency)
+        ? fmtIn(e.amount, e.currency) + " = " + fmt(e.baseAmount)
+        : fmt(e.amount);
+      return '<div class="row" style="padding:0.4rem 0">' +
+        '<span class="row-sub" style="width:3.6rem;flex:none;color:var(--' + (e.action === "create" ? "gain" : "dim") + ')">' +
+        (e.action === "create" ? "add" : "update") + "</span>" +
+        '<div class="row-main"><div class="row-title" style="font-size:0.84rem">' + esc(e.name) + "</div>" +
+        '<div class="row-sub">' + esc(bits.join(" · ")) + "</div></div>" +
+        '<span class="row-fig">' + money + "</span></div>";
+    }
+
+    ta.addEventListener("input", paint);
+    document.getElementById("plFmt").addEventListener("click", function () {
+      var h = document.getElementById("plHelp");
+      var open = h.style.display !== "none";
+      h.style.display = open ? "none" : "";
+      this.textContent = open ? "Show the format" : "Hide the format";
+    });
+    document.getElementById("plFill").addEventListener("click", function () {
+      ta.value = planTemplate(); paint(); ta.focus();
+    });
+    document.getElementById("plFile").addEventListener("change", function (ev) {
+      var file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      var r = new FileReader();
+      r.onload = function () { ta.value = r.result; paint(); };
+      r.readAsText(file);
+    });
+    overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
+    overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (ev) {
+      if (ev.target === ev.currentTarget) closeModal();
+    });
+    go.addEventListener("click", function () {
+      if (!current || current.blocked) return;
+      var box = document.getElementById("plCats");
+      closeModal();
+      applyPlan(current.parsed, current.entries, { createCategories: !box || box.checked });
+    });
+
+    paint();
+    ta.focus();
+  }
+
+  /* ---- applying it, once, undoably ---- */
+
+  function applyPlan(parsed, entries, opts) {
+    var before = JSON.parse(JSON.stringify(state));
+    var made = 0, changed = 0, skipped = 0;
+
+    var usable = entries.filter(function (e) {
+      if (e.problem) return false;
+      // untick the category box and those lines drop out rather than
+      // quietly landing in some other category
+      if (e.newCategory && !opts.createCategories) { skipped++; return false; }
+      return true;
+    });
+
+    usable.forEach(function (e) {
+      if (e.newCategory && state.categories[e.newCategory.kind].indexOf(e.newCategory.name) < 0) {
+        state.categories[e.newCategory.kind].push(e.newCategory.name);
+      }
+    });
+
+    var lines = usable.map(function (e) {
+      var recordId = null;
+
+      if (e.section === "budgets") {
+        if (state.budgets[e.category] == null) made++; else changed++;
+        state.budgets[e.category] = e.baseAmount;
+        recordId = e.category;
+
+      } else if (e.section === "goals") {
+        var g = state.goals.filter(function (x) { return x.planKey === e.key; })[0];
+        if (g) {
+          // never touch `saved` — that is real money already put aside
+          g.name = e.name; g.target = e.baseAmount; g.due = e.date || null;
+          changed++;
+        } else {
+          g = { id: uid(), name: e.name, target: e.baseAmount, saved: 0, due: e.date || null, planKey: e.key };
+          state.goals.push(g);
+          made++;
+        }
+        recordId = g.id;
+
+      } else {
+        var ref = parseRef(e.accountRef);
+        var r = state.recurring.filter(function (x) { return x.planKey === e.key; })[0];
+        if (r) {
+          r.name = e.name; r.type = e.type; r.category = e.category;
+          r.accountId = ref.accountId; r.pocketId = ref.pocketId || null;
+          r.amount = e.amount; r.currency = e.currency; r.rate = e.rate;
+          r.frequency = e.frequency;
+          // nextDate is left alone on an update: it has been advancing as the
+          // item was logged, and resetting it would re-post things already paid
+          changed++;
+        } else {
+          r = {
+            id: uid(), name: e.name, type: e.type, category: e.category,
+            accountId: ref.accountId, pocketId: ref.pocketId || null,
+            amount: e.amount, currency: e.currency, rate: e.rate,
+            frequency: e.frequency, nextDate: e.date || today(), planKey: e.key
+          };
+          state.recurring.push(r);
+          made++;
+        }
+        recordId = r.id;
+      }
+
+      return {
+        key: e.key, section: e.section, name: e.name,
+        amount: e.amount, currency: e.currency, rate: e.rate, baseAmount: e.baseAmount,
+        frequency: e.frequency || null, accountRef: e.accountRef || null, accountLabel: e.accountLabel || null,
+        category: e.category || null, date: e.date || null, recordId: recordId
+      };
+    });
+
+    state.plan = {
+      version: PLAN_VERSION,
+      id: (state.plan && state.plan.id) || uid(),
+      name: parsed.name || "Plan",
+      from: parsed.from || thisMonth(),
+      to: parsed.to || "",
+      base: baseCode(),
+      importedAt: today(),
+      lines: lines
+    };
+
+    save(); render();
+    var msg = made + " added, " + changed + " updated" + (skipped ? ", " + skipped + " skipped" : "") + ".";
+    toast(msg, function () { state = before; viewMonth = thisMonth(); });
+  }
+
   function parseEntry(raw) {
     var text = String(raw || "").trim();
     if (!text) return null;
@@ -2873,6 +3520,198 @@
   /* ============================================================
      GOALS
      ============================================================ */
+
+
+  /* ---- the plan, scored against what actually happened ---- */
+
+  // Income and commitments are matched to real transactions by category. There
+  // is no link stamped on a transaction saying which plan line it came from,
+  // and inventing one retroactively would only be right for entries logged
+  // after this feature shipped. Category is a basis you can check by hand.
+  function planActuals(mk) {
+    var got = { income: {}, expense: {} };
+    monthTx(mk).forEach(function (t) {
+      if (t.type === "transfer") return;
+      var bucket = t.type === "income" ? "income" : "expense";
+      got[bucket][t.category] = (got[bucket][t.category] || 0) + txBase(t);
+    });
+    return got;
+  }
+
+  function planSection(plan, sec) {
+    return (plan.lines || []).filter(function (l) { return l.section === sec; });
+  }
+
+  function renderPlan() {
+    var plan = state.plan;
+
+    if (!plan) {
+      return pageHead("Plan", "What you meant to do, kept next to what you actually did.") +
+        '<div class="card"><div class="card-body"><p class="empty">' +
+        "No plan yet. <strong>Write your year down once</strong> — the budgets you want to hold to, the income you " +
+        "expect, the commitments you have to cover and what you are saving toward — and Coffer will set it all up " +
+        "and then show you, month by month, where reality parted from it." +
+        "</p><button class=\"btn primary\" data-act=\"plan-import\">Import a plan</button></div></div>" +
+        '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>How to write one</h3></div>' +
+        '<div class="card-body">' + PLAN_FORMAT_HELP +
+        '<pre style="margin-top:0.6rem;padding:0.7rem;border:1px solid var(--rule);border-radius:8px;overflow-x:auto;' +
+        'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.74rem;line-height:1.6;color:var(--dim)">' +
+        esc(planTemplate()) + "</pre></div></div>";
+    }
+
+    var mk = viewMonth;
+    var progress = monthProgress(mk);
+    var actual = planActuals(mk);
+    var budgets = planSection(plan, "budgets");
+    var income = planSection(plan, "income");
+    var commitments = planSection(plan, "commitments");
+    var goals = planSection(plan, "goals");
+
+    var plannedIn = income.reduce(function (s, l) { return s + monthlyEquivalent(l.baseAmount, l.frequency); }, 0);
+
+    // Budgets and commitments can name the same category — a £700 Housing cap
+    // and a £700 rent are one claim on the month, not two. Taking the larger
+    // per category keeps the headline from double-counting them.
+    var outBy = {};
+    budgets.forEach(function (l) {
+      outBy[l.category] = Math.max(outBy[l.category] || 0, l.baseAmount);
+    });
+    commitments.forEach(function (l) {
+      var m = monthlyEquivalent(l.baseAmount, l.frequency);
+      outBy[l.category] = Math.max(outBy[l.category] || 0, m);
+    });
+    var plannedOut = Object.keys(outBy).reduce(function (s, c) { return s + outBy[c]; }, 0);
+
+    var sum = monthSummary(mk);
+    var plannedKeep = plannedIn - plannedOut;
+    var reallyKept = sum.net;
+    var gap = reallyKept - plannedKeep;
+
+    var verdict;
+    if (!plannedIn && !plannedOut) verdict = "This plan has nothing that applies to a month yet.";
+    else if (progress === 0) verdict = "Nothing logged for this month yet.";
+    else if (Math.abs(gap) < 0.005) verdict = "Exactly on plan.";
+    else if (gap > 0) verdict = "<b>" + fmt(gap, { round: true }) + " better than planned</b> so far this month.";
+    else verdict = "<b>" + fmt(-gap, { round: true }) + " behind plan</b> so far this month.";
+
+    var html = pageHead(esc(plan.name),
+      (plan.from ? "Covers " + esc(plan.from) + (plan.to ? " to " + esc(plan.to) : "") + ". " : "") +
+      "Imported " + esc(plan.importedAt) + ". Figures were converted at the rates set that day and do not move.",
+      monthStepper());
+
+    html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
+      '<div class="tile"><span class="label">Planned to keep</span><div class="tile-fig">' +
+      fmt(plannedKeep, { round: true }) + "</div>" +
+      '<div class="tile-foot">' + fmt(plannedIn, { round: true }) + " in, " + fmt(plannedOut, { round: true }) + " out</div></div>" +
+      '<div class="tile"><span class="label">Actually kept</span><div class="tile-fig' + (reallyKept < 0 ? " loss" : "") + '">' +
+      fmt(reallyKept, { round: true }) + "</div>" +
+      '<div class="tile-foot">' + fmt(sum.income, { round: true }) + " in, " + fmt(sum.expense, { round: true }) + " out</div></div>" +
+      '<div class="tile"><span class="label">Against plan</span><div class="tile-fig' + (gap < 0 ? " loss" : "") + '">' +
+      fmt(gap, { round: true, signed: true }) + "</div>" +
+      '<div class="tile-foot">' + Math.round(progress * 100) + "% through the month</div></div></div>";
+
+    html += '<p class="hint" style="margin-top:0.6rem">' + verdict + "</p>";
+
+    function line(name, plannedAmt, actualAmt, sub, invert, quiet) {
+      var pct = plannedAmt > 0 ? actualAmt / plannedAmt : 0;
+      // for money going out, past the line is bad; for money coming in it is good
+      var bad = invert ? pct < 0.999 && progress > 0.5 : pct > 1.001;
+      var color = bad ? "var(--loss)" : (invert ? "var(--gain)" : (pct / Math.max(progress, 0.01) > 1.15 ? "var(--warn)" : "var(--gain)"));
+      var diff = actualAmt - plannedAmt;
+      return '<div class="row" style="align-items:stretch;flex-direction:column;gap:0.45rem">' +
+        '<div style="display:flex;align-items:center;gap:0.6rem">' +
+        '<span class="row-title" style="flex:1">' + esc(name) + "</span>" +
+        '<span class="row-fig">' + fmt(actualAmt, { round: true }) + " / " + fmt(plannedAmt, { round: true }) + "</span></div>" +
+        meter(pct, color, invert ? null : progress) +
+        '<div class="row-sub">' + esc(sub) +
+        (!quiet && Math.abs(diff) >= 0.5
+          ? " · " + (diff > 0 ? "+" : "−") + fmt(Math.abs(diff), { round: true }).replace("-", "") +
+            (invert ? (diff > 0 ? " more than expected" : " short") : (diff > 0 ? " over" : " under"))
+          : "") +
+        "</div></div>";
+    }
+
+    function card(title, sub, rowsHtml, empty) {
+      return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>' + esc(title) + "</h3>" +
+        '<span class="sub">' + esc(sub) + "</span></div><div class=\"card-body flush\">" +
+        (rowsHtml ? '<div class="rows">' + rowsHtml + "</div>" : '<p class="empty">' + empty + "</p>") + "</div></div>";
+    }
+
+    if (budgets.length) {
+      html += card("Budgets", "spent against the planned cap", budgets.map(function (l) {
+        return line(l.category, l.baseAmount, actual.expense[l.category] || 0,
+          isForeign(l.currency) ? "planned as " + fmtIn(l.amount, l.currency) : "monthly cap");
+      }).join(""), "");
+    }
+    if (income.length) {
+      html += card("Income", "arrived against what was expected", income.map(function (l) {
+        var expect = monthlyEquivalent(l.baseAmount, l.frequency);
+        return line(l.name, expect, actual.income[l.category] || 0,
+          l.frequency + " · " + l.category +
+          (isForeign(l.currency) ? " · planned as " + fmtIn(l.amount, l.currency) : ""), true);
+      }).join(""), "");
+    }
+    if (commitments.length) {
+      html += card("Commitments", "paid against what is due", commitments.map(function (l) {
+        var expect = monthlyEquivalent(l.baseAmount, l.frequency);
+        return line(l.name, expect, actual.expense[l.category] || 0,
+          l.frequency + " · " + l.category +
+          (isForeign(l.currency) ? " · planned as " + fmtIn(l.amount, l.currency) : ""));
+      }).join(""), "");
+    }
+    if (goals.length) {
+      html += card("Goals", "saved against the target", goals.map(function (l) {
+        var g = state.goals.filter(function (x) { return x.id === l.recordId || x.planKey === l.key; })[0];
+        var saved = g ? num(g.saved) : 0;
+        var target = l.baseAmount;
+        var sub;
+        if (!l.date) sub = "no target date";
+        else {
+          var total = Math.max((parseISO(l.date) - parseISO(plan.importedAt)) / 86400000, 1);
+          var gone = clamp((new Date() - parseISO(plan.importedAt)) / 86400000, 0, total);
+          var due = target * (gone / total);
+          sub = saved >= due
+            ? "on pace — " + fmt(due, { round: true }) + " expected by now"
+            : "behind by " + fmt(due - saved, { round: true }) + " against the pace for " + l.date;
+        }
+        return line(l.name, target, saved, sub, true, true);
+      }).join(""), "");
+    }
+
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>This plan</h3>' +
+      '<span class="sub">' + (plan.lines || []).length + " lines</span></div><div class=\"card-body\">" +
+      '<p class="hint">Re-importing an edited plan updates these same entries rather than making second copies, ' +
+      "so it is safe to run again whenever the plan changes. Removing the plan leaves every budget, goal and " +
+      "recurring item it created exactly where it is — only the scoring goes away.</p>" +
+      '<div class="btn-row" style="margin-top:0.75rem">' +
+      '<button class="btn primary" data-act="plan-import">Re-import or replace</button>' +
+      '<button class="btn" data-act="plan-copy">Copy it back out</button>' +
+      '<button class="btn danger" data-act="plan-remove">Remove the plan</button>' +
+      "</div></div></div>";
+
+    return html;
+  }
+
+  // Writing the plan back out as text it can read again. Round-tripping it is
+  // the only honest way to let someone edit a plan they imported months ago.
+  function planToText(plan) {
+    var out = ["# Plan: " + plan.name];
+    if (plan.from) out.push("covers: " + plan.from + (plan.to ? " to " + plan.to : ""));
+    [["budgets", "Budgets"], ["income", "Income"], ["commitments", "Commitments"], ["goals", "Goals"]].forEach(function (pair) {
+      var list = planSection(plan, pair[0]);
+      if (!list.length) return;
+      out.push("", "## " + pair[1]);
+      list.forEach(function (l) {
+        var s = "- " + l.name + ": " + l.amount + (isForeign(l.currency) ? " " + l.currency : "");
+        if (l.frequency && pair[0] !== "budgets") s += " " + l.frequency;
+        if (l.accountLabel) s += (pair[0] === "income" ? " into " : " from ") + l.accountLabel;
+        if (l.category && pair[0] !== "budgets") s += ", " + l.category;
+        if (l.date) s += (pair[0] === "goals" ? " by " : " from ") + l.date;
+        out.push(s);
+      });
+    });
+    return out.join("\n") + "\n";
+  }
 
   function renderGoals() {
     var pace = avgMonthlySaving(3);
@@ -4026,6 +4865,53 @@
       });
     },
 
+    /* ---- financial plans ---- */
+    "plan-import": function () { planImportDialog(!!state.plan); },
+
+    "plan-copy": function () {
+      if (!state.plan) return;
+      var text = planToText(state.plan);
+      // A textarea you can select beats a clipboard call that silently fails
+      // on a phone browser that does not allow it.
+      openModal({
+        title: "Your plan as text",
+        message: "Edit this, then paste it back through Import to update everything it describes.",
+        fields: [],
+        confirmLabel: "Done",
+        cancelLabel: "Close"
+      });
+      var body = overlay.querySelector(".modal-head");
+      if (body) {
+        var pre = document.createElement("textarea");
+        pre.readOnly = false;
+        pre.rows = 12;
+        pre.value = text;
+        pre.style.cssText = "width:100%;margin-top:0.7rem;font-family:ui-monospace,Menlo,Consolas,monospace;" +
+          "font-size:0.76rem;padding:0.6rem;border-radius:8px;border:1px solid var(--rule-mid);" +
+          "background:var(--surface);color:var(--ink);resize:vertical";
+        body.appendChild(pre);
+        pre.focus();
+        pre.select();
+      }
+    },
+
+    "plan-remove": function () {
+      if (!state.plan) return;
+      var plan = state.plan;
+      var count = (plan.lines || []).length;
+      confirmAction({
+        title: "Remove " + plan.name + "?",
+        message: "The <b>" + count + "</b> budget" + (count === 1 ? "" : "s") + ", goal and recurring " +
+          "record this plan set up all stay exactly as they are \u2014 only the plan itself, and the " +
+          "planned-against-actual scoring, go away.",
+        confirmLabel: "Remove the plan"
+      }, function () {
+        state.plan = null;
+        save(); render();
+        toast(plan.name + " removed.", function () { state.plan = plan; });
+      });
+    },
+
     /* ---- exchange rates ---- */
     "rate-edit": function () { ACTIONS["rate-set"](""); },
     "rate-set": function (code) {
@@ -4483,6 +5369,7 @@
           });
           if (incoming.budgets && typeof incoming.budgets === "object") fresh.budgets = incoming.budgets;
           if (incoming.photoIndex && typeof incoming.photoIndex === "object") fresh.photoIndex = incoming.photoIndex;
+          if (incoming.plan && typeof incoming.plan === "object") fresh.plan = incoming.plan;
           fresh.extraDebtPayment = num(incoming.extraDebtPayment);
           state = fresh;
           viewMonth = thisMonth();
@@ -5113,6 +6000,7 @@
     else if (view === "ledger") html = renderLedger();
     else if (view === "budgets") html = renderBudgets();
     else if (view === "goals") html = renderGoals();
+    else if (view === "plan") html = renderPlan();
     else if (view === "debts") html = renderDebts();
     else if (view === "insights") html = renderInsights();
     else html = renderSettings();

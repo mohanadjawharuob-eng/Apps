@@ -13,6 +13,11 @@ no account, no server, nothing sent anywhere.
 | [Timesheet](./timesheet/) | Hours per client, then invoice them | `timesheet.v1` |
 | [Bustan](./garden/) | Plants, watering by real weather, seasonal almanac | `bustan.v1` |
 
+Two things worth knowing about before changing anything here:
+[`CLAUDE.md`](./CLAUDE.md) for the conventions every app follows, and
+[`ROADMAP.md`](./ROADMAP.md) for what is built, what is queued, and what was
+turned down and why.
+
 ## Layout
 
 Each app is one self-contained directory, and that is deliberate — a single
@@ -27,6 +32,16 @@ first one you install actually installs.
 icons/                      192, 512 and maskable 512 per app
 index.html                  this launcher; not installable, on purpose
 ```
+
+## Coffer plans
+
+Coffer takes a written financial plan — budgets, expected income, commitments
+and savings goals — and scores what you actually spend against it. The format is
+plain text you can write in Word or a notes app; it is documented in
+[`coffer/PLAN-FORMAT.md`](./coffer/PLAN-FORMAT.md) and inside the import dialog
+itself. Nothing is applied until a preview has shown every line, and a line
+whose currency, account or date cannot be resolved blocks the import rather than
+being guessed at.
 
 ## Bustan
 

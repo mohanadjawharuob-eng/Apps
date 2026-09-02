@@ -1,5 +1,5 @@
 /* Offline shell for Daybook. Scope: /Apps/daybook/ */
-var CACHE = 'pwa-daybook-v1';
+var CACHE = 'pwa-daybook-v2';
 var PRECACHE = [
   "./",
   "../icons/daybook-192.png",

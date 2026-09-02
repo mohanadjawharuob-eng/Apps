@@ -1,5 +1,5 @@
 /* Offline shell for Kitchen. Scope: /Apps/kitchen/ */
-var CACHE = 'pwa-kitchen-v1';
+var CACHE = 'pwa-kitchen-v2';
 var PRECACHE = [
   "./",
   "../icons/kitchen-192.png",
