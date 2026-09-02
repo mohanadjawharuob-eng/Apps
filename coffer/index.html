@@ -670,6 +670,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
+  var BUILD = "2026-09-02d";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1017,6 +1018,19 @@
      A rate is "units of this currency per 1 unit of base". Base is 1.
      ------------------------------------------------- */
   var CURRENCIES = ["USD", "EUR", "LBP", "GBP", "JOD", "AED", "SAR", "TRY", "EGP"];
+
+  // Rough starting points, so a rate is never typed into a blank box. They are
+  // deliberately only a first guess: what an exchange or an employer actually
+  // gives you is rarely the published rate, and the LBP one in particular
+  // moves. Every one of these is offered pre-filled and meant to be corrected.
+  var DEFAULT_RATES = { EUR: 0.92, GBP: 0.79, LBP: 89500, JOD: 0.709, AED: 3.6725, SAR: 3.75, TRY: 41, EGP: 48 };
+  // The table is quoted per 1 USD, so it means nothing if the book totals in
+  // something else. Better to offer no suggestion than a wrong one.
+  function suggestedRate(code) {
+    if (baseCode() !== "USD") return 0;
+    var r = num(DEFAULT_RATES[code]);
+    return r > 0 ? r : 0;
+  }
   var SYMBOLS = { USD: "$", EUR: "\u20ac", LBP: "LL", GBP: "\u00a3", JOD: "JD",
                   AED: "AED", SAR: "SAR", TRY: "\u20ba", EGP: "E\u00a3" };
 
@@ -1117,6 +1131,15 @@
   }
   function unallocatedOf(acc) {
     return balanceOf(acc) - pocketsOf(acc).reduce(function (n, p) { return n + pocketBalance(acc, p); }, 0);
+  }
+
+  // A closed account is one you have stopped using: it keeps every
+  // transaction it ever carried, so the history stays whole, but it is out of
+  // every picker and out of the way. Nothing else in the app special-cases it,
+  // which is deliberate — a closed account with money still in it is still
+  // money, and still counts towards net worth.
+  function openAccounts() {
+    return state.accounts.filter(function (a) { return !a.closed; });
   }
 
   function accountById(id) {
@@ -1526,6 +1549,15 @@
         box.style.display = isNew ? "" : "none";
         if (isNew) box.focus();
       });
+    });
+
+    // A field can react to another one changing. The rate dialog uses it to
+    // fill in a suggested rate the moment you pick a currency.
+    function fieldEl(k) { return document.getElementById("mf_" + k); }
+    fields.forEach(function (f) {
+      if (typeof f.onChange !== "function") return;
+      var el = fieldEl(f.key);
+      if (el) el.addEventListener("change", function () { f.onChange(el.value, fieldEl); });
     });
 
     escHandler = function (e) {
@@ -2399,33 +2431,67 @@
   }
 
   function accountsCard() {
-    // Accounts are grouped by where they are held, so a bank with three
-    // accounts reads as one place with three lines under it rather than
-    // three unrelated rows. Anything without a place falls under "Other".
-    var groups = [], byGroup = {};
-    state.accounts.forEach(function (a) {
-      var g = (a.group || "").trim() || "\u2014";
-      if (!byGroup[g]) { byGroup[g] = []; groups.push(g); }
+    // A heading only earns its line when it actually collects something. One
+    // account under its own "Whish \u2014 1 account" heading was three lines of
+    // furniture wrapped around a single row, three times over; that is what
+    // made this card read as clutter. So: places holding two or more accounts
+    // get a heading and a subtotal, and everything else falls into one plain
+    // list with its place written into the row instead.
+    var live = openAccounts();
+    var shut = state.accounts.filter(function (a) { return a.closed; });
+
+    var byGroup = {}, seen = [];
+    live.forEach(function (a) {
+      var g = (a.group || "").trim();
+      if (!g) return;
+      if (!byGroup[g]) { byGroup[g] = []; seen.push(g); }
       byGroup[g].push(a);
     });
-    groups.sort(function (x, y) {
-      if (x === "\u2014") return 1;          // loose accounts sit last
-      if (y === "\u2014") return -1;
+    var headed = seen.filter(function (g) { return byGroup[g].length > 1; }).sort(function (x, y) {
       return x.localeCompare(y);
     });
+    var isHeaded = {};
+    headed.forEach(function (g) { isHeaded[g] = true; });
+    var loose = live.filter(function (a) { return !isHeaded[(a.group || "").trim()]; });
 
-    function accountRow(a) {
+    function sumOfAccounts(list) {
+      return list.reduce(function (t, a) { return t + balanceOf(a); }, 0);
+    }
+    function head(name, count, total) {
+      return '<div class="grp-head"><span class="grp-name">' + esc(name) + "</span>" +
+        '<span class="grp-sub">' + esc(count) + "</span>" +
+        '<span class="grp-fig' + (total < 0 ? " loss" : "") + '">' + fmt(total) + "</span></div>";
+    }
+
+    function accountRow(a, showPlace) {
       var bal = balanceOf(a);
       var pockets = pocketsOf(a);
+      var bits = [];
+      // in the loose list nothing above the row says where it is held, so the
+      // place goes in the row itself rather than being lost with the heading
+      if (showPlace && (a.group || "").trim()) bits.push((a.group || "").trim());
+      bits.push(a.type);
+      if (pockets.length) bits.push(pockets.length + (pockets.length === 1 ? " pocket" : " pockets"));
+
+      // An account carrying history offers Close, not Delete: deleting it
+      // would take every transaction with it, which is exactly the trap this
+      // is here to avoid. Delete stays on the ones with nothing to lose, and
+      // on closed accounts, where the warning has already been read.
+      var used = state.transactions.some(function (t) {
+        return t.accountId === a.id || t.toAccountId === a.id;
+      }) || state.recurring.some(function (r) { return r.accountId === a.id; });
+
       var html = '<div class="row"><div class="row-main">' +
         '<div class="row-title">' + esc(a.name) + "</div>" +
-        '<div class="row-sub">' + esc(a.type) +
-        (pockets.length ? " · " + pockets.length + (pockets.length === 1 ? " pocket" : " pockets") : "") + "</div></div>" +
+        '<div class="row-sub">' + esc(bits.join(" \u00b7 ")) + "</div></div>" +
         '<div class="row-end"><span class="row-fig' + (bal < 0 ? " loss" : "") + '">' + fmt(bal) + "</span>" +
         '<button class="ibtn" data-act="pocket-add" data-id="' + a.id + '" aria-label="Add a pocket to ' + esc(a.name) + '" title="Add a pocket">+</button>' +
         '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit ' + esc(a.name) + '" title="Edit">\u270e</button>' +
-        '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">\u2715</button>' +
+        (used
+          ? '<button class="ibtn" data-act="account-close" data-id="' + a.id + '" aria-label="Close ' + esc(a.name) + '" title="Close, keeping its history">\u2298</button>'
+          : '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">\u2715</button>') +
         "</div></div>";
+
       if (pockets.length) {
         var left = unallocatedOf(a);
         html += pockets.map(function (p) {
@@ -2448,21 +2514,43 @@
       return html;
     }
 
-    var rows;
-    if (!state.accounts.length) {
-      rows = '<p class="empty">No accounts yet.</p>';
-    } else if (groups.length === 1 && groups[0] === "\u2014") {
-      // nothing is grouped yet, so do not impose a heading on a single list
-      rows = '<div class="rows">' + state.accounts.map(accountRow).join("") + "</div>";
-    } else {
-      rows = groups.map(function (g) {
-        var list = byGroup[g];
-        var sub = list.reduce(function (t, a) { return t + balanceOf(a); }, 0);
-        return '<div class="grp-head"><span class="grp-name">' + esc(g === "\u2014" ? "Elsewhere" : g) + "</span>" +
-          '<span class="grp-sub">' + esc(list.length + (list.length === 1 ? " account" : " accounts")) + "</span>" +
-          '<span class="grp-fig' + (sub < 0 ? " loss" : "") + '">' + fmt(sub) + "</span></div>" +
-          '<div class="rows">' + list.map(accountRow).join("") + "</div>";
-      }).join("");
+    function closedRow(a) {
+      var bal = balanceOf(a);
+      var count = state.transactions.filter(function (t) {
+        return t.accountId === a.id || t.toAccountId === a.id;
+      }).length;
+      var bits = [];
+      if ((a.group || "").trim()) bits.push((a.group || "").trim());
+      bits.push(count + (count === 1 ? " entry kept" : " entries kept"));
+      if (a.closedOn) bits.push("closed " + a.closedOn);
+      return '<div class="row"><div class="row-main">' +
+        '<div class="row-title" style="color:var(--dim)">' + esc(a.name) + "</div>" +
+        '<div class="row-sub">' + esc(bits.join(" \u00b7 ")) + "</div></div>" +
+        '<div class="row-end"><span class="row-fig' + (bal < 0 ? " loss" : "") +
+        '"' + (Math.abs(bal) < 0.005 ? ' style="color:var(--dim)"' : "") + ">" + fmt(bal) + "</span>" +
+        '<button class="ibtn" data-act="account-open" data-id="' + a.id + '" aria-label="Reopen ' + esc(a.name) + '" title="Reopen">\u21ba</button>' +
+        '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete for good">\u2715</button>' +
+        "</div></div>";
+    }
+
+    var rows = "";
+    headed.forEach(function (g) {
+      var list = byGroup[g];
+      rows += head(g, list.length + " accounts", sumOfAccounts(list)) +
+        '<div class="rows">' + list.map(function (a) { return accountRow(a, false); }).join("") + "</div>";
+    });
+    if (loose.length) {
+      // a heading over the loose list is only worth it when something above it
+      // is headed too; on its own it would be a label with nothing to contrast
+      if (headed.length) {
+        rows += head("Elsewhere", loose.length + (loose.length === 1 ? " account" : " accounts"), sumOfAccounts(loose));
+      }
+      rows += '<div class="rows">' + loose.map(function (a) { return accountRow(a, true); }).join("") + "</div>";
+    }
+    if (!live.length) rows = shut.length ? "" : '<p class="empty">No accounts yet.</p>';
+    if (shut.length) {
+      rows += head("Closed", shut.length + (shut.length === 1 ? " account" : " accounts"), sumOfAccounts(shut)) +
+        '<div class="rows">' + shut.map(closedRow).join("") + "</div>";
     }
 
     return '<div class="card"><div class="card-head"><h3>Accounts</h3>' +
@@ -2642,8 +2730,11 @@
         return '<option value="' + esc(c) + '"' + (filters.category === c ? " selected" : "") + ">" + esc(c) + "</option>";
       }).join("") + "</select></div>" +
       '<div class="field"><label class="label" for="f_acc">Account</label><select id="f_acc">' +
+      // closed accounts stay in this list on purpose: looking back at what
+      // went through one is the whole reason for closing rather than deleting
       '<option value="all">All accounts</option>' + state.accounts.map(function (a) {
-        return '<option value="' + a.id + '"' + (filters.account === a.id ? " selected" : "") + ">" + esc(a.name) + "</option>";
+        return '<option value="' + a.id + '"' + (filters.account === a.id ? " selected" : "") + ">" +
+          esc(a.name + (a.closed ? " (closed)" : "")) + "</option>";
       }).join("") + "</select></div>" +
       '<div class="field"><label class="label" for="f_from">From</label><input id="f_from" type="date" value="' + esc(filters.from) + '" /></div>' +
       '<div class="field"><label class="label" for="f_to">To</label><input id="f_to" type="date" value="' + esc(filters.to) + '" /></div>' +
@@ -3067,6 +3158,16 @@
       "</div></div>";
 
     /* backup */
+    /* which build is actually running */
+    html += '<div class="card" style="margin-top:1rem"><div class="card-body">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.6rem">' +
+      '<span class="label">App version</span>' +
+      '<span class="mono" style="font-size:0.8rem;color:var(--dim)">' + esc(BUILD) + "</span></div>" +
+      '<p class="hint" style="margin-top:0.4rem">If this does not match what you were told to expect, the app is ' +
+      'running an old copy. It now updates itself when you open it, but you can force it here.</p>' +
+      '<button class="btn" style="margin-top:0.6rem" data-act="force-update">Check for an update</button>' +
+      "</div></div>";
+
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Backup and restore</h3>' +
       '<span class="sub">' + (bytesUsed() / 1024).toFixed(1) + " KB stored</span></div><div class=\"card-body\">" +
       '<div class="btn-row">' +
@@ -3092,7 +3193,8 @@
       '<p class="hint" style="margin-bottom:0.75rem">How many of each currency you actually get for one ' +
       esc(baseCode()) + '. Use the rate you really trade at, not the official one. ' +
       '<b>Changing a rate only affects what you log next</b> — anything already recorded keeps the rate it ' +
-      'was logged at, so your history never rewrites itself.</p>';
+      'was logged at, so your history never rewrites itself. Pick a currency and a typical rate is filled in ' +
+      'for you to correct, so you are never staring at an empty box.</p>';
     var setRates = rateCodes.filter(function (c) { return num((state.settings.rates || {})[c]) > 0; });
     if (!setRates.length) {
       html += '<p class="empty">No rates set. Everything is treated as ' + esc(baseCode()) + '.</p>';
@@ -3342,10 +3444,16 @@
      Nothing depends on form submission or native dialogs.
      ============================================================ */
 
-  function accountOptions() {
+  // keepRef is whatever the field is already set to. A closed account stays
+  // out of every picker so nothing new can land in it — except on the entry
+  // that is already filed there, which would otherwise be silently reassigned
+  // to some other account the moment you opened the edit dialog.
+  function accountOptions(keepRef) {
+    var keepId = keepRef ? parseRef(keepRef).accountId : null;
     var out = [];
     state.accounts.forEach(function (a) {
-      out.push({ value: a.id, label: a.name });
+      if (a.closed && a.id !== keepId) return;
+      out.push({ value: a.id, label: a.name + (a.closed ? " (closed)" : "") });
       pocketsOf(a).forEach(function (p) {
         out.push({ value: acctRef(a.id, p.id), label: a.name + " \u203a " + p.name });
       });
@@ -3399,8 +3507,8 @@
   }
 
   function needAccount() {
-    if (state.accounts.length) return false;
-    toast("Add an account first.");
+    if (openAccounts().length) return false;
+    toast(state.accounts.length ? "Every account is closed \u2014 reopen one first." : "Add an account first.");
     return true;
   }
 
@@ -3420,7 +3528,9 @@
         fields: [
           { key: "name", label: "Name", placeholder: "e.g. Everyday current", span: true },
           { key: "group", label: "Held at", type: "select", options: groupOptions(), catKind: "free",
-            newLabel: "New place\u2026", newPlaceholder: "e.g. Bank of Cyprus", value: groupOptions()[0],
+            // "" is the Elsewhere option. Defaulting to the first real place
+            // would file every new account under whichever bank sorts first.
+            newLabel: "New place\u2026", newPlaceholder: "e.g. Bank of Cyprus", value: "",
             hint: "the bank, wallet or place this sits in" },
           { key: "type", label: "Type", type: "select", options: typeOptions(), catKind: "free",
             newLabel: "New type\u2026", newPlaceholder: "e.g. Joint, Pension", value: "Checking" },
@@ -3464,6 +3574,89 @@
       });
     },
 
+    // Closing is what you want when an account is finished but the money that
+    // ran through it is not: you stopped using the card, moved banks, emptied
+    // the wallet. Delete throws the history away; this keeps all of it and
+    // just gets the account out of your way.
+    "account-close": function (id) {
+      var a = accountById(id);
+      if (!a) return;
+      var bal = balanceOf(a);
+      var held = Math.abs(bal) > 0.005;
+      var kept = state.transactions.filter(function (t) {
+        return t.accountId === id || t.toAccountId === id;
+      }).length;
+      var recur = state.recurring.filter(function (r) { return r.accountId === id; }).length;
+      // moving to a pocket is fine; moving to another spot in the same account
+      // is not, so the whole account is filtered out rather than just its row
+      var elsewhere = accountOptions().filter(function (o) { return parseRef(o.value).accountId !== id; });
+
+      var msg = "Its <b>" + kept + (kept === 1 ? " transaction stays" : " transactions stay") +
+        "</b> in your history exactly as they are. The account just leaves the pickers, so nothing " +
+        "new can be logged against it.";
+      if (recur) {
+        msg += " <b>" + recur + " recurring " + (recur === 1 ? "item is" : "items are") +
+          "</b> still pointing at it \u2014 move " + (recur === 1 ? "it" : "them") + " to another account " +
+          "or " + (recur === 1 ? "it" : "they") + " will have nowhere to post.";
+      }
+      if (held && !elsewhere.length) {
+        msg += " It still holds " + fmt(bal) + ", and there is nowhere else to put it, so that stays " +
+          "counted in your net worth.";
+      }
+
+      var fields = [];
+      if (held && elsewhere.length) {
+        fields.push({
+          key: "moveTo",
+          label: bal > 0 ? "Move the remaining " + fmt(bal) + " to" : "Settle the " + fmt(-bal) + " owed from",
+          type: "select",
+          options: [{ value: "", label: "\u2014 leave it where it is \u2014" }].concat(elsewhere),
+          value: elsewhere[0].value,
+          hint: "records a transfer dated today, so both balances stay right"
+        });
+      }
+
+      openModal({
+        title: "Close " + a.name + "?",
+        message: msg,
+        fields: fields,
+        confirmLabel: "Close account",
+        onConfirm: function (v) {
+          var moved = null;
+          if (v && v.moveTo) {
+            var r = parseRef(v.moveTo);
+            // a negative balance is a debt, so the money flows the other way:
+            // the account being closed receives it and lands on zero either way
+            moved = {
+              id: uid(), date: today(), desc: "Closing " + a.name, type: "transfer", category: "Transfer",
+              amount: Math.abs(bal),
+              accountId: bal > 0 ? a.id : r.accountId, pocketId: bal > 0 ? null : (r.pocketId || null),
+              toAccountId: bal > 0 ? r.accountId : a.id, toPocketId: bal > 0 ? (r.pocketId || null) : null,
+              currency: baseCode(), rate: 1
+            };
+            state.transactions.push(moved);
+          }
+          a.closed = true;
+          a.closedOn = today();
+          save(); render();
+          toast(a.name + " closed \u2014 its history is intact.", function () {
+            a.closed = false;
+            a.closedOn = null;
+            if (moved) state.transactions = state.transactions.filter(function (t) { return t.id !== moved.id; });
+          });
+        }
+      });
+    },
+
+    "account-open": function (id) {
+      var a = accountById(id);
+      if (!a) return;
+      a.closed = false;
+      a.closedOn = null;
+      save(); render();
+      toast(a.name + " is open again.", function () { a.closed = true; });
+    },
+
     "account-del": function (id) {
       var a = accountById(id);
       if (!a) return;
@@ -3475,7 +3668,8 @@
       var msg = linked.length || linkedRecur.length
         ? "This will also remove <b>" + linked.length + (linked.length === 1 ? " transaction" : " transactions") + "</b>" +
           (linkedRecur.length ? " and <b>" + linkedRecur.length + " recurring " + (linkedRecur.length === 1 ? "item" : "items") + "</b>" : "") +
-          " attached to it. You can undo this straight afterwards."
+          " attached to it. You can undo this straight afterwards. " +
+          (a.closed ? "" : "To keep all of that and just stop using the account, close it instead.")
         : "Nothing is attached to this account.";
 
       confirmAction({
@@ -3568,8 +3762,8 @@
           fields: [
             { key: "date", label: "Date", type: "date", value: t.date },
             { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 },
-            { key: "from", label: "From", type: "select", options: accountOptions(), value: acctRef(t.accountId, t.pocketId) },
-            { key: "to", label: "To", type: "select", options: accountOptions(), value: acctRef(t.toAccountId, t.toPocketId) },
+            { key: "from", label: "From", type: "select", options: accountOptions(acctRef(t.accountId, t.pocketId)), value: acctRef(t.accountId, t.pocketId) },
+            { key: "to", label: "To", type: "select", options: accountOptions(acctRef(t.toAccountId, t.toPocketId)), value: acctRef(t.toAccountId, t.toPocketId) },
             { key: "desc", label: "Note", value: t.desc, span: true }
           ].concat(currencyField(t.currency)),
           validate: function (v) {
@@ -3597,7 +3791,7 @@
           { key: "desc", label: "Description", value: t.desc, span: true },
           { key: "category", label: "Category", type: "select", catKind: "auto", options: catOptions(t.type).concat(
               catOptions(t.type).indexOf(t.category) === -1 ? [t.category] : []), value: t.category },
-          { key: "account", label: "Account", type: "select", options: accountOptions(), value: acctRef(t.accountId, t.pocketId) },
+          { key: "account", label: "Account", type: "select", options: accountOptions(acctRef(t.accountId, t.pocketId)), value: acctRef(t.accountId, t.pocketId) },
           { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 }
         ].concat(currencyField(t.currency)),
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
@@ -3633,15 +3827,16 @@
     },
 
     "transfer-add": function () {
-      if (state.accounts.length < 2) { toast("You need two accounts to move money between them."); return; }
+      var moveable = openAccounts();
+      if (moveable.length < 2) { toast("You need two open accounts to move money between them."); return; }
       openModal({
         title: "Move money",
         message: "A transfer changes both balances and leaves your net worth unchanged.",
         fields: [
           { key: "date", label: "Date", type: "date", value: today() },
           { key: "amount", label: "Amount", type: "number", min: 0 },
-          { key: "from", label: "From", type: "select", options: accountOptions(), value: state.accounts[0].id },
-          { key: "to", label: "To", type: "select", options: accountOptions(), value: state.accounts[1].id },
+          { key: "from", label: "From", type: "select", options: accountOptions(), value: moveable[0].id },
+          { key: "to", label: "To", type: "select", options: accountOptions(), value: moveable[1].id },
           { key: "desc", label: "Note", placeholder: "optional", span: true }
         ].concat(currencyField()),
         confirmLabel: "Transfer",
@@ -3697,6 +3892,23 @@
       delete state.budgets[cat];
       save(); render();
       toast(cat + " budget removed.", function () { state.budgets[cat] = prev; });
+    },
+
+    "force-update": function () {
+      toast("Checking\u2026");
+      if (!("serviceWorker" in navigator)) { location.reload(); return; }
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (r) { return r.unregister(); }));
+      }).then(function () {
+        // drop this app's caches too, or the reload just serves them again
+        if (!window.caches) return null;
+        return caches.keys().then(function (keys) {
+          return Promise.all(keys.filter(function (k) { return k.indexOf("pwa-coffer-") === 0; })
+            .map(function (k) { return caches.delete(k); }));
+        });
+      }).then(function () {
+        location.reload();
+      }).catch(function () { location.reload(); });
     },
 
     /* ---- pockets ---- */
@@ -3819,12 +4031,28 @@
     "rate-set": function (code) {
       var rates = state.settings.rates || (state.settings.rates = {});
       var codes = CURRENCIES.filter(function (c) { return c !== baseCode(); });
+      var start = code || codes[0];
+      // an already-set rate wins over the suggestion; the suggestion beats a
+      // blank box. `touched` also tracks what we last filled in, so the change
+      // handler can tell its own value from something you typed.
+      var touched = num(rates[start]) || suggestedRate(start) || "";
       openModal({
         title: code ? "Rate for " + code : "Set an exchange rate",
         fields: [
-          { key: "code", label: "Currency", type: "select", options: codes, value: code || codes[0] },
+          { key: "code", label: "Currency", type: "select", options: codes, value: start,
+            onChange: function (c, el) {
+              // only overwrite a box the user has not typed into, so picking
+              // through the list to compare suggestions never eats an entry
+              var box = el("rate");
+              if (!box || (box.value && box.value !== String(touched))) return;
+              touched = num(rates[c]) || suggestedRate(c) || "";
+              box.value = touched;
+            } },
           { key: "rate", label: "Units per 1 " + baseCode(), type: "number", min: 0,
-            value: code ? rates[code] : "", hint: "e.g. 1 " + baseCode() + " = 89000 LBP" }
+            value: touched,
+            hint: suggestedRate(start)
+              ? "starts at a typical rate \u2014 change it to the one you actually get"
+              : "e.g. 1 " + baseCode() + " = 89500 LBP" }
         ],
         confirmLabel: "Save rate",
         validate: function (v) {
@@ -3924,7 +4152,7 @@
           { key: "amount", label: "Amount", type: "number", value: r.amount, min: 0 },
           { key: "category", label: "Category", type: "select", catKind: "auto",
             options: catOptions(r.type === "income" ? "income" : "expense"), value: r.category },
-          { key: "account", label: "Account", type: "select", options: accountOptions(), value: acctRef(r.accountId, r.pocketId) },
+          { key: "account", label: "Account", type: "select", options: accountOptions(acctRef(r.accountId, r.pocketId)), value: acctRef(r.accountId, r.pocketId) },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: r.frequency },
           { key: "nextDate", label: "Next due", type: "date", value: r.nextDate }
         ].concat(currencyField(r.currency)),
@@ -5017,13 +5245,27 @@
 </script>
 
 <script>
-  // Registers the offline worker. Only meaningful over https (or localhost) —
-  // opening this file straight from disk simply skips it, and the app still
-  // works because everything it needs is already inside the file.
+  // Registers the offline worker, and — more importantly — makes the app able
+  // to update itself. An installed app that is resumed rather than reopened
+  // never navigates, so it can sit on a months-old build forever with no way
+  // for its owner to tell. Now it asks for a new worker on every open, and
+  // reloads itself once the moment a new one takes over.
   if ('serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    var swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (swReloaded) return;      // guard: claiming can fire this more than once
+      swReloaded = true;
+      location.reload();
+    });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').catch(function () {});
+      navigator.serviceWorker.register('./sw.js').then(function (reg) {
+        reg.update();
+        // and check again when the app is brought back to the foreground
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) reg.update();
+        });
+      }).catch(function () {});
     });
   }
 </script>
