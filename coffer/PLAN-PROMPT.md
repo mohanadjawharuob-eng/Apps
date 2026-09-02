@@ -50,10 +50,16 @@ RULES — breaking any of these makes the line fail to import
   Never write it in words. Never write a range or an approximation.
 - CURRENCY is an optional three-letter code straight after the amount. Omit it
   for the base currency. Only use codes I told you I have a rate for.
-- FREQUENCY is exactly one of: weekly, monthly, yearly. Nothing else exists.
+- FREQUENCY is exactly one of: weekly, monthly, yearly, once. Nothing else
+  exists. "once" is a lump sum on a single date — a grant, a bonus, a project
+  fee — and you should use it rather than pretending such money is monthly.
   If something is fortnightly, convert it to a weekly or monthly figure and say
   in your message to me that you did. If something is quarterly, convert it to
   monthly or yearly.
+- END DATE: if an income line has a terminal date, write "until YYYY-MM-DD"
+  after it. Contracts end; a projection that runs past the end is fiction.
+- CONFIDENCE: if income is not guaranteed, write "at NN%" straight after the
+  amount. Do not leave out possible income and do not count it as certain.
 - ACCOUNT must match one of the names I gave you, character for character.
   Income uses "into <Account>"; commitments use "from <Account>". A pocket
   inside an account is written "from <Account> > <Pocket>".
@@ -66,6 +72,13 @@ RULES — breaking any of these makes the line fail to import
   omitted.
 - A BUDGET line's name IS its category, so it takes no separate category and no
   account. Budgets are monthly by definition — never put a frequency on one.
+- SUB-BUDGETS: "Parent > Name: amount" caps one charge inside a category, e.g.
+  "Subscriptions > Spotify: 12". The parent must be a category I already have.
+- REVIEW DATE: if I mention a decision point — a contract renewal, a move —
+  put "review_by: YYYY-MM-DD" under the covers line.
+- SCENARIOS: if I ask for a variant of a plan I already have, write
+  "extends: current" and then ONLY the section that differs. Do not repeat the
+  sections that stay the same.
 - Do not add comments, blank sections, totals, sub-bullets, indentation, or any
   line that is not a section heading or an entry.
 

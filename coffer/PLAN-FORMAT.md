@@ -12,14 +12,19 @@ before anything is changed, and nothing is applied while a single line is broken
 ```
 # Plan: Cyprus move
 covers: 2026-09 to 2027-08
+review_by: 2027-02-01
 
 ## Budgets
 - Groceries: 400
 - Transport: 120
 - Housing: 700 EUR
+- Subscriptions: 60
+- Subscriptions > Spotify: 12
 
 ## Income
 - Salary: 45,000,000 LBP monthly into Wallet from 2026-09-25
+- Contract: 2000 monthly into Wallet from 2026-09-01 until 2027-03-31
+- Possible grant: 5000 at 40% once into Wallet from 2026-11-15
 
 ## Commitments
 - Rent: 700 EUR monthly from BoC current, Housing, from 2026-09-01
@@ -50,6 +55,47 @@ Everything after the amount can come in any order.
 | **date** | `from 2026-09-01` or `by 2027-06-30`. Always `YYYY-MM-DD`. **"next March" is refused** — a date guessed at is a date that is quietly wrong. |
 
 A budget line's name *is* its category.
+
+## For income that is not a salary
+
+| Written | Means |
+|---|---|
+| `once` as the frequency | a lump sum on one date — a grant, a bonus, a project fee. It is **not** averaged into a monthly figure, because pretending a one-off is a monthly rate is exactly what makes contract income look like a salary. |
+| `until 2027-03-31` | a terminal date. Projections stop there instead of assuming the contract runs forever, and Coffer warns you when an income line is about to end with nothing scheduled after it. |
+| `at 40%` | how likely this is. A line at 40% counts as 40% of its value in the headline and says so, which means guaranteed and possible income can live in one plan instead of forcing two near-identical files. |
+
+## Sub-budgets
+
+`Subscriptions > Spotify: 12` caps one charge inside a parent category. The
+parent is what transactions are actually filed under, so a sub-budget is kept as
+a **breakdown** of the parent rather than a budget of its own — when
+Subscriptions runs over you can see which line to cut. The parent must be a
+category that exists.
+
+## Review date
+
+`review_by: 2027-02-01` at the top ties the plan to a real decision point — a
+contract renewal, a move. Within 45 days the Plan tab says so, prominently, so
+regenerating it is not left to memory.
+
+## Scenarios
+
+A plan can inherit from the one already imported and replace only the sections it
+mentions:
+
+```
+# Plan: Contract lost
+extends: current
+
+## Income
+- Stopgap: 600 monthly into Wallet from 2027-04-01
+```
+
+Budgets, commitments and goals are taken from the parent as they stand, so a
+branching future does not mean two near-duplicate files kept in step by hand.
+Lines the scenario drops are listed in the preview as *no longer in the plan* —
+the records they created stay where they are, because they may have been logged
+against; only the plan stops tracking them.
 
 ## Running it more than once
 

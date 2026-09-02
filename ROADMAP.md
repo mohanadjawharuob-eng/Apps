@@ -30,6 +30,31 @@ in the same commit that ships the change, so it cannot drift from the code.
 - A written prompt (`coffer/PLAN-PROMPT.md`) that makes any AI emit a plan file
   Coffer will accept.
 
+### Shipped: built for irregular income and a moving currency
+
+Coffer was designed around a steady salary, a stable currency and predictable
+expenses. None of those hold for contract work paid in a currency that moves, so:
+
+- **True burn, separate from total outflow.** One-offs (`oneOff`) and money you
+  expect back are stripped out, so the burn rate is what it actually costs to
+  keep living.
+- **Runway as a headline**, on Today and Insights: money you can actually reach,
+  over true burn, averaged across up to six months rather than one noisy one.
+- **Refundable / pass-through spending** — kept out of burn and category charts
+  until you mark it settled, then counted normally.
+- **Pocket status** — free, earmarked or committed. Committed money stays in net
+  worth but is out of the runway, because it is only nominally yours.
+- **One-off income** (`once`) and **income end dates** (`until`), so a grant is
+  not averaged into a monthly rate and a contract's projection stops when it does.
+- **Gap alerts** — an income line ending with nothing scheduled after it.
+- **Dated exchange rates** with a staleness warning after 30 days.
+- **Goals that follow a pocket** instead of a figure you keep updating.
+- **Category rename** that carries transactions, budgets, recurring items and
+  plan lines with it.
+- **Plan scenarios** (`extends`), **confidence on income** (`at 40%`),
+  **`review_by`**, **sub-budgets** (`Subscriptions > Spotify`), and a
+  **close-out** comparing projected against real once a plan's period ends.
+
 ### Next
 - **Split transactions** — one shop trip across two categories.
 - **Cross-currency transfers** — a transfer needs two amounts when the accounts
@@ -37,9 +62,11 @@ in the same commit that ships the change, so it cannot drift from the code.
 - **Latching save warning** — a failed save currently only toasts once.
 - **Search by amount** in the ledger.
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
+- **Merging two categories** — rename refuses a name that already exists, because
+  merging is lossier than renaming and deserves its own confirmation.
+- **Auto-detecting one-offs** — an expense far above what its category normally
+  costs could offer the one-off tick rather than waiting to be told.
 - **Budget rollover** — carry an underspend into next month.
-- **Self-filling goals** — a goal that fills from transactions in a category
-  instead of being topped up by hand.
 - **Plan: dated changes** — "rent becomes €700 from March". Needs budgets to
   gain a time dimension; they are one figure per category today.
 

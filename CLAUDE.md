@@ -31,6 +31,11 @@ no package.json. What is in the repo is what runs.
   a figure that is already recorded. There is a regression test for this.
 - **Balances are derived**, never stored: opening figure plus every
   transaction. Nothing can drift out of sync.
+- **Two spending numbers, deliberately.** `monthSummary().expense` is everything
+  that left; `.spend` and `trueBurnFor()` exclude one-offs and money you are
+  owed back. Runway is built from true burn over `freeAssets()` (which drops
+  committed pockets). If you add a place that shows "what I spend", pick the one
+  that matches the question and be consistent with the charts beside it.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure.
