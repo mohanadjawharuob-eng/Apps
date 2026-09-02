@@ -332,6 +332,7 @@
   .btn.sm { padding: 0.33rem 0.6rem; font-size: 0.77rem; }
   .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+  .ibtn.on { color: var(--brass); border-color: var(--brass); }
   .ibtn {
     width: 30px; height: 30px; border-radius: 6px;
     display: grid; place-items: center;
@@ -713,6 +714,7 @@
     return {
       version: 2,
       settings: { currency: "$", lock: null, base: "USD", rates: {} },
+      photoIndex: {},
       categories: { expense: DEFAULT_CATS.expense.slice(), income: DEFAULT_CATS.income.slice() },
       accounts: [],
       transactions: [],
@@ -797,6 +799,7 @@
           if (Array.isArray(p[k])) s[k] = p[k];
         });
         if (p.budgets && typeof p.budgets === "object") s.budgets = p.budgets;
+        if (p.photoIndex && typeof p.photoIndex === "object") s.photoIndex = p.photoIndex;
         s.extraDebtPayment = num(p.extraDebtPayment);
         return s;
       }
@@ -821,6 +824,141 @@
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
     catch (e) { toast("Could not save — this browser's storage may be full or blocked."); }
+  }
+
+  /* ---------------- receipt photos ----------------
+     Photos live in IndexedDB, not in the state object. A single phone photo
+     is larger than this app's entire ledger, and localStorage caps out around
+     5 MB — putting them in `state` would break saving for everything else.
+     They are therefore also NOT in a normal backup unless you ask for it; see
+     the backup card, which says so plainly rather than losing them quietly.
+     ------------------------------------------------- */
+  var PHOTO_DB = "coffer-photos", PHOTO_STORE = "receipts", photoDb = null;
+
+  function withPhotos(fn, onFail) {
+    if (photoDb) { fn(photoDb); return; }
+    if (!window.indexedDB) { if (onFail) onFail(); return; }
+    var req;
+    try { req = indexedDB.open(PHOTO_DB, 1); }
+    catch (e) { if (onFail) onFail(); return; }
+    req.onupgradeneeded = function () {
+      var db = req.result;
+      if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+    };
+    req.onsuccess = function () { photoDb = req.result; fn(photoDb); };
+    req.onerror = function () { if (onFail) onFail(); };
+  }
+  function photoPut(id, blob, done) {
+    withPhotos(function (db) {
+      var tx = db.transaction(PHOTO_STORE, "readwrite");
+      tx.objectStore(PHOTO_STORE).put(blob, id);
+      tx.oncomplete = function () { done && done(true); };
+      tx.onerror = function () { done && done(false); };
+    }, function () { done && done(false); });
+  }
+  function photoGet(id, done) {
+    withPhotos(function (db) {
+      var r = db.transaction(PHOTO_STORE, "readonly").objectStore(PHOTO_STORE).get(id);
+      r.onsuccess = function () { done(r.result || null); };
+      r.onerror = function () { done(null); };
+    }, function () { done(null); });
+  }
+  function photoDel(id, done) {
+    withPhotos(function (db) {
+      var tx = db.transaction(PHOTO_STORE, "readwrite");
+      tx.objectStore(PHOTO_STORE).delete(id);
+      tx.oncomplete = function () { done && done(); };
+    }, function () { done && done(); });
+  }
+  function photoKeys(done) {
+    withPhotos(function (db) {
+      var r = db.transaction(PHOTO_STORE, "readonly").objectStore(PHOTO_STORE).getAllKeys();
+      r.onsuccess = function () { done(r.result || []); };
+      r.onerror = function () { done([]); };
+    }, function () { done([]); });
+  }
+
+  // Downscale before storing. A modern phone photo is 3-6 MB; a receipt is
+  // perfectly readable at 1400px and about 200 KB.
+  function shrinkImage(file, done) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var MAX = 1400;
+      var sc = Math.min(1, MAX / Math.max(img.width, img.height));
+      var w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+      var cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      cv.toBlob(function (blob) { done(blob || file); }, "image/jpeg", 0.72);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); done(null); };
+    img.src = url;
+  }
+
+  // which transactions have a receipt — kept in state so the ledger can show a
+  // marker without hitting the database on every render
+  function hasPhoto(id) { return !!(state.photoIndex && state.photoIndex[id]); }
+  function markPhoto(id, on) {
+    if (!state.photoIndex) state.photoIndex = {};
+    if (on) state.photoIndex[id] = 1; else delete state.photoIndex[id];
+  }
+
+  function pickReceipt(id, t) {
+    var inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "image/*";
+    inp.setAttribute("capture", "environment");   // opens the camera on a phone
+    inp.style.display = "none";
+    document.body.appendChild(inp);
+    inp.addEventListener("change", function () {
+      var f = inp.files && inp.files[0];
+      document.body.removeChild(inp);
+      if (!f) return;
+      toast("Saving receipt…");
+      shrinkImage(f, function (blob) {
+        if (!blob) { toast("That image could not be read."); return; }
+        photoPut(id, blob, function (ok) {
+          if (!ok) { toast("Could not store the receipt — this browser may be blocking storage."); return; }
+          markPhoto(id, true); save(); render();
+          toast("Receipt attached to " + esc0(t.desc || t.category) + ".");
+        });
+      });
+    });
+    inp.click();
+  }
+
+  function viewReceipt(t) {
+    photoGet(t.id, function (blob) {
+      if (!blob) {
+        markPhoto(t.id, false); save(); render();
+        toast("That receipt is no longer stored.");
+        return;
+      }
+      // a data URL rather than an object URL: openModal has no close hook to
+      // revoke one, and a leaked handle would hold the image forever
+      var fr = new FileReader();
+      fr.onload = function () {
+        openModal({
+          title: t.desc || t.category,
+          message: '<img src="' + fr.result + '" alt="Receipt for ' + esc(t.desc || t.category) +
+            '" style="width:100%;height:auto;display:block;margin-top:0.5rem;border:1px solid var(--rule-mid)" />' +
+            '<span class="hint" style="display:block;margin-top:0.6rem">' + esc(t.date) + " · " + fmt(txBase(t)) +
+            (isForeign(t.currency) ? " · " + esc(fmtIn(t.amount, t.currency)) : "") + "</span>",
+          cancelLabel: "Done",
+          confirmLabel: "Remove receipt",
+          danger: true,
+          onConfirm: function () {
+            photoDel(t.id, function () {
+              markPhoto(t.id, false); save(); render(); toast("Receipt removed.");
+            });
+          }
+        });
+      };
+      fr.onerror = function () { toast("That receipt could not be opened."); };
+      fr.readAsDataURL(blob);
+    });
   }
 
   /* ---------------- money ---------------- */
@@ -2201,6 +2339,9 @@
           "<td>" + acc + "</td>" +
           '<td class="num' + (t.type === "income" ? " gain" : "") + '">' + amt + "</td>" +
           '<td><span style="display:flex;gap:0.1rem;justify-content:flex-end">' +
+          '<button class="ibtn' + (hasPhoto(t.id) ? " on" : "") + '" data-act="tx-photo" data-id="' + t.id +
+            '" aria-label="' + (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '" title="' +
+            (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '">▣</button>' +
           '<button class="ibtn" data-act="tx-edit" data-id="' + t.id + '" aria-label="Edit transaction" title="Edit">✎</button>' +
           '<button class="ibtn danger" data-act="tx-del" data-id="' + t.id + '" aria-label="Delete transaction" title="Delete">✕</button>' +
           "</span></td></tr>";
@@ -2693,6 +2834,18 @@
     }
     html += "</div></div>";
 
+    /* receipts */
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Receipts</h3>' +
+      '<span class="sub" id="photo_stat">counting…</span></div><div class="card-body">' +
+      '<p class="hint">Photos are stored separately from everything else, because one phone photo is bigger ' +
+      'than this entire ledger and would break saving if it went in with the rest. ' +
+      '<b>They are not included in a backup</b> — a backup stays small, readable JSON. Keep the photos by ' +
+      'backing up your phone as you normally would.</p>' +
+      '<div class="btn-row" style="margin-top:0.75rem">' +
+      '<button class="btn" data-act="photo-tidy">Remove orphaned receipts</button>' +
+      '<button class="btn danger" data-act="photo-wipe">Remove all receipts</button>' +
+      "</div></div></div>";
+
     /* categories */
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Categories</h3>' +
       '<div class="btn-row"><button class="btn sm" data-act="cat-add" data-kind="expense">Add expense</button>' +
@@ -2899,6 +3052,8 @@
   }
 
   // toast() escapes for us; this just trims very long descriptions
+  function forgetPhoto(id) { if (hasPhoto(id)) { photoDel(id); markPhoto(id, false); } }
+
   function esc0(s) { return String(s).length > 40 ? String(s).slice(0, 38) + "…" : String(s); }
 
   /* ============================================================
@@ -3121,7 +3276,11 @@
       for (var i = 0; i < state.transactions.length; i++) if (state.transactions[i].id === id) idx = i;
       if (idx < 0) return;
       var removed = state.transactions[idx];
+      var hadPhoto = hasPhoto(id);
       state.transactions.splice(idx, 1);
+      // the receipt is left in place while undo is still on offer, and swept
+      // by the storage tidy-up in Settings if the delete is allowed to stand
+      if (hadPhoto) markPhoto(id, false);
       save(); render();
       toast("Deleted " + (removed.desc || removed.category || "transaction") + ".", function () {
         state.transactions.splice(idx, 0, removed);
@@ -3190,6 +3349,43 @@
       delete state.budgets[cat];
       save(); render();
       toast(cat + " budget removed.", function () { state.budgets[cat] = prev; });
+    },
+
+    /* ---- receipt photos ---- */
+    "tx-photo": function (id) {
+      var t = state.transactions.filter(function (x) { return x.id === id; })[0];
+      if (!t) return;
+      if (hasPhoto(id)) { viewReceipt(t); return; }
+      pickReceipt(id, t);
+    },
+
+    "photo-tidy": function () {
+      photoKeys(function (keys) {
+        var live = {};
+        state.transactions.forEach(function (t) { live[t.id] = 1; });
+        var orphans = keys.filter(function (k) { return !live[k]; });
+        if (!orphans.length) { toast("Nothing to clear — every receipt belongs to a transaction."); return; }
+        var n = 0;
+        orphans.forEach(function (k) { photoDel(k, function () { if (++n === orphans.length) { render(); } }); });
+        orphans.forEach(function (k) { markPhoto(k, false); });
+        save();
+        toast(orphans.length + " orphaned " + (orphans.length === 1 ? "receipt" : "receipts") + " removed.");
+      });
+    },
+    "photo-wipe": function () {
+      confirmAction({
+        title: "Remove every receipt?",
+        message: "Deletes all stored receipt photos from this browser. Your transactions are untouched. " +
+          "There is no undo, and receipts are not in your backup.",
+        confirmLabel: "Remove them", danger: true
+      }, function () {
+        photoKeys(function (keys) {
+          keys.forEach(function (k) { photoDel(k); });
+          state.photoIndex = {};
+          save(); render();
+          toast(keys.length + " " + (keys.length === 1 ? "receipt" : "receipts") + " removed.");
+        });
+      });
     },
 
     /* ---- exchange rates ---- */
@@ -3603,6 +3799,7 @@
             if (Array.isArray(incoming[k])) fresh[k] = incoming[k];
           });
           if (incoming.budgets && typeof incoming.budgets === "object") fresh.budgets = incoming.budgets;
+          if (incoming.photoIndex && typeof incoming.photoIndex === "object") fresh.photoIndex = incoming.photoIndex;
           fresh.extraDebtPayment = num(incoming.extraDebtPayment);
           state = fresh;
           viewMonth = thisMonth();
@@ -4234,6 +4431,25 @@
     else html = renderSettings();
     viewEl.innerHTML = html;
     wireInputs();
+    // receipts live in IndexedDB, so their size can only be reported asynchronously
+    var pstat = document.getElementById("photo_stat");
+    if (pstat) {
+      photoKeys(function (keys) {
+        var el = document.getElementById("photo_stat");
+        if (!el) return;
+        if (!keys.length) { el.textContent = "none stored"; return; }
+        var total = 0, seen = 0;
+        keys.forEach(function (k) {
+          photoGet(k, function (blob) {
+            if (blob) total += blob.size;
+            if (++seen === keys.length) {
+              var e2 = document.getElementById("photo_stat");
+              if (e2) e2.textContent = keys.length + " stored · " + (total / 1048576).toFixed(1) + " MB";
+            }
+          });
+        });
+      });
+    }
     wireOmni();
     wireHovers();
   }
