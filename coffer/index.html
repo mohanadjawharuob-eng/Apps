@@ -3811,7 +3811,7 @@
     },
 
     /* ---- exchange rates ---- */
-    "rate-edit": function () { actions["rate-set"](""); },
+    "rate-edit": function () { ACTIONS["rate-set"](""); },
     "rate-set": function (code) {
       var rates = state.settings.rates || (state.settings.rates = {});
       var codes = CURRENCIES.filter(function (c) { return c !== baseCode(); });
@@ -4983,7 +4983,15 @@
     var name = act.getAttribute("data-act");
     if (ACTIONS[name]) {
       hideTip();
-      ACTIONS[name](act.getAttribute("data-id"), act);
+      // A handler that throws used to leave the button looking simply dead —
+      // which is exactly how a one-character typo hid the Set a rate button.
+      // Fail loudly instead.
+      try {
+        ACTIONS[name](act.getAttribute("data-id"), act);
+      } catch (err) {
+        toast("Something went wrong with that button. " + (err && err.message ? err.message : ""));
+        if (window.console && console.error) console.error(name, err);
+      }
     }
   });
 
