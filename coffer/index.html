@@ -748,7 +748,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02i";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-02j";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -3623,6 +3623,37 @@
       "</span></button>";
   }
 
+  function owedBackCard() {
+    var owed = pendingRefunds();
+    if (!owed.length) return "";
+    var total = owed.reduce(function (t, x) { return t + txBase(x); }, 0);
+
+    return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Owed back to you</h3>' +
+      '<span class="sub">' + owed.length + (owed.length === 1 ? " thing" : " things") + " · " +
+      fmt(total, { round: true }) + " out</span></div>" +
+      '<div class="card-body flush"><div class="rows">' +
+      owed.slice()
+        .sort(function (a, b) { return a.date.localeCompare(b.date); })
+        .map(function (t) {
+          var age = Math.max(0, Math.round((parseISO(today()) - parseISO(t.date)) / 86400000));
+          return '<div class="row stacked">' +
+            '<div class="stack-top">' +
+            '<span class="row-title">' + esc(t.desc || t.category) + "</span>" +
+            '<span class="row-fig">' + fmt(txBase(t)) +
+            (isForeign(t.currency) ? '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>" : "") +
+            "</span></div>" +
+            '<div class="stack-foot">' +
+            '<span class="row-sub">' + esc(t.category) + " · " + esc(accountName(t.accountId, t.pocketId)) +
+            " · paid " + esc(t.date) + "</span>" +
+            (age >= 30 ? '<span class="pill warn">' + age + " days</span>" : "") +
+            '<button class="btn sm primary" data-act="tx-settle" data-id="' + t.id + '">Money came back</button>' +
+            "</div></div>";
+        }).join("") + "</div>" +
+      '<p class="hint" style="padding:0.75rem">This is money that has left your accounts but is not counted ' +
+      "as spending, so it is out of your burn rate and your runway. Mark each one when it comes back.</p>" +
+      "</div></div>";
+  }
+
   function renderToday() {
     if (!state.accounts.length && !state.transactions.length) {
       return pageHead("Today", "Log what you spend, and see where the month is going.") + firstRunCard();
@@ -3638,6 +3669,7 @@
 
     html += todayCard();
     html += monthTilesCard();
+    html += owedBackCard();
     html += '<div class="cols-2" style="margin-top:1rem">' + billsCard() +
       '<div class="card"><div class="card-head"><h3>What stands out</h3>' +
       '<button class="btn sm quiet" data-act="go-insights">All insights →</button></div>' +
@@ -4007,8 +4039,9 @@
             (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '">▣</button>' +
           (t.refundable
             ? '<button class="ibtn' + (t.settledOn ? " on" : "") + '" data-act="tx-settle" data-id="' + t.id +
-              '" aria-label="' + (t.settledOn ? "Mark as still owed" : "Mark as refunded") + '" title="' +
-              (t.settledOn ? "Refunded — click to undo" : "Mark as refunded") + '">\u21a9</button>'
+              '" aria-label="' + (t.settledOn ? "Mark as still owed" : "Record the money coming back") + '" title="' +
+              (t.settledOn ? "Refunded on " + t.settledOn + " — click to undo" : "Record the money coming back") +
+              '">\u21a9</button>'
             : "") +
           '<button class="ibtn" data-act="tx-edit" data-id="' + t.id + '" aria-label="Edit transaction" title="Edit">✎</button>' +
           '<button class="ibtn danger" data-act="tx-del" data-id="' + t.id + '" aria-label="Delete transaction" title="Delete">✕</button>' +
@@ -5390,19 +5423,82 @@
     },
 
     /* ---- transactions ---- */
+    /* Two things happen when a reimbursement comes back: the original expense
+       stops being held out of your spending, and money arrives in an account.
+       Marking it settled only did the first, which left the second as a chore
+       to remember. It now offers to log the arrival too, prefilled — and it is
+       only an offer, because a refund can land late, short, in another
+       currency, or in a different account than it left from.
+
+       A partial refund needs no special handling: the expense counts in full
+       and the income entry carries whatever actually arrived, so the net cost
+       comes out right on its own. */
     "tx-settle": function (id) {
       var t = state.transactions.filter(function (x) { return x.id === id; })[0];
       if (!t) return;
-      var was = t.settledOn || null;
-      // Settling records that the money came back; it does not create an
-      // income entry, because the refund landing in your account is a separate
-      // thing you log yourself. This just stops it being held out of spending.
-      t.settledOn = was ? null : today();
-      save(); render();
-      toast(t.settledOn
-        ? (t.desc || t.category) + " settled \u2014 it counts as spending from now on."
-        : (t.desc || t.category) + " is outstanding again.",
-        function () { t.settledOn = was; });
+
+      if (t.settledOn) {
+        var wasDate = t.settledOn;
+        t.settledOn = null;
+        save(); render();
+        toast((t.desc || t.category) + " is outstanding again.",
+          function () { t.settledOn = wasDate; });
+        return;
+      }
+
+      var cur = t.currency || baseCode();
+      var incomeCats = catOptions("income");
+      var guess = incomeCats.filter(function (c) {
+        return /refund|reimburse/i.test(c);
+      })[0] || incomeCats[incomeCats.length - 1];
+
+      openModal({
+        title: "Money back for " + (t.desc || t.category),
+        message: "You paid <b>" + fmtIn(t.amount, cur) + "</b> on " + esc(t.date) +
+          ". Recording this stops it being held out of your spending.",
+        fields: [
+          { key: "date", label: "Date it came back", type: "date", value: today() },
+          { key: "log", type: "check", span: true, value: true,
+            label: "Also log the money arriving",
+            hint: "leave this off if you have already entered the refund yourself" },
+          { key: "amount", label: "Amount received", type: "number", value: t.amount, min: 0,
+            hint: "less than you paid is fine \u2014 the difference stays as spending" },
+          { key: "account", label: "Into", type: "select",
+            options: accountOptions(acctRef(t.accountId, t.pocketId)),
+            value: acctRef(t.accountId, t.pocketId) },
+          { key: "category", label: "Category", type: "select", catKind: "income",
+            options: incomeCats, value: guess }
+        ].concat(currencyField(cur)),
+        confirmLabel: "Mark refunded",
+        validate: function (v) {
+          if (v.log && !(v.amount > 0)) return "Enter what actually came back, or untick logging it.";
+        },
+        onConfirm: function (v) {
+          var made = null;
+          if (v.log) {
+            var c = v.currency || baseCode();
+            var ref = parseRef(v.account);
+            made = {
+              id: uid(), date: v.date || today(),
+              desc: "Refund \u2014 " + (t.desc || t.category),
+              type: "income", category: v.category,
+              accountId: ref.accountId, pocketId: ref.pocketId || null,
+              amount: v.amount, currency: c, rate: rateFor(c),
+              refundFor: t.id
+            };
+            state.transactions.push(made);
+          }
+          t.settledOn = v.date || today();
+          save(); render();
+          toast(made
+            ? fmt(txBase(made)) + " logged back into " + accountName(made.accountId, made.pocketId) + "."
+            : (t.desc || t.category) + " marked refunded.",
+            function () {
+              t.settledOn = null;
+              if (made) state.transactions = state.transactions.filter(function (x) { return x.id !== made.id; });
+            });
+        }
+      });
     },
 
     "tx-add": function () {

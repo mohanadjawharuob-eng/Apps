@@ -58,6 +58,9 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   flash, with the status-bar colour kept in step.
 - **Reclassifying past entries** — refundable and one-off can be set when editing
   a transaction, not only when adding one.
+- **An "Owed back to you" card** on Today, listing everything reimbursable that
+  has not come back, flagging anything over 30 days. Marking one settled offers
+  to log the money arriving, prefilled, into the account it left from.
 - **Net worth on the first screen** — one line at the top of Today with the
   month's movement, what is owed and what is spoken for. The 12-month curve and
   the accounts behind it stay on Worth, a tap away.
