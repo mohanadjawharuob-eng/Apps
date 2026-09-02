@@ -54,6 +54,10 @@ expenses. None of those hold for contract work paid in a currency that moves, so
 - **Plan scenarios** (`extends`), **confidence on income** (`at 40%`),
   **`review_by`**, **sub-budgets** (`Subscriptions > Spotify`), and a
   **close-out** comparing projected against real once a plan's period ends.
+- **Light / dark / match-my-phone**, applied before first paint so there is no
+  flash, with the status-bar colour kept in step.
+- **Reclassifying past entries** — refundable and one-off can be set when editing
+  a transaction, not only when adding one.
 - **Net worth on the first screen** — one line at the top of Today with the
   month's movement, what is owed and what is spoken for. The 12-month curve and
   the accounts behind it stay on Worth, a tap away.
@@ -72,6 +76,10 @@ expenses. None of those hold for contract work paid in a currency that moves, so
 - **Budget rollover** — carry an underspend into next month.
 - **Plan: dated changes** — "rent becomes €700 from March". Needs budgets to
   gain a time dimension; they are one figure per category today.
+
+### Open question
+- **A visual redesign.** `coffer/DESIGN-BRIEF.md` is a brief to hand to Claude
+  Design. The six-tab structure is settled; the visual language is not.
 
 ### Considered and turned down
 - **Receipt scanning by camera** — OCR of a photographed receipt is wrong often

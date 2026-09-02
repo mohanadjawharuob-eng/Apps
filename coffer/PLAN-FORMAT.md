@@ -49,7 +49,7 @@ Everything after the amount can come in any order.
 |---|---|
 | **amount** | Required. `400`, `45,000,000` and `$400` all read the same. |
 | **currency** | A three-letter code after the amount. It **must already have a rate** under Settings › Exchange rates — otherwise the line is refused rather than converted at a rate nobody chose. The rate is then frozen into the plan, so changing it later never re-values a plan you already imported. |
-| **frequency** | `weekly`, `monthly` or `yearly` — the three Coffer keeps. Monthly if omitted. `fortnightly` and `quarterly` are refused by name rather than silently rounded. |
+| **frequency** | `weekly`, `monthly`, `yearly` or `once` — the four Coffer keeps. Monthly if omitted. `fortnightly` and `quarterly` are refused by name rather than silently rounded. See below for what `once` means. |
 | **account** | `into Wallet` for income, `from Wallet` for a commitment; a pocket is `from Bank › Cyprus`. Matched case-insensitively against the accounts you actually have. An unknown name is an error listing the ones that exist; a closed account is refused. |
 | **category** | After a comma: `, Housing`. Leave it out and Coffer uses the entry's own name if that names a category, otherwise guesses from it and tells you which it picked. A category that doesn't exist is offered as a tickbox, never created behind your back. |
 | **date** | `from 2026-09-01` or `by 2027-06-30`. Always `YYYY-MM-DD`. **"next March" is refused** — a date guessed at is a date that is quietly wrong. |

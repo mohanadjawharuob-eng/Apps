@@ -3,6 +3,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#eef1ec" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#101f1b" media="(prefers-color-scheme: dark)" />
+<script>
+  /* Read the saved theme before anything paints. Doing this from the main
+     script, which runs at the end of the body, means a visible flash of the
+     wrong colours on every launch. */
+  (function () {
+    try {
+      var raw = localStorage.getItem("coffer.v2");
+      var t = raw && JSON.parse(raw).settings && JSON.parse(raw).settings.theme;
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) { /* no preference stored, or storage blocked: follow the system */ }
+  })();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -736,7 +748,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02h";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-02i";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -843,7 +855,7 @@
   function blank() {
     return {
       version: 2,
-      settings: { currency: "$", lock: null, base: "USD", rates: {} },
+      settings: { theme: "system", currency: "$", lock: null, base: "USD", rates: {} },
       photoIndex: {},
       categories: { expense: DEFAULT_CATS.expense.slice(), income: DEFAULT_CATS.income.slice() },
       accounts: [],
@@ -918,6 +930,7 @@
         var s = blank();
         if (p.settings) {
           s.settings.currency = p.settings.currency || "$";
+          s.settings.theme = p.settings.theme || "system";
           s.settings.lock = p.settings.lock || null;
           // absent in every backup written before multi-currency: default to a
           // single-currency book, which is exactly what those files describe
@@ -1131,6 +1144,40 @@
   }
   var SYMBOLS = { USD: "$", EUR: "\u20ac", LBP: "LL", GBP: "\u00a3", JOD: "JD",
                   AED: "AED", SAR: "SAR", TRY: "\u20ba", EGP: "E\u00a3" };
+
+  var THEMES = ["system", "light", "dark"];
+  var THEME_LABEL = { system: "Match my phone", light: "Light", dark: "Dark" };
+  var THEME_BG = { light: "#eef1ec", dark: "#101f1b" };
+
+  function currentTheme() {
+    var t = state.settings && state.settings.theme;
+    return THEMES.indexOf(t) >= 0 ? t : "system";
+  }
+  function applyTheme() {
+    var t = currentTheme();
+    var root = document.documentElement;
+    if (t === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", t);
+
+    // The two media-query theme-colors in the head cannot know about a manual
+    // override, so a forced theme gets a single plain one instead. Without
+    // this the phone's status bar keeps the system colour and clashes.
+    var olds = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < olds.length; i++) olds[i].parentNode.removeChild(olds[i]);
+    function addMeta(color, media) {
+      var m = document.createElement("meta");
+      m.setAttribute("name", "theme-color");
+      m.setAttribute("content", color);
+      if (media) m.setAttribute("media", media);
+      document.head.appendChild(m);
+    }
+    if (t === "system") {
+      addMeta(THEME_BG.light, "(prefers-color-scheme: light)");
+      addMeta(THEME_BG.dark, "(prefers-color-scheme: dark)");
+    } else {
+      addMeta(THEME_BG[t]);
+    }
+  }
 
   function baseCode() { return (state.settings && state.settings.base) || "USD"; }
 
@@ -4788,6 +4835,18 @@
       "</div><p class=\"hint\" style=\"margin-top:0.75rem\">Back up gives you the text and a file — copy the text if " +
       "your browser blocks downloads. Restoring replaces everything currently in this browser, after a confirmation.</p></div></div>";
 
+    /* appearance */
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Appearance</h3>' +
+      '<span class="sub">' + esc(currentTheme() === "system" ? "following your phone" : THEME_LABEL[currentTheme()].toLowerCase()) +
+      "</span></div><div class=\"card-body\">" +
+      '<div class="seg" style="max-width:420px">' + THEMES.map(function (t) {
+        return '<button data-act="theme-set" data-v="' + t + '" aria-pressed="' + (currentTheme() === t) + '">' +
+          esc(THEME_LABEL[t]) + "</button>";
+      }).join("") + "</div>" +
+      '<p class="hint" style="margin-top:0.6rem">Matching your phone follows its light and dark setting, ' +
+      "including any automatic schedule it has. Picking one holds it there whatever the phone does.</p>" +
+      "</div></div>";
+
     /* currency */
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Currency</h3>' +
       '<span class="sub">everything totals in ' + esc(baseCode()) + '</span></div><div class="card-body">' +
@@ -5149,6 +5208,11 @@
 
     /* ---- navigation ---- */
     "go-insights": function () { view = "insights"; render(); },
+
+    "theme-set": function (id, el) {
+      state.settings.theme = el.getAttribute("data-v");
+      save(); applyTheme(); render();
+    },
     "plan-tab": function (id) { planTab = id; view = "plan"; render(); },
     "month-prev": function () { viewMonth = monthShift(viewMonth, -1); render(); },
     "month-next": function () { if (viewMonth < thisMonth()) { viewMonth = monthShift(viewMonth, 1); render(); } },
@@ -5453,7 +5517,17 @@
               catOptions(t.type).indexOf(t.category) === -1 ? [t.category] : []), value: t.category },
           { key: "account", label: "Account", type: "select", options: accountOptions(acctRef(t.accountId, t.pocketId)), value: acctRef(t.accountId, t.pocketId) },
           { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 }
-        ].concat(currencyField(t.currency)),
+        ].concat(currencyField(t.currency)).concat(t.type === "expense" ? [{
+          key: "refundable", type: "check", span: true, value: !!t.refundable,
+          label: "I expect this money back",
+          hint: t.settledOn
+            ? "already marked refunded on " + t.settledOn + " — unticking this clears that"
+            : "kept out of your spending and your burn rate until you mark it settled"
+        }, {
+          key: "oneOff", type: "check", span: true, value: !!t.oneOff,
+          label: "One-off, not a running cost",
+          hint: "counted in the month, but left out of the burn rate your runway is worked out from"
+        }] : []),
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
         onConfirm: function (v) {
           // Keep the rate this entry was logged at unless the currency itself
@@ -5465,6 +5539,17 @@
           t.type = v.type; t.date = v.date || t.date; t.desc = v.desc.trim();
           t.category = v.category; t.amount = v.amount;
           t.accountId = parseRef(v.account).accountId; t.pocketId = parseRef(v.account).pocketId;
+
+          // The checkboxes are only shown for expenses, so an entry switched to
+          // income must not keep flags that no longer mean anything.
+          if (v.type === "expense") {
+            t.refundable = !!v.refundable;
+            t.oneOff = !!v.oneOff;
+            // no longer refundable means there is nothing left to settle
+            if (!t.refundable) t.settledOn = null;
+          } else {
+            t.refundable = false; t.oneOff = false; t.settledOn = null;
+          }
           save(); render(); toast("Transaction updated.");
         }
       });
@@ -6276,6 +6361,7 @@
           var fresh = blank();
           if (incoming.settings) {
             fresh.settings.currency = incoming.settings.currency || "$";
+            fresh.settings.theme = incoming.settings.theme || "system";
             fresh.settings.lock = incoming.settings.lock || null;
             fresh.settings.base = incoming.settings.base || "USD";
             fresh.settings.rates = (incoming.settings.rates && typeof incoming.settings.rates === "object")
@@ -6294,7 +6380,7 @@
           fresh.extraDebtPayment = num(incoming.extraDebtPayment);
           state = fresh;
           viewMonth = thisMonth();
-          save(); render();
+          save(); applyTheme(); render();
           toast("Backup restored — " + counts + ".");
         });
       });
@@ -7045,12 +7131,15 @@
   });
 
   function boot() {
+    // the head script already set the attribute from storage; this keeps the
+    // theme-color meta in step and covers a state restored from a backup
+    applyTheme();
     render();
     // roll any overdue recurring reminder into view rather than silently passing
     var overdue = activeRecurring().filter(function (r) { return r.nextDate && daysUntil(r.nextDate) < 0; });
     if (overdue.length) {
       toast(overdue.length === 1
-        ? overdue[0].name + " is overdue — log it from Budgets."
+        ? overdue[0].name + " is overdue — log it from Plan › Bills."
         : overdue.length + " recurring items are overdue.");
     }
   }
