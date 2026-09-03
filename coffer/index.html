@@ -1,8 +1,8 @@
 <meta charset="utf-8" />
 <title>Coffer — Personal Finance, Fully Local</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#eef1ec" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#101f1b" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#101312" media="(prefers-color-scheme: dark)" />
 <script>
   /* Read the saved theme before anything paints. Doing this from the main
      script, which runs at the end of the body, means a visible flash of the
@@ -24,97 +24,137 @@
 <link rel="manifest" href="./manifest.webmanifest" />
 <style>
   /* ============================================================
-     Coffer — visual identity
-     Ground: deep ink with a green bias (bank ledger).
-     Structure: ruled hairlines, not boxes-inside-boxes.
-     Accent: brass, reserved for actions only.
-     Money direction is semantic (gain/loss), never the accent.
+     Coffer — the Press visual system
+
+     Warm bone paper in light, near-black with a sage accent in dark.
+     Three rules carried from the design, and worth keeping:
+
+       · Cards are separated by fill, not elevation. One shadow exists,
+         on the log bar, because it floats over scrolling content.
+       · Green means healthy state and nothing else — the runway arc, an
+         on-pace budget bar, the net-worth trend. It is never decoration,
+         so income rows are NOT green: direction is carried by the sign
+         and by position. Amber marks drift and staleness. Red is kept
+         for genuinely wrong (over budget, overdue, negative worth).
+       · Every monetary figure is set in the serif. That is what makes
+         this read as a ledger rather than a dashboard.
+
+     Both token vocabularies live here: the original names, which most
+     of the app still uses, and the design's names, so new work can be
+     written straight from the handoff.
      ============================================================ */
   :root {
-    --page: #eff1ed;
+    /* design names */
+    --bg: #f7f4ee;
     --surface: #ffffff;
-    --raised: #f7f8f5;
-    --ink: #131c1a;
-    --dim: rgba(19, 28, 26, 0.64);
-    --faint: rgba(19, 28, 26, 0.42);
-    --rule: rgba(19, 28, 26, 0.10);
-    --rule-mid: rgba(19, 28, 26, 0.16);
-    --rule-strong: rgba(19, 28, 26, 0.26);
-    --brass: #8a6420;
-    --brass-soft: rgba(138, 100, 32, 0.12);
-    --on-brass: #fffdf7;
-    --gain: #0a7f36;
-    --loss: #b5342c;
-    --warn: #9a6a08;
-    --warn-bg: rgba(250, 178, 25, 0.18);
-    --gain-bg: rgba(10, 127, 54, 0.12);
-    --loss-bg: rgba(181, 52, 44, 0.12);
-    --shadow: 0 1px 1px rgba(19, 28, 26, 0.04), 0 12px 28px -18px rgba(19, 28, 26, 0.28);
-    --scrim: rgba(19, 28, 26, 0.45);
+    --tint: #efe9dc;
+    --ink: #1b1a17;
+    --dim: #6f6a60;
+    --line: #e3ded2;
+    --ac: #b0472c;
+    --onac: #ffffff;
+    --calm: #4a6b4f;
+    --warn: #a5701a;
+    --emph: #b0472c;
+    /* the design has no alert role; runway under three months needs one.
+       Derived from the accent hue at higher chroma, as the handoff says. */
+    --alert: #9c3218;
 
-    --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100;
-    --c5: #e87ba4; --c6: #008300; --c7: #4a3aa7; --c8: #e34948;
-    --grid: rgba(19, 28, 26, 0.09);
+    /* original names, re-pointed */
+    --page: var(--bg);
+    --raised: var(--tint);
+    --faint: #9a958b;
+    --rule: var(--line);
+    --rule-mid: #d5cec0;
+    --rule-strong: #b9b1a1;
+    --brass: var(--ac);
+    --brass-soft: rgba(176, 71, 44, 0.10);
+    --on-brass: var(--onac);
+    --gain: var(--calm);
+    --loss: var(--alert);
+    --warn-bg: rgba(165, 112, 26, 0.14);
+    --gain-bg: rgba(74, 107, 79, 0.12);
+    --loss-bg: rgba(156, 50, 24, 0.10);
 
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --shadow: none;
+    --lift: 0 2px 10px rgba(27, 26, 23, 0.08);
+    --scrim: rgba(27, 26, 23, 0.40);
+    /* Categorical, for the spending donut and the category table only.
+       Earth tones, so nothing here competes with the state colours. */
+    --c1: #8a6a3f; --c2: #b0472c; --c3: #4a6b4f; --c4: #a5701a;
+    --c5: #7a5c78; --c6: #3f6b6b; --c7: #6b6f4a; --c8: #99553d;
+    --grid: rgba(27, 26, 23, 0.08);
+
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color-scheme: light;
+    font-variant-numeric: tabular-nums;
   }
 
+  /* The dark theme is the design's "dark sage": near-black with a sage
+     accent, chosen over the warm persimmon dark because green then does
+     the state work on its own. */
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
-      --page: #0b1110;
-      --surface: #131c1a;
-      --raised: #1a2523;
+      --bg: #101312;
+      --surface: #191d1b;
+      --tint: #1f2422;
       --ink: #e8ece9;
-      --dim: rgba(232, 236, 233, 0.68);
-      --faint: rgba(232, 236, 233, 0.44);
-      --rule: rgba(232, 236, 233, 0.11);
-      --rule-mid: rgba(232, 236, 233, 0.18);
-      --rule-strong: rgba(232, 236, 233, 0.30);
-      --brass: #d8ab61;
-      --brass-soft: rgba(216, 171, 97, 0.16);
-      --on-brass: #17110333;
-      --on-brass: #1a1204;
-      --gain: #4fbe6a;
-      --loss: #e8756c;
-      --warn: #f0b03c;
-      --warn-bg: rgba(240, 176, 60, 0.16);
-      --gain-bg: rgba(79, 190, 106, 0.14);
-      --loss-bg: rgba(232, 117, 108, 0.14);
-      --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 16px 32px -20px rgba(0, 0, 0, 0.7);
+      --dim: #8d9793;
+      --line: #2a302d;
+      --ac: #7fb08a;
+      --onac: #0f1a13;
+      --calm: #7fb08a;
+      --warn: #cfa055;
+      /* deliberately not the accent here: on sage, letting true burn take
+         the accent would put it in competition with the runway arc */
+      --emph: #e8ece9;
+      --alert: #e0765a;
+
+      --faint: #67716d;
+      --rule-mid: #38403c;
+      --rule-strong: #4b544f;
+      --brass-soft: rgba(127, 176, 138, 0.14);
+      --warn-bg: rgba(207, 160, 85, 0.15);
+      --gain-bg: rgba(127, 176, 138, 0.13);
+      --loss-bg: rgba(224, 118, 90, 0.13);
+      --shadow: none;
+      --lift: 0 2px 12px rgba(0, 0, 0, 0.45);
       --scrim: rgba(4, 8, 7, 0.62);
-      --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
-      --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
-      --grid: rgba(232, 236, 233, 0.10);
+      --c1: #c0a071; --c2: #e0765a; --c3: #7fb08a; --c4: #cfa055;
+      --c5: #b394b1; --c6: #6fa3a3; --c7: #a3a878; --c8: #d08b70;
+      --grid: rgba(232, 236, 233, 0.09);
       color-scheme: dark;
     }
   }
 
   :root[data-theme="dark"] {
-    --page: #0b1110;
-    --surface: #131c1a;
-    --raised: #1a2523;
+    --bg: #101312;
+    --surface: #191d1b;
+    --tint: #1f2422;
     --ink: #e8ece9;
-    --dim: rgba(232, 236, 233, 0.68);
-    --faint: rgba(232, 236, 233, 0.44);
-    --rule: rgba(232, 236, 233, 0.11);
-    --rule-mid: rgba(232, 236, 233, 0.18);
-    --rule-strong: rgba(232, 236, 233, 0.30);
-    --brass: #d8ab61;
-    --brass-soft: rgba(216, 171, 97, 0.16);
-    --on-brass: #1a1204;
-    --gain: #4fbe6a;
-    --loss: #e8756c;
-    --warn: #f0b03c;
-    --warn-bg: rgba(240, 176, 60, 0.16);
-    --gain-bg: rgba(79, 190, 106, 0.14);
-    --loss-bg: rgba(232, 117, 108, 0.14);
-    --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 16px 32px -20px rgba(0, 0, 0, 0.7);
+    --dim: #8d9793;
+    --line: #2a302d;
+    --ac: #7fb08a;
+    --onac: #0f1a13;
+    --calm: #7fb08a;
+    --warn: #cfa055;
+    --emph: #e8ece9;
+    --alert: #e0765a;
+
+    --faint: #67716d;
+    --rule-mid: #38403c;
+    --rule-strong: #4b544f;
+    --brass-soft: rgba(127, 176, 138, 0.14);
+    --warn-bg: rgba(207, 160, 85, 0.15);
+    --gain-bg: rgba(127, 176, 138, 0.13);
+    --loss-bg: rgba(224, 118, 90, 0.13);
+    --shadow: none;
+    --lift: 0 2px 12px rgba(0, 0, 0, 0.45);
     --scrim: rgba(4, 8, 7, 0.62);
-    --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
-    --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
-    --grid: rgba(232, 236, 233, 0.10);
+    --c1: #c0a071; --c2: #e0765a; --c3: #7fb08a; --c4: #cfa055;
+    --c5: #b394b1; --c6: #6fa3a3; --c7: #a3a878; --c8: #d08b70;
+    --grid: rgba(232, 236, 233, 0.09);
     color-scheme: dark;
   }
 
@@ -135,6 +175,12 @@
 
   /* every figure aligns in its column */
   .fig, td.num, th.num, input, .hero-fig, .tile-fig { font-variant-numeric: tabular-nums; }
+  /* the design's kicker: a small, wide, quiet label above every figure */
+  .label, .tile .label, .hero .label {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  td.num, th.num { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; }
 
   .label {
     font-size: 0.66rem;
@@ -260,9 +306,10 @@
 
   /* ---------------- generic surfaces ---------------- */
   .card {
+    border: 0;
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 12px;
+    border-radius: 18px;
     box-shadow: var(--shadow);
   }
   .card > .card-head {
@@ -289,7 +336,7 @@
     width: 100%; text-align: left; cursor: pointer;
     padding: 0.85rem 1.1rem; margin-bottom: 1rem;
     background: var(--surface); border: 1px solid var(--rule);
-    border-radius: 12px; box-shadow: var(--shadow);
+    border-radius: 18px; box-shadow: var(--shadow);
   }
   .worth-strip:hover { border-color: var(--rule-mid); }
   .worth-label {
@@ -297,7 +344,7 @@
     text-transform: uppercase; color: var(--faint); flex: none;
   }
   .worth-fig {
-    font-family: var(--serif); font-size: 1.6rem; font-weight: 600;
+    font-family: var(--serif); font-size: 1.9rem; font-weight: 400;
     color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1;
   }
   .worth-fig.loss { color: var(--loss); }
@@ -311,7 +358,7 @@
   .hero {
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 12px;
+    border-radius: 18px;
     box-shadow: var(--shadow);
     display: grid;
     grid-template-columns: minmax(210px, 0.85fr) minmax(0, 1.7fr);
@@ -329,7 +376,7 @@
   .hero-fig {
     font-family: var(--serif);
     font-size: clamp(2rem, 4.4vw, 2.9rem);
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: -0.02em;
     line-height: 1.05;
     margin-top: 0.3rem;
@@ -346,15 +393,19 @@
   @media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
   .tile {
+    border-radius: 16px;
     background: var(--surface);
     border: 1px solid var(--rule);
-    border-radius: 12px;
+    border-radius: 18px;
     box-shadow: var(--shadow);
     padding: 0.85rem 1rem 0.9rem;
     display: flex; flex-direction: column; gap: 0.1rem;
     min-width: 0;
   }
-  .tile-fig { font-size: 1.35rem; font-weight: 650; letter-spacing: -0.015em; margin-top: 0.2rem; }
+  .tile-fig {
+    font-family: var(--serif); font-size: 1.45rem; font-weight: 400;
+    letter-spacing: -0.02em; margin-top: 0.35rem; line-height: 1;
+  }
   .tile-foot { font-size: 0.72rem; color: var(--faint); margin-top: 0.15rem; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
   .tile .spark { margin-top: 0.5rem; }
 
@@ -377,9 +428,12 @@
   .row-sub { font-size: 0.73rem; color: var(--faint); margin-top: 0.1rem; }
   .row-end { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
   .fx { display:block; font-size:0.72rem; color:var(--faint); font-variant-numeric:tabular-nums; }
-  .row-fig { font-size: 0.9rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .row-fig.gain { color: var(--gain); }
-  .row-fig.loss { color: var(--loss); }
+  .row-fig {
+    font-family: var(--serif); font-size: 1.05rem; font-weight: 400;
+    font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -0.01em;
+  }
+  .row-fig.gain { color: var(--ink); }
+  .row-fig.loss { color: var(--alert); }
 
   .empty {
     padding: 1.1rem 0;
@@ -417,7 +471,7 @@
     line-height:1.1; margin-top:0.1rem; }
   .today-side .today-fig { font-size:1.15rem; }
   .today-fig.quiet { color:var(--dim); }
-  .today-fig.gain { color:var(--gain); }
+  .today-fig.gain { color:var(--ink); }
   .dayrow td { background:var(--raised); border-top:1px solid var(--rule-mid);
     padding:0.45rem 0.65rem; }
   .dayrow td > span { display:inline-block; vertical-align:baseline; }
@@ -497,7 +551,7 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--raised); }
   td.num { white-space: nowrap; font-weight: 600; }
-  td.num.gain { color: var(--gain); }
+  td.num.gain { color: var(--ink); }
   .cat-tag { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
   .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
@@ -628,7 +682,7 @@
     display: flex; gap: 0.8rem; align-items: flex-start;
     background: var(--gain-bg);
     border: 1px solid rgba(10, 127, 54, 0.22);
-    border-radius: 12px;
+    border-radius: 18px;
     padding: 0.95rem 1.15rem;
     font-size: 0.855rem; line-height: 1.55;
   }
@@ -670,6 +724,113 @@
      Phone: the rail becomes a bottom tab bar.
      Placed last so it wins the cascade over the base rules.
      ============================================================ */
+  /* ---------------- Today, in the Press shape ---------------- */
+  .dateline {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.1rem;
+  }
+  .dateline > span {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
+  }
+
+  .hero-plain { padding: 0 0.25rem; margin-bottom: 1.1rem; }
+  .hero-plain .hero-fig { margin-top: 0.45rem; }
+  .hero-plain .hero-fig.loss { color: var(--alert); }
+
+  .band {
+    background: var(--tint); border-radius: 18px;
+    padding: 1.1rem 1.15rem 1rem; margin-bottom: 0.75rem;
+  }
+  .runway-band { display: flex; gap: 1rem; align-items: center; }
+  .lead { font-size: 0.88rem; font-weight: 600; line-height: 1.35; margin: 0.45rem 0 0; }
+  .band-sub { font-size: 0.72rem; color: var(--dim); margin: 0.4rem 0 0; line-height: 1.4; }
+
+  .card.pad { padding: 1rem 1.15rem; margin-bottom: 0.75rem; }
+  .pair { display: flex; align-items: stretch; justify-content: space-between; gap: 1rem; }
+  .pair > div:first-child, .pair > div:last-child { flex: 1; min-width: 0; }
+  .pair-rule { width: 1px; background: var(--line); flex: none; }
+  .pair-fig {
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 400;
+    letter-spacing: -0.01em; line-height: 1; margin-top: 0.45rem;
+  }
+  .pair-fig.emph { color: var(--emph); }
+  .pair-sub { font-size: 0.66rem; color: var(--dim); margin: 0.35rem 0 0; line-height: 1.35; }
+  .thinbar { height: 7px; border-radius: 4px; background: var(--tint); overflow: hidden; }
+  .thinbar-fill { height: 100%; background: var(--ac); border-radius: 4px; }
+
+  /* the bar with today's mark on it: the point is the gap between how far
+     through the money you are and how far through the month */
+  .markbar { height: 8px; border-radius: 999px; background: var(--line); position: relative; }
+  .markbar-fill { height: 100%; border-radius: 999px; }
+  .markbar-mark {
+    position: absolute; top: -4px; bottom: -4px; width: 2px;
+    border-radius: 2px; background: var(--ink);
+  }
+  /* no cap on this, and outside your burn if it was a one-off */
+  .stripebar {
+    height: 6px; border-radius: 999px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 10px);
+  }
+  .budget-card { position: relative; }
+  .budget-card .card-tools {
+    position: absolute; top: 0.7rem; right: 0.7rem;
+    display: flex; gap: 0.15rem; opacity: 0; transition: opacity 0.12s;
+  }
+  .budget-card:hover .card-tools, .budget-card:focus-within .card-tools { opacity: 1; }
+  @media (hover: none) { .budget-card .card-tools { opacity: 1; } }
+
+  .triple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.75rem; }
+  .card.tile-sm { padding: 0.85rem 0.95rem; border-radius: 16px; }
+  /* a tile whose value is a phrase rather than a figure: the display serif is
+     for numbers, and prose at that size just breaks */
+  .tile-fig.words {
+    font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+    letter-spacing: 0; line-height: 1.25;
+  }
+
+  .due-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.75rem; }
+  .due-row { display: flex; align-items: baseline; gap: 0.6rem; }
+  .due-name { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 500; }
+  .due-when { font-size: 0.7rem; color: var(--dim); }
+  .due-when.warn { color: var(--warn); }
+  .due-amt { font-family: var(--serif); font-size: 1rem; font-weight: 400; }
+
+  .notices { padding: 0 0.35rem; margin-top: 0.9rem; }
+  .notice { font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0 0 0.4rem; }
+  .notice.warn { color: var(--warn); }
+  .notice b { color: var(--ink); font-weight: 600; }
+  .notice.warn b { color: inherit; }
+
+  /* ---------------- the bottom assembly ----------------
+     Logging is the thing done many times a day, so it sits under the thumb
+     on every screen rather than at the top of two of them. The bar and the
+     tabs travel together; this is the only part of the app that floats, and
+     the only surviving shadow. */
+  .logbar { display: flex; gap: 0.55rem; align-items: center; padding: 0 0.2rem 0.55rem; }
+  .logbar-field {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 0.1rem 0.9rem;
+    box-shadow: var(--lift);
+  }
+  .logbar-field:focus-within { border-color: var(--ac); }
+  .logbar-plus { color: var(--ac); font-weight: 600; font-size: 0.9rem; flex: none; }
+  .logbar input {
+    flex: 1; min-width: 0; border: 0; background: none; padding: 0.72rem 0;
+    font: 500 0.9rem/1 var(--sans); color: var(--ink);
+  }
+  .logbar input::placeholder { color: var(--dim); }
+  .logbar input:focus { outline: none; }
+  .logbar-go {
+    flex: none; padding: 0.8rem 1.1rem; border-radius: 999px;
+    background: var(--ac); color: var(--onac);
+    font: 700 0.82rem/1 var(--sans);
+  }
+  .logbar-go:hover { filter: brightness(1.06); }
+
+  .tab .ico svg { display: block; }
+
   @media (max-width: 880px) {
     .shell { grid-template-columns: minmax(0, 1fr); }
     .rail {
@@ -683,16 +844,21 @@
       box-shadow: 0 -8px 24px -16px rgba(0, 0, 0, 0.4);
     }
     .rail .brand, .rail .rail-foot { display: none; }
+    .rail { flex-direction: column; padding: 0.5rem 0.5rem calc(0.2rem + env(safe-area-inset-bottom)); }
     .rail nav { flex-direction: row; gap: 0.1rem; width: 100%; }
+    .logbar { width: 100%; padding: 0 0.15rem 0.5rem; }
     .tab {
       flex: 1; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.12rem; padding: 0.35rem 0.1rem;
-      font-size: 0.58rem; font-weight: 600; letter-spacing: 0.01em;
-      min-height: 50px; border-radius: 8px;
+      gap: 0.3rem; padding: 0.3rem 0.1rem;
+      font-size: 0.56rem; font-weight: 600; letter-spacing: 0.06em;
+      min-height: 44px; border-radius: 8px; text-transform: none;
     }
-    .tab .ico { font-size: 1.1rem; width: auto; }
-    main.view { padding: 1.15rem 1rem calc(4.9rem + env(safe-area-inset-bottom)); }
-    .toasts { bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+    .tab .ico { font-size: 1.1rem; width: auto; height: 20px; }
+    /* the design colours the whole item, icon and label together */
+    .tab[aria-current="page"] { background: none; color: var(--ac); font-weight: 700; }
+    .tab:hover { background: none; color: var(--ink); }
+    main.view { padding: 1.15rem 1rem calc(7.6rem + env(safe-area-inset-bottom)); }
+    .toasts { bottom: calc(7.4rem + env(safe-area-inset-bottom)); }
   }
 
   @media (max-width: 620px) {
@@ -719,6 +885,13 @@
       <span class="brand-mark">C</span>
       <h1>Coffer</h1>
     </div>
+    <form class="logbar" id="logbar" autocomplete="off">
+      <div class="logbar-field">
+        <span class="logbar-plus" aria-hidden="true">+</span>
+        <input id="logInput" type="text" placeholder="10$ potato" aria-label="Log an expense" />
+      </div>
+      <button class="logbar-go" type="submit">Log</button>
+    </form>
     <nav id="nav" aria-label="Sections"></nav>
     <div class="rail-foot">
       <p class="lock-note">Stored only on this device. No account, no server, no network.</p>
@@ -748,7 +921,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-02j";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-03a";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -765,13 +938,26 @@
 
   // Six tabs, one question each: what is happening now, what happened, what I
   // intend, what I hold and owe, what I keep missing, and how it is set up.
+  //
+  // Drawn inline rather than set as glyphs — still no icon font and no
+  // library, but a sunrise and a ruled page say more than ◈ and ≡ did.
+  function ico(d) {
+    return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + "</svg>";
+  }
   var TABS = [
-    { id: "today", label: "Today", ico: "◈" },
-    { id: "ledger", label: "Ledger", ico: "≡" },
-    { id: "plan", label: "Plan", ico: "◇" },
-    { id: "worth", label: "Worth", ico: "◆" },
-    { id: "insights", label: "Insights", ico: "◐" },
-    { id: "settings", label: "Settings", ico: "⚙" }
+    { id: "today", label: "Today",
+      ico: ico('<path d="M3 14.6h14"/><path d="M6.2 14.6a3.8 3.8 0 0 1 7.6 0"/><path d="M10 4.4v1.7"/><path d="M4.9 6.5 6 7.6"/><path d="M15.1 6.5 14 7.6"/>') },
+    { id: "ledger", label: "Ledger",
+      ico: ico('<rect x="4.8" y="3.2" width="10.4" height="13.6" rx="2.4"/><path d="M7.7 3.2v13.6"/><path d="M9.9 7.1h3.3"/><path d="M9.9 10h3.3"/><path d="M9.9 12.9h2.1"/>') },
+    { id: "plan", label: "Plan",
+      ico: ico('<path d="M3.6 7.2 10 3.6l6.4 3.6v6.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2z"/><path d="M3.6 7.2 10 10.8l6.4-3.6"/>') },
+    { id: "worth", label: "Worth",
+      ico: ico('<ellipse cx="10" cy="6" rx="5.6" ry="2.4"/><path d="M4.4 6v4c0 1.33 2.51 2.4 5.6 2.4s5.6-1.07 5.6-2.4V6"/><path d="M4.4 10v3.2c0 1.33 2.51 2.4 5.6 2.4s5.6-1.07 5.6-2.4V10"/>') },
+    { id: "insights", label: "Insights",
+      ico: ico('<circle cx="8.9" cy="8.9" r="4.9"/><path d="M12.6 12.6 16.4 16.4"/>') },
+    { id: "settings", label: "Settings",
+      ico: ico('<path d="M3.4 7h13"/><path d="M3.4 13h13"/><circle cx="7.6" cy="7" r="2"/><circle cx="12.4" cy="13" r="2"/>') }
   ];
 
   /* ---------------- small utilities ---------------- */
@@ -1147,7 +1333,7 @@
 
   var THEMES = ["system", "light", "dark"];
   var THEME_LABEL = { system: "Match my phone", light: "Light", dark: "Dark" };
-  var THEME_BG = { light: "#eef1ec", dark: "#101f1b" };
+  var THEME_BG = { light: "#f7f4ee", dark: "#101312" };
 
   function currentTheme() {
     var t = state.settings && state.settings.theme;
@@ -3455,6 +3641,86 @@
      the tabs compose, so each screen answers one question instead of all of
      them. The markup inside each piece is unchanged. */
 
+
+  /* ---- the runway gauge ----------------------------------------------
+     A semicircle spanning nought to twelve months. The design's brief was
+     that three months should not look like twelve, and a number alone does
+     not manage that — so the arc carries the length and the colour carries
+     the state, and the sentence beside it says the figure in words, which
+     is how you would say it out loud.
+     -------------------------------------------------------------------- */
+
+  var RUNWAY_SPAN = 12;
+
+  function runwayTone(m) {
+    if (m == null) return "dim";
+    if (m >= 6) return "calm";
+    if (m >= 3) return "warn";
+    return "alert";
+  }
+
+  // months as words, because "nine months and a bit" reads like a person
+  // talking and "9.4" reads like a spreadsheet
+  var NUM_WORDS = ["nought", "one", "two", "three", "four", "five", "six",
+                   "seven", "eight", "nine", "ten", "eleven", "twelve"];
+  function monthsInWords(m) {
+    if (m == null) return "No spending logged yet, so there is nothing to divide into.";
+    if (m >= RUNWAY_SPAN) return "Over a year before the money runs out.";
+    var whole = Math.floor(m);
+    var frac = m - whole;
+    var word = NUM_WORDS[whole] || String(whole);
+    var tail = frac < 0.15 ? "" : frac < 0.4 ? " and a bit" : frac < 0.7 ? " and a half" : ", nearly " + (NUM_WORDS[whole + 1] || (whole + 1)) + ",";
+    if (whole === 0) {
+      return frac < 0.5 ? "Less than a fortnight before the money runs out."
+                        : "Under a month before the money runs out.";
+    }
+    var noun = whole === 1 && !tail ? "month" : "months";
+    return word.charAt(0).toUpperCase() + word.slice(1) + tail + " " + noun + " before the money runs out.";
+  }
+
+  function runwayGauge(months, size) {
+    var w = size || 112, h = Math.round(w * 0.59);
+    var cx = w / 2, cy = h * 0.91, r = w * 0.43;
+    var tone = runwayTone(months);
+    var colour = tone === "calm" ? "var(--calm)" : tone === "warn" ? "var(--warn)" : tone === "alert" ? "var(--alert)" : "var(--line)";
+    var f = months == null ? 0 : clamp(months / RUNWAY_SPAN, 0, 1);
+    // the endpoint of a sweep of pi*f radians from the left of the arc
+    var th = Math.PI * f;
+    var x = cx - r * Math.cos(th), y = cy - r * Math.sin(th);
+    var x0 = cx - r, x1 = cx + r;
+    var sw = Math.max(6, Math.round(w * 0.08));
+
+    return '<svg viewBox="0 0 ' + w + " " + h + '" style="width:' + w + "px;height:" + h + 'px;flex:none" ' +
+      'role="img" aria-label="' + (months == null ? "Runway unknown" : "Runway " + months.toFixed(1) + " months") + '">' +
+      '<path d="M' + x0 + " " + cy + " A" + r + " " + r + " 0 0 1 " + x1 + " " + cy + '" fill="none" ' +
+        'stroke="var(--line)" stroke-width="' + sw + '" stroke-linecap="round"></path>' +
+      (f > 0.001
+        ? '<path d="M' + x0 + " " + cy + " A" + r + " " + r + " 0 0 1 " + x.toFixed(1) + " " + y.toFixed(1) + '" fill="none" ' +
+          'stroke="' + colour + '" stroke-width="' + sw + '" stroke-linecap="round"></path>'
+        : "") +
+      '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" ' +
+        'style="font:400 ' + Math.round(w * 0.23) + 'px var(--serif);fill:var(--ink)">' +
+        (months == null ? "—" : months >= RUNWAY_SPAN ? "12+" : months.toFixed(1)) + "</text>" +
+      "</svg>";
+  }
+
+  function runwayBand() {
+    var rw = runway();
+    var m = rw.months;
+    return '<div class="band runway-band">' +
+      runwayGauge(m) +
+      "<div>" +
+      '<span class="label">Runway</span>' +
+      '<p class="lead">' + esc(monthsInWords(m)) + "</p>" +
+      '<p class="band-sub">' + (m == null
+        ? "Log a few weeks and this fills in."
+        : fmt(rw.free, { round: true }) + " reachable at " + fmt(rw.burn, { round: true }) + " a month") +
+      (rw.basis && rw.basis.partial && m != null
+        ? " · from only " + rw.basis.months + " month" + (rw.basis.months === 1 ? "" : "s") + " of data"
+        : "") + "</p>" +
+      "</div></div>";
+  }
+
   function worthHero() {
     var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
     var histMonths = dataWindow(12, viewMonth);
@@ -3654,28 +3920,113 @@
       "</div></div>";
   }
 
+  /* ---- Today, to the design ------------------------------------------
+     Date line · net worth · runway · the burn pair · three small tiles ·
+     what is due · what is worth noticing. One idea per band, in the order
+     you would ask the questions.
+     -------------------------------------------------------------------- */
+
+  function burnCard() {
+    var out = monthSummary(viewMonth).expense;
+    var burn = trueBurnFor(viewMonth);
+    var stripped = out - burn;
+    var share = out > 0 ? clamp(burn / out, 0, 1) : 0;
+    var mn = monthName(viewMonth, true);
+
+    return '<div class="card pad"><div class="pair">' +
+      '<div><span class="label">Total out</span>' +
+      '<div class="pair-fig">' + fmt(out, { round: true }) + "</div>" +
+      '<div class="pair-sub">everything that left in ' + esc(mn) + "</div></div>" +
+      '<div class="pair-rule"></div>' +
+      '<div><span class="label">True burn</span>' +
+      '<div class="pair-fig emph">' + fmt(burn, { round: true }) + "</div>" +
+      '<div class="pair-sub">one-offs stripped out</div></div>' +
+      "</div>" +
+      '<div class="thinbar" style="margin-top:0.85rem">' +
+      '<div class="thinbar-fill" style="width:' + (share * 100).toFixed(1) + '%"></div></div>' +
+      '<p class="pair-sub" style="margin-top:0.45rem">' +
+      (stripped > 0.5
+        ? fmt(stripped, { round: true }) + " of it was a one-off or money you are owed back"
+        : "all of it was running cost this month") + "</p></div>";
+  }
+
+  function threeTiles() {
+    var cur = monthSummary(viewMonth);
+    var t0 = today();
+    var todayOut = state.transactions.reduce(function (n2, t) {
+      return t.date === t0 && t.type === "expense" ? n2 + txBase(t) : n2;
+    }, 0);
+    function tile(lab, val) {
+      return '<div class="card tile-sm"><span class="label">' + esc(lab) + "</span>" +
+        '<div class="tile-fig">' + fmt(val, { round: true }) + "</div></div>";
+    }
+    return '<div class="triple">' + tile("In", cur.income) + tile("Kept", cur.net) + tile("Today", todayOut) + "</div>";
+  }
+
+  function upcomingCard() {
+    var up = upcomingBills(14);
+    if (!up.length) return "";
+    var free = freeAssets();
+    var running = 0;
+    return '<div class="card pad"><span class="label">Due in the next fortnight</span>' +
+      '<div class="due-list">' + up.slice(0, 5).map(function (r) {
+        var amt = toBase(r.amount, r.currency, r.rate);
+        running += r.type === "income" ? 0 : amt;
+        // the rule from the design: a date the current balance cannot
+        // comfortably cover is the one that gets marked
+        var tight = r.type !== "income" && running > free;
+        return '<div class="due-row"><span class="due-name">' + esc(r.name) +
+          ' <span class="due-when' + (tight ? " warn" : "") + '">' + esc(shortDate(r.nextDate)) + "</span></span>" +
+          '<span class="due-amt">' + fmt(amt, { round: true }) + "</span></div>";
+      }).join("") + "</div>" +
+      '<div class="btn-row" style="margin-top:0.9rem">' +
+      '<button class="btn sm quiet" data-act="plan-tab" data-id="bills">Manage bills</button></div></div>';
+  }
+
+  function shortDate(d) {
+    try {
+      return parseISO(d).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    } catch (e) { return d; }
+  }
+
+  function noticesBlock() {
+    var notes = buildInsights(viewMonth).slice(0, 3);
+    if (!notes.length) return "";
+    return '<div class="notices">' + notes.map(function (nt) {
+      return '<p class="notice' + (nt.tone === "warn" || nt.tone === "bad" ? " warn" : "") + '">' + nt.html + "</p>";
+    }).join("") + '<button class="btn sm quiet" data-act="go-insights" style="margin-top:0.5rem">All insights →</button></div>';
+  }
+
   function renderToday() {
     if (!state.accounts.length && !state.transactions.length) {
       return pageHead("Today", "Log what you spend, and see where the month is going.") + firstRunCard();
     }
-    var html = pageHead("Today", null, monthStepper());
 
-    html += netWorthStrip();
+    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
+    var startOfMonth = totalAssets(lastDayOf(monthShift(viewMonth, -1))) - debt;
+    var nowValue = totalAssets(viewMonth === thisMonth() ? null : lastDayOf(viewMonth)) - debt;
+    var moved = nowValue - startOfMonth;
 
-    // logging comes first: it is done many times a day, everything else is
-    // read occasionally
-    var qa = quickAddCard();
-    if (qa) html += qa + '<div style="height:1rem"></div>';
+    var html = '<div class="dateline">' +
+      '<span>' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
+      monthStepper() + "</div>";
 
-    html += todayCard();
-    html += monthTilesCard();
+    // net worth, plainly, first — it is what people open the app to see
+    html += '<div class="hero-plain">' +
+      '<span class="label">Net worth</span>' +
+      '<div class="hero-fig' + (net < 0 ? " loss" : "") + '">' + fmt(net) + "</div>" +
+      '<p class="band-sub">' +
+      (Math.abs(moved) < 0.005
+        ? "level so far in " + esc(monthName(viewMonth, true))
+        : (moved > 0 ? "up " : "down ") + fmt(Math.abs(moved), { round: true }) + " in " + esc(monthName(viewMonth, true))) +
+      (debt > 0 ? " · after " + fmt(debt, { round: true }) + " owed" : "") + "</p></div>";
+
+    html += runwayBand();
+    html += burnCard();
+    html += threeTiles();
     html += owedBackCard();
-    html += '<div class="cols-2" style="margin-top:1rem">' + billsCard() +
-      '<div class="card"><div class="card-head"><h3>What stands out</h3>' +
-      '<button class="btn sm quiet" data-act="go-insights">All insights →</button></div>' +
-      '<div class="card-body flush">' +
-      notesHtml(buildInsights(viewMonth).slice(0, 3), "Log a few transactions and observations will appear here.") +
-      "</div></div></div>";
+    html += upcomingCard();
+    html += noticesBlock();
     return html;
   }
 
@@ -3683,11 +4034,41 @@
     if (!state.accounts.length && !state.debts.length) {
       return pageHead("Worth", "Everything you hold, and everything you owe.") + firstRunCard();
     }
-    return pageHead("Worth", null, monthStepper()) +
-      worthHero() +
-      '<div style="height:1rem"></div>' +
-      accountsCard() +
-      debtsBody();
+    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
+    var free = freeAssets();
+    var histMonths = dataWindow(12, viewMonth);
+    var pts = histMonths.map(function (mk) {
+      var v = totalAssets(lastDayOf(mk)) - debt;
+      return { label: monthName(mk), value: v, tip: monthName(mk, true) + "\n" + fmt(v) };
+    });
+    var first = pts[0].value, last = pts[pts.length - 1].value;
+
+    var html = '<div class="dateline"><span>Worth</span>' + monthStepper() + "</div>" +
+      '<div class="hero-plain">' +
+      '<div class="hero-fig' + (net < 0 ? " loss" : "") + '">' + fmt(net) + "</div>" +
+      '<p class="band-sub">' +
+      (Math.abs(last - first) < 0.005
+        ? "level over " + pts.length + " months"
+        : (last > first ? "up " : "down ") + fmt(Math.abs(last - first), { round: true }) +
+          " over " + pts.length + " months") + "</p></div>";
+
+    // the twelve-month line, in the state colour because a rising net worth
+    // is the healthy case and this is the one chart that says so
+    html += '<div class="band" style="padding:0.9rem 1rem 0.7rem">' +
+      areaChart(pts, { cssHeight: 96, height: 40, color: "var(--calm)", aria: "Net worth over " + pts.length + " months" }) +
+      '<div style="display:flex;justify-content:space-between;margin-top:0.5rem">' +
+      '<span class="band-sub" style="margin:0">' + esc(monthName(histMonths[0], true)) + "</span>" +
+      '<span class="band-sub" style="margin:0">' + esc(monthName(histMonths[histMonths.length - 1], true)) + "</span>" +
+      "</div></div>";
+
+    if (Math.abs(assets - free) > 0.5) {
+      html += '<p class="band-sub" style="padding:0 0.35rem;margin:0 0 0.75rem">' +
+        fmt(free, { round: true }) + " of it is reachable — the rest is in pockets you have marked as " +
+        "already spoken for, and is left out of your runway.</p>";
+    }
+
+    html += accountsCard() + debtsBody();
+    return html;
   }
 
   var PLAN_TABS = [
@@ -3847,9 +4228,9 @@
           var pb = pocketBalance(a, p);
           var st = pocketStatus(p);
           return '<div class="row pocket"><div class="row-main">' +
-            '<div class="row-title">' + esc(p.name) +
-            (st !== "free" ? ' <span class="pill ' + (st === "committed" ? "bad" : "mute") + '">' +
-              esc(POCKET_STATUS_LABEL[st]) + "</span>" : "") + "</div></div>" +
+            '<div class="row-title">' + esc(p.name) + "</div>" +
+            '<div class="row-sub">' + esc(POCKET_STATUS_LABEL[st]) +
+            (st === "committed" ? " · not counted toward your runway" : "") + "</div></div>" +
             '<div class="row-end"><span class="row-fig' + (pb < 0 ? " loss" : "") + '">' + fmt(pb) + "</span>" +
             '<button class="ibtn" data-act="pocket-edit" data-id="' + a.id + "|" + p.id + '" aria-label="Edit ' + esc(p.name) + '" title="Edit">\u270e</button>' +
             '<button class="ibtn danger" data-act="pocket-del" data-id="' + a.id + "|" + p.id + '" aria-label="Remove ' + esc(p.name) + '" title="Remove">\u2715</button>' +
@@ -4127,59 +4508,89 @@
     var progress = monthProgress(viewMonth);
     var totalLimit = rows.reduce(function (s, b) { return s + b.limit; }, 0);
     var totalSpent = rows.reduce(function (s, b) { return s + b.spent; }, 0);
-    var cur = monthSummary(viewMonth);
-    var unbudgeted = cur.expense - totalSpent;
-    var html = "";
+    var pct = totalLimit > 0 ? totalSpent / totalLimit : 0;
 
-    html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
-      '<div class="tile"><span class="label">Budgeted</span><div class="tile-fig">' + fmt(totalLimit, { round: true }) + "</div>" +
-      '<div class="tile-foot">' + rows.length + (rows.length === 1 ? " category" : " categories") + "</div></div>" +
-      '<div class="tile"><span class="label">Spent against it</span><div class="tile-fig">' + fmt(totalSpent, { round: true }) + "</div>" +
-      '<div class="tile-foot">' + (totalLimit > 0 ? Math.round(totalSpent / totalLimit * 100) + "% of budget · " : "") +
-      Math.round(progress * 100) + "% through the month</div></div>" +
-      '<div class="tile"><span class="label">Outside any budget</span><div class="tile-fig">' + fmt(unbudgeted, { round: true }) + "</div>" +
-      '<div class="tile-foot">' + (unbudgeted > 0.005 ? "spending in uncapped categories" : "everything is covered") + "</div></div>" +
-      "</div>";
+    // fractions in words: the comparison that matters is how far through the
+    // money you are against how far through the month, and that is a sentence
+    function tenths(x) {
+      var w = ["nothing", "a tenth", "two tenths", "three tenths", "four tenths", "half",
+               "six tenths", "seven tenths", "eight tenths", "nine tenths", "all"];
+      return w[clamp(Math.round(x * 10), 0, 10)];
+    }
+    var lead = !totalLimit
+      ? "No budgets set yet."
+      : "You are " + tenths(pct) + " of the way through what you meant to spend, and " +
+        tenths(progress) + " of the way through the month.";
 
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Category limits</h3>' +
-      '<span class="sub">limits carry over every month</span>' +
-      '<button class="btn sm primary" data-act="budget-set">Set a budget</button></div><div class="card-body flush">';
+    var html = '<div class="band"><p class="lead" style="margin-top:0">' + esc(lead) + "</p>";
+    if (totalLimit) {
+      var ahead = pct > progress + 0.02;
+      html += '<div style="display:flex;align-items:baseline;gap:0.5rem;margin-top:0.75rem">' +
+        '<span class="pair-fig" style="margin-top:0">' + fmt(totalSpent, { round: true }) + "</span>" +
+        '<span class="band-sub" style="margin:0">of ' + fmt(totalLimit, { round: true }) + " intended</span></div>" +
+        '<div class="markbar" style="margin-top:0.8rem">' +
+        '<div class="markbar-fill" style="width:' + (clamp(pct, 0, 1) * 100).toFixed(1) +
+          '%;background:' + (ahead ? "var(--warn)" : "var(--calm)") + '"></div>' +
+        '<div class="markbar-mark" style="left:' + (clamp(progress, 0, 1) * 100).toFixed(1) + '%"></div></div>' +
+        '<p class="band-sub">the mark is today</p>';
+    }
+    html += "</div>";
 
     if (!rows.length) {
-      html += '<p class="empty">No budgets yet. <strong>Pick a category and a monthly limit</strong> — Coffer tracks it against ' +
-        "what you actually log, and warns you when you're on pace to pass it.</p>";
-    } else {
-      html += '<div class="rows">' + rows.map(function (b) {
-        var over = b.pct >= 1;
-        var hot = !over && progress > 0.15 && (b.spent / progress) > b.limit;
-        var color = over ? "var(--loss)" : hot ? "var(--warn)" : "var(--gain)";
-        var pill = over ? '<span class="pill bad">over by ' + fmt(-b.left, { round: true }) + "</span>"
-          : hot ? '<span class="pill warn">on pace to pass</span>'
-          : '<span class="pill ok">' + fmt(b.left, { round: true }) + " left</span>";
-        return '<div class="row" style="align-items:stretch;flex-direction:column;gap:0.45rem">' +
-          '<div style="display:flex;align-items:center;gap:0.6rem">' +
-          '<span class="cat-dot" style="background:' + catColor(b.category) + '"></span>' +
-          '<span class="row-title" style="flex:1">' + esc(b.category) + "</span>" +
-          '<span class="row-fig">' + fmt(b.spent, { round: true }) + ' <span style="color:var(--faint);font-weight:400">/ ' +
-          fmt(b.limit, { round: true }) + "</span></span>" +
-          '<button class="ibtn" data-act="budget-edit" data-cat="' + esc(b.category) + '" aria-label="Edit budget" title="Edit">✎</button>' +
-          '<button class="ibtn danger" data-act="budget-del" data-cat="' + esc(b.category) + '" aria-label="Remove budget" title="Remove">✕</button>' +
-          "</div>" +
-          meter(b.pct, color, progress) +
-          '<div style="display:flex;justify-content:space-between;align-items:center">' +
-          '<span class="hint">' + Math.round(b.pct * 100) + "% used</span>" + pill + "</div>" +
-          "</div>";
-      }).join("") + "</div>";
+      return html + '<div class="card pad"><p class="empty" style="margin:0">No budgets yet. ' +
+        "<strong>Pick a category and a monthly limit</strong> — Coffer tracks it against what you actually " +
+        'log.</p><div class="btn-row" style="margin-top:0.75rem">' +
+        '<button class="btn primary" data-act="budget-set">Set a budget</button></div></div>';
     }
-    html += "</div></div>";
+
+    html += rows.map(function (b) {
+      var over = b.pct >= 1;
+      var hot = !over && b.pct > progress + 0.10;
+      var colour = over ? "var(--alert)" : hot ? "var(--warn)" : "var(--calm)";
+      var note = over
+        ? "over by " + fmt(-b.left, { round: true }) + " of " + fmt(b.limit, { round: true })
+        : hot
+          ? "running ahead — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true })
+          : b.pct < progress - 0.10
+            ? "well under — " + fmt(b.left, { round: true }) + " still there"
+            : "on pace — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true });
+      var noteTone = over ? "var(--alert)" : hot ? "var(--warn)" : "var(--dim)";
+
+      return '<div class="card pad budget-card">' +
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:0.6rem">' +
+        '<span style="font-size:0.88rem;font-weight:600">' + esc(b.category) + "</span>" +
+        '<span class="due-amt">' + fmt(b.spent, { round: true }) + "</span></div>" +
+        '<div class="thinbar" style="height:6px;margin-top:0.65rem">' +
+        '<div class="thinbar-fill" style="width:' + (clamp(b.pct, 0, 1) * 100).toFixed(1) +
+          '%;background:' + colour + '"></div></div>' +
+        '<p class="pair-sub" style="color:' + noteTone + ';font-size:0.72rem">' + esc(note) + "</p>" +
+        '<div class="card-tools">' +
+        '<button class="ibtn" data-act="budget-edit" data-cat="' + esc(b.category) + '" aria-label="Edit budget" title="Edit">✎</button>' +
+        '<button class="ibtn danger" data-act="budget-del" data-cat="' + esc(b.category) + '" aria-label="Remove budget" title="Remove">✕</button>' +
+        "</div></div>";
+    }).join("");
+
+    // Spending with no budget behind it, shown with the design's striped bar:
+    // the stripe means "no cap, and outside your burn if it was a one-off".
+    var capped = {};
+    rows.forEach(function (b) { capped[b.category] = true; });
+    var loose = spendByCategory(viewMonth);
+    var extras = Object.keys(loose).filter(function (c) { return !capped[c] && loose[c] > 0.005; });
+    if (extras.length) {
+      html += extras.sort(function (a, b) { return loose[b] - loose[a]; }).map(function (c) {
+        return '<div class="card pad budget-card">' +
+          '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:0.6rem">' +
+          '<span style="font-size:0.88rem;font-weight:600">' + esc(c) + "</span>" +
+          '<span class="due-amt">' + fmt(loose[c], { round: true }) + "</span></div>" +
+          '<div class="stripebar" style="margin-top:0.65rem"></div>' +
+          '<p class="pair-sub" style="font-size:0.72rem">no budget on this yet</p>' +
+          '<div class="card-tools">' +
+          '<button class="btn sm quiet" data-act="budget-set">Set one</button></div></div>';
+      }).join("");
+    }
 
     return html;
   }
-
-  /* recurring — split in two, because a bill and a wage are not the same
-     kind of number. A bill is a commitment that eats what is safe to spend;
-     income is the thing it is measured against. One array underneath, so
-     every existing backup still loads untouched. */
 
   function recurRow(r) {
     var done = !r.nextDate;
@@ -4652,11 +5063,12 @@
 
       html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:0.7rem">' +
         '<div class="tile" style="box-shadow:none"><span class="label">Debt-free in</span>' +
-        '<div class="tile-fig">' + humanMonths(chosen.months) + "</div></div>" +
+        '<div class="tile-fig words">' + humanMonths(chosen.months) + "</div></div>" +
         '<div class="tile" style="box-shadow:none"><span class="label">Total interest</span>' +
         '<div class="tile-fig">' + (chosen.interest == null ? "—" : fmt(chosen.interest)) + "</div></div>" +
         '<div class="tile" style="box-shadow:none"><span class="label">Versus minimums only</span>' +
-        '<div class="tile-fig" style="color:' + (saved > 0.5 ? "var(--gain)" : "inherit") + '">' +
+        '<div class="tile-fig' + (saved > 0.5 ? "" : " words") + '" style="color:' +
+        (saved > 0.5 ? "var(--calm)" : "inherit") + '">' +
         (saved == null ? "—" : saved > 0.5 ? fmt(saved) + " saved" : "no change") + "</div>" +
         '<div class="tile-foot">' + (faster > 0 ? humanMonths(faster) + " sooner" : "same timeline") + "</div></div>" +
         "</div>";
@@ -7226,10 +7638,42 @@
     }
   });
 
+  /* The log bar is outside the rendered view, so it survives every render and
+     keeps focus and caret while you type. Submitting parses the same shorthand
+     the quick box does; anything it cannot read falls through to the full
+     dialog rather than being guessed at. */
+  function wireLogBar() {
+    var form = document.getElementById("logbar");
+    var input = document.getElementById("logInput");
+    if (!form || !input) return;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = input.value.trim();
+      if (!text) { ACTIONS["tx-add"](); return; }
+      if (!openAccounts().length) { needAccount(); return; }
+
+      var parsed = parseEntry(text);
+      if (!parsed || !parsed.ok) {
+        // hand it to the box that can show what it understood
+        omni = { text: text, touched: {} };
+        view = "today";
+        input.value = "";
+        render();
+        toast(parsed && parsed.reason ? parsed.reason : "Type an amount and what it was for.");
+        return;
+      }
+      omni = { text: text, touched: {} };
+      commitOmni();
+      input.value = "";
+      input.blur();
+    });
+  }
+
   function boot() {
     // the head script already set the attribute from storage; this keeps the
     // theme-color meta in step and covers a state restored from a backup
     applyTheme();
+    wireLogBar();
     render();
     // roll any overdue recurring reminder into view rather than silently passing
     var overdue = activeRecurring().filter(function (r) { return r.nextDate && daysUntil(r.nextDate) < 0; });

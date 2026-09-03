@@ -40,6 +40,24 @@ no package.json. What is in the repo is what runs.
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure.
 
+## Coffer's look
+
+The Press system, from `coffer/DESIGN-HANDOFF.md`. Three rules worth keeping in
+mind before adding anything:
+
+- **Green means healthy state and nothing else** — the runway arc, an on-pace
+  budget bar, a rising net-worth line. Never decoration, and never on a routine
+  income row. Amber is drift and staleness; red is genuinely wrong.
+- **Every monetary figure is set in `var(--serif)` at weight 400.** Prose in a
+  figure slot gets `.words`, which drops back to the UI stack — the display
+  serif is for numbers and phrases at that size just break.
+- **Cards are separated by fill, not elevation.** One shadow exists, on the log
+  bar, because it floats over scrolling content.
+
+Both token vocabularies are live: the design's (`--bg --tint --ac --calm
+--emph --alert`) and the original names, which most of the app still uses and
+which are aliased onto the new values.
+
 ## Coffer's shape
 
 Six tabs, one question each: Today, Ledger, Plan, Worth, Insights, Settings. A

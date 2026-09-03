@@ -80,9 +80,32 @@ expenses. None of those hold for contract work paid in a currency that moves, so
 - **Plan: dated changes** — "rent becomes €700 from March". Needs budgets to
   gain a time dimension; they are one figure per category today.
 
-### Open question
-- **A visual redesign.** `coffer/DESIGN-BRIEF.md` is a brief to hand to Claude
-  Design. The six-tab structure is settled; the visual language is not.
+### Shipped: the Press visual system
+Claude Design returned two directions and chose one. Press is now built:
+warm bone paper in light, near-black with a sage accent in dark, every monetary
+figure set in the serif, cards separated by fill rather than elevation.
+
+- **Runway is a gauge, not a statistic** — a semicircular arc over nought to
+  twelve months, coloured calm / warn / alert, with the figure written out in
+  words beside it ("Nine months and a bit before the money runs out").
+- **The log bar is pinned to the bottom of every screen**, above the tabs, so
+  logging is five seconds from wherever you are rather than only from Today.
+- **Tab icons are drawn**, not set as Unicode glyphs — still inline SVG, still
+  no icon font and no library.
+- **Colour discipline:** green means healthy state and nothing else, so income
+  rows are no longer green; direction is carried by the sign and the column.
+  Amber marks drift and staleness. Red is kept for genuinely wrong.
+- Today, Plan › Budgets and Worth rebuilt to the design; the other three tabs
+  inherit the system through the shared card and row primitives.
+
+`coffer/DESIGN-BRIEF.md` is the brief that was sent;
+`coffer/DESIGN-HANDOFF.md` is what came back, including the tokens and the
+gauge maths.
+
+### Not designed yet
+Ledger, Insights and Settings have no bespoke screens — they inherit the
+system. Also open: parse-confirmation after a quick log, empty and first-run
+states, and the rate-refresh flow.
 
 ### Considered and turned down
 - **Receipt scanning by camera** — OCR of a photographed receipt is wrong often
