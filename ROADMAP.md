@@ -103,9 +103,11 @@ figure set in the serif, cards separated by fill rather than elevation.
 gauge maths.
 
 ### Not designed yet
-Ledger, Insights and Settings have no bespoke screens — they inherit the
-system. Also open: parse-confirmation after a quick log, empty and first-run
-states, and the rate-refresh flow.
+Ledger, Insights and Settings have no bespoke screens. They now use the same
+component vocabulary as the rest — one card header, one pill, one row — so they
+are coherent, but nobody composed them. `coffer/DESIGN-BRIEF-2.md` is the
+follow-up brief for Claude Design covering those three plus the dense row,
+empty states, the under-three-months runway and the modal shell.
 
 ### Considered and turned down
 - **Receipt scanning by camera** — OCR of a photographed receipt is wrong often

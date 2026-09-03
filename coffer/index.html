@@ -242,14 +242,20 @@
 
   /* ---------------- page head ---------------- */
   .page-head {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    gap: 1rem; flex-wrap: wrap;
-    padding-bottom: 0.85rem;
-    border-bottom: 1px solid var(--rule-mid);
-    margin-bottom: 1.25rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; flex-wrap: wrap;
+    margin-bottom: 1rem;
   }
-  .page-head h2 { font-size: 1.55rem; letter-spacing: -0.015em; }
-  .page-head p { margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--dim); max-width: 58ch; }
+  .page-head > div { min-width: 0; }
+  .page-head h2 {
+    font-family: var(--sans);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .page-head p {
+    margin: 0.45rem 0 0; font-size: 0.8rem; color: var(--dim);
+    max-width: 46ch; line-height: 1.45;
+  }
 
   /* month stepper */
   /* Second-level navigation inside one tab. Scrolls sideways instead of
@@ -282,25 +288,23 @@
   }
   .subnav::-webkit-scrollbar { display: none; }
   .subnav button {
-    flex: none; padding: 0.35rem 0.7rem; border-radius: 999px;
-    font-size: 0.84rem; font-weight: 600; color: var(--dim);
-    white-space: nowrap; border: 1px solid transparent;
+    flex: none; padding: 0.45rem 0.85rem; border-radius: 999px;
+    font-size: 0.8rem; font-weight: 600; color: var(--dim);
+    white-space: nowrap; border: 0; background: var(--surface);
   }
-  .subnav button:hover { color: var(--ink); background: var(--raised); }
-  .subnav button.on {
-    color: var(--ink); background: var(--raised); border-color: var(--rule-mid);
-  }
+  .subnav button:hover { color: var(--ink); }
+  .subnav button.on { color: var(--onac); background: var(--ac); font-weight: 700; }
 
   .stepper { display: flex; align-items: center; gap: 0.15rem; }
   .stepper button {
-    width: 32px; height: 32px; border-radius: 6px;
+    width: 32px; height: 32px; border-radius: 999px;
     color: var(--dim); display: grid; place-items: center; font-size: 1rem;
   }
-  .stepper button:hover:not(:disabled) { background: var(--raised); color: var(--ink); }
+  .stepper button:hover:not(:disabled) { background: var(--tint); color: var(--ink); }
   .stepper button:disabled { opacity: 0.3; cursor: default; }
   .stepper .m {
-    min-width: 9.5rem; text-align: center;
-    font-size: 0.86rem; font-weight: 600;
+    min-width: 8.5rem; text-align: center;
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
   }
 
@@ -313,14 +317,17 @@
     box-shadow: var(--shadow);
   }
   .card > .card-head {
-    display: flex; align-items: baseline; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     gap: 0.75rem; flex-wrap: wrap;
-    padding: 0.95rem 1.15rem 0.7rem;
-    border-bottom: 1px solid var(--rule);
+    padding: 1rem 1.15rem 0.2rem;
   }
-  .card > .card-head h3 { font-size: 0.98rem; }
-  .card > .card-head .sub { font-size: 0.74rem; color: var(--faint); }
-  .card > .card-body { padding: 1.05rem 1.15rem 1.15rem; }
+  .card > .card-head h3 {
+    font-family: var(--sans);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .card > .card-head .sub { font-size: 0.72rem; color: var(--dim); }
+  .card > .card-body { padding: 0.7rem 1.15rem 1.15rem; }
   .card > .card-body.flush { padding: 0.35rem 1.15rem 0.8rem; }
 
   .stack { display: flex; flex-direction: column; gap: 1rem; }
@@ -375,8 +382,8 @@
 
   .hero-fig {
     font-family: var(--serif);
-    font-size: clamp(2rem, 4.4vw, 2.9rem);
-    font-weight: 400;
+    font-size: clamp(2.9rem, 12vw, 3.6rem);
+    font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.05;
     margin-top: 0.3rem;
@@ -418,14 +425,14 @@
   .rows { display: flex; flex-direction: column; }
   .row {
     display: flex; align-items: center; gap: 0.7rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--rule);
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--line);
     min-width: 0;
   }
   .row:last-child { border-bottom: none; }
   .row-main { flex: 1; min-width: 0; }
-  .row-title { font-size: 0.9rem; font-weight: 550; overflow-wrap: anywhere; }
-  .row-sub { font-size: 0.73rem; color: var(--faint); margin-top: 0.1rem; }
+  .row-title { font-size: 0.88rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+  .row-sub { font-size: 0.72rem; color: var(--dim); margin-top: 0.2rem; line-height: 1.35; }
   .row-end { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
   .fx { display:block; font-size:0.72rem; color:var(--faint); font-variant-numeric:tabular-nums; }
   .row-fig {
@@ -436,7 +443,7 @@
   .row-fig.loss { color: var(--alert); }
 
   .empty {
-    padding: 1.1rem 0;
+    padding: 0.3rem 0 0.2rem;
     color: var(--faint);
     font-size: 0.86rem;
     line-height: 1.55;
@@ -444,24 +451,27 @@
   .empty strong { color: var(--dim); font-weight: 600; }
 
   /* ---------------- buttons ---------------- */
+  /* Everything actionable is a pill and everything that reports state is a
+     pill, at the same radius and the same height, so a "Log" button and an
+     "in 14d" tag beside it read as one family instead of two. */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
-    padding: 0.5rem 0.9rem;
-    border-radius: 7px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    background: var(--raised);
-    border: 1px solid var(--rule-mid);
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: var(--tint);
+    border: 0;
     color: var(--ink);
     white-space: nowrap;
   }
-  .btn:hover { border-color: var(--rule-strong); }
-  .btn.primary { background: var(--brass); color: var(--on-brass); border-color: transparent; }
+  .btn:hover { filter: brightness(0.97); }
+  .btn.primary { background: var(--ac); color: var(--onac); }
   .btn.primary:hover { filter: brightness(1.06); }
-  .btn.quiet { background: transparent; border-color: transparent; color: var(--dim); font-weight: 500; }
-  .btn.quiet:hover { background: var(--raised); color: var(--ink); }
-  .btn.danger { color: var(--loss); border-color: var(--loss-bg); background: var(--loss-bg); }
-  .btn.sm { padding: 0.33rem 0.6rem; font-size: 0.77rem; }
+  .btn.quiet { background: transparent; color: var(--dim); font-weight: 600; }
+  .btn.quiet:hover { background: var(--tint); color: var(--ink); }
+  .btn.danger { color: var(--alert); background: var(--loss-bg); }
+  .btn.sm { padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 700; }
   .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
   .today-row { display:flex; gap:1.2rem; align-items:flex-start; flex-wrap:wrap; }
@@ -500,13 +510,13 @@
   .grp-fig.loss { color:var(--loss); }
   .ibtn.on { color: var(--brass); border-color: var(--brass); }
   .ibtn {
-    width: 30px; height: 30px; border-radius: 6px;
+    width: 32px; height: 32px; border-radius: 999px;
     display: grid; place-items: center;
-    color: var(--faint); font-size: 0.9rem;
+    color: var(--dim); font-size: 0.88rem;
     flex-shrink: 0;
   }
-  .ibtn:hover { background: var(--raised); color: var(--ink); }
-  .ibtn.danger:hover { background: var(--loss-bg); color: var(--loss); }
+  .ibtn:hover { background: var(--tint); color: var(--ink); }
+  .ibtn.danger:hover { background: var(--loss-bg); color: var(--alert); }
 
   /* ---------------- forms ---------------- */
   .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.7rem 0.75rem; align-items: end; }
@@ -528,13 +538,14 @@
   }
   input::placeholder { color: var(--faint); }
   input:hover, select:hover { border-color: var(--rule-strong); }
-  .seg { display: flex; gap: 0.2rem; background: var(--raised); border: 1px solid var(--rule-mid); border-radius: 8px; padding: 0.18rem; }
+  .seg { display: flex; gap: 0.25rem; }
   .seg button {
-    flex: 1; padding: 0.36rem 0.5rem; border-radius: 6px;
-    font-size: 0.8rem; font-weight: 600; color: var(--dim);
-    white-space: nowrap;
+    flex: 1; padding: 0.45rem 0.6rem; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; color: var(--dim);
+    background: var(--tint); white-space: nowrap;
   }
-  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.09); }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ac); color: var(--onac); font-weight: 700; }
 
   /* ---------------- table ---------------- */
   .tscroll { overflow-x: auto; margin: 0 -1.15rem; padding: 0 1.15rem; }
@@ -558,14 +569,15 @@
   /* ---------------- pills / meters ---------------- */
   .pill {
     display: inline-flex; align-items: center; gap: 0.28rem;
-    font-size: 0.7rem; font-weight: 650;
-    padding: 0.18rem 0.5rem; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 700;
+    padding: 0.4rem 0.7rem; border-radius: 999px;
     white-space: nowrap;
+    background: var(--tint); color: var(--dim); border: 0;
   }
-  .pill.ok { background: var(--gain-bg); color: var(--gain); }
+  .pill.ok { background: var(--gain-bg); color: var(--calm); }
   .pill.warn { background: var(--warn-bg); color: var(--warn); }
-  .pill.bad { background: var(--loss-bg); color: var(--loss); }
-  .pill.mute { background: var(--raised); color: var(--dim); border: 1px solid var(--rule); }
+  .pill.bad { background: var(--loss-bg); color: var(--alert); }
+  .pill.mute { background: var(--tint); color: var(--dim); }
 
   .meter { height: 7px; border-radius: 999px; background: var(--rule); overflow: hidden; position: relative; }
   .meter-fill { height: 100%; border-radius: 999px; }
@@ -747,6 +759,36 @@
   .band-sub { font-size: 0.72rem; color: var(--dim); margin: 0.4rem 0 0; line-height: 1.4; }
 
   .card.pad { padding: 1rem 1.15rem; margin-bottom: 0.75rem; }
+  .card-tophead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+  .card-tophead .sub { font-size: 0.72rem; color: var(--dim); }
+  /* a .card.pad already carries its own padding; an inner body must not add
+     a second helping of it */
+  .card.pad > .card-body,
+  .card.pad > .card-body.flush { padding: 0.7rem 0 0; }
+  .card.pad > .card-body > .tscroll { margin: 0 -1.15rem; padding: 0 1.15rem; }
+
+  /* a heading between groups of cards, at kicker weight so it organises
+     without competing with the cards themselves */
+  .sec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.6rem; margin: 1.2rem 0.35rem 0.6rem;
+  }
+
+  .asset-name { font-size: 0.95rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .asset-card.closed { opacity: 0.75; }
+  /* the three-way split, indented under the account it belongs to */
+  .split {
+    margin-top: 0.8rem; padding-left: 0.75rem;
+    border-left: 2px solid var(--line);
+    display: flex; flex-direction: column; gap: 0.45rem;
+  }
+  .split-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.6rem; font-size: 0.78rem;
+  }
+  .split-row.muted { color: var(--dim); }
+  .split-tag { font-size: 0.68rem; color: var(--dim); }
+  .split-fig { font-family: var(--serif); font-size: 0.95rem; font-weight: 400; white-space: nowrap; }
   .pair { display: flex; align-items: stretch; justify-content: space-between; gap: 1rem; }
   .pair > div:first-child, .pair > div:last-child { flex: 1; min-width: 0; }
   .pair-rule { width: 1px; background: var(--line); flex: none; }
@@ -772,13 +814,12 @@
     height: 6px; border-radius: 999px;
     background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 10px);
   }
-  .budget-card { position: relative; }
-  .budget-card .card-tools {
-    position: absolute; top: 0.7rem; right: 0.7rem;
-    display: flex; gap: 0.15rem; opacity: 0; transition: opacity 0.12s;
+  .budget-foot {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-top: 0.5rem;
   }
-  .budget-card:hover .card-tools, .budget-card:focus-within .card-tools { opacity: 1; }
-  @media (hover: none) { .budget-card .card-tools { opacity: 1; } }
+  .budget-foot .pair-sub { flex: 1; min-width: 0; margin: 0; }
+  .budget-foot .card-tools { display: flex; gap: 0.1rem; flex: none; }
 
   .triple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.75rem; }
   .card.tile-sm { padding: 0.85rem 0.95rem; border-radius: 16px; }
@@ -868,7 +909,7 @@
     .btn.sm { min-height: 34px; }
     .ibtn { width: 38px; height: 38px; font-size: 1rem; }
     .fields { grid-template-columns: minmax(0, 1fr); }
-    .page-head h2 { font-size: 1.35rem; }
+    .page-head p { font-size: 0.78rem; }
     .tiles { gap: 0.65rem; }
     .card > .card-head, .card > .card-body { padding-left: 0.95rem; padding-right: 0.95rem; }
     .card > .card-body.flush { padding-left: 0.95rem; padding-right: 0.95rem; }
@@ -921,7 +962,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-03a";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-03c";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -3758,9 +3799,6 @@
 
   function todayCard() {
     var t0 = today();
-    var html = "";
-
-    var t0 = today();
     var todayTx = state.transactions.filter(function (t) { return t.date === t0; });
     var todayOut = todayTx.reduce(function (n, t) { return t.type === "expense" ? n + txBase(t) : n; }, 0);
     var todayIn = todayTx.reduce(function (n, t) { return t.type === "income" ? n + txBase(t) : n; }, 0);
@@ -3769,35 +3807,41 @@
     var avgDay = monthSummary(monthOf(t0)).expense / elapsedDays;
     var vsAvg = avgDay > 0 ? todayOut / avgDay : null;
 
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Today</h3>' +
-      '<span class="sub">' + esc(dayLabel(t0)) + " · " + esc(new Date().toLocaleDateString(undefined, { day: "numeric", month: "long" })) + "</span></div>" +
-      '<div class="card-body"><div class="today-row">' +
-      '<div class="today-main"><span class="label">Spent today</span>' +
-      '<div class="today-fig' + (todayOut > 0 ? "" : " quiet") + '">' + fmt(todayOut) + "</div>" +
-      '<div class="tile-foot">' + (
+    return '<div class="card pad"><div class="card-tophead">' +
+      '<span class="label">Spent today</span>' +
+      '<span class="pair-sub" style="margin:0">' + esc(dayLabel(t0)) + "</span></div>" +
+
+      '<div class="pair" style="margin-top:0.5rem;align-items:baseline">' +
+      '<div><div class="pair-fig" style="margin-top:0">' + fmt(todayOut) + "</div>" +
+      '<div class="pair-sub">' + (
         !todayTx.length ? "nothing logged yet"
         : vsAvg == null ? todayTx.length + (todayTx.length === 1 ? " entry" : " entries")
-        : (vsAvg <= 1
-            ? '<span class="pill ok">' + Math.round((1 - vsAvg) * 100) + "% under</span> a typical day"
-            : '<span class="pill warn">' + Math.round((vsAvg - 1) * 100) + "% over</span> a typical day")
+        : vsAvg <= 1 ? Math.round((1 - vsAvg) * 100) + "% under a typical day"
+                     : Math.round((vsAvg - 1) * 100) + "% over a typical day"
       ) + "</div></div>" +
-      (todayIn > 0 ? '<div class="today-side"><span class="label">In today</span>' +
-        '<div class="today-fig gain">+' + fmt(todayIn) + "</div></div>" : "") +
-      '<div class="today-side"><span class="label">Typical day</span>' +
-      '<div class="today-fig quiet">' + fmt(avgDay, { round: true }) + "</div>" +
-      '<div class="tile-foot">this month so far</div></div>' +
+      '<div class="pair-rule"></div>' +
+      '<div style="text-align:right"><div class="pair-fig" style="margin-top:0;color:var(--dim)">' +
+      fmt(avgDay, { round: true }) + "</div>" +
+      '<div class="pair-sub">a typical day this month</div></div>' +
       "</div>" +
+
+      (todayIn > 0
+        ? '<p class="pair-sub" style="margin-top:0.6rem">' + fmt(todayIn) + " came in today as well.</p>"
+        : "") +
+
       (todayTx.length
         ? '<div class="rows" style="margin-top:0.7rem">' + todayTx.slice(0, 4).map(function (t) {
-            return '<div class="row"><div class="row-main"><div class="row-title">' + esc(t.desc || t.category) + "</div>" +
+            return '<div class="row"><div class="row-main">' +
+              '<div class="row-title">' + esc(t.desc || t.category) + "</div>" +
               '<div class="row-sub">' + esc(t.category) + "</div></div>" +
-              '<span class="row-fig' + (t.type === "income" ? " gain" : "") + '">' +
-              (t.type === "income" ? "+" : "\u2212") + fmt(txBase(t)).replace("-", "") + "</span></div>";
-          }).join("") + "</div>"
-        : "") +
-      "</div></div>";
-
-    return html;
+              '<span class="row-fig">' + (t.type === "income" ? "+" : "−") +
+              fmt(txBase(t)).replace("-", "") + "</span></div>";
+          }).join("") + "</div>" +
+          (todayTx.length > 4
+            ? '<div class="btn-row" style="margin-top:0.7rem"><button class="btn sm quiet" data-tab="ledger">' +
+              "See all " + todayTx.length + "</button></div>"
+            : "")
+        : "") + "</div>";
   }
 
   function monthTilesCard() {
@@ -3942,8 +3986,10 @@
       '<div class="pair-fig emph">' + fmt(burn, { round: true }) + "</div>" +
       '<div class="pair-sub">one-offs stripped out</div></div>' +
       "</div>" +
-      '<div class="thinbar" style="margin-top:0.85rem">' +
-      '<div class="thinbar-fill" style="width:' + (share * 100).toFixed(1) + '%"></div></div>' +
+      (stripped > 0.5
+        ? '<div class="thinbar" style="margin-top:0.85rem">' +
+          '<div class="thinbar-fill" style="width:' + (share * 100).toFixed(1) + '%"></div></div>'
+        : "") +
       '<p class="pair-sub" style="margin-top:0.45rem">' +
       (stripped > 0.5
         ? fmt(stripped, { round: true }) + " of it was a one-off or money you are owed back"
@@ -3952,15 +3998,22 @@
 
   function threeTiles() {
     var cur = monthSummary(viewMonth);
-    var t0 = today();
-    var todayOut = state.transactions.reduce(function (n2, t) {
-      return t.date === t0 && t.type === "expense" ? n2 + txBase(t) : n2;
-    }, 0);
     function tile(lab, val) {
       return '<div class="card tile-sm"><span class="label">' + esc(lab) + "</span>" +
         '<div class="tile-fig">' + fmt(val, { round: true }) + "</div></div>";
     }
-    return '<div class="triple">' + tile("In", cur.income) + tile("Kept", cur.net) + tile("Today", todayOut) + "</div>";
+    return '<div class="triple">' + tile("In", cur.income) + tile("Kept", cur.net) +
+      tile("Reachable", freeAssets()) + "</div>";
+  }
+
+  // The one-tap buttons: things paid often at no fixed time. They belong on the
+  // screen you open, next to the day they affect.
+  function quickCard() {
+    if (!state.quick.length) return "";
+    return '<div class="card pad"><div class="card-tophead">' +
+      '<span class="label">One tap</span>' +
+      '<button class="btn sm quiet" data-act="quick-manage">Manage</button></div>' +
+      '<div style="margin-top:0.7rem">' + quickChipsHtml() + "</div></div>";
   }
 
   function upcomingCard() {
@@ -4024,10 +4077,81 @@
     html += runwayBand();
     html += burnCard();
     html += threeTiles();
-    html += owedBackCard();
+    html += todayCard();
+    html += quickCard();
     html += upcomingCard();
     html += noticesBlock();
+    // last, because it is a list of things to chase rather than something to
+    // read every time you open the app
+    html += owedBackCard();
     return html;
+  }
+
+  /* Worth, in the Press idiom: one card per account, the three-way split
+     spelled out inside it, and debts as cards of the same shape. The old
+     hairline-row treatment is gone — it was the last screen still speaking
+     the previous vocabulary. */
+
+  function assetCard(a) {
+    var bal = balanceOf(a);
+    var pockets = pocketsOf(a);
+    var left = unallocatedOf(a);
+    var bits = [];
+    if ((a.group || "").trim()) bits.push((a.group || "").trim());
+    bits.push(a.type);
+
+    var html = '<div class="card pad asset-card">' +
+      '<div class="card-tophead">' +
+      '<div style="min-width:0"><div class="asset-name">' + esc(a.name) + "</div>" +
+      '<div class="pair-sub" style="margin-top:0.2rem">' + esc(bits.join(" · ")) + "</div></div>" +
+      '<span class="due-amt"' + (bal < 0 ? ' style="color:var(--alert)"' : "") + ">" + fmt(bal) + "</span></div>";
+
+    if (pockets.length) {
+      html += '<div class="split">' + pockets.map(function (pk) {
+        var st = pocketStatus(pk);
+        var pb = pocketBalance(a, pk);
+        return '<div class="split-row' + (st === "committed" ? " muted" : "") + '">' +
+          '<span>' + esc(pk.name) + ' <span class="split-tag">' + esc(POCKET_STATUS_LABEL[st]) + "</span></span>" +
+          '<span class="split-fig">' + fmt(pb) + "</span></div>";
+      }).join("") +
+      (Math.abs(left) > 0.005
+        ? '<div class="split-row muted"><span>Not allocated</span><span class="split-fig">' + fmt(left) + "</span></div>"
+        : "") + "</div>";
+    }
+
+    var used = state.transactions.some(function (t) {
+      return t.accountId === a.id || t.toAccountId === a.id;
+    }) || state.recurring.some(function (r) { return r.accountId === a.id; });
+
+    html += '<div class="budget-foot">' +
+      '<p class="pair-sub">' + (pockets.length
+        ? pockets.length + (pockets.length === 1 ? " pocket" : " pockets")
+        : "no pockets — all of it is available") + "</p>" +
+      '<span class="card-tools">' +
+      '<button class="ibtn" data-act="pocket-add" data-id="' + a.id + '" aria-label="Add a pocket to ' + esc(a.name) + '" title="Add a pocket">+</button>' +
+      '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit ' + esc(a.name) + '" title="Edit">✎</button>' +
+      (used
+        ? '<button class="ibtn" data-act="account-close" data-id="' + a.id + '" aria-label="Close ' + esc(a.name) + '" title="Close, keeping its history">⊘</button>'
+        : '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete">✕</button>') +
+      "</span></div></div>";
+    return html;
+  }
+
+  function closedAssetCard(a) {
+    var bal = balanceOf(a);
+    var count = state.transactions.filter(function (t) {
+      return t.accountId === a.id || t.toAccountId === a.id;
+    }).length;
+    return '<div class="card pad asset-card closed">' +
+      '<div class="card-tophead">' +
+      '<div style="min-width:0"><div class="asset-name" style="color:var(--dim)">' + esc(a.name) + "</div>" +
+      '<div class="pair-sub" style="margin-top:0.2rem">closed' + (a.closedOn ? " " + esc(a.closedOn) : "") +
+      " · " + count + (count === 1 ? " entry kept" : " entries kept") + "</div></div>" +
+      '<span class="due-amt" style="color:var(--dim)">' + fmt(bal) + "</span></div>" +
+      '<div class="budget-foot"><p class="pair-sub"></p><span class="card-tools">' +
+      '<button class="ibtn" data-act="account-open" data-id="' + a.id + '" aria-label="Reopen ' + esc(a.name) + '" title="Reopen">↺</button>' +
+      '<button class="ibtn danger" data-act="account-del" data-id="' + a.id + '" aria-label="Delete ' + esc(a.name) + '" title="Delete for good">✕</button>' +
+      "</span></div></div>";
   }
 
   function renderWorth() {
@@ -4036,6 +4160,7 @@
     }
     var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
     var free = freeAssets();
+    var live = openAccounts(), shut = state.accounts.filter(function (a) { return a.closed; });
     var histMonths = dataWindow(12, viewMonth);
     var pts = histMonths.map(function (mk) {
       var v = totalAssets(lastDayOf(mk)) - debt;
@@ -4052,8 +4177,6 @@
         : (last > first ? "up " : "down ") + fmt(Math.abs(last - first), { round: true }) +
           " over " + pts.length + " months") + "</p></div>";
 
-    // the twelve-month line, in the state colour because a rising net worth
-    // is the healthy case and this is the one chart that says so
     html += '<div class="band" style="padding:0.9rem 1rem 0.7rem">' +
       areaChart(pts, { cssHeight: 96, height: 40, color: "var(--calm)", aria: "Net worth over " + pts.length + " months" }) +
       '<div style="display:flex;justify-content:space-between;margin-top:0.5rem">' +
@@ -4061,13 +4184,34 @@
       '<span class="band-sub" style="margin:0">' + esc(monthName(histMonths[histMonths.length - 1], true)) + "</span>" +
       "</div></div>";
 
+    html += '<div class="triple">' +
+      '<div class="card tile-sm"><span class="label">Assets</span><div class="tile-fig">' + fmt(assets, { round: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">Debts</span><div class="tile-fig"' +
+        (debt > 0 ? ' style="color:var(--alert)"' : "") + ">" + fmt(debt, { round: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">Reachable</span><div class="tile-fig">' + fmt(free, { round: true }) + "</div></div>" +
+      "</div>";
+
     if (Math.abs(assets - free) > 0.5) {
-      html += '<p class="band-sub" style="padding:0 0.35rem;margin:0 0 0.75rem">' +
-        fmt(free, { round: true }) + " of it is reachable — the rest is in pockets you have marked as " +
-        "already spoken for, and is left out of your runway.</p>";
+      html += '<p class="band-sub" style="padding:0 0.35rem;margin:0 0 0.9rem">' +
+        "The gap is money in pockets you have marked as already spoken for. It is yours, but it is left " +
+        "out of your runway.</p>";
     }
 
-    html += accountsCard() + debtsBody();
+    html += '<div class="sec-head"><span class="label">Accounts</span>' +
+      '<span class="btn-row"><button class="btn sm" data-act="transfer-add">Transfer</button>' +
+      '<button class="btn sm primary" data-act="account-add">Add</button></span></div>';
+    html += live.length
+      ? live.map(assetCard).join("")
+      : '<div class="card pad"><p class="empty" style="margin:0">No open accounts.</p></div>';
+
+    if (shut.length) {
+      html += '<div class="sec-head"><span class="label">Closed</span>' +
+        '<span class="pair-sub" style="margin:0">' + shut.length +
+        (shut.length === 1 ? " account" : " accounts") + "</span></div>" +
+        shut.map(closedAssetCard).join("");
+    }
+
+    html += debtsBody();
     return html;
   }
 
@@ -4563,11 +4707,12 @@
         '<div class="thinbar" style="height:6px;margin-top:0.65rem">' +
         '<div class="thinbar-fill" style="width:' + (clamp(b.pct, 0, 1) * 100).toFixed(1) +
           '%;background:' + colour + '"></div></div>' +
+        '<div class="budget-foot">' +
         '<p class="pair-sub" style="color:' + noteTone + ';font-size:0.72rem">' + esc(note) + "</p>" +
-        '<div class="card-tools">' +
+        '<span class="card-tools">' +
         '<button class="ibtn" data-act="budget-edit" data-cat="' + esc(b.category) + '" aria-label="Edit budget" title="Edit">✎</button>' +
         '<button class="ibtn danger" data-act="budget-del" data-cat="' + esc(b.category) + '" aria-label="Remove budget" title="Remove">✕</button>' +
-        "</div></div>";
+        "</span></div></div>";
     }).join("");
 
     // Spending with no budget behind it, shown with the design's striped bar:
@@ -4583,8 +4728,8 @@
           '<span style="font-size:0.88rem;font-weight:600">' + esc(c) + "</span>" +
           '<span class="due-amt">' + fmt(loose[c], { round: true }) + "</span></div>" +
           '<div class="stripebar" style="margin-top:0.65rem"></div>' +
+          '<div class="budget-foot">' +
           '<p class="pair-sub" style="font-size:0.72rem">no budget on this yet</p>' +
-          '<div class="card-tools">' +
           '<button class="btn sm quiet" data-act="budget-set">Set one</button></div></div>';
       }).join("");
     }
@@ -5011,19 +5156,18 @@
     // net worth is one minus the other. When there are none, this collapses to
     // a single quiet card rather than the empty tab it used to be.
     if (!state.debts.length) {
-      return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Debts</h3>' +
-        '<button class="btn sm primary" data-act="debt-add">Add a debt</button></div>' +
-        '<div class="card-body"><p class="empty">' +
-        "Nothing tracked here — <strong>skip this if you're debt-free</strong>. Otherwise add each balance with its APR " +
-        "and minimum payment, and Coffer will compare payoff strategies and show what the interest is really costing you." +
-        "</p></div></div>";
+      return '<div class="sec-head"><span class="label">Debts</span>' +
+        '<button class="btn sm quiet" data-act="debt-add">Add a debt</button></div>' +
+        '<div class="card pad"><p class="empty" style="margin:0;padding:0">' +
+        "Nothing tracked here — <strong>skip this if you're debt-free</strong>. Otherwise add each balance with its " +
+        "APR and minimum payment, and Coffer will compare payoff strategies." +
+        "</p></div>";
     }
 
     // Under Worth these tiles arrive below the accounts card, so they need to
     // say what they are counting.
-    var html = '<div class="grp-head" style="margin-top:1.4rem"><span class="grp-name">Debts</span>' +
-      '<span class="grp-sub">' + state.debts.length + (state.debts.length === 1 ? " balance" : " balances") + "</span>" +
-      '<span class="grp-fig loss">\u2212' + fmt(totalDebt()) + "</span></div>";
+    var html = '<div class="sec-head"><span class="label">Debts</span>' +
+      '<span class="pair-sub" style="margin:0;color:var(--alert)">\u2212' + fmt(totalDebt()) + "</span></div>";
 
     var total = totalDebt();
     var monthlyInterest = state.debts.reduce(function (s, d) { return s + num(d.balance) * num(d.rate) / 100 / 12; }, 0);
@@ -5035,25 +5179,26 @@
     var snowball = simulatePayoff("snowball", extra);
     var chosen = debtStrategy === "snowball" ? snowball : debtStrategy === "minimum" ? base : avalanche;
 
-    html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
-      '<div class="tile"><span class="label">Total owed</span><div class="tile-fig" style="color:var(--loss)">' + fmt(total) + "</div>" +
-      '<div class="tile-foot">' + state.debts.length + (state.debts.length === 1 ? " balance" : " balances") + "</div></div>" +
-      '<div class="tile"><span class="label">Interest per month</span><div class="tile-fig">' + fmt(monthlyInterest) + "</div>" +
-      '<div class="tile-foot">before any principal comes off</div></div>' +
-      '<div class="tile"><span class="label">Minimums</span><div class="tile-fig">' + fmt(minTotal) + "</div>" +
-      '<div class="tile-foot">' + (extra > 0 ? "plus " + fmt(extra, { round: true }) + " extra = " + fmt(minTotal + extra, { round: true }) + "/mo" : "per month") + "</div></div>" +
+    html += '<div class="triple">' +
+      '<div class="card tile-sm"><span class="label">Owed</span>' +
+      '<div class="tile-fig" style="color:var(--alert)">' + fmt(total, { round: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">Interest/mo</span>' +
+      '<div class="tile-fig">' + fmt(monthlyInterest, { round: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">Minimums</span>' +
+      '<div class="tile-fig">' + fmt(minTotal + extra, { round: true }) + "</div></div>" +
       "</div>";
 
     /* strategy comparison */
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Payoff strategy</h3>' +
-      '<button class="btn sm" data-act="debt-extra">Extra payment: ' + fmt(extra, { round: true }) + "/mo</button></div>" +
-      '<div class="card-body">';
+    html += '<div class="card pad"><div class="card-tophead">' +
+      '<span class="label">Payoff strategy</span>' +
+      '<button class="btn sm" data-act="debt-extra">Extra ' + fmt(extra, { round: true }) + "/mo</button></div>" +
+      '<div style="margin-top:0.8rem">';
 
     if (base.stalled && avalanche.stalled) {
       html += '<p class="empty" style="color:var(--loss)">The minimum payments you\'ve entered don\'t cover the interest, so these ' +
         "balances would grow forever. Raise a minimum payment, or add an extra monthly amount, to see a real payoff date.</p>";
     } else {
-      html += '<div class="seg" style="max-width:420px;margin-bottom:1rem">' +
+      html += '<div class="seg" style="margin-bottom:1rem">' +
         [["avalanche", "Avalanche"], ["snowball", "Snowball"], ["minimum", "Minimums only"]].map(function (s) {
           return '<button data-act="debt-strategy" data-v="' + s[0] + '" aria-pressed="' + (debtStrategy === s[0]) + '">' + s[1] + "</button>";
         }).join("") + "</div>";
@@ -5061,17 +5206,16 @@
       var saved = (base.interest != null && chosen.interest != null) ? base.interest - chosen.interest : null;
       var faster = (base.months != null && chosen.months != null) ? base.months - chosen.months : null;
 
-      html += '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:0.7rem">' +
-        '<div class="tile" style="box-shadow:none"><span class="label">Debt-free in</span>' +
-        '<div class="tile-fig words">' + humanMonths(chosen.months) + "</div></div>" +
-        '<div class="tile" style="box-shadow:none"><span class="label">Total interest</span>' +
-        '<div class="tile-fig">' + (chosen.interest == null ? "—" : fmt(chosen.interest)) + "</div></div>" +
-        '<div class="tile" style="box-shadow:none"><span class="label">Versus minimums only</span>' +
-        '<div class="tile-fig' + (saved > 0.5 ? "" : " words") + '" style="color:' +
-        (saved > 0.5 ? "var(--calm)" : "inherit") + '">' +
-        (saved == null ? "—" : saved > 0.5 ? fmt(saved) + " saved" : "no change") + "</div>" +
-        '<div class="tile-foot">' + (faster > 0 ? humanMonths(faster) + " sooner" : "same timeline") + "</div></div>" +
-        "</div>";
+      // said as a sentence rather than as three tiles of wrapping prose
+      html += '<p class="lead" style="margin:0 0 0.2rem">' +
+        (chosen.months == null ? "These balances do not clear at this rate."
+          : "Debt-free in <b>" + esc(humanMonths(chosen.months)) + "</b>, having paid " +
+            fmt(chosen.interest, { round: true }) + " in interest.") + "</p>" +
+        '<p class="pair-sub">' +
+        (saved != null && saved > 0.5
+          ? "That is " + fmt(saved, { round: true }) + " less than minimums only" +
+            (faster > 0 ? ", and " + humanMonths(faster) + " sooner." : ".")
+          : "The same as paying minimums only.") + "</p>";
 
       if (debtStrategy !== "minimum" && chosen.priority.length > 1) {
         html += '<p class="hint" style="margin-top:0.9rem">Pay every minimum, then send anything spare here first: ' +
@@ -5094,17 +5238,16 @@
 
     /* balances */
     var sorted = state.debts.slice().sort(function (a, b) { return num(b.rate) - num(a.rate); });
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>What you owe</h3>' +
-      '<span class="sub">highest rate first</span>' +
+    html += '<div class="sec-head"><span class="label">What you owe</span>' +
       '<button class="btn sm primary" data-act="debt-add">Add a debt</button></div>' +
-      '<div class="card-body flush"><div class="rows">' +
+      '<div class="card pad"><div class="rows">' +
       sorted.map(function (d) {
         var mi = num(d.balance) * num(d.rate) / 100 / 12;
         var covers = num(d.minPayment) > mi;
         return '<div class="row stacked">' +
           '<div class="stack-top">' +
           '<span class="row-title">' + esc(d.name) + "</span>" +
-          '<span class="row-fig loss">' + fmt(d.balance) + "</span></div>" +
+          '<span class="row-fig" style="color:var(--alert)">' + fmt(d.balance) + "</span></div>" +
           '<div class="stack-foot">' +
           '<span class="row-sub">' + num(d.rate).toFixed(2) + "% APR · min " + fmt(d.minPayment, { round: true }) +
           "/mo · " + fmt(mi) + " interest this month" + (covers ? "" : " — minimum doesn't cover it") + "</span>" +
@@ -5123,13 +5266,12 @@
      ============================================================ */
 
   function renderInsights() {
-    var html = pageHead("Insights", "Patterns across your whole ledger, not just this month.", monthStepper());
-
+    var html = '<div class="dateline"><span>Insights</span>' + monthStepper() + "</div>";
 
     if (state.transactions.length < 2) {
-      return html + '<div class="card"><div class="card-body"><p class="empty">' +
+      return html + '<div class="card pad"><p class="empty" style="margin:0;padding:0">' +
         "Not much to read yet. <strong>Log a few weeks of transactions</strong> and this screen will show trends, " +
-        "category movement, and how long your balances would last.</p></div></div>";
+        "category movement, and how long your balances would last.</p></div>";
     }
 
     var months = monthsWithData();
@@ -5138,30 +5280,34 @@
     var rw = runway();
     var owed = pendingRefundTotal();
 
-    html += '<div class="tiles">' +
-      '<div class="tile"><span class="label">Total out, typical month</span><div class="tile-fig">' +
-      fmt(outflow, { round: true }) + "</div>" +
-      '<div class="tile-foot">everything that left, ' + rw.basis.months + "-month average</div></div>" +
-      // The two numbers are shown together because the gap between them is the
-      // point: it is how much of a typical month was not a running cost.
-      '<div class="tile"><span class="label">True burn</span><div class="tile-fig">' +
-      fmt(rw.burn, { round: true }) + "</div>" +
-      '<div class="tile-foot">' + (outflow - rw.burn > 0.5
-        ? fmt(outflow - rw.burn, { round: true }) + " of that was one-offs or owed back"
-        : "no one-offs to strip out") + "</div></div>" +
-      '<div class="tile"><span class="label">Runway</span><div class="tile-fig" style="color:' +
-      (rw.months == null ? "var(--ink)" : rw.months >= 6 ? "var(--gain)" : rw.months >= 3 ? "var(--warn)" : "var(--loss)") +
-      '">' + (rw.months == null ? "—" : rw.months.toFixed(1) + " mo") + "</div>" +
-      '<div class="tile-foot">' + fmt(rw.free, { round: true }) + " you can reach ÷ true burn" +
-      (rw.basis.partial ? " · only " + rw.basis.months + " month" + (rw.basis.months === 1 ? "" : "s") + " of data" : "") +
-      "</div></div>" +
-      '<div class="tile"><span class="label">Typical month kept</span><div class="tile-fig" style="color:' +
-      (pace >= 0 ? "var(--gain)" : "var(--loss)") + '">' + fmt(pace, { round: true, signed: true }) + "</div>" +
-      '<div class="tile-foot">' + rw.basis.months + "-month average</div></div>" +
+    // The same runway band as Today, so the two screens that answer "how long
+    // can I keep going" answer it in the same words.
+    html += runwayBand();
+
+    html += '<div class="card pad"><div class="pair">' +
+      '<div><span class="label">Total out</span>' +
+      '<div class="pair-fig">' + fmt(outflow, { round: true }) + "</div>" +
+      '<div class="pair-sub">typical month, over ' + rw.basis.months + "</div></div>" +
+      '<div class="pair-rule"></div>' +
+      '<div><span class="label">True burn</span>' +
+      '<div class="pair-fig emph">' + fmt(rw.burn, { round: true }) + "</div>" +
+      '<div class="pair-sub">one-offs stripped out</div></div>' +
+      "</div>" +
+      '<p class="pair-sub" style="margin-top:0.7rem">' + (outflow - rw.burn > 0.5
+        ? fmt(outflow - rw.burn, { round: true }) + " of a typical month was one-offs or money owed back."
+        : "Nothing to strip out — a typical month here is all running cost.") + "</p></div>";
+
+    html += '<div class="triple">' +
+      '<div class="card tile-sm"><span class="label">Kept/mo</span><div class="tile-fig"' +
+      (pace < 0 ? ' style="color:var(--alert)"' : "") + ">" + fmt(pace, { round: true, signed: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">Reachable</span><div class="tile-fig">' +
+      fmt(rw.free, { round: true }) + "</div></div>" +
+      '<div class="card tile-sm"><span class="label">On record</span><div class="tile-fig">' +
+      months.length + "</div></div>" +
       "</div>";
 
     if (owed > 0.005 || committedTotal() > 0.005) {
-      html += '<p class="hint" style="margin-top:0.6rem">' +
+      html += '<p class="band-sub" style="padding:0 0.35rem;margin:0 0 0.9rem">' +
         (owed > 0.005 ? "<b>" + fmt(owed, { round: true }) + "</b> is out as money you expect back. " : "") +
         (committedTotal() > 0.005
           ? "<b>" + fmt(committedTotal(), { round: true }) + "</b> sits in pockets marked as already spoken for, " +
@@ -5169,7 +5315,7 @@
           : "") + "</p>";
     }
 
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Everything worth noting</h3>' +
+    html += '<div class="card pad"><div class="card-tophead"><span class="label">Everything worth noting</span>' +
       '<span class="sub">' + monthName(viewMonth, true) + "</span></div>" +
       '<div class="card-body flush">' + notesHtml(buildInsights(viewMonth), "Nothing stands out this month.") + "</div></div>";
 
@@ -5211,7 +5357,7 @@
     var thisM = spendByCategory(viewMonth);
     var lastM = spendByCategory(monthShift(viewMonth, -1));
 
-    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Categories, all time</h3>' +
+    html += '<div class="card pad"><div class="card-tophead"><span class="label">Categories, all time</span>' +
       '<span class="sub">' + fmt(grand, { round: true }) + " total</span></div>" +
       '<div class="card-body flush"><div class="tscroll"><table>' +
       '<thead><tr><th>Category</th><th class="num">All time</th><th class="num">Share</th>' +
@@ -5230,7 +5376,7 @@
     var biggest = state.transactions.filter(function (t) { return t.type === "expense"; })
       .sort(function (a, b) { return txBase(b) - txBase(a); }).slice(0, 8);
     if (biggest.length) {
-      html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Largest expenses on record</h3></div>' +
+      html += '<div class="card pad"><span class="label">Largest expenses on record</span>' +
         '<div class="card-body flush"><div class="rows">' + biggest.map(function (t) {
           return '<div class="row"><div class="row-main"><div class="row-title">' + esc(t.desc || t.category) +
             (isPending(t) ? ' <span class="pill warn">owed back</span>' : "") + "</div>" +
