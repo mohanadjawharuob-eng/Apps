@@ -232,6 +232,23 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   of every control and `getElementById` returned the one under the scrim —
   which is why picking a category in the bar below did nothing.
 
+### Fixed by inspecting the above
+
+- **Editing a split entry could leave it disagreeing with itself.**
+  `tx-edit` wrote `t.amount` and never looked at `t.splits`, so changing Big
+  shop from $60 to $80 left parts reading 38 + 22: Insights' total out and the
+  budget bars were $20 apart and neither said so. Flipping a split expense to
+  income was worse — `planActuals()` filed *Groceries* and *Household* as
+  income categories. The parts are dropped when the total or the type actually
+  changes, the Amount field says so before you type and the toast says so
+  after. `split.js` now carries the assertion that would have caught it.
+- **A pocket's opening figure was read as base currency** while the account's
+  own was converted, so in a lira account "Not allocated" could be off by a
+  factor of ninety thousand. Pockets record a `currency` and `rate` like
+  accounts do; one saved before this has neither, so it reads exactly as it
+  did, and the edit dialog opens on how it is *currently* being read rather
+  than silently re-valuing it on Save.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because

@@ -108,6 +108,26 @@ no package.json. What is in the repo is what runs.
   Everything that files money under a category goes through `txParts()`, which
   returns a single part for an unsplit entry — so no caller needs to know
   whether it was split. `t.category` stays the largest share.
+- **A split belongs to one amount, so anything that changes the amount drops
+  it.** `tx-edit` wrote `t.amount` and left `t.splits` alone, so an entry
+  edited from $60 to $80 kept parts reading 38 + 22 — `spendByCategory()` and
+  `planActuals()` then disagreed with `monthSummary().expense` and
+  `trueBurnFor()` by $20 with nothing said. Scaling the parts to fit is
+  guessing at money and refusing the edit means a typo can never be corrected,
+  so the parts go and both the dialog and the toast say so. The same holds for
+  a type change: expense categories filed under income are nonsense. The
+  currency is deliberately not a trigger — the parts are in the entry's own
+  currency, so they still sum to it.
+- **A pocket's opening figure is in the pocket's own currency**, at the rate it
+  was opened at, exactly like the account it sits in — `pocketOpeningBase(p)`
+  beside `acctOpeningBase(a)`. `pocketBalance()` used the raw figure while
+  `balanceOf()` converted the account's, so a lira pocket in a lira account was
+  counted as dollars and `unallocatedOf()`, which subtracts one from the other,
+  went to pieces. A pocket saved before this carries no `currency`, so
+  `toBase()` hands the raw figure back and nothing stored moves — which is also
+  why `pocket-edit` opens its picker on **base**, not the account's currency:
+  defaulting to the account would re-value an old pocket the moment anyone
+  opened the dialog and pressed Save.
 - **A currency picker belongs wherever money goes in or out**, and the rate is
   frozen onto the record there. The quick-log preview, the log-bar sheet,
   one-tap buttons, a debt payment, a contract arriving and a goal top-up all

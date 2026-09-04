@@ -1047,7 +1047,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04g";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04h";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1627,6 +1627,14 @@
   function canSplit(t) { return t && (t.type === "expense" || t.type === "income"); }
 
   function acctOpeningBase(a) { return toBase(a.opening, a.currency, a.rate); }
+  /* A pocket's opening figure is in the pocket's own currency, at the rate it
+     was opened at, exactly like the account it sits in. pocketBalance() used
+     the raw number while balanceOf() converted the account's — so in a lira
+     account a pocket opened with a lira figure was counted as dollars, and
+     unallocatedOf(), which subtracts one from the other, became meaningless.
+     A pocket saved before this carries no currency, so toBase() hands the raw
+     figure straight back and nothing already stored moves. */
+  function pocketOpeningBase(p) { return toBase(p.opening, p.currency, p.rate); }
   // an amount shown in its own currency, for the ledger row
   function fmtIn(n, code) {
     n = num(n);
@@ -1806,7 +1814,7 @@
      went down and Cyprus never went up. Each side is now matched on its own
      account and its own pocket. */
   function pocketBalance(acc, p, onOrBefore) {
-    var b = num(p.opening);
+    var b = pocketOpeningBase(p);
     for (var i = 0; i < state.transactions.length; i++) {
       var t = state.transactions[i];
       if (onOrBefore && t.date > onOrBefore) continue;
@@ -8013,8 +8021,10 @@
     omni = { text: "", touched: {} };
     save();
     render();
-    var box = document.getElementById("omniBox");
-    if (box) box.focus();
+    // named apart from the new-category box above it: one `var box` for two
+    // different elements in one function is a hoisting trap waiting to happen
+    var typeBox = document.getElementById("omniBox");
+    if (typeBox) typeBox.focus();
     toast(esc0(tx.desc) + " · " + (isForeign(tx.currency) ? fmtIn(tx.amount, tx.currency) + " = " : "") +
       fmt(txBase(tx)) + " logged to " + accountName(tx.accountId, tx.pocketId) + ".", function () {
       state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
@@ -8713,9 +8723,9 @@
       var lastKey = "a" + (rowN - 1);
 
       function restate(_v, el, setHint) {
-        var sum = 0;
-        for (var i = 0; i < rowN; i++) { var e = el("a" + i); if (e) sum += num(e.value); }
-        var left = num(t.amount) - sum;
+        var typed = [];
+        for (var i = 0; i < rowN; i++) { var e = el("a" + i); if (e) typed.push({ amount: e.value }); }
+        var left = num(t.amount) - splitsTotal(typed);
         setHint(lastKey, Math.abs(left) < 0.005
           ? "adds up to " + fmtIn(t.amount, cur) + " exactly"
           : left > 0
@@ -8746,15 +8756,16 @@
         confirmLabel: "Split it",
         onReady: function (el, setHint) { restate(null, el, setHint); },
         validate: function (v) {
-          var used = 0, sum = 0, i;
+          var parts = [], i;
           for (i = 0; i < rowN; i++) {
             var c = (v["c" + i] || "").trim(), a = num(v["a" + i]);
             if (!c && a > 0) return "Row " + (i + 1) + " has an amount but no category.";
             if (c && !(a > 0)) return "\u201C" + c + "\u201D has no amount.";
-            if (c && a > 0) { used++; sum += a; }
+            if (c && a > 0) parts.push({ category: c, amount: a });
           }
-          if (!used) return "Pick at least one category, or cancel to leave it as it is.";
-          if (used > 1 && Math.abs(sum - num(t.amount)) >= 0.005) {
+          if (!parts.length) return "Pick at least one category, or cancel to leave it as it is.";
+          var sum = splitsTotal(parts);
+          if (parts.length > 1 && Math.abs(sum - num(t.amount)) >= 0.005) {
             return "The parts come to " + fmtIn(sum, cur) + ", not " + fmtIn(t.amount, cur) + ".";
           }
         },
@@ -8837,7 +8848,13 @@
           { key: "category", label: "Category", type: "select", catKind: "auto", options: catOptions(t.type).concat(
               catOptions(t.type).indexOf(t.category) === -1 ? [t.category] : []), value: t.category },
           { key: "account", label: "Account", type: "select", options: accountOptions(acctRef(t.accountId, t.pocketId)), value: acctRef(t.accountId, t.pocketId) },
-          { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 }
+          { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0,
+            // a split is a breakdown OF this figure, so say what changing it costs
+            // before it is changed, the way the whole-account picker does
+            hint: isSplit(t)
+              ? "split across " + txParts(t).map(function (pt) { return pt.category; }).join(" and ") +
+                " \u2014 changing the total, or the type, drops that split"
+              : null }
         ].concat(currencyField(t.currency)).concat(t.type === "expense" ? [{
           key: "refundable", type: "check", span: true, value: !!t.refundable,
           label: "I expect this money back",
@@ -8851,14 +8868,32 @@
         }] : []),
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
         onConfirm: function (v) {
+          /* A split is a breakdown OF an amount. Change the total and the parts
+             describe a figure that no longer exists — 38 + 22 against an entry
+             now worth 80 — and spendByCategory() would quietly disagree with
+             monthSummary().expense with nothing said, which is the one thing
+             splits were built not to do. Scaling the parts to fit would be
+             guessing at money and refusing the edit would mean a typo in a
+             total could never be corrected, so the parts go and it is said.
+             The currency is deliberately NOT a trigger: the parts are stored in
+             the entry's own currency, so they still sum to it.
+             Turning an expense into income is the same problem wearing a
+             different hat — planActuals() would file expense categories under
+             income. */
+          var splitParts = isSplit(t) ? txParts(t).length : 0;
+          var splitLost = splitParts > 0 &&
+            (Math.abs(num(v.amount) - num(t.amount)) >= 0.005 || v.type !== t.type);
+
           // Keep the rate this entry was logged at unless the currency itself
           // changed — editing a description must never silently re-value a
           // past transaction at today's rate.
           var wasCur = t.currency || baseCode(), nowCur = v.currency || baseCode();
           t.currency = nowCur;
           if (nowCur !== wasCur || !(num(t.rate) > 0)) t.rate = rateFor(nowCur);
+          var wasType = t.type;
           t.type = v.type; t.date = v.date || t.date; t.desc = v.desc.trim();
           t.category = v.category; t.amount = v.amount;
+          if (splitLost) delete t.splits;
           t.accountId = parseRef(v.account).accountId; t.pocketId = parseRef(v.account).pocketId;
 
           // The checkboxes are only shown for expenses, so an entry switched to
@@ -8871,7 +8906,12 @@
           } else {
             t.refundable = false; t.oneOff = false; t.settledOn = null;
           }
-          save(); render(); toast("Transaction updated.");
+          save(); render();
+          toast(splitLost
+            ? "Transaction updated \u2014 its split across " + splitParts +
+              " categories was dropped, because the " +
+              (v.type !== wasType ? "type" : "total") + " changed."
+            : "Transaction updated.");
         }
       });
     },
@@ -9279,12 +9319,15 @@
         fields: [
           { key: "name", label: "Name", placeholder: "e.g. Cyprus, Savings", span: true },
           { key: "opening", label: "Starting amount", type: "number", value: 0,
-            hint: "how much of the current balance is already this pocket's" },
+            hint: "how much of the current balance is already this pocket's" }
+        // the account's own currency is the unit anyone standing inside it is
+        // thinking in, so that is what the picker opens on
+        ].concat(currencyField(a.currency)).concat([
           { key: "status", label: "This money is", type: "select",
             options: POCKET_STATUS.map(function (k) { return { value: k, label: POCKET_STATUS_LABEL[k] }; }),
             value: "free",
             hint: "money already spoken for is left out of what the app treats as spendable" }
-        ],
+        ]),
         confirmLabel: "Add pocket",
         validate: function (v) {
           if (!v.name.trim()) return "Give the pocket a name.";
@@ -9295,7 +9338,9 @@
         },
         onConfirm: function (v) {
           if (!a.pockets) a.pockets = [];
-          a.pockets.push({ id: uid(), name: v.name.trim(), opening: num(v.opening), status: v.status || "free" });
+          var pcur = v.currency || baseCode();
+          a.pockets.push({ id: uid(), name: v.name.trim(), opening: num(v.opening),
+            currency: pcur, rate: rateFor(pcur), status: v.status || "free" });
           save(); render();
           toast(v.name.trim() + " added to " + a.name + ".");
         }
@@ -9314,12 +9359,22 @@
         message: "Holding " + fmt(pocketBalance(a, p)) + " of " + a.name + "'s " + fmt(balanceOf(a)) + ".",
         fields: [
           { key: "name", label: "Name", value: p.name, span: true },
-          { key: "opening", label: "Starting amount", type: "number", value: p.opening },
+          { key: "opening", label: "Starting amount", type: "number", value: p.opening,
+            /* A pocket saved before pockets recorded a currency is being read
+               as base, and that is what the picker below opens on — defaulting
+               it to the ACCOUNT's currency would re-value the figure the moment
+               anyone opened this dialog and pressed Save, which is the bug this
+               is fixing. Say how it is being read and let them correct it. */
+            hint: (!p.currency && isForeign(a.currency))
+              ? "read as " + baseCode() + ", because this pocket predates pockets recording a currency \u2014 " +
+                "set it to " + a.currency + " below if that is what you typed"
+              : null }
+        ].concat(currencyField(p.currency || baseCode())).concat([
           { key: "status", label: "This money is", type: "select",
             options: POCKET_STATUS.map(function (k) { return { value: k, label: POCKET_STATUS_LABEL[k] }; }),
             value: pocketStatus(p),
             hint: heldGrant ? "fixed while " + heldGrant.name + " is held here" : null }
-        ],
+        ]),
         validate: function (v) {
           if (!v.name.trim()) return "Give the pocket a name.";
           if (heldGrant && v.status !== "committed") {
@@ -9328,7 +9383,12 @@
           }
         },
         onConfirm: function (v) {
+          // same rule as a transaction: only a changed currency re-values it,
+          // so renaming a pocket never moves the figure it holds
+          var wasCur = p.currency || baseCode(), nowCur = v.currency || baseCode();
           p.name = v.name.trim(); p.opening = num(v.opening);
+          p.currency = nowCur;
+          if (nowCur !== wasCur || !(num(p.rate) > 0)) p.rate = rateFor(nowCur);
           p.status = heldGrant ? "committed" : (v.status || "free");
           save(); render(); toast("Pocket updated.");
         }
