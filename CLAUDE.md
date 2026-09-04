@@ -57,7 +57,13 @@ no package.json. What is in the repo is what runs.
 - **Money going into an investment is a transfer, never an expense.** Logged as
   an expense it lands in the burn rate and reports a saver as someone bleeding
   money. Same rule for the reverse: a payout is income, a sale is a transfer
-  out. Recording a sale as income counts the same money twice.
+  out. Recording a sale as income counts the same money twice. **Nor is buying
+  one a way to get richer**: `invest-add` used to put the figure you paid into
+  the new account's `opening`, which `totalAssets()` counts, so adding a
+  holding you had just paid $5,000 for raised your net worth by $5,000 out of
+  nothing. It asks which account the money came out of and writes the transfer.
+  An `opening` is still right for a holding funded before this ledger existed,
+  which is the other option in the same picker.
 - **The projection never averages past income.** `projectForward()` uses
   scheduled recurring income only, weighted by confidence. Averaging what a
   contractor earned last quarter is the lie that makes freelance work look like
@@ -233,3 +239,45 @@ to the **site**, not the folder — which is why moving these apps from
 `deep/apps/` carried every user's data across untouched. Receipt photos live in
 IndexedDB, because one phone photo is larger than an entire ledger and would
 break saving for everything else.
+
+That site-wide scope cuts both ways. Coffer is served from **two** paths on one
+origin — `/Apps/coffer/` and `/deep/apps/coffer/` — so the two copies shared one
+ledger, and loading the sample in one wiped the real book in the other. The key
+is now derived from the path:
+
+```js
+var STORE_SUFFIX = /(^|\/)deep\//.test(location.pathname) ? ".deep" : "";
+var KEY = "coffer" + STORE_SUFFIX + ".v2";
+```
+
+Derived rather than hard-coded per copy, so `index.html` stays byte-identical
+between the two and there is no line for anyone to forget to change when
+copying it across. `LEGACY_KEY` and `PHOTO_DB` take the same suffix, and so
+does the pre-paint theme reader at the top of the file — it runs before the
+main script and needs its own copy of the expression. Anything not under
+`/deep/` keeps the original key, so no existing install loses sight of its
+data.
+
+## Sample data
+
+`sampleData()` is the thing people are shown the app with, so it has to
+exercise the app rather than describe it: two currencies, pockets in three
+states, a grant with lines, two holdings (one funded by a transfer, one held
+from before the ledger), a split, a cross-currency exchange with a spread, a
+contract that ends and a salary with an allowance inside it. If a feature has
+no representation here, nobody can be shown it.
+
+Three rules it must keep. **Nothing may be dated in the future** — and because
+that left the current month with four entries when the sample was loaded on the
+3rd, the current month's days are squeezed into the days that have actually
+happened while `elapsed < 12`, with `Math.ceil` so the last entry lands *on*
+today and "Spent today" is not empty. **The grant arithmetic has to
+self-check**: the award transaction equals the grant total, and spending never
+runs past it, or the sample demonstrates a bug instead of a feature. And
+**anything the sample puts into a pocket has to come out again** — rent was set
+aside every month and then paid from the account, so the pocket climbed to
+$3,800 and showed the opposite of what a pocket is for. Money in, money out,
+and it sits at one month's rent.
+
+Look at it after changing it. Every figure on every screen is derived, so a
+plausible-looking seed can still produce a screen that says something false.

@@ -249,6 +249,32 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   did, and the edit dialog opens on how it is *currently* being read rather
   than silently re-valuing it on Save.
 
+### Shipped: a demo you can hand someone, and two books kept apart
+
+- **A holding can be deleted, and buying one no longer invents money.** The
+  investment card offered edit, value, fund and payout and no way out, so a
+  holding entered by mistake was permanent. And `invest-add` put the figure you
+  paid into the new account's `opening`, which `totalAssets()` counts — adding
+  a holding you had just paid $5,000 for raised your net worth by $5,000 out of
+  nothing while the account it came from sat unchanged. It now asks which
+  account the money came out of and writes the transfer, so net worth holds
+  still and the runway correctly drops. "Held before this ledger" is still on
+  offer for a holding funded years ago, named for what it is.
+- **The sample ledger is a whole person, not a feature list.** It was a salaried
+  job in one currency with three accounts, which left more than half the app
+  with nothing to point at. It is now three months of a freelancer paid in
+  dollars and lira: pockets in all three states, a grant with four lines, two
+  holdings, a split shop trip, an exchange with a real spread, a contract that
+  runs out and a salary with a travel allowance inside it. Every screen has
+  something true on it to explain, and it is reachable from Settings rather
+  than only from the empty screen you can never get back to.
+- **The two copies keep separate books.** `/Apps/coffer/` and
+  `/deep/apps/coffer/` are one GitHub Pages origin and localStorage is scoped
+  to the site, so both read and wrote `coffer.v2` — loading the sample in one
+  replaced the real ledger in the other. The key is derived from the path now,
+  so `index.html` stays byte-identical between the copies and the deep one
+  starts empty: a safe place to load the sample and show somebody around.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because
