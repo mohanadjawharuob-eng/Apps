@@ -997,7 +997,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04b";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04c";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -5548,7 +5548,14 @@
       ghost = projectForward(PROJECT_MONTHS, {}).points.map(function (x) { return x.balance; });
     }
 
-    var tone = pr.crossing == null ? "calm" : (projectedMonths(pr) >= 6 ? "warn" : "alert");
+    /* Green means a healthy state and nothing else. Not running out inside the
+       horizon is not the same as being fine: a line that ends on under three
+       months of cover is drift, and colouring it calm would be the reassuring
+       half of a sentence that says otherwise. */
+    var endCover = coverAfter(pr);
+    var tone = pr.crossing != null
+      ? (projectedMonths(pr) >= 6 ? "warn" : "alert")
+      : (endCover >= AFFORD_FLOOR_MONTHS ? "calm" : "warn");
     var html = '<div class="card pad">' +
       '<span class="label">The next ' + pr.horizon + ' months</span>' +
       '<p class="lead" style="color:var(--' + tone + ')">' + esc(outlookSentence(pr)) + "</p>" +
