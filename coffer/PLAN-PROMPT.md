@@ -64,6 +64,15 @@ RULES — breaking any of these makes the line fail to import
   after it. Contracts end; a projection that runs past the end is fiction.
 - CONFIDENCE: if income is not guaranteed, write "at NN%" straight after the
   amount. Do not leave out possible income and do not count it as certain.
+- RENEWAL: if a contract has an end date and might carry on past it, write
+  "renews NN%" after the until date. This is NOT the same as "at NN%": that one
+  is whether each payment lands, this one is whether there is another contract
+  at all. If I have not told you how likely a renewal is, LEAVE IT OUT — the
+  projection then stops dead at the end date, which is the honest default.
+- ALLOWANCE: if part of a salary is paid for a purpose — travel money, a phone
+  budget — write "plus N CUR a day for Category" at the end of the line. Ask me
+  the day rate rather than working it back from a total, and use a category I
+  already have. Do not use this for money that is simply pay.
 - ACCOUNT must match one of the names I gave you, character for character.
   Income uses "into <Account>"; commitments use "from <Account>". A pocket
   inside an account is written "from <Account> > <Pocket>".
@@ -134,7 +143,7 @@ covers: 2026-09 to 2027-08
 - Transport: 120
 
 ## Income
-- Salary: 45,000,000 LBP monthly into Wallet from 2026-09-25
+- Salary: 45,000,000 LBP monthly into Wallet from 2026-09-25 plus 5 USD a day for Transport
 
 ## Commitments
 - Rent: 700 EUR monthly from BoC current, Housing, from 2026-09-01

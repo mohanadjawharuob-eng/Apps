@@ -121,6 +121,15 @@ When a screen is rebuilt, check nothing was the *only* caller of an action.
 `accountsCard()` stopped being called during the Worth rebuild and took pocket
 editing with it; the buttons still existed, nothing rendered them.
 
+## State
+
+One shape, adopted in one place. `adoptState()` turns a parsed object into
+state and **both** `load()` and the backup restore call it. They used to
+hand-copy the same key list separately, and only one was updated when grants
+and allowances shipped — so restoring a backup quietly lost them. Anything
+added to the state shape goes in `STATE_LISTS`, `STATE_MAPS` or `adoptState`'s
+settings block, and nowhere else.
+
 ## Testing
 
 Playwright against a local server, driving the real app:

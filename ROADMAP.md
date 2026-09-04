@@ -145,6 +145,11 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   date could be set when it was created and then never corrected.
 - The typical-day figure divided the *current* month's spending by the *viewed*
   month's day count, so stepping back a month mixed two months together.
+- **Restoring a backup silently dropped grants, recorded allowance days and the
+  savings cushion.** `load()` and the restore each hand-copied the same key
+  list and only `load()` was kept current. Both now go through one
+  `adoptState()`, so the next thing added to the state shape cannot go missing
+  from one path and not the other. There is a regression test for it.
 
 ### Next
 - **Split transactions** — one shop trip across two categories.

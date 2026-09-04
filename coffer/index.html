@@ -997,7 +997,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04d";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04e";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1189,40 +1189,46 @@
     return s;
   }
 
+  /* Turning a parsed object into state. This exists as ONE function because
+     it used to exist as two — load() and the restore each hand-copied the same
+     key list, and only load() was updated when grants and allowances shipped.
+     Restoring a backup therefore dropped every grant and every recorded
+     allowance day, silently. Anything added to the state shape goes here once. */
+  var STATE_LISTS = ["accounts", "transactions", "goals", "debts", "recurring", "quick", "grants"];
+  var STATE_MAPS = ["budgets", "allowanceDays", "photoIndex"];
+
+  function adoptState(p) {
+    var s = blank();
+    if (!p || typeof p !== "object") return s;
+    if (p.settings) {
+      s.settings.currency = p.settings.currency || "$";
+      s.settings.theme = p.settings.theme || "system";
+      s.settings.lock = p.settings.lock || null;
+      // absent in every backup written before multi-currency: default to a
+      // single-currency book, which is exactly what those files describe
+      s.settings.base = p.settings.base || "USD";
+      s.settings.rates = (p.settings.rates && typeof p.settings.rates === "object") ? p.settings.rates : {};
+      // absent from every backup written before the afford rebuild, which is
+      // fine: floorMonths() falls back to the default on its own
+      s.settings.floorMonths = num(p.settings.floorMonths) || null;
+    }
+    if (p.categories) {
+      if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
+      if (Array.isArray(p.categories.income) && p.categories.income.length) s.categories.income = p.categories.income;
+    }
+    STATE_LISTS.forEach(function (k) { if (Array.isArray(p[k])) s[k] = p[k]; });
+    STATE_MAPS.forEach(function (k) { if (p[k] && typeof p[k] === "object") s[k] = p[k]; });
+    // absent from every backup written before plans existed, which is fine:
+    // no plan is a valid state, so there is nothing to migrate
+    if (p.plan && typeof p.plan === "object") s.plan = p.plan;
+    s.extraDebtPayment = num(p.extraDebtPayment);
+    return s;
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) {
-        var p = JSON.parse(raw);
-        var s = blank();
-        if (p.settings) {
-          s.settings.currency = p.settings.currency || "$";
-          s.settings.theme = p.settings.theme || "system";
-          s.settings.lock = p.settings.lock || null;
-          // absent in every backup written before multi-currency: default to a
-          // single-currency book, which is exactly what those files describe
-          s.settings.base = p.settings.base || "USD";
-          s.settings.rates = (p.settings.rates && typeof p.settings.rates === "object") ? p.settings.rates : {};
-          // absent from every backup written before the afford rebuild, which
-          // is fine: floorMonths() falls back to the default on its own
-          s.settings.floorMonths = num(p.settings.floorMonths) || null;
-        }
-        if (p.categories) {
-          if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
-          if (Array.isArray(p.categories.income) && p.categories.income.length) s.categories.income = p.categories.income;
-        }
-        ["accounts", "transactions", "goals", "debts", "recurring", "quick", "grants"].forEach(function (k) {
-          if (Array.isArray(p[k])) s[k] = p[k];
-        });
-        if (p.budgets && typeof p.budgets === "object") s.budgets = p.budgets;
-        if (p.allowanceDays && typeof p.allowanceDays === "object") s.allowanceDays = p.allowanceDays;
-        if (p.photoIndex && typeof p.photoIndex === "object") s.photoIndex = p.photoIndex;
-        // absent from every backup written before plans existed, which is fine:
-        // no plan is a valid state, so there is nothing to migrate
-        if (p.plan && typeof p.plan === "object") s.plan = p.plan;
-        s.extraDebtPayment = num(p.extraDebtPayment);
-        return s;
-      }
+      if (raw) return adoptState(JSON.parse(raw));
       var legacy = localStorage.getItem(LEGACY_KEY);
       if (legacy) {
         var migrated = migrateV1(JSON.parse(legacy));
@@ -1606,9 +1612,6 @@
   // What it has cost you: everything transferred in, less anything taken back
   // out. The account's own derived balance is exactly that.
   function investCost(a, onOrBefore) { return balanceOf(a, onOrBefore); }
-  function investGain(a) {
-    return investValue(a) + investReturns(a) - investCost(a);
-  }
 
   /* Not every balance is money you can actually reach for. A savings pocket
      and a not-yet-refunded trip pocket are the same number and nothing like
@@ -3029,6 +3032,24 @@
       }
     }
 
+    /* 0b. renewal chance, taken BEFORE confidence: "renews 60%" and the
+        confidence form "at 40%" are both a number and a percent sign, and
+        whichever runs first wins. These mean different things — one is whether
+        each payment lands, the other is whether the contract carries on — so
+        reading one as the other would be silently wrong. */
+    var rn = rest.match(/\srenews?\s+(?:at\s+)?(\d{1,3})\s*%/i);
+    if (rn) { raw.renews = Math.min(100, parseInt(rn[1], 10)); rest = rest.replace(rn[0], " "); }
+
+    // 0c. an allowance inside the pay: "plus 5 USD a day for Transport".
+    //     Taken before the amount, or its figure would be read as the amount.
+    var aw = rest.match(/\splus\s+([\d.,]+)\s*([A-Za-z]{3})?\s*(?:a|per|\/)\s*day\s+for\s+([^,]+?)\s*(?=,|$)/i);
+    if (aw) {
+      raw.allowRate = aw[1];
+      raw.allowCur = aw[2] ? aw[2].toUpperCase() : null;
+      raw.allowCat = aw[3].trim();
+      rest = rest.replace(aw[0], " ");
+    }
+
     // 1. date. "from" introduces both a date and an account, so it only counts
     //    as a date when an actual date follows it.
     var dm = rest.match(/\s(?:by|from|on|next|starting|due)\s+(\d{4}-\d{2}-\d{2})(?=[\s,]|$)/i);
@@ -3189,7 +3210,11 @@
           // from the same key the text form writes into
           category: e.category || e.funder || null,
           date: e.date || e.due || e.by || e.next || null,
-          until: e.until || e.ends || e.endsOn || null
+          until: e.until || e.ends || e.endsOn || null,
+          renews: e.renews == null ? null : parseInt(String(e.renews).replace("%", ""), 10),
+          allowRate: e.allowance ? String(e.allowance.rate) : null,
+          allowCur: e.allowance ? e.allowance.currency : null,
+          allowCat: e.allowance ? e.allowance.category : null
         });
       });
     });
@@ -3242,7 +3267,11 @@
           account: l.accountLabel || null,
           category: l.section === "budgets" ? null : (l.section === "grants" ? l.funder : l.category),
           date: l.date || null,
-          until: l.until || null
+          until: l.until || null,
+          renews: l.renews == null ? null : l.renews,
+          allowRate: l.allowance ? String(l.allowance.rate) : null,
+          allowCur: l.allowance ? l.allowance.currency : null,
+          allowCat: l.allowance ? l.allowance.category : null
         });
       });
     });
@@ -3338,6 +3367,33 @@
         if (!isIsoDate(r.until)) { e.problem = "“" + r.until + "” is not a real date. Use YYYY-MM-DD."; return e; }
         if (e.date && r.until < e.date) { e.problem = "It cannot end before it starts."; return e; }
         e.until = r.until;
+      }
+      if (r.renews != null) {
+        if (r.section !== "income") { e.notes.push("only income can renew; ignored here"); }
+        else if (!r.until) { e.problem = "“renews” needs an end date to renew past. Add “until YYYY-MM-DD”."; return e; }
+        else e.renews = r.renews;
+      }
+      if (r.allowCat) {
+        if (r.section !== "income") { e.notes.push("an allowance only makes sense inside income; ignored here"); }
+        else {
+          var arate = planAmount(r.allowRate);
+          if (!(arate > 0)) { e.problem = "“" + r.allowRate + "” is not a day rate I can read."; return e; }
+          var acur = r.allowCur || baseCode();
+          if (acur !== baseCode() && !(rateNum(acur) > 0)) {
+            e.problem = "No rate set for " + acur + ", so the allowance cannot be converted.";
+            return e;
+          }
+          var acat = state.categories.expense.filter(function (c) {
+            return c.toLowerCase() === r.allowCat.toLowerCase();
+          })[0];
+          if (!acat) {
+            e.problem = "“" + r.allowCat + "” is not one of your expense categories, so an allowance " +
+              "cannot be spent against it.";
+            return e;
+          }
+          e.allowance = { category: acat, rate: arate, currency: acur, per: "day" };
+          e.notes.push(fmtIn(arate, acur) + " a day of this is " + acat + " money");
+        }
       }
 
       if (r.section === "grants") {
@@ -3869,6 +3925,10 @@
           r.amount = e.amount; r.currency = e.currency; r.rate = e.rate;
           r.frequency = e.frequency;
           r.until = e.until || null;
+          if (e.type === "income") {
+            r.renews = e.renews == null ? null : e.renews;
+            r.allowance = e.allowance || null;
+          }
           // nextDate is left alone on an update: it has been advancing as the
           // item was logged, and resetting it would re-post things already paid
           changed++;
@@ -3878,7 +3938,10 @@
             accountId: ref.accountId, pocketId: ref.pocketId || null,
             amount: e.amount, currency: e.currency, rate: e.rate,
             frequency: e.frequency, nextDate: e.date || today(),
-            until: e.until || null, planKey: e.key
+            until: e.until || null,
+            renews: e.type === "income" && e.renews != null ? e.renews : null,
+            allowance: e.type === "income" ? (e.allowance || null) : null,
+            planKey: e.key
           };
           state.recurring.push(r);
           made++;
@@ -3892,6 +3955,8 @@
         frequency: e.frequency || null, accountRef: e.accountRef || null, accountLabel: e.accountLabel || null,
         category: e.category || null, date: e.date || null, recordId: recordId,
         parent: e.parent || null, until: e.until || null, funder: e.funder || null,
+        renews: e.renews == null ? null : e.renews,
+        allowance: e.allowance || null,
         confidence: e.confidence == null ? null : e.confidence
       };
     });
@@ -6928,6 +6993,12 @@
         if (l.accountLabel) s += (sec === "income" || sec === "grants" ? " into " : " from ") + l.accountLabel;
         if (l.date) s += (sec === "goals" ? " by " : " from ") + l.date;
         if (l.until) s += " until " + l.until;
+        if (l.renews != null) s += " renews " + l.renews + "%";
+        if (l.allowance && l.allowance.category) {
+          s += " plus " + l.allowance.rate +
+            (l.allowance.currency && l.allowance.currency !== baseCode() ? " " + l.allowance.currency : "") +
+            " a day for " + l.allowance.category;
+        }
         // the comma slot is the category everywhere but a grant, where it is
         // who the money came from
         var tail = sec === "grants" ? l.funder : (sec === "budgets" ? null : l.category);
@@ -9380,27 +9451,9 @@
           confirmLabel: "Replace my data"
         }, function () {
           var incoming = parsed.version === 2 || parsed.categories ? parsed : migrateV1(parsed);
-          var fresh = blank();
-          if (incoming.settings) {
-            fresh.settings.currency = incoming.settings.currency || "$";
-            fresh.settings.theme = incoming.settings.theme || "system";
-            fresh.settings.lock = incoming.settings.lock || null;
-            fresh.settings.base = incoming.settings.base || "USD";
-            fresh.settings.rates = (incoming.settings.rates && typeof incoming.settings.rates === "object")
-              ? incoming.settings.rates : {};
-          }
-          if (incoming.categories) {
-            if (Array.isArray(incoming.categories.expense) && incoming.categories.expense.length) fresh.categories.expense = incoming.categories.expense;
-            if (Array.isArray(incoming.categories.income) && incoming.categories.income.length) fresh.categories.income = incoming.categories.income;
-          }
-          ["accounts", "transactions", "goals", "debts", "recurring", "quick"].forEach(function (k) {
-            if (Array.isArray(incoming[k])) fresh[k] = incoming[k];
-          });
-          if (incoming.budgets && typeof incoming.budgets === "object") fresh.budgets = incoming.budgets;
-          if (incoming.photoIndex && typeof incoming.photoIndex === "object") fresh.photoIndex = incoming.photoIndex;
-          if (incoming.plan && typeof incoming.plan === "object") fresh.plan = incoming.plan;
-          fresh.extraDebtPayment = num(incoming.extraDebtPayment);
-          state = fresh;
+          // the same adoption load() uses, so a restore cannot quietly know
+          // about fewer things than a reload does
+          state = adoptState(incoming);
           viewMonth = thisMonth();
           save(); applyTheme(); render();
           toast("Backup restored — " + counts + ".");

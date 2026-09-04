@@ -22,8 +22,8 @@ review_by: 2027-02-01
 - Subscriptions > Spotify: 12
 
 ## Income
-- Salary: 45,000,000 LBP monthly into Wallet from 2026-09-25
-- Contract: 2000 monthly into Wallet from 2026-09-01 until 2027-03-31
+- Salary: 45,000,000 LBP monthly into Wallet from 2026-09-25 plus 5 USD a day for Transport
+- Contract: 2000 monthly into Wallet from 2026-09-01 until 2027-03-31 renews 60%
 - Possible grant: 5000 at 40% once into Wallet from 2026-11-15
 
 ## Commitments
@@ -69,6 +69,8 @@ A budget line's name *is* its category.
 | `once` as the frequency | a lump sum on one date — a grant, a bonus, a project fee. It is **not** averaged into a monthly figure, because pretending a one-off is a monthly rate is exactly what makes contract income look like a salary. |
 | `until 2027-03-31` | a terminal date. Projections stop there instead of assuming the contract runs forever, and Coffer warns you when an income line is about to end with nothing scheduled after it. |
 | `at 40%` | how likely this is. A line at 40% counts as 40% of its value in the headline and says so, which means guaranteed and possible income can live in one plan instead of forcing two near-identical files. |
+| `renews 60%` | how likely the contract is to **carry on past its end date**. Not the same as `at 40%`, which is whether each payment lands — this is whether there is another one at all. Leave it out and the projection stops dead at `until`, which is the honest default; write it and the projection carries the contract at that fraction and says on the chart that it is doing so. Needs an `until` to renew past. |
+| `plus 5 USD a day for Transport` | an **allowance inside the pay**. A travel allowance is money for travel: Coffer asks how many days you worked, draws that pot down before your own Transport budget, and shows how much of the salary is actually pay. The currency is optional and the category must be one you already have. It is still your money — it counts as income and net worth like the rest of the pay. |
 
 ## Grants — money that is not yours
 
