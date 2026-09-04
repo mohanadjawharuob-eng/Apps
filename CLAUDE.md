@@ -83,6 +83,36 @@ no package.json. What is in the repo is what runs.
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright
   when there is no income booked, rather than projecting a date from nothing.
+  A transfer whose currency changed refuses to save without the figure that
+  actually arrived, because the only number it could fill in is the stored
+  rate — and the stored rate is exactly what turned out to be wrong.
+- **A transfer has two sides and they are matched separately.** The source is
+  `accountId` + `pocketId`, the destination `toAccountId` + `toPocketId`, and
+  anything walking transfers must test each on its own account *and* its own
+  pocket. `pocketBalance()` filtered on `t.pocketId` before looking at
+  anything, so money moved into a pocket was never credited and a move between
+  two pockets of one account cancelled itself out. For the same reason
+  `effectOn()` adds both sides instead of returning on the first match — an
+  account can be both ends of one transfer, and returning early made
+  `balanceOf()` disagree with `totalAssets()`.
+- **What left and what landed are two figures.** `txBase()` is what left;
+  `txBaseIn()` is what arrived, falling back to `txBase()` when `toAmount` is
+  absent, which is every transfer between accounts in one currency. The three
+  arithmetic sites — `pocketBalance`, `effectOn`, `totalAssets` — credit the
+  destination with `txBaseIn()`. Net worth falls by `txSpread()`, which is
+  right: it left. It stays out of `trueBurnFor()`, because an exchange fee is
+  not a living cost.
+- **A split is in the transaction's own currency.** `t.splits` holds
+  `{category, amount}` parts that must sum to `t.amount`, so the one frozen
+  rate covers the whole entry and no part can be re-valued separately.
+  Everything that files money under a category goes through `txParts()`, which
+  returns a single part for an unsplit entry — so no caller needs to know
+  whether it was split. `t.category` stays the largest share.
+- **A currency picker belongs wherever money goes in or out**, and the rate is
+  frozen onto the record there. The quick-log preview, the log-bar sheet,
+  one-tap buttons, a debt payment, a contract arriving and a goal top-up all
+  take one. A figure in a foreign currency is never printed with the base
+  symbol — `fmtIn()` for the original, `fmt(toBase(...))` for the converted.
 
 ## Coffer's look
 
@@ -121,6 +151,19 @@ When a screen is rebuilt, check nothing was the *only* caller of an action.
 `accountsCard()` stopped being called during the Worth rebuild and took pocket
 editing with it; the buttons still existed, nothing rendered them.
 
+`accountOptions()` returns a **grouped** list — an account with pockets comes
+back as `{group, options}` and carries no `value` of its own. Anything that
+needs a first entry to default to, or builds its own `<select>`, takes
+`accountOptionsFlat()`. Reading `.value` off a group gave `undefined`, which is
+how a debt payment came to default to "don't log a transaction" and silently
+record nothing.
+
+The Ledger's "Add something" card and the log bar's sheet render the **same**
+`omniPreviewHtml()`, so with the sheet open there are two copies of every
+control in the document. Every lookup goes through `omniEl()`, which scopes to
+the visible one — `getElementById` returns the copy under the scrim, and for a
+while nothing you changed in the log bar was wired to anything.
+
 ## State
 
 One shape, adopted in one place. `adoptState()` turns a parsed object into
@@ -143,6 +186,17 @@ There is no test runner. Each script seeds `localStorage`, reloads, drives the
 UI, and prints what it found. Screenshot anything visual and *look at it* —
 a bug that renders 55 plants identically passes every assertion you thought to
 write.
+
+The scripts drive the real UI, so **a reshaped screen breaks them and that is
+not a regression** — but a suite nobody trusts is a suite nobody runs, so fix
+them in the same change. Three traps account for almost every stale one:
+`innerText` reflects `text-transform`, so a heading uppercased in CSS reads
+`SALARY` and `.includes("Salary")` is false; the ledger and plan rows are
+`div.row` and `.card`, never `<tr>`, so `closest("tr")` returns null; and a
+control that moved to a sub-tab needs `.subnav button[data-id="…"]` clicked
+first. When a dialog gained a confirmation step, the script has to press
+through it — logging from the bar goes via `#omniSheet [data-act="omni-commit"]`
+now, and income asks what arrived before it writes.
 
 Check both inline scripts still parse after any edit:
 

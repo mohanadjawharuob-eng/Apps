@@ -169,12 +169,70 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   row of pills for the filter reached for most, and the rest behind a
   disclosure that opens itself when something is set.
 
+### Shipped: six gaps found by audit, the dangerous one first
+
+- **A failed save is no longer silent.** It toasted once and faded, then the app
+  carried on looking healthy while nothing was written — the worst available
+  failure for an app whose whole premise is *your data lives in this browser*.
+  A latching banner now names the time of the last good save, survives every
+  re-render, and offers an export built from memory, which needs no storage.
+- **The log bar asks before it writes.** The control used more than all the
+  others together parsed what you typed and committed it, showing a preview
+  only when parsing *failed* — so the category was whatever `guessCategory()`
+  decided and the account was `state.accounts[0]`, the first entry in the
+  array. It now opens the same preview the Ledger has, as a sheet, and nothing
+  is written until you press Log. Until you pin one, the default account is the
+  one you have logged to most over 90 days.
+- **The whole account is its own option in every picker.** `accountOptions()`
+  always offered it, but in a flat list *Bank* sat one line above three entries
+  starting with the same word. Each account is an `<optgroup>` now, its first
+  option reading "Bank — the whole account". Paying from the whole account when
+  it exceeds the unallocated remainder says so before it writes.
+- **A transfer can change currency.** It carried one amount and used it for
+  both sides, so changing 30,000,000 lira into dollars credited exactly what it
+  debited at the *stored* rate — the rate you actually got, and the spread you
+  paid for it, existed nowhere. `toAmount`, `toCurrency` and `toRate` are
+  written only when the far side differs, the dialog states the implied rate
+  against your stored one as you type, and the ledger row says what the
+  exchange cost. Net worth falls by the spread, which is correct; `trueBurnFor()`
+  does not, because an exchange fee is not a living cost.
+- **One payment, several costs.** `t.splits` holds the parts in the
+  transaction's own currency, so one frozen rate covers the entry and the parts
+  must add up to it exactly — a split that disagrees with its own entry is
+  refused rather than scaled to fit. Everything that files money under a
+  category walks `txParts()`; CSV exports one line per share.
+- **The ledger searches amounts.** Typing `400` found nothing at all, which is
+  the first thing anyone tries. It now matches the base figure, the foreign one
+  and any split share, within half a unit so `400` finds `399.99`.
+- **A currency picker wherever money goes in or out.** The quick-log preview,
+  the log-bar sheet, one-tap buttons, a payment against a debt, money arriving
+  against a contract and money put toward a goal all take a currency and freeze
+  its rate onto the record. The quick preview also printed a foreign figure
+  with the base symbol, so 8,900,000 lira read as eight and a half million
+  dollars.
+
+### Fixed alongside those
+
+- **A transfer into a pocket never arrived.** `pocketBalance()` filtered on
+  `t.pocketId` before looking at anything, so `toPocketId` was never read:
+  money moved into a pocket was not credited to it, and a move between two
+  pockets of one account debited the source and credited it straight back.
+  Savings never went down and Cyprus never went up.
+- **`balanceOf()` and `totalAssets()` disagreed** on a transfer inside one
+  account — `effectOn()` returned on the first match, so it debited and never
+  credited, while `totalAssets()` added both sides.
+- **Grouping the picker broke three of its callers.** A group object carries no
+  `value`, so `accountOptions()[0].value` was `undefined`: a debt payment
+  defaulted to "don't log a transaction" and quietly recorded nothing, closing
+  an account still offered that account as a destination, and the bulk-paste
+  box rendered `<option value="undefined">`. `accountOptionsFlat()` exists for
+  the callers that need a flat list.
+- **The log-bar sheet's controls were never wired.** The Ledger card and the
+  sheet render the same preview, so with the sheet open there were two copies
+  of every control and `getElementById` returned the one under the scrim —
+  which is why picking a category in the bar below did nothing.
+
 ### Next
-- **Split transactions** — one shop trip across two categories.
-- **Cross-currency transfers** — a transfer needs two amounts when the accounts
-  hold different currencies.
-- **Latching save warning** — a failed save currently only toasts once.
-- **Search by amount** in the ledger.
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because
   merging is lossier than renaming and deserves its own confirmation.

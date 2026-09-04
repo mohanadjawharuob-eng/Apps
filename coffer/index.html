@@ -652,6 +652,22 @@
     flex-wrap: wrap;
   }
 
+  /* ---------------- a save that is not happening ----------------
+     The one message in the app that must not go away on its own. It sits
+     above everything, including the log bar, because logging into a browser
+     that is refusing to store anything is the failure it exists to stop. */
+  .savefail {
+    position: fixed; z-index: 200; left: 0; right: 0;
+    top: 0; padding: calc(0.7rem + env(safe-area-inset-top)) 1rem 0.8rem;
+    background: var(--loss-bg); color: var(--alert);
+    border-bottom: 1px solid var(--alert);
+    font-size: 0.8rem; line-height: 1.45;
+  }
+  .savefail b { color: inherit; }
+  .savefail .btn-row { margin-top: 0.6rem; }
+  .savefail .btn { background: var(--surface); color: var(--ink); }
+  .savefail .btn.primary { background: var(--alert); color: #fff; }
+
   /* ---------------- toast ---------------- */
   .toasts {
     position: fixed; z-index: 120;
@@ -1009,6 +1025,7 @@
   <main class="view" id="view"></main>
 </div>
 
+<div class="savefail" id="savefail" role="alert" hidden></div>
 <div class="toasts" id="toasts"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
 <div id="overlay"></div>
@@ -1030,7 +1047,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04f";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04g";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1244,6 +1261,7 @@
       // absent from every backup written before the afford rebuild, which is
       // fine: floorMonths() falls back to the default on its own
       s.settings.floorMonths = num(p.settings.floorMonths) || null;
+      s.settings.defaultAccountRef = p.settings.defaultAccountRef || null;
     }
     if (p.categories) {
       if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
@@ -1287,9 +1305,52 @@
   var LEDGER_PAGE = 60;
   var ledgerLimit = LEDGER_PAGE;
 
+  /* A save that fails used to show one toast and let you carry on. The toast
+     faded, the app looked perfectly healthy, and everything logged after it
+     went nowhere — in a private tab, on a full quota, or with site data
+     blocked, you found out when you closed it. For an app whose whole premise
+     is that your data lives in this browser, that is the worst way to fail.
+
+     So the failure latches: a banner that stays until a save actually works,
+     and an export that needs no storage to produce. */
+  var lastSaveAt = null, saveBroken = false;
+
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); }
-    catch (e) { toast("Could not save — this browser's storage may be full or blocked."); }
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      lastSaveAt = new Date();
+      if (saveBroken) { saveBroken = false; paintSaveFail(); toast("Saved — storage is working again."); }
+      return true;
+    } catch (e) {
+      if (!saveBroken) { saveBroken = true; paintSaveFail(); }
+      return false;
+    }
+  }
+
+  /* Asked at the moment it is needed rather than remembered from boot: a
+     `var hadStoredState = false` declared below `var state = load()` is reset
+     by its own initialiser after load() has already set it. */
+  function storedStateExists() {
+    try { return localStorage.getItem(KEY) != null; } catch (e) { return false; }
+  }
+
+  function paintSaveFail() {
+    var el = document.getElementById("savefail");
+    if (!el) return;
+    if (!saveBroken) { el.hidden = true; el.innerHTML = ""; return; }
+    var when = lastSaveAt
+      ? "Nothing has saved since " +
+        lastSaveAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) + "."
+      : storedStateExists()
+        ? "Nothing has saved since you opened Coffer."
+        : "Nothing has been saved at all.";
+    el.innerHTML = "<b>" + esc(when) + "</b> This browser is refusing to store data \u2014 it may be " +
+      "full, or set to block site data, or this may be a private tab. Anything you log now will be " +
+      "gone when you close it." +
+      '<div class="btn-row">' +
+      '<button class="btn sm primary" data-act="export-json">Export a backup now</button>' +
+      '<button class="btn sm" data-act="save-retry">Try again</button></div>';
+    el.hidden = false;
   }
 
   /* ---------------- receipt photos ----------------
@@ -1530,6 +1591,41 @@
     return r > 0 ? a / r : a;
   }
   function txBase(t) { return toBase(t.amount, t.currency, t.rate); }
+
+  /* What LANDED, as opposed to what left. A transfer used to carry one amount
+     and use it for both sides, so changing 30,000,000 LBP into dollars
+     credited the same base value it debited, at your STORED rate — the rate
+     you actually got at the changer, and the spread you paid, existed
+     nowhere. A transfer between accounts holding the same currency is
+     unchanged: toAmount is absent and this is txBase. */
+  function txBaseIn(t) {
+    if (t.toAmount == null) return txBase(t);
+    return toBase(t.toAmount, t.toCurrency || t.currency, t.toRate);
+  }
+  // what the exchange cost: out, less what arrived
+  function txSpread(t) {
+    return t.toAmount == null ? 0 : txBase(t) - txBaseIn(t);
+  }
+  /* ---- one payment, several costs -----------------------------------------
+     A shop trip that was half groceries and half household was two entries or
+     one wrong category. `t.splits` holds the parts in the transaction's OWN
+     currency, so the single frozen rate covers the whole entry and no part can
+     be re-valued on its own. Everything that files money under a category
+     walks txParts(); a transaction with no splits — which is every one written
+     before this — comes back as a single part with its own category, so no
+     caller needs to know whether it was split. */
+  function txParts(t) {
+    if (!t.splits || !t.splits.length) return [{ category: t.category, base: txBase(t) }];
+    return t.splits.map(function (sp) {
+      return { category: sp.category, base: toBase(num(sp.amount), t.currency, t.rate) };
+    });
+  }
+  function splitsTotal(list) {
+    return (list || []).reduce(function (n, sp) { return n + num(sp.amount); }, 0);
+  }
+  function isSplit(t) { return !!(t.splits && t.splits.length > 1); }
+  function canSplit(t) { return t && (t.type === "expense" || t.type === "income"); }
+
   function acctOpeningBase(a) { return toBase(a.opening, a.currency, a.rate); }
   // an amount shown in its own currency, for the ledger row
   function fmtIn(n, code) {
@@ -1702,17 +1798,22 @@
     var bits = String(ref || "").split("|");
     return { accountId: bits[0] || null, pocketId: bits[1] || null };
   }
-  // what one pocket holds: its own opening plus everything filed to it
+  /* What one pocket holds: its own opening plus everything filed to it. The
+     destination of a transfer is `toPocketId`, and this used to filter on
+     `t.pocketId` before looking at anything — so money moved INTO a pocket was
+     never credited to it, and a move between two pockets of one account
+     debited the source and then immediately credited it back. Savings never
+     went down and Cyprus never went up. Each side is now matched on its own
+     account and its own pocket. */
   function pocketBalance(acc, p, onOrBefore) {
     var b = num(p.opening);
     for (var i = 0; i < state.transactions.length; i++) {
       var t = state.transactions[i];
-      if (t.pocketId !== p.id) continue;
       if (onOrBefore && t.date > onOrBefore) continue;
       if (t.type === "transfer") {
-        if (t.accountId === acc.id) b -= txBase(t);
-        if (t.toAccountId === acc.id) b += txBase(t);
-      } else if (t.accountId === acc.id) {
+        if (t.accountId === acc.id && t.pocketId === p.id) b -= txBase(t);
+        if (t.toAccountId === acc.id && t.toPocketId === p.id) b += txBaseIn(t);
+      } else if (t.accountId === acc.id && t.pocketId === p.id) {
         b += t.type === "income" ? txBase(t) : -txBase(t);
       }
     }
@@ -1793,12 +1894,18 @@
     return n == null ? "(removed account)" : n;
   }
 
-  // effect of one transaction on one account
+  /* Effect of one transaction on one account. Both sides are added rather
+     than returned early: a transfer between two pockets of the SAME account
+     touches it twice, and returning on the first match made balanceOf() debit
+     it and never credit it back — while totalAssets(), which adds both,
+     disagreed. Same account, same currency now nets to zero; across
+     currencies it nets to the spread, which is exactly what it cost. */
   function effectOn(t, accId) {
     if (t.type === "transfer") {
-      if (t.accountId === accId) return -txBase(t);
-      if (t.toAccountId === accId) return txBase(t);
-      return 0;
+      var e = 0;
+      if (t.accountId === accId) e -= txBase(t);
+      if (t.toAccountId === accId) e += txBaseIn(t);
+      return e;
     }
     if (t.accountId !== accId) return 0;
     return t.type === "income" ? txBase(t) : -txBase(t);
@@ -1831,7 +1938,7 @@
       if (onOrBefore && t.date > onOrBefore) continue;
       if (t.type === "transfer") {
         if (totals[t.accountId] != null) totals[t.accountId] -= txBase(t);
-        if (totals[t.toAccountId] != null) totals[t.toAccountId] += txBase(t);
+        if (totals[t.toAccountId] != null) totals[t.toAccountId] += txBaseIn(t);
       } else if (totals[t.accountId] != null) {
         totals[t.accountId] += (t.type === "income" ? 1 : -1) * txBase(t);
       }
@@ -1980,7 +2087,9 @@
       if (t.type !== "expense" || isPending(t)) return;
       // a grant-funded trip is not you overspending on travel
       if (isGrantSpend(t)) return;
-      out[t.category] = (out[t.category] || 0) + txBase(t);
+      txParts(t).forEach(function (pt) {
+        out[pt.category] = (out[pt.category] || 0) + pt.base;
+      });
     });
     memo.cats[mk] = out;
     return out;
@@ -2544,6 +2653,13 @@
         var inner;
         if (f.type === "select") {
           inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+            // a grouped entry: an account and the pockets inside it
+            if (o && o.group) {
+              return '<optgroup label="' + esc(o.group) + '">' + (o.options || []).map(function (g) {
+                return '<option value="' + esc(g.value) + '"' +
+                  (String(g.value) === String(f.value) ? " selected" : "") + ">" + esc(g.label) + "</option>";
+              }).join("") + "</optgroup>";
+            }
             var val = typeof o === "string" ? o : o.value;
             var lab = typeof o === "string" ? o : o.label;
             return '<option value="' + esc(val) + '"' + (String(val) === String(f.value) ? " selected" : "") + ">" + esc(lab) + "</option>";
@@ -2559,7 +2675,8 @@
           return '<div class="field' + (f.span ? " wide" : "") + '">' +
             '<label class="checkline"><input id="' + id + '" type="checkbox"' + (f.value ? " checked" : "") + " />" +
             "<span>" + esc(f.label) + "</span></label>" +
-            (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
+            '<span class="hint" id="' + id + '_hint"' + (f.hint ? "" : ' hidden') + ">" +
+            esc(f.hint || "") + "</span></div>";
         } else {
           inner = '<input id="' + id + '" type="' + (f.type || "text") + '"' +
             ' value="' + esc(f.value == null ? "" : f.value) + '"' +
@@ -2570,7 +2687,8 @@
         }
         return '<div class="field' + (f.span ? " wide" : "") + '">' +
           '<label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
-          (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
+          '<span class="hint" id="' + id + '_hint"' + (f.hint ? "" : ' hidden') + ">" +
+          esc(f.hint || "") + "</span></div>";
       }).join("") + "</div></div>";
     }
 
@@ -2666,14 +2784,26 @@
       });
     });
 
-    // A field can react to another one changing. The rate dialog uses it to
-    // fill in a suggested rate the moment you pick a currency.
+    /* A field can react to another one changing. The rate dialog uses it to
+       fill in a suggested rate the moment you pick a currency; the transfer
+       dialog uses it to restate the rate you are actually getting as you type,
+       which only works if it fires on every keystroke and not on blur. */
     function fieldEl(k) { return document.getElementById("mf_" + k); }
+    function setHint(k, text) {
+      var h = document.getElementById("mf_" + k + "_hint");
+      if (!h) return;
+      h.textContent = text || "";
+      h.hidden = !text;
+    }
     fields.forEach(function (f) {
       if (typeof f.onChange !== "function") return;
       var el = fieldEl(f.key);
-      if (el) el.addEventListener("change", function () { f.onChange(el.value, fieldEl); });
+      if (!el) return;
+      var fire = function () { f.onChange(el.value, fieldEl, setHint); };
+      el.addEventListener("change", fire);
+      if (f.type !== "select") el.addEventListener("input", fire);
     });
+    if (typeof opts.onReady === "function") opts.onReady(fieldEl, setHint);
 
     escHandler = function (e) {
       if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); }
@@ -2789,7 +2919,8 @@
     if (memo.learned) return memo.learned;
     var counts = {};
     state.transactions.forEach(function (t) {
-      if (t.type === "transfer" || !t.category) return;
+      // a split entry has no one category to teach, so it teaches none
+      if (t.type === "transfer" || !t.category || isSplit(t)) return;
       tokenize(t.desc).forEach(function (tok) {
         counts[tok] = counts[tok] || {};
         counts[tok][t.category] = (counts[tok][t.category] || 0) + 1;
@@ -4053,7 +4184,7 @@
       desc: desc || g.category,
       category: g.category,
       why: g.why,
-      accountId: ac.accountId || (state.accounts[0] ? state.accounts[0].id : null),
+      accountId: ac.accountId || defaultAccountRef(),
       accountExplicit: !!ac.accountId,
       currency: cur,
       currencyExplicit: !!curRe
@@ -5000,7 +5131,9 @@
           "</span></div>";
       }).join("") +
       (Math.abs(left) > 0.005
-        ? '<div class="split-row muted"><span>Not allocated</span><span class="split-fig">' + fmt(left) + "</span></div>"
+        ? '<div class="split-row muted"><span>' + (left < 0 ? "Over-allocated" : "Not allocated") +
+          "</span>" + '<span class="split-fig"' + (left < 0 ? ' style="color:var(--warn)"' : "") + ">" +
+          fmt(Math.abs(left)) + "</span></div>"
         : "") + "</div>";
     }
 
@@ -6238,17 +6371,46 @@
      LEDGER
      ============================================================ */
 
+  /* Typing a number searches the figures, not just the words. `400` found
+     nothing at all before, which is the one thing everybody tries first. Half
+     a unit of tolerance, because $399.99 is the number you think of as 400,
+     and both sides of every figure are checked — the base one and the one you
+     actually handed over, since with lira it is the second you remember. */
+  var AMOUNT_TOL = 0.5;
+  function queryAmount(text) {
+    // a number is only a number when the whole query is one: "Room 400" is a
+    // description, and matching it against amounts would be noise
+    var q = String(text == null ? "" : text).trim().replace(/[,\s]/g, "").replace(/^[^\d.]+/, "");
+    if (!/^\d+(\.\d+)?$/.test(q)) return null;
+    var n = parseFloat(q);
+    return isFinite(n) && n > 0 ? n : null;
+  }
+  function matchesAmount(t, text) {
+    var q = queryAmount(text);
+    if (q == null) return false;
+    function near(v) { return Math.abs(num(v) - q) < AMOUNT_TOL; }
+    if (near(txBase(t)) || near(t.amount)) return true;
+    if (t.toAmount != null && (near(t.toAmount) || near(txBaseIn(t)))) return true;
+    return (t.splits || []).some(function (sp) { return near(sp.amount); });
+  }
+
   function filteredTx() {
     return state.transactions.filter(function (t) {
       if (filters.type !== "all" && t.type !== filters.type) return false;
-      if (filters.category !== "all" && t.category !== filters.category) return false;
+      // a split entry belongs to every category it was split across
+      if (filters.category !== "all" && txParts(t).every(function (pt) {
+        return pt.category !== filters.category;
+      })) return false;
       if (filters.account !== "all" && t.accountId !== filters.account && t.toAccountId !== filters.account) return false;
       if (filters.from && t.date < filters.from) return false;
       if (filters.to && t.date > filters.to) return false;
       if (filters.text) {
         var q = filters.text.toLowerCase();
-        if ((t.desc || "").toLowerCase().indexOf(q) === -1 &&
-            (t.category || "").toLowerCase().indexOf(q) === -1) return false;
+        var inCat = txParts(t).some(function (pt) {
+          return (pt.category || "").toLowerCase().indexOf(q) > -1;
+        });
+        if (!inCat && (t.desc || "").toLowerCase().indexOf(q) === -1 &&
+            !matchesAmount(t, filters.text)) return false;
       }
       return true;
     }).sort(function (a, b) { return b.date.localeCompare(a.date) || b.id.localeCompare(a.id); });
@@ -6273,19 +6435,41 @@
      underneath. */
   function ledgerRowHtml(t) {
     var isTransfer = t.type === "transfer";
+    var exchanged = isTransfer && t.toAmount != null;
     var base = txBase(t);
     var amt = isTransfer ? fmt(base) : (t.type === "income" ? "+" : "−") + fmt(base).replace("-", "");
     // a foreign entry shows the amount you actually handed over, small, under
-    // the converted figure — otherwise the ledger stops matching the receipt
-    if (isForeign(t.currency)) amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
+    // the converted figure — otherwise the ledger stops matching the receipt.
+    // An exchange shows both sides, because one figure cannot describe it.
+    if (exchanged) {
+      amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency) + " \u2192 " +
+        fmtIn(t.toAmount, t.toCurrency || t.currency)) + "</span>";
+    } else if (isForeign(t.currency)) {
+      amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
+    }
+    /* What the exchange cost, stated on the row. Not amber: a spread is a
+       fact about a rate, not drift and not an error. */
+    var spread = exchanged ? txSpread(t) : 0;
+    var spreadPill = Math.abs(spread) < 0.005 ? "" :
+      '<span class="pill mute">' + esc(spread > 0
+        ? fmt(spread) + " to exchange"
+        : fmt(-spread) + " better than stored") + "</span>";
 
     var where = isTransfer
       ? esc(accountName(t.accountId, t.pocketId)) + " → " + esc(accountName(t.toAccountId, t.toPocketId))
       : esc(accountName(t.accountId, t.pocketId));
+    /* A split entry names every category it was filed under. Two fit on the
+       sub line at 390px; past that the row would wrap into a paragraph, so the
+       rest are counted and the dialog holds the detail. */
+    function catTag(c) {
+      return '<span class="cat-tag"><span class="cat-dot" style="background:' + catColor(c) +
+        '"></span>' + esc(c) + "</span>";
+    }
+    var parts = txParts(t);
     var cat = isTransfer
       ? '<span class="pill mute">Transfer</span>'
-      : '<span class="cat-tag"><span class="cat-dot" style="background:' + catColor(t.category) +
-        '"></span>' + esc(t.category) + "</span>";
+      : parts.slice(0, 2).map(function (pt) { return catTag(pt.category); }).join(" + ") +
+        (parts.length > 2 ? ' <span class="pill mute">+' + (parts.length - 2) + " more</span>" : "");
 
     return '<div class="row stacked">' +
       '<div class="stack-top">' +
@@ -6293,6 +6477,7 @@
       '<span class="row-fig' + (t.type === "income" ? " gain" : "") + '">' + amt + "</span></div>" +
       '<div class="stack-foot">' +
       '<span class="row-sub">' + cat + " · " + where + "</span>" +
+      spreadPill +
       (isPending(t) ? '<span class="pill warn">owed back</span>' : "") +
       (t.settledOn ? '<span class="pill ok">refunded</span>' : "") +
       (t.grantId && !t.grantAward ? '<span class="pill mute">grant</span>' : "") +
@@ -6306,6 +6491,12 @@
           '" aria-label="' + (t.settledOn ? "Mark as still owed" : "Record the money coming back") + '" title="' +
           (t.settledOn ? "Refunded on " + t.settledOn + " — click to undo" : "Record the money coming back") +
           '">↩</button>'
+        : "") +
+      (canSplit(t)
+        ? '<button class="ibtn' + (isSplit(t) ? " on" : "") + '" data-act="tx-split" data-id="' + t.id +
+          '" aria-label="Split across categories" title="' +
+          (isSplit(t) ? "Split across " + parts.length + " categories \u2014 click to change" : "Split across categories") +
+          '">\u25E7</button>'
         : "") +
       '<button class="ibtn" data-act="tx-edit" data-id="' + t.id + '" aria-label="Edit" title="Edit">✎</button>' +
       '<button class="ibtn danger" data-act="tx-del" data-id="' + t.id + '" aria-label="Delete" title="Delete">✕</button>' +
@@ -6395,7 +6586,7 @@
       "</div></div>" +
       '<div class="card-body">' +
       '<input id="f_text" type="text" value="' + esc(filters.text) + '" ' +
-      'placeholder="Search a description or category…" autocomplete="off" aria-label="Search" />' +
+      'placeholder="Search a description, category or amount…" autocomplete="off" aria-label="Search" />' +
 
       '<div class="chiprow" style="margin-top:0.7rem">' +
       [["all", "Everything"], ["expense", "Out"], ["income", "In"], ["transfer", "Transfers"]]
@@ -6810,7 +7001,9 @@
     monthTx(mk).forEach(function (t) {
       if (t.type === "transfer") return;
       var bucket = t.type === "income" ? "income" : "expense";
-      got[bucket][t.category] = (got[bucket][t.category] || 0) + txBase(t);
+      txParts(t).forEach(function (pt) {
+        got[bucket][pt.category] = (got[bucket][pt.category] || 0) + pt.base;
+      });
     });
     return got;
   }
@@ -7343,9 +7536,11 @@
       // the monthly chart already leaves out money you are owed back; this
       // table counted it, so one flight was spending here and not there
       if (t.type !== "expense" || isPending(t)) return;
-      totals[t.category] = (totals[t.category] || 0) + txBase(t);
-      monthsCounted[t.category] = monthsCounted[t.category] || {};
-      monthsCounted[t.category][monthOf(t.date)] = true;
+      txParts(t).forEach(function (pt) {
+        totals[pt.category] = (totals[pt.category] || 0) + pt.base;
+        monthsCounted[pt.category] = monthsCounted[pt.category] || {};
+        monthsCounted[pt.category][monthOf(t.date)] = true;
+      });
     });
     var league = Object.keys(totals).map(function (c) {
       var n = Object.keys(monthsCounted[c]).length;
@@ -7426,6 +7621,28 @@
       "your browser blocks downloads. Restoring replaces everything currently in this browser, after a confirmation.</p></div></div>";
 
     /* appearance */
+    var dref = defaultAccountRef();
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Where a quick log lands</h3>' +
+      '<span class="sub">' + esc(dref ? accountName(parseRef(dref).accountId, parseRef(dref).pocketId) : "nothing yet") +
+      "</span></div>" +
+      '<div class="card-body"><p class="hint" style="margin-bottom:0.7rem">' +
+      "The account the log bar and the one-tap buttons pick when what you typed does not say. " +
+      (state.settings.defaultAccountRef
+        ? "Pinned by you."
+        : "Not pinned, so Coffer uses whichever you log to most.") + "</p>" +
+      '<div class="field"><label class="label" for="defacc">Default</label><select id="defacc">' +
+      '<option value="">\u2014 whichever I log to most \u2014</option>' +
+      accountOptions(dref).map(function (o) {
+        if (o.group) {
+          return '<optgroup label="' + esc(o.group) + '">' + o.options.map(function (g) {
+            return '<option value="' + esc(g.value) + '"' +
+              (g.value === state.settings.defaultAccountRef ? " selected" : "") + ">" + esc(g.label) + "</option>";
+          }).join("") + "</optgroup>";
+        }
+        return '<option value="' + esc(o.value) + '"' +
+          (o.value === state.settings.defaultAccountRef ? " selected" : "") + ">" + esc(o.label) + "</option>";
+      }).join("") + "</select></div></div></div>";
+
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Your cushion</h3>' +
       '<span class="sub">' + floorMonths() + (floorMonths() === 1 ? " month" : " months") + "</span></div>" +
       '<div class="card-body"><p class="hint" style="margin-bottom:0.7rem">' +
@@ -7577,16 +7794,27 @@
     }
 
     var cat = omni.touched.category || p.category;
-    var acc = omni.touched.accountId || p.accountId;
+    var acc = omni.touched.accountId || p.accountId;   // an acctRef
     var date = omni.touched.date || p.date;
     var cats = state.categories[p.type === "income" ? "income" : "expense"];
     if (cats.indexOf(cat) === -1) cat = p.category;
+    /* The fastest way to log something could only ever log in base currency
+       unless you happened to type the code, which for anyone paid in lira is
+       most of what they log. Picking here wins over the text, because picking
+       is the later and more deliberate of the two. */
+    var codes = currencyCodes();
+    var cur = omni.touched.currency || p.currency || baseCode();
+    if (codes.indexOf(cur) === -1) cur = baseCode();
+    var shown = toBase(p.amount, cur, rateFor(cur));
 
     return '<div id="omniPreview" style="margin-top:0.7rem;padding-top:0.7rem;border-top:1px solid var(--rule)">' +
       '<div style="display:flex;align-items:baseline;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem">' +
       '<span class="pill ' + (p.type === "income" ? "ok" : "mute") + '">' + (p.type === "income" ? "money in" : "money out") + "</span>" +
+      // this printed the raw figure with the base symbol, so 8,900,000 lira
+      // read as eight and a half million dollars
       '<span style="font-size:1.25rem;font-weight:650;font-variant-numeric:tabular-nums">' +
-      (p.type === "income" ? "+" : "−") + fmt(p.amount).replace("-", "") + "</span>" +
+      (p.type === "income" ? "+" : "−") + fmt(shown).replace("-", "") + "</span>" +
+      (isForeign(cur) ? '<span class="hint">' + esc(fmtIn(p.amount, cur)) + "</span>" : "") +
       '<span style="font-size:0.92rem">' + esc(p.desc) + "</span>" +
       (p.why && !omni.touched.category
         ? '<span class="hint" style="margin-left:auto">' + esc(p.why) + "</span>" : "") +
@@ -7599,20 +7827,58 @@
       '<option value="' + NEW_CAT + '">\uFF0B New category\u2026</option></select>' +
       '<input id="omni_cat_new" type="text" placeholder="Name it" autocomplete="off" ' +
       'aria-label="New category name" style="display:none;margin-top:0.4rem" /></div>' +
+      // this listed accounts only — no pockets, and closed ones included — so
+      // the fastest way to log something was the one way that could not file
+      // it where it belonged
       '<div class="field"><label class="label" for="omni_acc">Account</label><select id="omni_acc">' +
-      state.accounts.map(function (a) {
-        return '<option value="' + a.id + '"' + (a.id === acc ? " selected" : "") + ">" + esc(a.name) + "</option>";
+      accountOptions(acc).map(function (o) {
+        if (o.group) {
+          return '<optgroup label="' + esc(o.group) + '">' + o.options.map(function (g) {
+            return '<option value="' + esc(g.value) + '"' + (g.value === acc ? " selected" : "") +
+              ">" + esc(g.label) + "</option>";
+          }).join("") + "</optgroup>";
+        }
+        return '<option value="' + esc(o.value) + '"' + (o.value === acc ? " selected" : "") +
+          ">" + esc(o.label) + "</option>";
       }).join("") + "</select></div>" +
+      '<div class="field"><label class="label" for="omni_cur">Currency</label><select id="omni_cur">' +
+      codes.map(function (c) {
+        return '<option value="' + esc(c) + '"' + (c === cur ? " selected" : "") + ">" + esc(c) + "</option>";
+      }).join("") + "</select>" +
+      (isForeign(cur)
+        ? '<span class="hint">at ' + esc(fmtRate(rateFor(cur))) + " to the " + esc(baseCode()) +
+          ", frozen onto this entry</span>"
+        : "") + "</div>" +
       '<div class="field"><label class="label" for="omni_date">Date</label>' +
       '<input id="omni_date" type="date" value="' + esc(date) + '" /></div>' +
       "</div>" +
       '<div class="btn-row" style="margin-top:0.75rem">' +
       '<button class="btn primary" data-act="omni-commit">Add ' +
-        (p.currencyExplicit
-          ? esc(fmtIn(p.amount, p.currency)) + " (" + fmt(toBase(p.amount, p.currency, rateFor(p.currency))).replace("-", "") + ")"
-          : fmt(p.amount).replace("-", "")) + "</button>" +
+        (isForeign(cur)
+          ? esc(fmtIn(p.amount, cur)) + " (" + fmt(shown).replace("-", "") + ")"
+          : fmt(shown).replace("-", "")) + "</button>" +
       '<button class="btn quiet" data-act="omni-clear">Clear</button>' +
       "</div></div>";
+  }
+
+  /* The bar at the bottom of every screen is the control used more than all
+     the others together, and it used to parse what you typed and WRITE IT —
+     showing a preview only when parsing failed. So the category was whatever
+     guessCategory decided and the account was whatever came first. Now the
+     same preview the Ledger has appears as a sheet, and nothing is written
+     until you press Log. One tap when the guess is right; one tap to correct
+     it when it is not. */
+  function openOmniSheet() {
+    closeModal();
+    overlay.innerHTML = '<div class="scrim" data-scrim="1">' +
+      '<div class="modal" role="dialog" aria-modal="true" aria-label="Log this">' +
+      '<div class="modal-head"><h3>Log this</h3>' +
+      "<p>Change anything that is not right \u2014 nothing is written until you press Log.</p></div>" +
+      '<div class="modal-body" id="omniSheet">' + omniPreviewHtml() + "</div></div></div>";
+    wireOmniPreview();
+    overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (ev) {
+      if (ev.target === ev.currentTarget) closeModal();
+    });
   }
 
   function quickChipsHtml() {
@@ -7655,9 +7921,22 @@
     wireOmniPreview();
   }
 
+  /* The Ledger card and the log-bar sheet render the SAME preview, so with the
+     sheet open there are two copies of every control in the document and
+     getElementById hands back the first — the one under the scrim. Nothing you
+     changed in the sheet was ever wired, which is why picking a category there
+     did nothing. Every lookup goes through the visible copy instead. */
+  function omniRoot() {
+    return document.getElementById("omniSheet") || document.getElementById("omniZone") || document;
+  }
+  function omniEl(id) {
+    var r = omniRoot();
+    return r === document ? document.getElementById(id) : r.querySelector("#" + id);
+  }
+
   function wireOmniPreview() {
-    var c = document.getElementById("omni_cat");
-    var cNew = document.getElementById("omni_cat_new");
+    var c = omniEl("omni_cat");
+    var cNew = omniEl("omni_cat_new");
     if (c) c.addEventListener("change", function () {
       if (c.value === NEW_CAT) {
         // keep the typed name out of touched.category until it's committed
@@ -7667,10 +7946,17 @@
         omni.touched.category = c.value;
       }
     });
-    var a = document.getElementById("omni_acc");
+    var a = omniEl("omni_acc");
     if (a) a.addEventListener("change", function () { omni.touched.accountId = a.value; });
-    var d = document.getElementById("omni_date");
+    var d = omniEl("omni_date");
     if (d) d.addEventListener("change", function () { omni.touched.date = d.value; });
+    var u = omniEl("omni_cur");
+    if (u) u.addEventListener("change", function () {
+      omni.touched.currency = u.value;
+      // the figure and the button both restate in the currency just picked
+      var zone = omniRoot();
+      if (zone && zone !== document) { zone.innerHTML = omniPreviewHtml(); wireOmniPreview(); }
+    });
   }
 
   var omniTimer = null;
@@ -7688,44 +7974,52 @@
     wireOmniPreview();
   }
 
+  // returns false when nothing was written, so the sheet stays open on it
   function commitOmni() {
     var p = parseEntry(omni.text);
-    if (!p || !p.ok) { toast(p && p.reason ? p.reason : "Type an amount and what it was for."); return; }
+    if (!p || !p.ok) { toast(p && p.reason ? p.reason : "Type an amount and what it was for."); return false; }
     var kind = p.type === "income" ? "income" : "expense";
     var cats = state.categories[kind];
     var cat = omni.touched.category && cats.indexOf(omni.touched.category) >= 0 ? omni.touched.category : p.category;
 
     // a category typed into the quick box joins the list for good
-    var sel = document.getElementById("omni_cat");
-    var box = document.getElementById("omni_cat_new");
+    var sel = omniEl("omni_cat");
+    var box = omniEl("omni_cat_new");
     if (sel && sel.value === NEW_CAT) {
       var typed = (box ? box.value : "").trim();
-      if (!typed) { toast("Type a name for the new category."); return; }
+      if (!typed) { toast("Type a name for the new category."); return false; }
       var clash = cats.filter(function (c) { return c.toLowerCase() === typed.toLowerCase(); })[0];
       if (clash) { cat = clash; }
       else { cats.push(typed); cat = typed; toast("\u201C" + typed + "\u201D added to your " + kind + " categories."); }
     }
+    // the picker hands back an acctRef, which may name a pocket
+    var ref = parseRef(omni.touched.accountId || p.accountId || "");
+    var cur = omni.touched.currency || p.currency || baseCode();
+    if (currencyCodes().indexOf(cur) === -1) cur = baseCode();
     var tx = {
       id: uid(),
       date: omni.touched.date || p.date,
       desc: p.desc,
       type: p.type,
       category: cat,
-      accountId: omni.touched.accountId || p.accountId,
+      accountId: ref.accountId,
+      pocketId: ref.pocketId || null,
       amount: p.amount,
-      currency: p.currency || baseCode(),
-      rate: rateFor(p.currency || baseCode())
+      currency: cur,
+      rate: rateFor(cur)
     };
-    if (!tx.accountId) { toast("Add an account first."); return; }
+    if (!tx.accountId) { toast("Add an account first."); return false; }
     state.transactions.push(tx);
     omni = { text: "", touched: {} };
     save();
     render();
     var box = document.getElementById("omniBox");
     if (box) box.focus();
-    toast(esc0(tx.desc) + " · " + fmt(txBase(tx)) + " logged to " + accountName(tx.accountId) + ".", function () {
+    toast(esc0(tx.desc) + " · " + (isForeign(tx.currency) ? fmtIn(tx.amount, tx.currency) + " = " : "") +
+      fmt(txBase(tx)) + " logged to " + accountName(tx.accountId, tx.pocketId) + ".", function () {
       state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
     });
+    return true;
   }
 
   // toast() escapes for us; this just trims very long descriptions
@@ -7742,14 +8036,95 @@
   // out of every picker so nothing new can land in it — except on the entry
   // that is already filed there, which would otherwise be silently reassigned
   // to some other account the moment you opened the edit dialog.
+  /* One picker, nineteen call sites. It always offered the whole account —
+     `{ value: a.id }` before each pocket — but as a bare "Bank" one line above
+     "Bank \u203a Savings", "Bank \u203a Cyprus" and "Bank \u203a Balamand". In a flat
+     native select that is invisible in the sense that matters: you cannot tell
+     which line is the account and which are parts of it. Grouped, with the
+     account named as the whole thing and its pockets reduced to their own
+     names, the difference is unmissable. */
+  /* Where a quick log lands when the text does not say. This was
+     `state.accounts[0]` — literally first in the array, not a choice anyone
+     made and not even the first OPEN one. Now: what you picked, or failing
+     that the account you actually log to most, which lands on the right one
+     without anyone configuring anything. */
+  function mostUsedAccountRef() {
+    var since = iso(new Date(Date.now() - 90 * 86400000));
+    var count = {}, best = null, bestN = 0;
+    state.transactions.forEach(function (t) {
+      if (t.type === "transfer" || t.date < since || !t.accountId) return;
+      var k = acctRef(t.accountId, t.pocketId);
+      count[k] = (count[k] || 0) + 1;
+      if (count[k] > bestN) { bestN = count[k]; best = k; }
+    });
+    return best;
+  }
+  function defaultAccountRef() {
+    var pick = state.settings.defaultAccountRef;
+    if (pick) {
+      var r = parseRef(pick), a = accountById(r.accountId);
+      // a default pointing at something deleted or closed is not a default
+      if (a && !a.closed && (!r.pocketId || pocketById(a, r.pocketId))) return pick;
+    }
+    var used = mostUsedAccountRef();
+    if (used) {
+      var u = parseRef(used), ua = accountById(u.accountId);
+      if (ua && !ua.closed && (!u.pocketId || pocketById(ua, u.pocketId))) return used;
+    }
+    var open = openAccounts()[0];
+    return open ? open.id : null;
+  }
+
+  /* Paying from the WHOLE account draws on the part that is not in a pocket,
+     so a payment larger than that quietly pushes "Not allocated" negative and
+     is really coming out of what you set aside. Said out loud rather than
+     left to be discovered on the Worth screen. */
+  function warnIfOverAllocated(ref, type, base) {
+    if (type !== "expense" || !(base > 0)) return;
+    var r = parseRef(ref || "");
+    if (!r.accountId || r.pocketId) return;            // a pocket pays for itself
+    var a = accountById(r.accountId);
+    if (!a || !pocketsOf(a).length) return;
+    var loose = unallocatedOf(a);
+    if (base <= loose + 0.005) return;
+    toast(fmt(base - loose, { round: true }) + " more than " + a.name +
+      " holds outside its pockets — it comes out of what you have set aside.");
+  }
+
   function accountOptions(keepRef) {
     var keepId = keepRef ? parseRef(keepRef).accountId : null;
     var out = [];
     state.accounts.forEach(function (a) {
       if (a.closed && a.id !== keepId) return;
-      out.push({ value: a.id, label: a.name + (a.closed ? " (closed)" : "") });
-      pocketsOf(a).forEach(function (p) {
-        out.push({ value: acctRef(a.id, p.id), label: a.name + " \u203a " + p.name });
+      var pockets = pocketsOf(a);
+      if (!pockets.length) {
+        out.push({ value: a.id, label: a.name + (a.closed ? " (closed)" : "") });
+        return;
+      }
+      out.push({
+        group: a.name + (a.closed ? " (closed)" : ""),
+        options: [{ value: a.id, label: a.name + " \u2014 the whole account" }].concat(
+          pockets.map(function (pk) {
+            return { value: acctRef(a.id, pk.id), label: pk.name };
+          }))
+      });
+    });
+    return out;
+  }
+  /* The grouped list is for pickers. Anything that needs a FLAT list — a first
+     entry to default to, a hand-rolled <select> — takes this instead: a group
+     object carries no `value`, and reading one off it silently produced
+     `<option value="undefined">` and a debt payment that quietly logged
+     nothing because its default resolved to the "don't log it" row. */
+  function accountOptionsFlat(keepRef) {
+    var out = [];
+    accountOptions(keepRef).forEach(function (o) {
+      if (!o.group) { out.push(o); return; }
+      o.options.forEach(function (g) {
+        out.push({
+          value: g.value,
+          label: parseRef(g.value).pocketId ? o.group + " \u203a " + g.label : g.label
+        });
       });
     });
     return out;
@@ -7772,6 +8147,117 @@
         ? "kept at today's rate, so this entry never re-values later"
         : "only " + baseCode() + " so far — add rates under Settings \u203a Exchange rates to log in another currency"
     }];
+  }
+
+  /* ---- the far side of an exchange ----------------------------------------
+     A transfer used to carry one amount and one currency and use it for both
+     sides, so changing 30,000,000 LBP into dollars credited exactly what it
+     debited, at the rate stored in Settings. The rate you actually got at the
+     changer, and the spread you paid for it, existed nowhere — which for
+     someone converting lira every month is the ledger quietly telling you a
+     story. A transfer now carries `toAmount`, `toCurrency` and `toRate`, left
+     off entirely when both sides match so every transfer already written
+     behaves exactly as it did. */
+
+  function currencyCodes() {
+    return [baseCode()].concat(Object.keys(state.settings.rates || {}).filter(function (c) {
+      return c !== baseCode() && rateNum(c) > 0;
+    }));
+  }
+
+  /* Stated in whichever direction reads as a number above one: 90,909 lira to
+     the dollar is a rate you recognise, 0.000011 dollars to the lira is not. */
+  function impliedRate(outAmt, outCur, inAmt, inCur) {
+    if (!(outAmt > 0) || !(inAmt > 0) || outCur === inCur) return null;
+    var a = outAmt / inAmt;
+    return a >= 1 ? { n: a, of: outCur, per: inCur } : { n: inAmt / outAmt, of: inCur, per: outCur };
+  }
+  function fmtRate(n) {
+    var d = n >= 1000 ? 0 : n >= 10 ? 2 : 4;
+    return num(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  // the spread, in base: what left, less what landed
+  function exchangeCost(outAmt, outCur, inAmt, inCur) {
+    return toBase(outAmt, outCur, rateFor(outCur)) - toBase(inAmt, inCur, rateFor(inCur));
+  }
+
+  /* What the dialog says under "Amount received" while you type. It never
+     fills a figure in for you: with the currency changed and nothing entered
+     it refuses, because the number it would have to guess with is the stored
+     rate, and the stored rate is exactly what turned out to be wrong. */
+  function exchangeLine(outAmt, outCur, inAmt, inCur) {
+    if (outCur === inCur) {
+      if (!(inAmt > 0) || Math.abs(inAmt - outAmt) < 0.005) return "leave blank unless the currency changed";
+      var fee = exchangeCost(outAmt, outCur, inAmt, inCur);
+      return fee > 0
+        ? fmt(fee) + " of it did not arrive \u2014 a fee, not a rate."
+        : fmt(-fee) + " more arrived than left.";
+    }
+    if (!(outAmt > 0) || !(inAmt > 0)) return "Say how much arrived in " + inCur + " \u2014 Coffer will not invent a rate.";
+    var got = impliedRate(outAmt, outCur, inAmt, inCur);
+    var stored = rateFor(got.of) / rateFor(got.per);
+    var line = fmtRate(got.n) + " " + got.of + " to the " + got.per + ", against " + fmtRate(stored) + " stored";
+    if (rateIsStale(got.of) || rateIsStale(got.per)) line += ", which is over a month old";
+    var spread = exchangeCost(outAmt, outCur, inAmt, inCur);
+    if (Math.abs(spread) < 0.005) return line + " \u2014 the same rate.";
+    return line + (spread > 0
+      ? " \u2014 the exchange cost " + fmt(spread) + "."
+      : " \u2014 " + fmt(-spread) + " better than stored.");
+  }
+
+  /* The two fields, wired so the line above restates on every keystroke.
+     Passed the transaction when editing, nothing when adding. */
+  function transferSideFields(t) {
+    function restate(_v, el, setHint) {
+      if (!el("toAmount")) return;
+      setHint("toAmount", exchangeLine(
+        num(el("amount").value), el("currency").value || baseCode(),
+        num(el("toAmount").value), el("toCurrency").value || baseCode()));
+    }
+    /* A transfer is not an exchange until you say it is. Changing the currency
+       you are sending carries the received side with it while the received box
+       is still empty, so moving $50 into an account you happen to keep in lira
+       stays one plain move — it was briefly demanding a lira figure for it,
+       which is friction in the way of the common case. Once you have typed a
+       received figure, nothing overwrites it. */
+    function mirror(v, el, setHint) {
+      var box = el("toAmount"), sel = el("toCurrency");
+      if (box && sel && !(num(box.value) > 0)) sel.value = v || baseCode();
+      restate(v, el, setHint);
+    }
+    return {
+      restate: restate,
+      mirror: mirror,
+      fields: [
+        { key: "toAmount", label: "Amount received", type: "number", min: 0,
+          value: t && t.toAmount != null ? t.toAmount : "",
+          hint: "leave blank unless the currency changed", onChange: restate },
+        { key: "toCurrency", label: "Received in", type: "select", options: currencyCodes(),
+          value: (t && t.toCurrency) || (t && t.currency) || baseCode(), onChange: restate }
+      ]
+    };
+  }
+
+  function transferSideProblem(v) {
+    var cur = v.currency || baseCode(), inCur = v.toCurrency || cur;
+    if (inCur !== cur && !(v.toAmount > 0)) {
+      return "Say how much arrived in " + inCur + " \u2014 Coffer will not invent a rate.";
+    }
+    if (v.toAmount < 0) return "The amount received cannot be negative.";
+    return null;
+  }
+
+  /* Written onto the transfer only when the far side actually differs, so a
+     same-currency move keeps the exact shape it has always had. */
+  function setTransferSide(t, outAmt, outCur, inAmt, inCur) {
+    inCur = inCur || outCur;
+    if (inCur === outCur && (!(inAmt > 0) || Math.abs(inAmt - outAmt) < 0.005)) {
+      delete t.toAmount; delete t.toCurrency; delete t.toRate;
+      return;
+    }
+    t.toAmount = inAmt;
+    t.toCurrency = inCur;
+    t.toRate = rateFor(inCur);
   }
 
   // Places accounts are held — whatever you have already used, so the list
@@ -7953,7 +8439,12 @@
       var recur = state.recurring.filter(function (r) { return r.accountId === id; }).length;
       // moving to a pocket is fine; moving to another spot in the same account
       // is not, so the whole account is filtered out rather than just its row
-      var elsewhere = accountOptions().filter(function (o) { return parseRef(o.value).accountId !== id; });
+      var elsewhere = accountOptions().filter(function (o) {
+        // a group holds the account and its pockets, so it is judged by what
+        // is inside it — filtering on o.value left the whole group standing
+        var v = o.group ? (o.options[0] || {}).value : o.value;
+        return parseRef(v).accountId !== id;
+      });
 
       var msg = "Its <b>" + kept + (kept === 1 ? " transaction stays" : " transactions stay") +
         "</b> in your history exactly as they are. The account just leaves the pickers, so nothing " +
@@ -8169,6 +8660,7 @@
           },
           onConfirm: function (v) {
             var cur = v.currency || baseCode();
+            warnIfOverAllocated(v.account, v.type, toBase(v.amount, cur, rateFor(cur)));
             state.transactions.push({
               id: uid(), date: v.date || today(), desc: v.desc.trim(),
               type: v.type, category: v.category,
@@ -8204,24 +8696,123 @@
       open(kind);
     },
 
+    /* One payment, several costs. The parts are entered in the transaction's
+       own currency and must add up to it exactly — a split that disagrees with
+       its own entry is a number nobody can check, so it is refused rather than
+       scaled to fit. */
+    "tx-split": function (id) {
+      var t = null;
+      for (var i = 0; i < state.transactions.length; i++) if (state.transactions[i].id === id) t = state.transactions[i];
+      if (!t) return;
+      if (!canSplit(t)) { toast("A transfer has no category to split."); return; }
+      var cur = t.currency || baseCode();
+      var have = (t.splits || []).slice();
+      var rowN = Math.min(6, Math.max(3, have.length + 1));
+      var cats = catOptions(t.type);
+      if (cats.indexOf(t.category) === -1) cats = cats.concat([t.category]);
+      var lastKey = "a" + (rowN - 1);
+
+      function restate(_v, el, setHint) {
+        var sum = 0;
+        for (var i = 0; i < rowN; i++) { var e = el("a" + i); if (e) sum += num(e.value); }
+        var left = num(t.amount) - sum;
+        setHint(lastKey, Math.abs(left) < 0.005
+          ? "adds up to " + fmtIn(t.amount, cur) + " exactly"
+          : left > 0
+            ? fmtIn(left, cur) + " of " + fmtIn(t.amount, cur) + " still to account for"
+            : fmtIn(-left, cur) + " more than the entry is for");
+      }
+
+      var fields = [];
+      for (var r = 0; r < rowN; r++) {
+        var sp = have[r];
+        fields.push({
+          key: "c" + r, label: r === 0 ? "Part" : "and",
+          type: "select", options: [""].concat(cats),
+          value: sp ? sp.category : (r === 0 && !have.length ? t.category : "")
+        });
+        fields.push({
+          key: "a" + r, label: "Amount", type: "number", min: 0,
+          value: sp ? sp.amount : (r === 0 && !have.length ? t.amount : ""),
+          onChange: restate
+        });
+      }
+
+      openModal({
+        title: "Split " + (t.desc || "this entry"),
+        message: "One payment of <b>" + esc(fmtIn(t.amount, cur)) + "</b> filed under more than one category. " +
+          "The parts must add up to it, and leaving one category is how you undo the split.",
+        fields: fields,
+        confirmLabel: "Split it",
+        onReady: function (el, setHint) { restate(null, el, setHint); },
+        validate: function (v) {
+          var used = 0, sum = 0, i;
+          for (i = 0; i < rowN; i++) {
+            var c = (v["c" + i] || "").trim(), a = num(v["a" + i]);
+            if (!c && a > 0) return "Row " + (i + 1) + " has an amount but no category.";
+            if (c && !(a > 0)) return "\u201C" + c + "\u201D has no amount.";
+            if (c && a > 0) { used++; sum += a; }
+          }
+          if (!used) return "Pick at least one category, or cancel to leave it as it is.";
+          if (used > 1 && Math.abs(sum - num(t.amount)) >= 0.005) {
+            return "The parts come to " + fmtIn(sum, cur) + ", not " + fmtIn(t.amount, cur) + ".";
+          }
+        },
+        onConfirm: function (v) {
+          var before = { category: t.category, splits: t.splits ? t.splits.slice() : null };
+          var merged = [], byCat = {}, i;
+          for (i = 0; i < rowN; i++) {
+            var c = (v["c" + i] || "").trim(), a = num(v["a" + i]);
+            if (!c || !(a > 0)) continue;
+            // picking one category twice is two lines of one receipt, and one
+            // cost — adding them is what you meant, not an error
+            if (byCat[c] != null) merged[byCat[c]].amount += a;
+            else { byCat[c] = merged.length; merged.push({ category: c, amount: a }); }
+          }
+          if (merged.length < 2) {
+            // one category is not a split; it is a recategorisation
+            delete t.splits;
+            t.category = merged[0].category;
+          } else {
+            t.splits = merged;
+            // the biggest share stays the entry's own category, so anything
+            // that reads t.category alone still reads something true
+            t.category = merged.slice().sort(function (a, b) { return b.amount - a.amount; })[0].category;
+          }
+          save(); render();
+          toast(merged.length < 2
+            ? "Filed under " + t.category + "."
+            : "Split across " + merged.length + " categories.", function () {
+              t.category = before.category;
+              if (before.splits) t.splits = before.splits; else delete t.splits;
+            });
+        }
+      });
+    },
+
     "tx-edit": function (id) {
       var t = null;
       for (var i = 0; i < state.transactions.length; i++) if (state.transactions[i].id === id) t = state.transactions[i];
       if (!t) return;
 
       if (t.type === "transfer") {
+        var side = transferSideFields(t);
         openModal({
           title: "Edit transfer",
           fields: [
             { key: "date", label: "Date", type: "date", value: t.date },
-            { key: "amount", label: "Amount", type: "number", value: t.amount, min: 0 },
             { key: "from", label: "From", type: "select", options: accountOptions(acctRef(t.accountId, t.pocketId)), value: acctRef(t.accountId, t.pocketId) },
             { key: "to", label: "To", type: "select", options: accountOptions(acctRef(t.toAccountId, t.toPocketId)), value: acctRef(t.toAccountId, t.toPocketId) },
-            { key: "desc", label: "Note", value: t.desc, span: true }
-          ].concat(currencyField(t.currency)),
+            { key: "amount", label: "Amount sent", type: "number", value: t.amount, min: 0, onChange: side.restate }
+          ].concat(currencyField(t.currency).map(function (f) { f.onChange = side.mirror; return f; }))
+            .concat(side.fields)
+            .concat([{ key: "desc", label: "Note", value: t.desc, span: true }]),
+          // an exchange already recorded should read back as one the moment it opens
+          onReady: function (el, setHint) { side.restate(null, el, setHint); },
           validate: function (v) {
             if (v.amount <= 0) return "Enter an amount above zero.";
             if (v.from === v.to) return "Pick two different accounts.";
+            return transferSideProblem(v);
           },
           onConfirm: function (v) {
             var wasCur = t.currency || baseCode(), nowCur = v.currency || baseCode();
@@ -8230,6 +8821,7 @@
             t.date = v.date; t.amount = v.amount; t.desc = v.desc.trim();
             t.accountId = parseRef(v.from).accountId; t.pocketId = parseRef(v.from).pocketId;
             t.toAccountId = parseRef(v.to).accountId; t.toPocketId = parseRef(v.to).pocketId;
+            setTransferSide(t, v.amount, nowCur, v.toAmount, v.toCurrency);
             save(); render(); toast("Transfer updated.");
           }
         });
@@ -8303,31 +8895,45 @@
     "transfer-add": function () {
       var moveable = openAccounts();
       if (moveable.length < 2) { toast("You need two open accounts to move money between them."); return; }
+      var side = transferSideFields(null);
       openModal({
         title: "Move money",
-        message: "A transfer changes both balances and leaves your net worth unchanged.",
+        message: "A transfer changes both balances and leaves your net worth unchanged \u2014 " +
+          "unless the currency changes, and then it falls by whatever the exchange cost.",
+        // where it moves, then what left, then what arrived: the two sides of
+        // an exchange belong beside each other, not either side of the accounts
         fields: [
           { key: "date", label: "Date", type: "date", value: today() },
-          { key: "amount", label: "Amount", type: "number", min: 0 },
           { key: "from", label: "From", type: "select", options: accountOptions(), value: moveable[0].id },
           { key: "to", label: "To", type: "select", options: accountOptions(), value: moveable[1].id },
-          { key: "desc", label: "Note", placeholder: "optional", span: true }
-        ].concat(currencyField()),
+          { key: "amount", label: "Amount sent", type: "number", min: 0, onChange: side.restate }
+        ].concat(currencyField().map(function (f) { f.onChange = side.mirror; return f; }))
+          .concat(side.fields)
+          .concat([{ key: "desc", label: "Note", placeholder: "optional", span: true }]),
         confirmLabel: "Transfer",
         validate: function (v) {
           if (v.amount <= 0) return "Enter an amount above zero.";
           if (v.from === v.to) return "Pick two different accounts.";
+          return transferSideProblem(v);
         },
         onConfirm: function (v) {
-          state.transactions.push({
+          var cur = v.currency || baseCode();
+          var t = {
             id: uid(), date: v.date || today(), desc: v.desc.trim() || "Transfer",
             type: "transfer", category: "Transfer", amount: v.amount,
             accountId: parseRef(v.from).accountId, pocketId: parseRef(v.from).pocketId,
             toAccountId: parseRef(v.to).accountId, toPocketId: parseRef(v.to).pocketId,
-            currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
-          });
+            currency: cur, rate: rateFor(cur)
+          };
+          setTransferSide(t, v.amount, cur, v.toAmount, v.toCurrency);
+          state.transactions.push(t);
           save(); render();
-          toast(fmt(v.amount) + " moved to " + accountName(parseRef(v.to).accountId, parseRef(v.to).pocketId) + ".");
+          var where = accountName(parseRef(v.to).accountId, parseRef(v.to).pocketId);
+          toast(t.toAmount == null
+            ? fmt(txBase(t)) + " moved to " + where + "."
+            : fmtIn(t.amount, t.currency) + " \u2192 " + fmtIn(t.toAmount, t.toCurrency) + " into " + where +
+              (Math.abs(txSpread(t)) < 0.005 ? "." : " \u2014 " + fmt(Math.abs(txSpread(t))) +
+               (txSpread(t) > 0 ? " gone in the exchange." : " better than your stored rate.")));
         }
       });
     },
@@ -9086,7 +9692,11 @@
       // logging late keeps the day it was actually due.
       var loggedDate = r.nextDate > today() ? today() : r.nextDate;
 
-      function commit(amount, date) {
+      function commit(amount, date, cur) {
+        // the schedule's own currency unless the money actually arrived in
+        // another one, in which case today's rate is the honest one to freeze
+        var sched = r.currency || baseCode();
+        cur = cur || sched;
         var tx = {
           id: uid(), date: date, desc: r.name, type: r.type,
           category: r.category, accountId: r.accountId, pocketId: r.pocketId || null,
@@ -9094,7 +9704,8 @@
           // which schedule this came from, so a month can tell whether its pay
           // has actually landed
           recurId: r.id,
-          currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
+          currency: cur,
+          rate: cur === sched && num(r.rate) > 0 ? num(r.rate) : rateFor(cur)
         };
         var prevDate = r.nextDate;
         state.transactions.push(tx);
@@ -9123,9 +9734,8 @@
         confirmLabel: "Log it",
         fields: [
           { key: "date", label: "Date", type: "date", value: loggedDate },
-          { key: "amount", label: "How much came in", type: "number", min: 0, value: r.amount,
-            hint: isForeign(r.currency) ? "in " + r.currency : null }
-        ].concat(al ? [{
+          { key: "amount", label: "How much came in", type: "number", min: 0, value: r.amount }
+        ].concat(currencyField(r.currency)).concat(al ? [{
           key: "days", label: "Days you went in", type: "number", min: 0, step: "1",
           value: (allowanceDays(r, mk) || {}).days || "",
           hint: fmtIn(num(al.rate), al.currency || baseCode()) + " a day toward " + al.category +
@@ -9141,7 +9751,7 @@
             state.allowanceDays[allowanceKey(r, monthOf(v.date || loggedDate))] =
               { days: num(v.days), rate: rateFor(cur) };
           }
-          commit(v.amount, v.date || loggedDate);
+          commit(v.amount, v.date || loggedDate, v.currency);
         }
       });
     },
@@ -9242,15 +9852,17 @@
       openModal({
         title: "Add funds to " + g.name,
         message: "This records progress on the goal. It doesn't move money between accounts — use a transfer for that.",
-        fields: [{ key: "amount", label: "Amount", type: "number", min: 0 }],
+        fields: [{ key: "amount", label: "Amount", type: "number", min: 0 }].concat(currencyField()),
         confirmLabel: "Add funds",
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
         onConfirm: function (v) {
-          g.saved = num(g.saved) + v.amount;
+          // a goal is held in base, so what goes in is converted on the way
+          var put = toBase(v.amount, v.currency || baseCode(), rateFor(v.currency || baseCode()));
+          g.saved = num(g.saved) + put;
           save(); render();
           var done = g.saved >= num(g.target);
-          toast(done ? g.name + " is fully funded." : fmt(v.amount) + " added to " + g.name + ".", function () {
-            g.saved = num(g.saved) - v.amount;
+          toast(done ? g.name + " is fully funded." : fmt(put) + " added to " + g.name + ".", function () {
+            g.saved = num(g.saved) - put;
           });
         }
       });
@@ -9261,16 +9873,18 @@
       if (!g) return;
       openModal({
         title: "Take out of " + g.name,
-        fields: [{ key: "amount", label: "Amount", type: "number", min: 0 }],
+        fields: [{ key: "amount", label: "Amount", type: "number", min: 0 }].concat(currencyField()),
         confirmLabel: "Take out",
         validate: function (v) {
           if (v.amount <= 0) return "Enter an amount above zero.";
-          if (v.amount > num(g.saved)) return "That's more than the goal holds (" + fmt(g.saved) + ").";
+          var out = toBase(v.amount, v.currency || baseCode(), rateFor(v.currency || baseCode()));
+          if (out > num(g.saved)) return "That's more than the goal holds (" + fmt(g.saved) + ").";
         },
         onConfirm: function (v) {
-          g.saved = num(g.saved) - v.amount;
+          var out = toBase(v.amount, v.currency || baseCode(), rateFor(v.currency || baseCode()));
+          g.saved = num(g.saved) - out;
           save(); render();
-          toast(fmt(v.amount) + " taken out of " + g.name + ".", function () { g.saved = num(g.saved) + v.amount; });
+          toast(fmt(out) + " taken out of " + g.name + ".", function () { g.saved = num(g.saved) + out; });
         }
       });
     },
@@ -9330,6 +9944,9 @@
       var d = state.debts.filter(function (x) { return x.id === id; })[0];
       if (!d) return;
       var opts = accountOptions();
+      var flat = accountOptionsFlat();
+      var payFrom = defaultAccountRef() ||
+        (flat.length ? flat[0].value : "");
       openModal({
         title: "Log a payment to " + d.name,
         message: "Reduces the balance by the amount you paid. Pick an account to also record it in your ledger.",
@@ -9337,24 +9954,31 @@
           { key: "amount", label: "Amount paid", type: "number", value: num(d.minPayment) || "", min: 0 },
           { key: "date", label: "Date", type: "date", value: today() },
           { key: "account", label: "Paid from", type: "select",
-            options: [{ value: "", label: "— don't log a transaction —" }].concat(opts), value: opts.length ? opts[0].value : "" }
-        ],
+            options: [{ value: "", label: "— don't log a transaction —" }].concat(opts), value: payFrom }
+        ].concat(currencyField()),
         confirmLabel: "Log payment",
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
         onConfirm: function (v) {
+          var cur = v.currency || baseCode();
+          // the balance is carried in base, so a payment made in another
+          // currency comes off it converted, at the rate frozen onto the entry
+          var paid = toBase(v.amount, cur, rateFor(cur));
           var before = num(d.balance);
-          d.balance = Math.max(before - v.amount, 0);
+          d.balance = Math.max(before - paid, 0);
           var tx = null;
           if (v.account) {
+            var pref = parseRef(v.account);
             tx = {
               id: uid(), date: v.date || today(), desc: d.name + " payment", type: "expense",
               category: state.categories.expense.indexOf("Other") >= 0 ? "Other" : state.categories.expense[0],
-              accountId: v.account, amount: v.amount
+              accountId: pref.accountId, pocketId: pref.pocketId || null,
+              amount: v.amount, currency: cur, rate: rateFor(cur)
             };
             state.transactions.push(tx);
           }
           save(); render();
-          toast(fmt(v.amount) + " paid — " + d.name + " now " + fmt(d.balance) + ".", function () {
+          toast((isForeign(cur) ? fmtIn(v.amount, cur) + " = " : "") + fmt(paid) +
+            " paid \u2014 " + d.name + " now " + fmt(d.balance) + ".", function () {
             d.balance = before;
             if (tx) state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
           });
@@ -9402,7 +10026,9 @@
     "cat-rename": function (id, el) {
       var kind = el.getAttribute("data-kind");
       var from = el.getAttribute("data-cat");
-      var inTx = state.transactions.filter(function (t) { return t.category === from; }).length;
+      var inTx = state.transactions.filter(function (t) {
+      return txParts(t).some(function (pt) { return pt.category === from; });
+    }).length;
       var inRec = state.recurring.filter(function (r) { return r.category === from; }).length;
       var hasBudget = state.budgets[from] != null;
       var inPlan = state.plan
@@ -9435,14 +10061,17 @@
           var to = v.name.trim();
           var before = JSON.parse(JSON.stringify({
             categories: state.categories, budgets: state.budgets,
-            tx: state.transactions.map(function (t) { return t.category; }),
+            tx: state.transactions.map(function (t) { return { c: t.category, s: t.splits || null }; }),
             rec: state.recurring.map(function (r) { return r.category; }),
             plan: state.plan ? (state.plan.lines || []).map(function (l) { return l.category; }) : null
           }));
 
           var idx = state.categories[kind].indexOf(from);
           if (idx >= 0) state.categories[kind][idx] = to;
-          state.transactions.forEach(function (t) { if (t.category === from) t.category = to; });
+          state.transactions.forEach(function (t) {
+            if (t.category === from) t.category = to;
+            (t.splits || []).forEach(function (sp) { if (sp.category === from) sp.category = to; });
+          });
           state.recurring.forEach(function (r) { if (r.category === from) r.category = to; });
           if (state.budgets[from] != null) {
             state.budgets[to] = state.budgets[from];
@@ -9460,7 +10089,10 @@
           toast(from + " is now " + to + ".", function () {
             state.categories = before.categories;
             state.budgets = before.budgets;
-            state.transactions.forEach(function (t, i) { t.category = before.tx[i]; });
+            state.transactions.forEach(function (t, i) {
+              t.category = before.tx[i].c;
+              if (before.tx[i].s) t.splits = before.tx[i].s; else delete t.splits;
+            });
             state.recurring.forEach(function (r, i) { r.category = before.rec[i]; });
             if (before.plan && state.plan) {
               (state.plan.lines || []).forEach(function (l, i) { l.category = before.plan[i]; });
@@ -9488,18 +10120,39 @@
     },
 
     /* ---- data ---- */
+    "save-retry": function () {
+      if (save()) return;
+      toast("Still refusing. Export a backup before you close this tab.");
+    },
+
     "export-json": function () {
       backupDialog("coffer-backup-" + today() + ".json", JSON.stringify(state, null, 2));
     },
 
     "export-csv": function () {
       var rows = [["Date", "Description", "Type", "Category", "Account", "To account",
-                   "Amount (" + baseCode() + ")", "Currency", "Original amount", "Rate"]];
+                   "Amount (" + baseCode() + ")", "Currency", "Original amount", "Rate", "Part of"]];
+      var lines = 0;
+      // a split entry exports one line per share, so the category column still
+      // sums correctly in a spreadsheet; the last column says they were one
+      // payment, so the amount column does not look double-counted
       filteredTx().forEach(function (t) {
-        rows.push([t.date, t.desc, t.type, t.category, accountName(t.accountId),
-          t.toAccountId ? accountName(t.toAccountId) : "",
-          txBase(t).toFixed(2), t.currency || baseCode(), num(t.amount).toFixed(2),
-          (num(t.rate) > 0 ? num(t.rate) : rateFor(t.currency)).toString()]);
+        lines++;
+        var parts = t.splits && t.splits.length ? t.splits : null;
+        if (!parts) {
+          rows.push([t.date, t.desc, t.type, t.category, accountName(t.accountId),
+            t.toAccountId ? accountName(t.toAccountId) : "",
+            txBase(t).toFixed(2), t.currency || baseCode(), num(t.amount).toFixed(2),
+            (num(t.rate) > 0 ? num(t.rate) : rateFor(t.currency)).toString(), ""]);
+          return;
+        }
+        parts.forEach(function (sp) {
+          rows.push([t.date, t.desc, t.type, sp.category, accountName(t.accountId), "",
+            toBase(num(sp.amount), t.currency, t.rate).toFixed(2), t.currency || baseCode(),
+            num(sp.amount).toFixed(2),
+            (num(t.rate) > 0 ? num(t.rate) : rateFor(t.currency)).toString(),
+            fmtIn(t.amount, t.currency || baseCode()) + " " + (t.desc || "")]);
+        });
       });
       var csv = rows.map(function (r) {
         return r.map(function (c) {
@@ -9508,7 +10161,8 @@
         }).join(",");
       }).join("\n");
       download("coffer-transactions-" + today() + ".csv", csv, "text/csv");
-      toast(rows.length - 1 + " transactions exported.");
+      toast(lines + " transactions exported" + (rows.length - 1 > lines
+        ? " as " + (rows.length - 1) + " lines, splits broken out." : "."));
     },
 
     "import-json": function () {
@@ -9618,10 +10272,13 @@
     },
 
     /* ---- plain-text entry ---- */
-    "omni-commit": function () { commitOmni(); },
+    // the sheet is read first and closed after: closing it first put the
+    // Ledger card's stale copy of the same controls in front of commitOmni
+    "omni-commit": function () { if (commitOmni() !== false) closeModal(); },
 
     "omni-clear": function () {
       omni = { text: "", touched: {} };
+      closeModal();
       render();
       var b = document.getElementById("omniBox");
       if (b) b.focus();
@@ -9630,7 +10287,7 @@
     "omni-bulk": function () {
       if (needAccount()) return;
       closeModal();
-      var accOpts = accountOptions();
+      var accOpts = accountOptionsFlat();
       overlay.innerHTML = '<div class="scrim" data-scrim="1"><div class="modal" style="max-width:620px" role="dialog" aria-modal="true" aria-label="Paste a list">' +
         '<div class="modal-head"><h3>Paste a list</h3>' +
         "<p>One purchase per line — the same shorthand as the quick box. Handy for copying a few messages " +
@@ -9715,11 +10372,12 @@
       var accId = q.accountId && accountById(q.accountId) ? q.accountId : (state.accounts[0] || {}).id;
       if (!accId) { toast("Add an account first."); return; }
 
-      function log(amount, date) {
+      function log(amount, date, cur) {
+        cur = cur || q.currency || baseCode();
         var tx = {
           id: uid(), date: date || today(), desc: q.label, type: q.type || "expense",
           category: q.category, accountId: accId, pocketId: q.pocketId || null, amount: amount,
-          currency: q.currency || baseCode(), rate: rateFor(q.currency || baseCode())
+          currency: cur, rate: rateFor(cur)
         };
         state.transactions.push(tx);
         // remember the last amount so the button gets smarter
@@ -9738,10 +10396,10 @@
         fields: [
           { key: "amount", label: "Amount", type: "number", value: num(q.lastAmount) || "", min: 0 },
           { key: "date", label: "Date", type: "date", value: today() }
-        ],
+        ].concat(currencyField(q.currency)),
         confirmLabel: "Log it",
         validate: function (v) { if (v.amount <= 0) return "Enter an amount above zero."; },
-        onConfirm: function (v) { log(v.amount, v.date || today()); }
+        onConfirm: function (v) { log(v.amount, v.date || today(), v.currency); }
       });
     },
 
@@ -9762,7 +10420,7 @@
       // offer the things they log most that aren't buttons yet
       var freq = {};
       state.transactions.forEach(function (t) {
-        if (t.type === "transfer" || !t.desc) return;
+        if (t.type === "transfer" || !t.desc || isSplit(t)) return;
         var k = t.desc.toLowerCase() + "|" + t.category;
         freq[k] = freq[k] || { label: t.desc, category: t.category, n: 0, sum: 0, type: t.type, accountId: t.accountId };
         freq[k].n++;
@@ -10236,6 +10894,16 @@
     }
 
     // f_type is pills now, handled by the filter-type action
+    var defacc = document.getElementById("defacc");
+    if (defacc) defacc.addEventListener("change", function () {
+      state.settings.defaultAccountRef = defacc.value || null;
+      save(); render();
+      toast(defacc.value
+        ? "Quick logs will land in " +
+          accountName(parseRef(defacc.value).accountId, parseRef(defacc.value).pocketId) + "."
+        : "Back to whichever account you log to most.");
+    });
+
     bindChange("f_cat", function (v) { filters.category = v; });
     bindChange("f_acc", function (v) { filters.account = v; });
     bindChange("f_from", function (v) { filters.from = v; });
@@ -10311,18 +10979,18 @@
 
       var parsed = parseEntry(text);
       if (!parsed || !parsed.ok) {
-        // hand it to the box that can show what it understood
-        omni = { text: text, touched: {} };
-        view = "today";
-        input.value = "";
-        render();
+        /* Leave what was typed where it was typed. This used to clear the bar,
+           jump to Today and toast the reason — so the toast faded, the text was
+           gone, and you retyped it from memory. */
         toast(parsed && parsed.reason ? parsed.reason : "Type an amount and what it was for.");
+        input.focus();
+        input.setSelectionRange(text.length, text.length);
         return;
       }
       omni = { text: text, touched: {} };
-      commitOmni();
       input.value = "";
       input.blur();
+      openOmniSheet();
     });
   }
 
