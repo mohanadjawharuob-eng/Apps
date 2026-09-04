@@ -790,6 +790,21 @@
   /* One row per way of paying. The verdict pill is the column the eye runs
      down, so it sits on the same line as the name and the detail hangs under
      both rather than pushing them apart. */
+  /* the pencil beside a pocket figure: present, but never louder than the money */
+  .ibtn.tiny { width: 24px; height: 24px; font-size: 0.72rem; margin-left: 0.35rem; vertical-align: middle; }
+  .split-fig { white-space: nowrap; }
+
+  .grant-foot, .grant-line-foot {
+    display: flex; justify-content: space-between; margin-top: 0.35rem;
+    font-size: 0.72rem; color: var(--dim);
+  }
+  .grant-lines { margin-top: 0.9rem; display: flex; flex-direction: column; gap: 0.8rem; }
+  .grant-line-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 0.6rem; margin-bottom: 0.35rem; font-size: 0.82rem;
+  }
+  .grant-line-top .fig { font-family: var(--serif); font-weight: 400; white-space: nowrap; }
+
   .afford-rows { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.9rem; }
   .afford-row {
     display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 0.6rem;
@@ -982,7 +997,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04a";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04b";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1115,6 +1130,8 @@
       // What you meant to do, kept next to what you actually did. null until a
       // plan is imported; see parsePlanText for its shape.
       plan: null,
+      // money held on someone else's behalf; see the grants block above
+      grants: [],
       extraDebtPayment: 0
     };
   }
@@ -1188,7 +1205,7 @@
           if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
           if (Array.isArray(p.categories.income) && p.categories.income.length) s.categories.income = p.categories.income;
         }
-        ["accounts", "transactions", "goals", "debts", "recurring", "quick"].forEach(function (k) {
+        ["accounts", "transactions", "goals", "debts", "recurring", "quick", "grants"].forEach(function (k) {
           if (Array.isArray(p[k])) s[k] = p[k];
         });
         if (p.budgets && typeof p.budgets === "object") s.budgets = p.budgets;
@@ -1519,6 +1536,73 @@
      ------------------------------------------------- */
   function pocketsOf(acc) { return (acc && acc.pockets) || []; }
 
+  /* ---------------- investments ----------------
+     An investment is an account with a kind, not a second kind of record.
+     That buys transfers, every account picker, closing, and net worth for
+     nothing — and, more to the point, means putting money in is a TRANSFER.
+     Logged as an expense it would land in the burn rate and report a saver as
+     someone bleeding money.
+
+       paid in     transfers into it. Derived, like every other balance.
+       worth now   a mark you type. Value is not derivable from a ledger; this
+                   is the one figure in the app, besides a debt balance, that
+                   is stated rather than computed.
+       returns     income transactions tagged investId, landing in a CASH
+                   account — a dividend raises your worth and the holding is
+                   still there.
+       capital out a transfer back out. Recording a sale as income would count
+                   the same money twice.
+
+     Accounts written before this have no kind, which reads as cash. */
+  function accountKind(a) { return a && a.kind === "investment" ? "investment" : "cash"; }
+  function isInvestment(a) { return accountKind(a) === "investment"; }
+  function investments() { return state.accounts.filter(isInvestment); }
+
+  // Marks are kept dated and in order, so a valuation in March stays a March
+  // valuation. Using today's mark for a past date would redraw your whole
+  // history as though the holding had always been worth what it is worth now.
+  function marksOf(a) {
+    return ((a && a.marks) || []).slice().sort(function (x, y) {
+      return String(x.on).localeCompare(String(y.on));
+    });
+  }
+  function markAt(a, onOrBefore) {
+    var ms = marksOf(a), found = null;
+    for (var i = 0; i < ms.length; i++) {
+      if (onOrBefore && ms[i].on > onOrBefore) break;
+      found = ms[i];
+    }
+    return found;
+  }
+  // What the holding is worth on a date: the latest mark up to then, and
+  // before the first mark, what was put in — which is the only figure anyone
+  // can honestly claim about an unvalued holding.
+  function investValue(a, onOrBefore) {
+    var m = markAt(a, onOrBefore);
+    return m ? toBase(num(m.value), m.currency, m.rate) : balanceOf(a, onOrBefore);
+  }
+  function latestMark(a) { var ms = marksOf(a); return ms.length ? ms[ms.length - 1] : null; }
+  function markAge(a) {
+    var m = latestMark(a);
+    return m && m.on ? Math.max(0, -daysUntil(m.on)) : null;
+  }
+  // Money this holding has actually handed back: income tagged to it.
+  function investReturns(a, onOrBefore) {
+    var t = 0;
+    state.transactions.forEach(function (x) {
+      if (x.investId !== a.id || x.type !== "income") return;
+      if (onOrBefore && x.date > onOrBefore) return;
+      t += txBase(x);
+    });
+    return t;
+  }
+  // What it has cost you: everything transferred in, less anything taken back
+  // out. The account's own derived balance is exactly that.
+  function investCost(a, onOrBefore) { return balanceOf(a, onOrBefore); }
+  function investGain(a) {
+    return investValue(a) + investReturns(a) - investCost(a);
+  }
+
   /* Not every balance is money you can actually reach for. A savings pocket
      and a not-yet-refunded trip pocket are the same number and nothing like
      the same thing, and treating them alike is what makes a net-worth figure
@@ -1540,15 +1624,21 @@
   }
 
   // What you could actually spend: every balance, less anything sitting in a
-  // pocket marked committed. This is the numerator of an honest runway.
+  // pocket marked committed, less every investment. You cannot pay rent out of
+  // a pension this month, and a runway that says you can is worse than no
+  // runway. This also means moving money into a holding correctly shortens it.
   function freeAssets(onOrBefore) {
     var total = totalAssets(onOrBefore);
     state.accounts.forEach(function (a) {
+      if (isInvestment(a)) { total -= investValue(a, onOrBefore); return; }
       pocketsOf(a).forEach(function (pk) {
         if (pocketStatus(pk) === "committed") total -= pocketBalance(a, pk, onOrBefore);
       });
     });
     return total;
+  }
+  function investedTotal(onOrBefore) {
+    return investments().reduce(function (t, a) { return t + investValue(a, onOrBefore); }, 0);
   }
   function committedTotal() {
     var t = 0;
@@ -1650,7 +1740,11 @@
   function balanceOf(acc, onOrBefore) {
     var key = acc.id + "|" + (onOrBefore || "");
     if (memo.bal[key] != null) return memo.bal[key];
-    var b = num(acc.opening);
+    // opening is stored in the account's OWN currency at the rate it was
+    // opened at, while every transaction effect is already in base. Adding the
+    // two raw was mixing units: a EUR account read its opening figure as
+    // dollars, and disagreed with the same account inside totalAssets().
+    var b = acctOpeningBase(acc);
     for (var i = 0; i < state.transactions.length; i++) {
       var t = state.transactions[i];
       if (onOrBefore && t.date > onOrBefore) continue;
@@ -1675,6 +1769,13 @@
         totals[t.accountId] += (t.type === "income" ? 1 : -1) * txBase(t);
       }
     }
+    // A holding is worth what it is worth, not what was paid for it. Swap the
+    // derived cost for the mark that was current on the date being asked about.
+    state.accounts.forEach(function (a) {
+      if (!isInvestment(a)) return;
+      var m = markAt(a, onOrBefore);
+      if (m) totals[a.id] = toBase(num(m.value), m.currency, m.rate);
+    });
     var sum = 0;
     Object.keys(totals).forEach(function (k) { sum += totals[k]; });
     memo.assets[key] = sum;
@@ -1683,7 +1784,8 @@
   function totalDebt() {
     return state.debts.reduce(function (s, d) { return s + num(d.balance); }, 0);
   }
-  function netWorth() { return totalAssets() - totalDebt(); }
+  // Grant money sits in the account but is not yours to count.
+  function netWorth() { return totalAssets() - totalDebt() - restrictedTotal(); }
 
   function monthTx(mk) {
     if (memo.mtx[mk]) return memo.mtx[mk];
@@ -1710,6 +1812,66 @@
     return pendingRefunds().reduce(function (s, t) { return s + txBase(t); }, 0);
   }
 
+  /* ---------------- grants ----------------
+     Money that is in your account and is not yours. Every default in a
+     personal-finance app is wrong for it: it would inflate net worth, wreck
+     the burn rate, and eat the budgets you set for your own spending.
+
+     The whole model is three exclusions and one pot:
+
+       the pot     a pocket, forced to `committed`, so freeAssets() already
+                   leaves it out of the runway with no new code at all
+       net worth   the unspent balance is subtracted. Holding twenty thousand
+                   of someone else's money does not make you richer by twenty
+                   thousand — and the arithmetic proves the model: the grant
+                   arriving adds to assets and to restricted in the same
+                   breath, so net worth does not move; spending a thousand of
+                   it takes a thousand off both, so net worth does not move;
+                   overspending past it with your own money takes off assets
+                   alone, and net worth falls. Which is exactly right.
+       true burn   grant spending is out. Five thousand of grant-funded
+                   equipment would otherwise report your runway as two months.
+       budgets     grant spending is out of spendByCategory(), so a
+                   grant-funded trip does not blow your own travel budget.
+
+     Lines are a total for the whole award, not a monthly cap, which is why
+     they cannot live in state.budgets. */
+  function grants() { return state.grants || []; }
+  function grantById(id) {
+    var g = grants().filter(function (x) { return x.id === id; })[0];
+    return g || null;
+  }
+  function isGrantSpend(t) { return !!t.grantId; }
+
+  // What is left of one grant: what was put in, less what has been spent
+  // against it. Read from the ledger, never stored.
+  function grantSpent(g, lineId, onOrBefore) {
+    var t = 0;
+    state.transactions.forEach(function (x) {
+      if (x.grantId !== g.id) return;
+      if (x.grantAward) return;          // the award landing is not a spend
+      if (lineId && x.grantLineId !== lineId) return;
+      if (onOrBefore && x.date > onOrBefore) return;
+      // a refund back into the grant reduces what has been spent
+      t += x.type === "income" ? -txBase(x) : txBase(x);
+    });
+    return t;
+  }
+  function grantTotal(g) { return toBase(num(g.total), g.currency, g.rate); }
+  function grantLeft(g, onOrBefore) { return grantTotal(g) - grantSpent(g, null, onOrBefore); }
+  function grantLineAmount(g, line) { return toBase(num(line.amount), g.currency, g.rate); }
+
+  // Grant money you are still holding. Clamped per grant: an overspent grant
+  // is your problem, not a negative liability that flatters your net worth.
+  function restrictedTotal(onOrBefore) {
+    return grants().reduce(function (t, g) {
+      if (g.closed) return t;
+      // before it was awarded it restricted nothing
+      if (onOrBefore && g.awardedOn && g.awardedOn > onOrBefore) return t;
+      return t + Math.max(0, grantLeft(g, onOrBefore));
+    }, 0);
+  }
+
   function monthSummary(mk) {
     if (memo.msum[mk]) return memo.msum[mk];
     var tx = monthTx(mk);
@@ -1718,12 +1880,27 @@
     var pending = tx.reduce(function (s, t) {
       return t.type === "expense" && isPending(t) ? s + txBase(t) : s;
     }, 0);
+    // A grant landing is not a month where you earned twenty thousand, and a
+    // grant being spent is not a month where you overspent. Both sides come
+    // out together, or the pair stops describing the same month.
+    var grantIn = 0, grantOut = 0;
+    tx.forEach(function (t) {
+      if (!t.grantId) return;
+      if (t.type === "income") grantIn += txBase(t);
+      else if (t.type === "expense") grantOut += txBase(t);
+    });
+    var ownIncome = income - grantIn;
+    var ownSpend = expense - pending - grantOut;
     var out = {
-      mk: mk, income: income, expense: expense, net: income - expense,
+      mk: mk, income: ownIncome, expense: expense - grantOut, net: ownIncome - (expense - grantOut),
       // what the month actually cost you, once money you are owed back is out
-      spend: expense - pending,
+      spend: ownSpend,
       pending: pending,
-      rate: income > 0 ? (income - expense) / income : null,
+      grantIn: grantIn, grantOut: grantOut,
+      // everything that moved, grants included, for anything that has to
+      // reconcile against the account itself
+      grossIncome: income, grossExpense: expense,
+      rate: ownIncome > 0 ? (ownIncome - (expense - grantOut)) / ownIncome : null,
       count: tx.length
     };
     memo.msum[mk] = out;
@@ -1734,6 +1911,8 @@
     var out = {};
     monthTx(mk).forEach(function (t) {
       if (t.type !== "expense" || isPending(t)) return;
+      // a grant-funded trip is not you overspending on travel
+      if (isGrantSpend(t)) return;
       out[t.category] = (out[t.category] || 0) + txBase(t);
     });
     memo.cats[mk] = out;
@@ -1805,6 +1984,7 @@
       if (t.type !== "expense") return;
       if (isPending(t)) return;            // owed back: not a cost yet
       if (t.oneOff) return;                // marked as a one-off by hand
+      if (isGrantSpend(t)) return;         // someone else's money, on their errand
       burn += txBase(t);
     });
     return burn;
@@ -2678,11 +2858,16 @@
     income: "income", incomes: "income", earnings: "income",
     commitment: "commitments", commitments: "commitments",
     bill: "commitments", bills: "commitments", expense: "commitments", expenses: "commitments",
-    goal: "goals", goals: "goals"
+    goal: "goals", goals: "goals",
+    grant: "grants", grants: "grants", fund: "grants", funds: "grants"
   };
   var PLAN_SECTION_LABEL = {
-    budgets: "Budgets", income: "Income", commitments: "Commitments", goals: "Goals"
+    budgets: "Budgets", income: "Income", commitments: "Commitments", goals: "Goals",
+    grants: "Grants"
   };
+  // Everywhere the plan walks its own sections. Grants are last because a
+  // grant's lines need the grant to exist first.
+  var PLAN_SECTION_ORDER = ["budgets", "income", "commitments", "goals", "grants"];
 
   // Anything that is a real frequency but not one Coffer keeps. Naming them
   // beats "unknown frequency", because the user wrote something reasonable.
@@ -2715,12 +2900,27 @@
     var rest = " " + body.slice(colon + 1).trim() + " ";
     if (!raw.name) { raw.problem = "This line has no name before the colon."; return raw; }
 
+    // 0. the terminal date, taken first so its date is gone before anything
+    //    else runs. PLAN-FORMAT.md has documented "until 2027-03-31" since
+    //    income end dates shipped and it never parsed: left in, the account
+    //    matcher ran on " into Wallet until 2027-03-31 " and took the whole
+    //    tail as the account name.
+    var un = rest.match(/\s(?:until|till|thru|through|ending|ends)\s+(\d{4}-\d{2}-\d{2})(?=[\s,]|$)/i);
+    if (un) { raw.until = un[1]; rest = rest.replace(un[0], " "); }
+    else {
+      var unWordy = rest.match(/\s(?:until|till|through|ending|ends)\s+([^,]+)/i);
+      if (unWordy) {
+        raw.problem = "\u201c" + unWordy[1].trim() + "\u201d is not an end date I can read. Write it as 2027-03-31.";
+        return raw;
+      }
+    }
+
     // 1. date. "from" introduces both a date and an account, so it only counts
     //    as a date when an actual date follows it.
-    var dm = rest.match(/\s(?:by|from|on|next|starting|due)\s+(\d{4}-\d{2}-\d{2})\s/i);
+    var dm = rest.match(/\s(?:by|from|on|next|starting|due)\s+(\d{4}-\d{2}-\d{2})(?=[\s,]|$)/i);
     if (dm) { raw.date = dm[1]; rest = rest.replace(dm[0], " "); }
     else {
-      var bare = rest.match(/\s(\d{4}-\d{2}-\d{2})\s/);
+      var bare = rest.match(/\s(\d{4}-\d{2}-\d{2})(?=[\s,]|$)/);
       if (bare) { raw.date = bare[1]; rest = rest.replace(bare[0], " "); }
     }
     // A written-out date is the single most likely way to be silently wrong,
@@ -2826,7 +3026,8 @@
 
       if (!section) {
         out.problems.push({ line: no, text: t,
-          problem: "This is not under a section. Put it below ## Budgets, ## Income, ## Commitments or ## Goals." });
+          problem: "This is not under a section. Put it below ## Budgets, ## Income, ## Commitments, " +
+            "## Goals or ## Grants." });
         return;
       }
       var raw = planLineToRaw(t, no);
@@ -2849,7 +3050,7 @@
       out.problems.push({ line: 0, text: "review_by", problem: "review_by must be a date like 2027-03-01." });
       out.reviewBy = "";
     }
-    ["budgets", "income", "commitments", "goals"].forEach(function (sec) {
+    PLAN_SECTION_ORDER.forEach(function (sec) {
       var list = obj[sec];
       if (list == null) return;
       if (!Array.isArray(list)) {
@@ -2870,13 +3071,17 @@
           currency: e.currency ? String(e.currency).toUpperCase() : null,
           frequency: e.frequency ? String(e.frequency).toLowerCase() : null,
           account: e.account || null,
-          category: e.category || null,
-          date: e.date || e.due || e.by || e.next || null
+          // for a grant the comma slot carries the funder, so JSON reads it
+          // from the same key the text form writes into
+          category: e.category || e.funder || null,
+          date: e.date || e.due || e.by || e.next || null,
+          until: e.until || e.ends || e.endsOn || null
         });
       });
     });
     if (!out.raws.length && !out.problems.length) {
-      out.problems.push({ line: 0, text: "", problem: "No budgets, income, commitments or goals in this file." });
+      out.problems.push({ line: 0, text: "",
+        problem: "No budgets, income, commitments, goals or grants in this file." });
     }
     return out;
   }
@@ -2906,7 +3111,7 @@
     parsed.raws.forEach(function (r) { overridden[r.section] = true; });
     parsed.inherited = [];
 
-    ["budgets", "income", "commitments", "goals"].forEach(function (sec) {
+    PLAN_SECTION_ORDER.forEach(function (sec) {
       if (overridden[sec]) return;
       var lines = (base.lines || []).filter(function (l) { return l.section === sec; });
       if (!lines.length) return;
@@ -2915,14 +3120,15 @@
         parsed.raws.push({
           line: 0, section: sec, inherited: true,
           text: sec + " · " + l.name + " (inherited)",
-          name: l.section === "budgets" && l.parent ? l.parent + " > " + l.name : l.name,
+          name: l.parent ? l.parent + " > " + l.name : l.name,
           amountText: String(l.amount),
           confidence: l.confidence == null ? null : l.confidence,
           currency: l.currency && l.currency !== baseCode() ? l.currency : null,
           frequency: l.frequency || null,
           account: l.accountLabel || null,
-          category: l.section === "budgets" ? null : l.category,
-          date: l.date || null
+          category: l.section === "budgets" ? null : (l.section === "grants" ? l.funder : l.category),
+          date: l.date || null,
+          until: l.until || null
         });
       });
     });
@@ -3013,6 +3219,82 @@
       if (r.date) {
         if (!isIsoDate(r.date)) { e.problem = "“" + r.date + "” is not a real date. Use YYYY-MM-DD."; return e; }
         e.date = r.date;
+      }
+      if (r.until) {
+        if (!isIsoDate(r.until)) { e.problem = "“" + r.until + "” is not a real date. Use YYYY-MM-DD."; return e; }
+        if (e.date && r.until < e.date) { e.problem = "It cannot end before it starts."; return e; }
+        e.until = r.until;
+      }
+
+      if (r.section === "grants") {
+        /* Two shapes under one heading, the way sub-budgets already work:
+
+             - Museum fellowship: 20000 into Wallet from 2026-09-01 until 2027-03-31, The Museum
+             - Museum fellowship > Travel: 5000
+
+           The second is an allocation inside the first. The comma slot, unused
+           for a grant, carries who it is from. */
+        if (e.name.indexOf(">") >= 0) {
+          var gp = e.name.split(">");
+          e.parent = gp[0].trim();
+          e.name = gp.slice(1).join(">").trim();
+          e.key = planKeyFor("grants", e.parent + "|" + e.name);
+          if (!e.name || !e.parent) { e.problem = "Write a grant line as \u201cGrant > Heading: amount\u201d."; return e; }
+          // the grant it belongs to has to be in this same plan, above it
+          var owner = raws.filter(function (x) {
+            return x.section === "grants" && x.name && x.name.indexOf(">") < 0 &&
+              planSlug(x.name) === planSlug(e.parent);
+          })[0];
+          if (!owner) {
+            e.problem = "\u201c" + e.parent + "\u201d is not a grant in this plan. Write the grant itself " +
+              "on a line above, then its headings under it.";
+            return e;
+          }
+          // A line is a share of the award, so it is held in the award's own
+          // currency. Two currencies in one grant would need a second rate
+          // nobody chose, so it is refused rather than converted.
+          var ownerCur = owner.currency || baseCode();
+          if (r.currency && r.currency !== ownerCur) {
+            e.problem = e.parent + " is in " + ownerCur + ", so its headings have to be too.";
+            return e;
+          }
+          e.currency = ownerCur;
+          e.rate = rateFor(ownerCur);
+          e.baseAmount = toBase(e.amount, e.currency, e.rate);
+          e.notes.push("a heading inside " + e.parent);
+          return finishEntry(e, known);
+        }
+
+        e.key = planKeyFor("grants", e.name);
+        if (r.frequency) e.notes.push("a grant is one award, so the frequency is ignored");
+        if (r.confidence != null) e.notes.push("confidence does not apply to a grant already awarded; ignored");
+        if (r.category) { e.funder = String(r.category).trim(); }
+
+        if (r.account) {
+          var ghit = matchAccountRef(r.account);
+          if (!ghit) {
+            e.problem = "No account called \u201c" + r.account + "\u201d. You have: " + accountNamesForHelp() + ".";
+            return e;
+          }
+          if (ghit.closed) { e.problem = "\u201c" + ghit.label + "\u201d is closed, so nothing new can be filed there."; return e; }
+          if (parseRef(ghit.ref).pocketId) {
+            e.problem = "Name the account, not a pocket \u2014 Coffer makes the grant its own pocket.";
+            return e;
+          }
+          e.accountRef = ghit.ref; e.accountLabel = ghit.label;
+        } else if (openList.length === 1) {
+          e.accountRef = openList[0].id; e.accountLabel = openList[0].name;
+          e.notes.push("no account named, so " + openList[0].name);
+        } else if (!openList.length) {
+          e.problem = "There are no open accounts for this to sit in.";
+          return e;
+        } else {
+          e.problem = "Say which account it sits in, e.g. \u201cinto " + openList[0].name + "\u201d.";
+          return e;
+        }
+        e.date = e.date || today();
+        e.notes.push("held in its own pocket, marked as already spoken for");
+        return finishEntry(e, known);
       }
 
       if (r.section === "budgets") {
@@ -3129,6 +3411,12 @@
     var out = {};
     state.goals.forEach(function (g) { if (g.planKey) out[g.planKey] = { kind: "goal", id: g.id }; });
     state.recurring.forEach(function (r) { if (r.planKey) out[r.planKey] = { kind: "recurring", id: r.id }; });
+    grants().forEach(function (g) {
+      if (g.planKey) out[g.planKey] = { kind: "grant", id: g.id };
+      (g.lines || []).forEach(function (L) {
+        if (L.planKey) out[L.planKey] = { kind: "grantline", id: L.id };
+      });
+    });
     Object.keys(state.budgets).forEach(function (cat) {
       out[planKeyFor("budgets", cat)] = { kind: "budget", id: cat };
     });
@@ -3156,7 +3444,11 @@
     "- Rent: 700 monthly from ACCOUNT, Housing, from 2026-09-01\n" +
     "\n" +
     "## Goals\n" +
-    "- Emergency fund: 5000 by 2027-06-30\n";
+    "- Emergency fund: 5000 by 2027-06-30\n" +
+    "\n" +
+    "## Grants\n" +
+    "- Museum fellowship: 20000 into ACCOUNT from 2026-10-01 until 2027-06-30, The Museum\n" +
+    "- Museum fellowship > Travel: 5000\n";
 
   function planTemplate() {
     var a = openAccounts()[0];
@@ -3164,7 +3456,7 @@
   }
 
   var PLAN_FORMAT_HELP =
-    '<p class="hint">Four sections, any of them optional. One entry per line, written ' +
+    '<p class="hint">Five sections, any of them optional. One entry per line, written ' +
     '<b>- Name: amount</b> and then whatever else applies, in any order:</p>' +
     '<ul class="hint" style="margin:0.4rem 0 0.6rem 1.1rem;padding:0;line-height:1.7">' +
     "<li><b>amount</b> — required. <code>400</code>, <code>45,000,000</code> and <code>$400</code> all read the same.</li>" +
@@ -3176,10 +3468,17 @@
     "<li><b>category</b> — after a comma: <code>, Housing</code>.</li>" +
     "<li><b>date</b> — <code>from 2026-09-01</code> or <code>by 2027-06-30</code>. Always YYYY-MM-DD; " +
     "“next March” is refused, because a date I guess at is a date that is quietly wrong.</li>" +
+    "<li><b>end date</b> — <code>until 2027-03-31</code> on income or a grant. A contract that ends is " +
+    "the whole point of the projection.</li>" +
     "</ul>" +
+    '<p class="hint"><b>## Grants</b> is money you are holding for someone else. It stays out of your ' +
+    "net worth, your burn rate and your budgets. Write the award as " +
+    "<code>- Name: total into Account from awarded until spend-by, Funder</code>, then its headings " +
+    "under it as <code>- Name › Heading: amount</code> — each a total for the whole award, not a " +
+    "monthly cap.</p>" +
     '<p class="hint">A budget line\'s name is its category. Re-importing an edited plan updates the ' +
     "same entries instead of making second copies of them, so it is safe to run twice. " +
-    "A JSON file with the same four keys works too.</p>";
+    "A JSON file with the same five keys works too.</p>";
 
   function planImportDialog(existing) {
     closeModal();
@@ -3243,7 +3542,7 @@
         }).join("") + "</div>";
       }
 
-      ["budgets", "income", "commitments", "goals"].forEach(function (sec) {
+      PLAN_SECTION_ORDER.forEach(function (sec) {
         var list = entries.filter(function (e) { return e.section === sec; });
         if (!list.length) return;
         html += '<div class="grp-head"><span class="grp-name">' + esc(PLAN_SECTION_LABEL[sec]) + "</span>" +
@@ -3300,6 +3599,9 @@
       if (e.accountLabel) bits.push((e.section === "income" ? "into " : "from ") + e.accountLabel);
       if (e.category && e.section !== "budgets") bits.push(e.category);
       if (e.date) bits.push((e.section === "goals" ? "by " : "from ") + e.date);
+      // the end date drives the whole projection, so it is shown rather than
+      // silently accepted
+      if (e.until) bits.push("until " + e.until);
       e.notes.forEach(function (nt) { bits.push(nt); });
       var money = isForeign(e.currency)
         ? fmtIn(e.amount, e.currency) + " = " + fmt(e.baseAmount)
@@ -3380,6 +3682,57 @@
           recordId = e.category;
         }
 
+      } else if (e.section === "grants") {
+        if (e.parent) {
+          // an allocation inside a grant, written after the grant itself so
+          // the grant is already there to hang it on
+          var owner = state.grants.filter(function (x) {
+            return x.planKey === planKeyFor("grants", e.parent);
+          })[0];
+          if (owner) {
+            if (!owner.lines) owner.lines = [];
+            var ln = owner.lines.filter(function (L) { return L.planKey === e.key; })[0];
+            if (ln) { ln.name = e.name; ln.amount = e.amount; changed++; }
+            else { owner.lines.push({ id: uid(), name: e.name, amount: e.amount, note: null, planKey: e.key });
+                   made++; }
+            recordId = owner.id;
+          }
+        } else {
+          if (!state.grants) state.grants = [];
+          var gr = state.grants.filter(function (x) { return x.planKey === e.key; })[0];
+          if (gr) {
+            // the pocket and everything already spent against it stay put; a
+            // re-import corrects the terms, never the history
+            gr.name = e.name; gr.funder = e.funder || gr.funder || null;
+            gr.total = e.amount; gr.currency = e.currency; gr.rate = e.rate;
+            gr.endsOn = e.until || null;
+            changed++;
+          } else {
+            var gacc = accountById(parseRef(e.accountRef).accountId);
+            if (gacc) {
+              if (!gacc.pockets) gacc.pockets = [];
+              var gpk = { id: uid(), name: e.name, opening: 0, status: "committed" };
+              gacc.pockets.push(gpk);
+              gr = {
+                id: uid(), name: e.name, funder: e.funder || null,
+                total: e.amount, currency: e.currency, rate: e.rate,
+                awardedOn: e.date || today(), endsOn: e.until || null,
+                ref: acctRef(gacc.id, gpk.id), lines: [], closed: false, planKey: e.key
+              };
+              state.grants.push(gr);
+              state.transactions.push({
+                id: uid(), date: gr.awardedOn, desc: gr.name + " awarded",
+                type: "income",
+                category: state.categories.income.indexOf("Gift") > -1 ? "Gift" : state.categories.income[0],
+                accountId: gacc.id, pocketId: gpk.id, amount: e.amount,
+                grantId: gr.id, grantAward: true, currency: e.currency, rate: e.rate
+              });
+              made++;
+            }
+          }
+          recordId = gr ? gr.id : null;
+        }
+
       } else if (e.section === "goals") {
         var g = state.goals.filter(function (x) { return x.planKey === e.key; })[0];
         if (g) {
@@ -3401,6 +3754,7 @@
           r.accountId = ref.accountId; r.pocketId = ref.pocketId || null;
           r.amount = e.amount; r.currency = e.currency; r.rate = e.rate;
           r.frequency = e.frequency;
+          r.until = e.until || null;
           // nextDate is left alone on an update: it has been advancing as the
           // item was logged, and resetting it would re-post things already paid
           changed++;
@@ -3409,7 +3763,8 @@
             id: uid(), name: e.name, type: e.type, category: e.category,
             accountId: ref.accountId, pocketId: ref.pocketId || null,
             amount: e.amount, currency: e.currency, rate: e.rate,
-            frequency: e.frequency, nextDate: e.date || today(), planKey: e.key
+            frequency: e.frequency, nextDate: e.date || today(),
+            until: e.until || null, planKey: e.key
           };
           state.recurring.push(r);
           made++;
@@ -3422,7 +3777,7 @@
         amount: e.amount, currency: e.currency, rate: e.rate, baseAmount: e.baseAmount,
         frequency: e.frequency || null, accountRef: e.accountRef || null, accountLabel: e.accountLabel || null,
         category: e.category || null, date: e.date || null, recordId: recordId,
-        parent: e.parent || null,
+        parent: e.parent || null, until: e.until || null, funder: e.funder || null,
         confidence: e.confidence == null ? null : e.confidence
       };
     });
@@ -4001,7 +4356,7 @@
   }
 
   function worthHero() {
-    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
+    var assets = totalAssets(), debt = totalDebt(), net = netWorth();
     var histMonths = dataWindow(12, viewMonth);
     var histPoints = histMonths.map(function (mk) {
       var v = totalAssets(lastDayOf(mk));
@@ -4149,9 +4504,11 @@
   /* ---- the six tabs ---- */
 
   function netWorthStrip() {
-    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
-    var startOfMonth = totalAssets(lastDayOf(monthShift(viewMonth, -1))) - debt;
-    var nowValue = totalAssets(viewMonth === thisMonth() ? null : lastDayOf(viewMonth)) - debt;
+    var assets = totalAssets(), debt = totalDebt(), net = netWorth();
+    var prevEnd = lastDayOf(monthShift(viewMonth, -1));
+    var asOf = viewMonth === thisMonth() ? null : lastDayOf(viewMonth);
+    var startOfMonth = totalAssets(prevEnd) - debt - restrictedTotal(prevEnd);
+    var nowValue = totalAssets(asOf) - debt - restrictedTotal(asOf);
     var moved = nowValue - startOfMonth;
     // freeAssets() is about reach, not solvency — it does not net off debt. Put
     // beside net worth it read as larger than net worth, which is nonsense. Say
@@ -4310,9 +4667,11 @@
       return pageHead("Today", "Log what you spend, and see where the month is going.") + firstRunCard();
     }
 
-    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
-    var startOfMonth = totalAssets(lastDayOf(monthShift(viewMonth, -1))) - debt;
-    var nowValue = totalAssets(viewMonth === thisMonth() ? null : lastDayOf(viewMonth)) - debt;
+    var assets = totalAssets(), debt = totalDebt(), net = netWorth();
+    var prevEnd = lastDayOf(monthShift(viewMonth, -1));
+    var asOf = viewMonth === thisMonth() ? null : lastDayOf(viewMonth);
+    var startOfMonth = totalAssets(prevEnd) - debt - restrictedTotal(prevEnd);
+    var nowValue = totalAssets(asOf) - debt - restrictedTotal(asOf);
     var moved = nowValue - startOfMonth;
 
     var html = '<div class="dateline">' +
@@ -4365,9 +4724,16 @@
       html += '<div class="split">' + pockets.map(function (pk) {
         var st = pocketStatus(pk);
         var pb = pocketBalance(a, pk);
+        var held = grants().filter(function (g) {
+          return !g.closed && parseRef(g.ref || "").pocketId === pk.id;
+        })[0];
         return '<div class="split-row' + (st === "committed" ? " muted" : "") + '">' +
-          '<span>' + esc(pk.name) + ' <span class="split-tag">' + esc(POCKET_STATUS_LABEL[st]) + "</span></span>" +
-          '<span class="split-fig">' + fmt(pb) + "</span></div>";
+          '<span>' + esc(pk.name) + ' <span class="split-tag">' +
+          esc(held ? "held for " + held.funder || "a grant" : POCKET_STATUS_LABEL[st]) + "</span></span>" +
+          '<span class="split-fig">' + fmt(pb) +
+          '<button class="ibtn tiny" data-act="pocket-edit" data-id="' + a.id + "|" + pk.id +
+          '" aria-label="Edit ' + esc(pk.name) + '" title="Edit">\u270e</button>' +
+          "</span></div>";
       }).join("") +
       (Math.abs(left) > 0.005
         ? '<div class="split-row muted"><span>Not allocated</span><span class="split-fig">' + fmt(left) + "</span></div>"
@@ -4409,16 +4775,24 @@
       "</span></div></div>";
   }
 
+  var WORTH_TABS = [
+    { id: "accounts", label: "Accounts" },
+    { id: "invest", label: "Investments" },
+    { id: "debts", label: "Debts" }
+  ];
+  var worthTab = "accounts";
+
   function renderWorth() {
     if (!state.accounts.length && !state.debts.length) {
       return pageHead("Worth", "Everything you hold, and everything you owe.") + firstRunCard();
     }
-    var assets = totalAssets(), debt = totalDebt(), net = assets - debt;
+    var assets = totalAssets(), debt = totalDebt(), net = netWorth();
     var free = freeAssets();
     var live = openAccounts(), shut = state.accounts.filter(function (a) { return a.closed; });
     var histMonths = dataWindow(12, viewMonth);
     var pts = histMonths.map(function (mk) {
-      var v = totalAssets(lastDayOf(mk)) - debt;
+      var end = lastDayOf(mk);
+      var v = totalAssets(end) - debt - restrictedTotal(end);
       return { label: monthName(mk), value: v, tip: monthName(mk, true) + "\n" + fmt(v) };
     });
     var first = pts[0].value, last = pts[pts.length - 1].value;
@@ -4446,17 +4820,27 @@
       '<div class="card tile-sm"><span class="label">Reachable</span><div class="tile-fig">' + fmt(free, { round: true }) + "</div></div>" +
       "</div>";
 
+    var held = investedTotal(), spoken = committedTotal();
     if (Math.abs(assets - free) > 0.5) {
+      var why = [];
+      if (held > 0.5) why.push(fmt(held, { round: true }) + " is invested");
+      if (spoken > 0.5) why.push(fmt(spoken, { round: true }) + " sits in pockets you marked as spoken for");
       html += '<p class="band-sub" style="padding:0 0.35rem;margin:0 0 0.9rem">' +
-        "The gap is money in pockets you have marked as already spoken for. It is yours, but it is left " +
-        "out of your runway.</p>";
+        "The gap is why reachable is lower: " + why.join(", and ") +
+        ". It is all yours \u2014 it is just not this month\u2019s money.</p>";
     }
 
+    html += subNav("worth-tab", WORTH_TABS, worthTab);
+
+    if (worthTab === "invest") { html += investBody(); return html; }
+    if (worthTab === "debts") { html += debtsBody(); return html; }
+
+    var cash = live.filter(function (a) { return !isInvestment(a); });
     html += '<div class="sec-head"><span class="label">Accounts</span>' +
       '<span class="btn-row"><button class="btn sm" data-act="transfer-add">Transfer</button>' +
       '<button class="btn sm primary" data-act="account-add">Add</button></span></div>';
-    html += live.length
-      ? live.map(assetCard).join("")
+    html += cash.length
+      ? cash.map(assetCard).join("")
       : '<div class="card pad"><p class="empty" style="margin:0">No open accounts.</p></div>';
 
     if (shut.length) {
@@ -4465,8 +4849,203 @@
         (shut.length === 1 ? " account" : " accounts") + "</span></div>" +
         shut.map(closedAssetCard).join("");
     }
+    return html;
+  }
 
-    html += debtsBody();
+  /* ---------------- Worth > Investments ---------------- */
+
+  function investCard(a) {
+    var cost = investCost(a), worth = investValue(a), got = investReturns(a);
+    var gain = worth + got - cost;
+    var mk = latestMark(a), age = markAge(a);
+    var stale = age != null && age > RATE_STALE_DAYS;
+    var pct = cost > 0.005 ? gain / cost : null;
+
+    // the value line, wherever there is more than one mark to draw
+    var ms = marksOf(a);
+    var spark = ms.length > 1
+      ? areaChart(ms.map(function (m) {
+          var v = toBase(num(m.value), m.currency, m.rate);
+          return { label: m.on, value: v, tip: m.on + "\n" + fmt(v) };
+        }), { cssHeight: 54, height: 26, color: gain >= 0 ? "var(--calm)" : "var(--alert)",
+              aria: "Value of " + a.name })
+      : "";
+
+    return '<div class="card pad" style="margin-bottom:0.75rem">' +
+      '<div class="card-head" style="padding:0"><h3>' + esc(a.name) + "</h3>" +
+      '<span class="sub">' + esc(a.type || "Investment") + "</span>" +
+      '<button class="ibtn" data-act="account-edit" data-id="' + a.id + '" aria-label="Edit">\u22ef</button>' +
+      "</div>" +
+      '<div class="tile-fig" style="margin-top:0.4rem">' + fmt(worth) + "</div>" +
+      // Never valued means the gain is unknown, not nought. "Up $0 (+0.0%)"
+      // states a return nobody has measured.
+      '<p class="band-sub">' + (mk
+        ? (gain >= 0 ? "up " : "down ") + fmt(Math.abs(gain), { round: true }) +
+          (pct != null ? " (" + (gain >= 0 ? "+" : "\u2212") + Math.abs(pct * 100).toFixed(1) + "%)" : "") +
+          " on " + fmt(cost, { round: true }) + " put in" +
+          (got > 0.005 ? ", including " + fmt(got, { round: true }) + " paid out to you" : "")
+        : "what you have put in \u2014 no valuation yet" +
+          (got > 0.005 ? ", though it has paid you " + fmt(got, { round: true }) : "")) + "</p>" +
+      (spark ? '<div style="margin-top:0.6rem">' + spark + "</div>" : "") +
+      '<div class="split" style="margin-top:0.75rem">' +
+      '<div class="split-row"><span>Put in</span><span class="fig">' + fmt(cost) + "</span></div>" +
+      '<div class="split-row"><span>Paid back to you</span><span class="fig">' + fmt(got) + "</span></div>" +
+      '<div class="split-row"><span>Worth now</span><span class="fig">' + fmt(worth) +
+      (mk ? "" : ' <span class="split-tag">not valued</span>') + "</span></div></div>" +
+      '<p class="hint" style="margin-top:0.5rem">' +
+      (mk
+        ? "Valued " + esc(longDate(mk.on)) +
+          (stale ? " \u2014 " + age + " days ago, worth checking" : "")
+        : "A ledger cannot know what a holding is worth. Say so and this becomes a real figure.") + "</p>" +
+      '<div class="btn-row" style="margin-top:0.7rem">' +
+      '<button class="btn sm' + (mk ? "" : " primary") + '" data-act="invest-mark" data-id="' + a.id +
+      '">' + (mk ? "Update its value" : "Say what it is worth") + "</button>" +
+      '<button class="btn sm" data-act="invest-add-in" data-id="' + a.id + '">Put money in</button>' +
+      '<button class="btn sm" data-act="invest-return" data-id="' + a.id + '">Log a payout</button>' +
+      "</div></div>";
+  }
+
+  function investBody() {
+    var list = investments().filter(function (a) { return !a.closed; });
+    if (!list.length) {
+      return '<div class="card pad"><span class="label">Investments</span>' +
+        '<p class="empty" style="margin:0.5rem 0 0.9rem">Nothing here yet. An investment is an account ' +
+        "with a value you set by hand \u2014 shares, gold, a stake in something. Money you put in is a " +
+        "transfer, so it never shows up as spending, and what it pays you back is income.</p>" +
+        '<button class="btn primary" data-act="invest-add">Add an investment</button></div>';
+    }
+    var cost = 0, worth = 0, got = 0;
+    list.forEach(function (a) { cost += investCost(a); worth += investValue(a); got += investReturns(a); });
+    var gain = worth + got - cost;
+
+    var html = '<div class="card pad">' +
+      '<span class="label">Held in investments</span>' +
+      '<div class="hero-fig' + (gain < 0 ? " loss" : "") + '" style="font-size:2rem">' + fmt(worth) + "</div>" +
+      '<p class="band-sub">' + fmt(cost, { round: true }) + " put in \u00b7 " +
+      (gain >= 0 ? "up " : "down ") + fmt(Math.abs(gain), { round: true }) +
+      (got > 0.005 ? " \u00b7 " + fmt(got, { round: true }) + " paid out so far" : "") + "</p>" +
+      '<p class="hint" style="margin-top:0.5rem">None of this counts toward your runway \u2014 it is ' +
+      "worth something, but not this month\u2019s rent.</p></div>";
+
+    html += '<div class="sec-head"><span class="label">Holdings</span>' +
+      '<button class="btn sm primary" data-act="invest-add">Add</button></div>';
+    html += list.map(investCard).join("");
+
+    var shut = investments().filter(function (a) { return a.closed; });
+    if (shut.length) {
+      html += '<div class="sec-head"><span class="label">Closed</span></div>' +
+        shut.map(closedAssetCard).join("");
+    }
+    return html;
+  }
+
+  /* ---------------- Plan > Grants ---------------- */
+
+  function grantCard(g) {
+    var total = grantTotal(g), spent = grantSpent(g), left = total - spent;
+    var pct = total > 0 ? spent / total : 0;
+    var days = g.endsOn ? daysUntil(g.endsOn) : null;
+    var acc = g.ref ? state.accounts.filter(function (a) { return a.id === parseRef(g.ref).accountId; })[0] : null;
+    var pk = acc ? pocketById(acc, parseRef(g.ref).pocketId) : null;
+    var held = (acc && pk) ? pocketBalance(acc, pk) : null;
+
+    // amber for drift, red for genuinely wrong: overspent is wrong, a deadline
+    // with money still sitting there is drift
+    var over = spent > total + 0.005;
+    var idle = days != null && days >= 0 && days <= 60 && left > total * 0.15;
+    var tone = over ? "alert" : (idle || (days != null && days < 0 && left > 0.5)) ? "warn" : "calm";
+
+    var lines = (g.lines || []).map(function (L) {
+      var amt = grantLineAmount(g, L), used = grantSpent(g, L.id);
+      var lp = amt > 0 ? used / amt : 0;
+      var lover = used > amt + 0.005;
+      return '<div class="grant-line">' +
+        '<div class="grant-line-top"><span>' + esc(L.name) + "</span>" +
+        '<span class="fig">' + fmt(used, { round: true }) + " / " + fmt(amt, { round: true }) + "</span></div>" +
+        meter(lp, lover ? "var(--alert)" : lp > 0.9 ? "var(--warn)" : "var(--ac)") +
+        '<div class="grant-line-foot">' +
+        (lover ? '<span class="pill bad">' + fmt(used - amt, { round: true }) + " over</span>"
+               : '<span>' + fmt(amt - used, { round: true }) + " left</span>") + "</div></div>";
+    }).join("");
+
+    var allocated = (g.lines || []).reduce(function (t, L) { return t + grantLineAmount(g, L); }, 0);
+    var unallocated = total - allocated;
+
+    return '<div class="card pad" style="margin-bottom:0.75rem">' +
+      '<div class="card-head" style="padding:0"><h3>' + esc(g.name) + "</h3>" +
+      (g.funder ? '<span class="sub">' + esc(g.funder) + "</span>" : "") +
+      '<button class="ibtn" data-act="grant-edit" data-id="' + g.id + '" aria-label="Edit">\u22ef</button></div>' +
+      '<div class="tile-fig" style="margin-top:0.4rem;color:var(--' + tone + ')">' +
+      fmt(left, { round: true }) + "</div>" +
+      '<p class="band-sub">left of ' + fmt(total, { round: true }) +
+      (g.endsOn
+        ? (days == null ? "" : days < 0 ? " \u00b7 ended " + esc(longDate(g.endsOn))
+           : " \u00b7 " + days + (days === 1 ? " day" : " days") + " to spend it")
+        : "") + "</p>" +
+      '<div style="margin-top:0.7rem">' + meter(pct, over ? "var(--alert)" : "var(--ac)") + "</div>" +
+      '<div class="grant-foot"><span>' + fmt(spent, { round: true }) + " spent</span>" +
+      "<span>" + Math.round(pct * 100) + "%</span></div>" +
+
+      (over
+        ? '<p class="notice warn" style="margin-top:0.6rem">Spent <b>' + fmt(spent - total, { round: true }) +
+          "</b> more than the award. That difference came out of your own money.</p>"
+        : idle
+        ? '<p class="notice warn" style="margin-top:0.6rem">Still <b>' + fmt(left, { round: true }) +
+          "</b> unspent with " + days + " days to go.</p>"
+        : days != null && days < 0 && left > 0.5
+        ? '<p class="notice warn" style="margin-top:0.6rem"><b>' + fmt(left, { round: true }) +
+          "</b> was left unspent when it ended \u2014 usually money that has to go back.</p>"
+        : "") +
+
+      (held != null && Math.abs(held - left) > 0.5
+        ? '<p class="hint" style="margin-top:0.5rem">' + esc(pk.name) + " holds " +
+          fmt(held, { round: true }) + ", which is " +
+          (held > left ? fmt(held - left, { round: true }) + " more" : fmt(left - held, { round: true }) + " less") +
+          " than the grant has left. Worth reconciling.</p>"
+        : "") +
+
+      (lines
+        ? '<div class="grant-lines">' + lines + "</div>" +
+          (Math.abs(unallocated) > 0.5
+            ? '<p class="hint">' + (unallocated > 0
+                ? fmt(unallocated, { round: true }) + " of the award is not split into a line yet."
+                : fmt(-unallocated, { round: true }) + " more is allocated across lines than the award holds.") + "</p>"
+            : "")
+        : '<p class="empty" style="margin:0.7rem 0 0">No lines yet. Split it into the headings you have to ' +
+          "report against.</p>") +
+
+      '<div class="btn-row" style="margin-top:0.8rem">' +
+      '<button class="btn sm primary" data-act="grant-spend" data-id="' + g.id + '">Spend from it</button>' +
+      '<button class="btn sm" data-act="grant-line-add" data-id="' + g.id + '">Add a line</button>' +
+      "</div></div>";
+  }
+
+  function grantsBody() {
+    var live = grants().filter(function (g) { return !g.closed; });
+    var shut = grants().filter(function (g) { return g.closed; });
+    if (!live.length && !shut.length) {
+      return '<div class="card pad"><span class="label">Grants</span>' +
+        '<p class="empty" style="margin:0.5rem 0 0.9rem">Money you are holding for someone else \u2014 ' +
+        "a grant, a fund, a budget you administer. Coffer keeps it out of your net worth, out of your " +
+        "burn rate and out of your own budgets, and tracks what is left against the headings you have " +
+        "to report on.</p>" +
+        '<button class="btn primary" data-act="grant-add">Add a grant</button></div>';
+    }
+
+    var restricted = restrictedTotal();
+    var html = '<div class="card pad">' +
+      '<span class="label">Held for someone else</span>' +
+      '<div class="hero-fig" style="font-size:2rem">' + fmt(restricted) + "</div>" +
+      '<p class="band-sub">across ' + live.length + (live.length === 1 ? " grant" : " grants") + "</p>" +
+      '<p class="hint" style="margin-top:0.5rem">This is out of your net worth, out of your burn rate ' +
+      "and out of your budgets. It is in your account; it is not your money.</p></div>";
+
+    html += '<div class="sec-head"><span class="label">Grants</span>' +
+      '<button class="btn sm primary" data-act="grant-add">Add</button></div>';
+    html += live.map(grantCard).join("");
+    if (shut.length) {
+      html += '<div class="sec-head"><span class="label">Closed</span></div>' + shut.map(grantCard).join("");
+    }
     return html;
   }
 
@@ -4476,6 +5055,7 @@
     { id: "bills", label: "Bills" },
     { id: "income", label: "Income" },
     { id: "goals", label: "Goals" },
+    { id: "grants", label: "Grants" },
     { id: "plan", label: "The plan" }
   ];
 
@@ -4543,11 +5123,13 @@
       goals: "What you're saving toward, and whether your current pace gets you there.",
       plan: "A written plan, scored against what actually happened.",
       outlook: "Where the money goes from here, month by month, with every contract " +
-        "starting and stopping on its own date."
+        "starting and stopping on its own date.",
+      grants: "Money you are holding for someone else, split into what it has to be spent on."
     }[sub];
 
     var right = sub === "goals" ? '<button class="btn primary" data-act="goal-add">Add a goal</button>'
       : sub === "outlook" ? ""
+      : sub === "grants" ? ""
       : sub === "plan" ? ""
       : !state.plan ? '<button class="btn sm" data-act="plan-tab" data-id="plan">Import a plan</button>'
       : monthStepper();
@@ -4556,6 +5138,7 @@
       subNav("plan-tab", PLAN_TABS, sub);
 
     if (sub === "outlook") html += outlookBody();
+    else if (sub === "grants") html += grantsBody();
     else if (sub === "budgets") html += budgetsBody();
     else if (sub === "bills") html += billsBody();
     else if (sub === "income") html += incomeBody();
@@ -5748,18 +6331,22 @@
     var out = ["# Plan: " + plan.name];
     if (plan.from) out.push("covers: " + plan.from + (plan.to ? " to " + plan.to : ""));
     if (plan.reviewBy) out.push("review_by: " + plan.reviewBy);
-    [["budgets", "Budgets"], ["income", "Income"], ["commitments", "Commitments"], ["goals", "Goals"]].forEach(function (pair) {
-      var list = planSection(plan, pair[0]);
+    PLAN_SECTION_ORDER.forEach(function (sec) {
+      var list = planSection(plan, sec);
       if (!list.length) return;
-      out.push("", "## " + pair[1]);
+      out.push("", "## " + PLAN_SECTION_LABEL[sec]);
       list.forEach(function (l) {
         var label = l.parent ? l.parent + " > " + l.name : l.name;
         var s = "- " + label + ": " + l.amount + (isForeign(l.currency) ? " " + l.currency : "");
         if (l.confidence != null) s += " at " + l.confidence + "%";
-        if (l.frequency && pair[0] !== "budgets") s += " " + l.frequency;
-        if (l.accountLabel) s += (pair[0] === "income" ? " into " : " from ") + l.accountLabel;
-        if (l.category && pair[0] !== "budgets") s += ", " + l.category;
-        if (l.date) s += (pair[0] === "goals" ? " by " : " from ") + l.date;
+        if (l.frequency && sec !== "budgets" && sec !== "grants") s += " " + l.frequency;
+        if (l.accountLabel) s += (sec === "income" || sec === "grants" ? " into " : " from ") + l.accountLabel;
+        if (l.date) s += (sec === "goals" ? " by " : " from ") + l.date;
+        if (l.until) s += " until " + l.until;
+        // the comma slot is the category everywhere but a grant, where it is
+        // who the money came from
+        var tail = sec === "grants" ? l.funder : (sec === "budgets" ? null : l.category);
+        if (tail) s += ", " + tail;
         out.push(s);
       });
     });
@@ -7011,6 +7598,283 @@
       });
     },
 
+    /* ---- grants ---- */
+    "grant-add": function () {
+      if (needAccount()) return;
+      openModal({
+        title: "Add a grant",
+        message: "Coffer will hold this in a pocket marked as already spoken for, so it stays out of " +
+          "your net worth, your runway and your budgets.",
+        fields: [
+          { key: "name", label: "What it is", placeholder: "e.g. Museum fellowship", span: true },
+          { key: "funder", label: "Who it is from", placeholder: "optional", span: true },
+          { key: "total", label: "How much", type: "number", min: 0 }
+        ].concat(currencyField()).concat([
+          { key: "account", label: "Sitting in", type: "select", options: accountOptions(),
+            value: openAccounts()[0].id, hint: "a pocket is made inside it to hold the money" },
+          { key: "awardedOn", label: "Awarded", type: "date", value: today() },
+          { key: "endsOn", label: "Spend it by", type: "date", value: "" }
+        ]),
+        confirmLabel: "Add",
+        validate: function (v) {
+          if (!v.name.trim()) return "Give it a name.";
+          if (!(v.total > 0)) return "Enter the amount of the award.";
+          if (v.endsOn && v.awardedOn && v.endsOn < v.awardedOn) return "It cannot end before it is awarded.";
+        },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode(), rt = rateFor(cur);
+          var acc = accountById(parseRef(v.account).accountId);
+          if (!acc) { toast("That account has gone."); return; }
+          if (!acc.pockets) acc.pockets = [];
+          // Committed is not a preference here, it is the whole mechanism:
+          // freeAssets() already drops committed pockets, which is what keeps
+          // grant money out of the runway with no new arithmetic.
+          var pk = { id: uid(), name: v.name.trim(), opening: 0, status: "committed" };
+          acc.pockets.push(pk);
+          var g = {
+            id: uid(), name: v.name.trim(), funder: (v.funder || "").trim() || null,
+            total: v.total, currency: cur, rate: rt,
+            awardedOn: v.awardedOn || today(), endsOn: v.endsOn || null,
+            ref: acctRef(acc.id, pk.id), lines: [], closed: false
+          };
+          if (!state.grants) state.grants = [];
+          state.grants.push(g);
+          // the award landing is real money arriving, so it is a real entry
+          state.transactions.push({
+            id: uid(), date: g.awardedOn, desc: g.name + " awarded",
+            type: "income", category: state.categories.income.indexOf("Gift") > -1 ? "Gift" : state.categories.income[0],
+            accountId: acc.id, pocketId: pk.id, amount: v.total,
+            grantId: g.id, grantAward: true, currency: cur, rate: rt
+          });
+          planTab = "grants"; view = "plan";
+          save(); render();
+          toast(g.name + " added \u2014 held in " + acc.name + " \u203a " + pk.name + ".");
+        }
+      });
+    },
+
+    "grant-edit": function (id) {
+      var g = grantById(id);
+      if (!g) return;
+      openModal({
+        title: g.name,
+        fields: [
+          { key: "name", label: "What it is", value: g.name, span: true },
+          { key: "funder", label: "Who it is from", value: g.funder || "", span: true },
+          { key: "total", label: "How much", type: "number", min: 0, value: g.total },
+          { key: "endsOn", label: "Spend it by", type: "date", value: g.endsOn || "" },
+          { key: "closed", label: "Closed and reported", type: "check", value: !!g.closed, span: true,
+            hint: "keeps its history and stops it counting" }
+        ],
+        confirmLabel: "Save",
+        danger: false,
+        validate: function (v) { if (!v.name.trim()) return "Give it a name."; },
+        onConfirm: function (v) {
+          g.name = v.name.trim();
+          g.funder = (v.funder || "").trim() || null;
+          g.total = v.total;
+          g.endsOn = v.endsOn || null;
+          g.closed = !!v.closed;
+          save(); render(); toast("Saved.");
+        }
+      });
+    },
+
+    "grant-line-add": function (id) {
+      var g = grantById(id);
+      if (!g) return;
+      openModal({
+        title: "A line of " + g.name,
+        message: "A total for the whole award, not a monthly cap \u2014 which is why these are not budgets.",
+        fields: [
+          { key: "name", label: "Heading", placeholder: "e.g. Travel, Materials, Fees", span: true },
+          { key: "amount", label: "Allocated", type: "number", min: 0 },
+          { key: "note", label: "Note", placeholder: "optional", span: true }
+        ],
+        confirmLabel: "Add the line",
+        validate: function (v) {
+          if (!v.name.trim()) return "Name the heading.";
+          if (!(v.amount > 0)) return "Enter what is allocated to it.";
+        },
+        onConfirm: function (v) {
+          if (!g.lines) g.lines = [];
+          g.lines.push({ id: uid(), name: v.name.trim(), amount: v.amount, note: (v.note || "").trim() || null });
+          save(); render(); toast(v.name.trim() + " added.");
+        }
+      });
+    },
+
+    "grant-spend": function (id) {
+      var g = grantById(id);
+      if (!g) return;
+      var ref = parseRef(g.ref || "");
+      var acc = accountById(ref.accountId);
+      if (!acc) { toast("The account holding this grant has gone."); return; }
+      var lineOpts = (g.lines || []).map(function (L) {
+        var amt = grantLineAmount(g, L), used = grantSpent(g, L.id);
+        return { value: L.id, label: L.name + " \u2014 " + fmt(Math.max(0, amt - used), { round: true }) + " left" };
+      });
+      openModal({
+        title: "Spend from " + g.name,
+        message: "This leaves your account but is not your spending: it stays out of your burn rate and " +
+          "your category budgets.",
+        fields: [
+          { key: "date", label: "Date", type: "date", value: today() },
+          { key: "desc", label: "What for", placeholder: "e.g. Flights to Nicosia", span: true },
+          { key: "amount", label: "Amount", type: "number", min: 0 }
+        ].concat(currencyField(g.currency)).concat(lineOpts.length ? [{
+          key: "line", label: "Against which line", type: "select",
+          options: [{ value: "", label: "\u2014 not assigned \u2014" }].concat(lineOpts), value: lineOpts[0].value
+        }] : []).concat([
+          { key: "category", label: "Category", type: "select", options: catOptions("expense"),
+            catKind: "expense", value: state.categories.expense[0],
+            hint: "for the ledger only \u2014 it is kept out of your own budget for that category" }
+        ]),
+        confirmLabel: "Log it",
+        validate: function (v) { if (!(v.amount > 0)) return "Enter an amount above zero."; },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode(), rt = rateFor(cur);
+          state.transactions.push({
+            id: uid(), date: v.date || today(), desc: v.desc.trim() || g.name,
+            type: "expense", category: v.category,
+            accountId: acc.id, pocketId: ref.pocketId || null,
+            amount: v.amount, currency: cur, rate: rt,
+            grantId: g.id, grantLineId: v.line || null
+          });
+          save(); render();
+          var left = grantLeft(g);
+          toast(fmt(toBase(v.amount, cur, rt)) + " from " + g.name + " \u2014 " +
+            fmt(Math.max(0, left), { round: true }) + " left.");
+        }
+      });
+    },
+
+    /* ---- investments ---- */
+    "worth-tab": function (id) { worthTab = id; view = "worth"; render(); },
+
+    "invest-add": function () {
+      openModal({
+        title: "Add an investment",
+        message: "Money you put in is a transfer, not spending, so it never lands in your burn rate. " +
+          "What it is worth is a figure you set by hand \u2014 a ledger cannot know it.",
+        fields: [
+          { key: "name", label: "Name", placeholder: "e.g. Index fund, gold, the shop", span: true },
+          { key: "type", label: "Kind", type: "select", options: typeOptions("Investment"),
+            catKind: "free", newLabel: "New kind\u2026", newPlaceholder: "e.g. Pension, Crypto",
+            value: "Investment" },
+          { key: "opening", label: "Already put in", type: "number", value: 0,
+            hint: "what it has cost you so far" },
+          { key: "worth", label: "Worth now", type: "number", value: 0,
+            hint: "leave at nought if you have not valued it" }
+        ].concat(currencyField()),
+        confirmLabel: "Add",
+        validate: function (v) { if (!v.name.trim()) return "Give it a name."; },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode(), rt = rateFor(cur);
+          var a = { id: uid(), name: v.name.trim(), group: null, kind: "investment",
+            type: v.type || "Investment", opening: v.opening,
+            currency: cur, rate: rt, marks: [] };
+          if (v.worth > 0) a.marks.push({ on: today(), value: v.worth, currency: cur, rate: rt });
+          state.accounts.push(a);
+          worthTab = "invest"; view = "worth";
+          save(); render();
+          toast(a.name + " added.");
+        }
+      });
+    },
+
+    "invest-mark": function (id) {
+      var a = accountById(id);
+      if (!a) return;
+      var last = latestMark(a);
+      openModal({
+        title: "What is " + a.name + " worth?",
+        message: "Dated, and kept. Past valuations stay where they were, so your net-worth history " +
+          "does not get rewritten every time you check the price.",
+        fields: [
+          { key: "on", label: "As of", type: "date", value: today() },
+          { key: "value", label: "Worth", type: "number", min: 0,
+            value: last ? last.value : num(a.opening) }
+        ].concat(currencyField(last ? last.currency : a.currency)),
+        confirmLabel: "Save the value",
+        validate: function (v) { if (!(v.value >= 0)) return "Enter what it is worth."; },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode();
+          if (!a.marks) a.marks = [];
+          var on = v.on || today();
+          // one valuation per date: re-checking the same day corrects it
+          a.marks = a.marks.filter(function (m) { return m.on !== on; });
+          a.marks.push({ on: on, value: v.value, currency: cur, rate: rateFor(cur) });
+          save(); render();
+          toast(a.name + " valued at " + fmt(toBase(v.value, cur, rateFor(cur))) + ".");
+        }
+      });
+    },
+
+    "invest-add-in": function (id) {
+      var a = accountById(id);
+      var from = openAccounts().filter(function (x) { return x.id !== id && !isInvestment(x); });
+      if (!a || !from.length) { toast("Add an account to move the money from first."); return; }
+      openModal({
+        title: "Put money into " + a.name,
+        message: "A transfer, so it leaves your reachable money without ever counting as spending.",
+        fields: [
+          { key: "date", label: "Date", type: "date", value: today() },
+          { key: "amount", label: "Amount", type: "number", min: 0 },
+          { key: "from", label: "From", type: "select", options: accountOptions(), value: from[0].id },
+          { key: "desc", label: "Note", placeholder: "optional", span: true }
+        ].concat(currencyField()),
+        confirmLabel: "Move it",
+        validate: function (v) { if (!(v.amount > 0)) return "Enter an amount above zero."; },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode();
+          state.transactions.push({
+            id: uid(), date: v.date || today(), desc: v.desc.trim() || ("Into " + a.name),
+            type: "transfer", category: "Transfer", amount: v.amount,
+            accountId: parseRef(v.from).accountId, pocketId: parseRef(v.from).pocketId,
+            toAccountId: a.id, toPocketId: null,
+            investId: a.id,
+            currency: cur, rate: rateFor(cur)
+          });
+          save(); render();
+          toast(fmt(toBase(v.amount, cur, rateFor(cur))) + " into " + a.name + ".");
+        }
+      });
+    },
+
+    "invest-return": function (id) {
+      var a = accountById(id);
+      var into = openAccounts().filter(function (x) { return !isInvestment(x); });
+      if (!a || !into.length) { toast("Add an account for the money to land in first."); return; }
+      openModal({
+        title: "A payout from " + a.name,
+        message: "A dividend or a share of profit is income: it raises what you are worth and the " +
+          "holding is still there. Selling part of it is a transfer back out instead.",
+        fields: [
+          { key: "date", label: "Date", type: "date", value: today() },
+          { key: "amount", label: "Amount", type: "number", min: 0 },
+          { key: "into", label: "Into", type: "select", options: accountOptions(), value: into[0].id },
+          { key: "category", label: "Category", type: "select", options: catOptions("income"),
+            catKind: "income", value: state.categories.income.indexOf("Investment") > -1
+              ? "Investment" : state.categories.income[0] }
+        ].concat(currencyField()),
+        confirmLabel: "Log it",
+        validate: function (v) { if (!(v.amount > 0)) return "Enter an amount above zero."; },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode();
+          state.transactions.push({
+            id: uid(), date: v.date || today(), desc: a.name + " payout",
+            type: "income", category: v.category,
+            accountId: parseRef(v.into).accountId, pocketId: parseRef(v.into).pocketId,
+            amount: v.amount, investId: a.id,
+            currency: cur, rate: rateFor(cur)
+          });
+          save(); render();
+          toast(fmt(toBase(v.amount, cur, rateFor(cur))) + " from " + a.name + ".");
+        }
+      });
+    },
+
     /* ---- budgets ---- */
     "budget-set": function () {
       var free = state.categories.expense.filter(function (c) { return state.budgets[c] == null; });
@@ -7102,6 +7966,9 @@
       var r = parseRef(ref), a = accountById(r.accountId);
       var p = a && pocketById(a, r.pocketId);
       if (!p) return;
+      var heldGrant = grants().filter(function (g) {
+        return !g.closed && parseRef(g.ref || "").pocketId === p.id;
+      })[0] || null;
       openModal({
         title: "Edit " + p.name,
         message: "Holding " + fmt(pocketBalance(a, p)) + " of " + a.name + "'s " + fmt(balanceOf(a)) + ".",
@@ -7110,11 +7977,19 @@
           { key: "opening", label: "Starting amount", type: "number", value: p.opening },
           { key: "status", label: "This money is", type: "select",
             options: POCKET_STATUS.map(function (k) { return { value: k, label: POCKET_STATUS_LABEL[k] }; }),
-            value: pocketStatus(p) }
+            value: pocketStatus(p),
+            hint: heldGrant ? "fixed while " + heldGrant.name + " is held here" : null }
         ],
-        validate: function (v) { if (!v.name.trim()) return "Give the pocket a name."; },
+        validate: function (v) {
+          if (!v.name.trim()) return "Give the pocket a name.";
+          if (heldGrant && v.status !== "committed") {
+            return heldGrant.name + " is held in this pocket, so it has to stay marked as already " +
+              "spoken for \u2014 that is what keeps it out of your runway.";
+          }
+        },
         onConfirm: function (v) {
-          p.name = v.name.trim(); p.opening = num(v.opening); p.status = v.status || "free";
+          p.name = v.name.trim(); p.opening = num(v.opening);
+          p.status = heldGrant ? "committed" : (v.status || "free");
           save(); render(); toast("Pocket updated.");
         }
       });
@@ -8429,6 +9304,13 @@
     else html = renderSettings();
     viewEl.innerHTML = html;
     wireInputs();
+    // A sub-nav that scrolls sideways can leave the tab you are actually on
+    // off the right-hand edge — Plan now has seven, and Grants sat past the
+    // fold while you were reading it.
+    var onTab = viewEl.querySelector(".subnav button.on");
+    if (onTab && onTab.scrollIntoView) {
+      onTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
     // receipts live in IndexedDB, so their size can only be reported asynchronously
     var pstat = document.getElementById("photo_stat");
     if (pstat) {

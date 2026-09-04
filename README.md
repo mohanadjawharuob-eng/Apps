@@ -8,7 +8,7 @@ no account, no server, nothing sent anywhere.
 | App | What it does | Data key |
 |---|---|---|
 | [Daybook](./daybook/) | Tasks, today's focus, habit streaks | `daybook.v2` |
-| [Coffer](./coffer/) | Ledger, budgets, plans, goals, debts | `coffer.v2` |
+| [Coffer](./coffer/) | Ledger, budgets, plans, goals, debts, investments, grants | `coffer.v2` |
 | [Kitchen](./kitchen/) | Weekly meal plan, one merged shopping list | `kitchen.v1` |
 | [Timesheet](./timesheet/) | Hours per client, then invoice them | `timesheet.v1` |
 | [Bustan](./garden/) | Plants, watering by real weather, seasonal almanac | `bustan.v1` |
@@ -35,9 +35,9 @@ index.html                  this launcher; not installable, on purpose
 
 ## Coffer plans
 
-Coffer takes a written financial plan — budgets, expected income, commitments
-and savings goals — and scores what you actually spend against it. The format is
-plain text you can write in Word or a notes app; it is documented in
+Coffer takes a written financial plan — budgets, expected income, commitments,
+savings goals and grants — and scores what you actually spend against it. The
+format is plain text you can write in Word or a notes app; it is documented in
 [`coffer/PLAN-FORMAT.md`](./coffer/PLAN-FORMAT.md) and inside the import dialog
 itself. Nothing is applied until a preview has shown every line, and a line
 whose currency, account or date cannot be resolved blocks the import rather than
@@ -46,9 +46,43 @@ being guessed at. To have an AI write one for you, paste
 
 Coffer is organised as six tabs, one question each: **Today** (log something,
 and see where the day and month are going) · **Ledger** (what happened) ·
-**Plan** (what you intend — budgets, bills, income, goals and the plan itself) ·
-**Worth** (accounts, pockets, debts, net worth) · **Insights** (patterns across
-the whole ledger) · **Settings**.
+**Plan** (what is coming — the outlook, budgets, bills, income, goals, grants
+and the plan itself) · **Worth** (accounts, investments, debts, net worth) ·
+**Insights** (patterns across the whole ledger) · **Settings**.
+
+## Seeing forward
+
+**Plan › Outlook** projects eighteen months instead of dividing savings by a
+burn rate: every contract starts and stops on its own date, income is weighted
+by how likely it is, and the month the money runs out is marked on the line. A
+switch beside each income line answers "what if this doesn't renew" without a
+second plan to keep in step.
+
+**"Can I afford it?"** answers with routes rather than yes or no — pay now,
+instalments with the markup shown against the sticker price, save up to a month
+that still leaves three months of cover, trim a budget, or take it from a
+pocket — with what each does to the date you run out. Nothing is logged; it is
+a question, not an entry.
+
+## Money that is not spending money
+
+Three kinds of money are held apart from the day-to-day, each for its own
+reason.
+
+**Investments** (Worth › Investments) are accounts with a hand-set value. Money
+going in is a *transfer*, so saving never shows up as spending; what comes back
+is income. Valuations are dated, so checking a price today does not rewrite
+last March. Net worth counts what a holding is worth; the runway never does.
+
+**Grants** (Plan › Grants) are money in your account that is not yours. The
+unspent balance is out of your net worth, the spending is out of your burn rate
+and out of your own budgets, and it lives in a pocket marked as spoken for.
+Split an award into the headings you have to report against and Coffer tracks
+each one, warns when a deadline is close with money unspent, and says when you
+have gone past the award with your own money.
+
+**Committed pockets** are yours, but earmarked — still in net worth, out of the
+runway.
 
 ## Bustan
 

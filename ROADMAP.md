@@ -65,6 +65,52 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   month's movement, what is owed and what is spoken for. The 12-month curve and
   the accounts behind it stay on Worth, a tap away.
 
+### Shipped: seeing forward, and money that is not yours
+
+- **Plan › Outlook** — an eighteen-month projection instead of a division.
+  Walks month by month from reachable money, with every contract starting and
+  stopping on its own date, income weighted by its confidence, and the month
+  you run out marked on the line. Outgoings are true burn plus only the
+  *changes* inside the horizon, so a logged monthly bill is never charged
+  twice. Income is only ever scheduled income — averaging past contract work
+  is the lie that makes freelancing look salaried.
+- **"What if this stops"** — a switch per income line, re-running the
+  projection against a dashed ghost of where you were. Answers "what if the
+  contract doesn't renew" without a second stored plan.
+- **"Can I afford it?"** — five funding routes side by side rather than a yes
+  or a no: pay now, N instalments with the markup shown against the sticker
+  price, save up to a month that still leaves three months of cover, trim a
+  budget, or take it from a pocket (which names the goal that pocket feeds).
+  Every route is measured over one window long enough to contain the slowest,
+  a route that runs you out is a warning rather than an option, and with no
+  income booked it refuses instead of inventing a date. Nothing is logged.
+- **Investments** — an account with `kind: "investment"`, so money going in is
+  a *transfer* and never lands in the burn rate. Cost is derived from the
+  transfers; worth is a dated mark you set by hand, kept in a list so a March
+  valuation stays a March valuation and the net-worth history is not rewritten
+  every time you check a price. Payouts are income tagged `investId`; selling
+  is a transfer back out. Net worth counts the mark, the runway never does.
+  Lives on **Worth › Investments**.
+- **Grants** — money in your account that is not yours. Held in a pocket forced
+  to `committed`, so the runway already excludes it. The unspent balance comes
+  out of net worth, grant spending is out of true burn, and it is out of your
+  own category budgets. Split into lines that are a total for the whole award
+  rather than a monthly cap, with drawdown, per-line spend, and warnings for
+  overspending or a deadline arriving with money unspent. Lives on
+  **Plan › Grants**.
+
+### Fixed along the way
+- `balanceOf` added a foreign account's opening figure, stored in its own
+  currency, to transaction effects already converted to base — so a EUR account
+  read its opening as dollars and disagreed with the same account inside
+  `totalAssets`.
+- Pockets could be created and then never edited or removed: the Worth rebuild
+  left `accountsCard()`, the only screen carrying `pocket-edit`, uncalled.
+- A bare `burn` in `buildInsights` threw a ReferenceError whenever there were
+  recurring bills, no recurring income and nothing logged that month — which is
+  a freelancer between contracts.
+- The three insight lines on Today floated on the page background with no card.
+
 ### Next
 - **Split transactions** — one shop trip across two categories.
 - **Cross-currency transfers** — a transfer needs two amounts when the accounts

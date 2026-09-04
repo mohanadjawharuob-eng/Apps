@@ -33,9 +33,14 @@ review_by: 2027-02-01
 ## Goals
 - Cyprus deposit: 3000 by 2027-02-28
 - Emergency fund: 5000
+
+## Grants
+- Museum fellowship: 20000 into Wallet from 2026-10-01 until 2027-06-30, The Museum
+- Museum fellowship > Travel: 5000
+- Museum fellowship > Materials: 12000
 ```
 
-All four sections are optional. Every entry is one line:
+All five sections are optional. Every entry is one line:
 
 ```
 - <name>: <amount> [CUR] [frequency] [into|from <account>] [, <category>] [by|from <date>]
@@ -53,6 +58,7 @@ Everything after the amount can come in any order.
 | **account** | `into Wallet` for income, `from Wallet` for a commitment; a pocket is `from Bank › Cyprus`. Matched case-insensitively against the accounts you actually have. An unknown name is an error listing the ones that exist; a closed account is refused. |
 | **category** | After a comma: `, Housing`. Leave it out and Coffer uses the entry's own name if that names a category, otherwise guesses from it and tells you which it picked. A category that doesn't exist is offered as a tickbox, never created behind your back. |
 | **date** | `from 2026-09-01` or `by 2027-06-30`. Always `YYYY-MM-DD`. **"next March" is refused** — a date guessed at is a date that is quietly wrong. |
+| **end date** | `until 2027-03-31` on an income line or a grant. Also `YYYY-MM-DD`, and also refused if written out. An end date before its start date is refused. |
 
 A budget line's name *is* its category.
 
@@ -63,6 +69,35 @@ A budget line's name *is* its category.
 | `once` as the frequency | a lump sum on one date — a grant, a bonus, a project fee. It is **not** averaged into a monthly figure, because pretending a one-off is a monthly rate is exactly what makes contract income look like a salary. |
 | `until 2027-03-31` | a terminal date. Projections stop there instead of assuming the contract runs forever, and Coffer warns you when an income line is about to end with nothing scheduled after it. |
 | `at 40%` | how likely this is. A line at 40% counts as 40% of its value in the headline and says so, which means guaranteed and possible income can live in one plan instead of forcing two near-identical files. |
+
+## Grants — money that is not yours
+
+A grant is money sitting in your account that belongs to whoever gave it to
+you. Coffer treats it as such: it is **out of your net worth, out of your burn
+rate and out of your own category budgets**, and it lives in its own pocket
+marked as already spoken for, so it never counts toward your runway.
+
+```
+- <name>: <total> [CUR] into <account> from <awarded> until <spend-by>, <funder>
+- <name> > <heading>: <amount>
+```
+
+| Part | Rule |
+|---|---|
+| **into** | the account it sits in — **not** a pocket. Coffer makes the grant its own pocket inside that account and holds the money there. |
+| **from** | the date it was awarded. The award is written into your ledger as income on that date, tagged to the grant, so the account balance is right. |
+| **until** | the date it has to be spent by. Coffer warns you when that is close with money still unspent, and again if it passes with money left — usually money that has to go back. |
+| **, funder** | after the comma, who it is from. The comma slot is the category everywhere else; a grant has no category, so it carries the funder instead. |
+| **`Name > Heading`** | one allocation inside the grant — a **total for the whole award, not a monthly cap**, which is why these are not budgets. The grant itself has to be written on a line above its headings. |
+
+Headings are held in the award's own currency, so a grant in EUR with a
+heading in USD is refused rather than converted at a second rate nobody chose.
+The headings do not have to add up to the award: Coffer says what is left
+unsplit, or how much more is allocated than the award holds.
+
+Re-importing updates the grant and its headings in place. **What has already
+been spent against it is never touched** — a re-import corrects the terms, not
+the history.
 
 ## Sub-budgets
 
@@ -122,7 +157,10 @@ A file starting with `{` is read as JSON with the same four keys:
   "commitments": [{ "name": "Rent", "amount": 700, "currency": "EUR",
                     "frequency": "monthly", "account": "BoC current",
                     "category": "Housing", "date": "2026-09-01" }],
-  "goals":       [{ "name": "Cyprus deposit", "amount": 3000, "date": "2027-02-28" }]
+  "goals":       [{ "name": "Cyprus deposit", "amount": 3000, "date": "2027-02-28" }],
+  "grants":      [{ "name": "Museum fellowship", "amount": 20000, "account": "Wallet",
+                    "date": "2026-10-01", "until": "2027-06-30", "category": "The Museum" },
+                  { "name": "Museum fellowship > Travel", "amount": 5000 }]
 }
 ```
 
@@ -130,7 +168,11 @@ Both forms go through exactly the same validation.
 
 ## What it does *not* do
 
-- **Accounts and pockets** — a plan attaches to accounts you already have.
+- **Accounts** — a plan attaches to accounts you already have. The one thing it
+  *does* create is a grant's pocket, because a grant without somewhere to sit
+  is not a grant.
+- **Investments** — a holding's worth is a figure only you can know, so it is
+  set in the app rather than written into a plan.
 - **Changes part-way through** — "rent becomes €700 from March" is not expressible;
   budgets are one figure per category with no time dimension. Re-import an
   edited plan when the figure changes.

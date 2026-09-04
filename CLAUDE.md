@@ -30,15 +30,43 @@ no package.json. What is in the repo is what runs.
   line each store the rate they were logged at. Changing a rate must never move
   a figure that is already recorded. There is a regression test for this.
 - **Balances are derived**, never stored: opening figure plus every
-  transaction. Nothing can drift out of sync.
+  transaction. Nothing can drift out of sync. The two exceptions are stated
+  rather than computed, because no ledger can know them: a debt's balance, and
+  an investment's worth. Both are hand-entered; the investment's is a *dated*
+  list of marks, so a March valuation stays a March valuation and the
+  net-worth history is not rewritten every time you check a price.
+- **Opening figures are in the account's own currency**, at the rate it was
+  opened at, while transaction effects are already in base. Anything summing
+  the two must convert first (`acctOpeningBase`) — adding them raw is a real
+  bug that shipped once.
 - **Two spending numbers, deliberately.** `monthSummary().expense` is everything
   that left; `.spend` and `trueBurnFor()` exclude one-offs and money you are
   owed back. Runway is built from true burn over `freeAssets()` (which drops
   committed pockets). If you add a place that shows "what I spend", pick the one
   that matches the question and be consistent with the charts beside it.
+- **Three kinds of money are not yours to spend, and each is excluded
+  differently.** Committed pockets are yours but out of the runway. Investments
+  count toward net worth at their mark but are dropped from `freeAssets()`
+  entirely — you cannot pay rent from a pension. A grant is not yours at all:
+  its unspent balance comes out of net worth, its spending is out of
+  `trueBurnFor()` and out of `spendByCategory()`, and it lives in a pocket
+  forced to `committed`. The grant arithmetic is self-checking — the award
+  arriving adds to assets and to restricted together, so net worth does not
+  move; spending takes off both; overspending past it takes off assets alone
+  and net worth falls. If a change breaks one of those three, it is wrong.
+- **Money going into an investment is a transfer, never an expense.** Logged as
+  an expense it lands in the burn rate and reports a saver as someone bleeding
+  money. Same rule for the reverse: a payout is income, a sale is a transfer
+  out. Recording a sale as income counts the same money twice.
+- **The projection never averages past income.** `projectForward()` uses
+  scheduled recurring income only, weighted by confidence. Averaging what a
+  contractor earned last quarter is the lie that makes freelance work look like
+  a salary. Confidence lives on `state.plan.lines`, never on the recurring
+  record — join through `planKey`.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
-  number is worse than a visible failure.
+  number is worse than a visible failure. "Can I afford it" refuses outright
+  when there is no income booked, rather than projecting a date from nothing.
 
 ## Coffer's look
 
@@ -64,6 +92,15 @@ Six tabs, one question each: Today, Ledger, Plan, Worth, Insights, Settings. A
 tab that grows past about three cards has stopped answering one question — split
 it, or give it a `subNav` the way Plan does. Overview was allowed to reach seven
 blocks and became the thing everybody scrolled past.
+
+Two tabs now carry a `subNav`: **Plan** (Outlook · Budgets · Bills · Income ·
+Goals · Grants · The plan) and **Worth** (Accounts · Investments · Debts). New
+work goes into one of those rather than into a seventh tab — six is the grid,
+and the bottom bar is the app's shape.
+
+When a screen is rebuilt, check nothing was the *only* caller of an action.
+`accountsCard()` stopped being called during the Worth rebuild and took pocket
+editing with it; the buttons still existed, nothing rendered them.
 
 ## Testing
 

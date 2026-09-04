@@ -41,7 +41,11 @@ covers: YYYY-MM to YYYY-MM
 ## Goals
 - <Name>: <amount> [CUR] by <YYYY-MM-DD>
 
-All four sections are optional. One entry per line. Everything after the amount
+## Grants
+- <Name>: <total> [CUR] into <Account> from <YYYY-MM-DD> until <YYYY-MM-DD>, <Funder>
+- <Name> > <Heading>: <amount>
+
+All five sections are optional. One entry per line. Everything after the amount
 may come in any order.
 
 RULES — breaking any of these makes the line fail to import
@@ -74,6 +78,19 @@ RULES — breaking any of these makes the line fail to import
   account. Budgets are monthly by definition — never put a frequency on one.
 - SUB-BUDGETS: "Parent > Name: amount" caps one charge inside a category, e.g.
   "Subscriptions > Spotify: 12". The parent must be a category I already have.
+- GRANTS are money I am HOLDING FOR SOMEONE ELSE — a grant, a fund, a budget I
+  administer. Put them under ## Grants, never under ## Income. If you are not
+  sure whether something is mine or held, ASK; the difference decides whether it
+  counts toward my net worth.
+  * "into <Account>" is the account it sits in. Never a pocket — Coffer makes
+    the grant its own pocket.
+  * "from <date>" is when it was awarded; "until <date>" is when it must be
+    spent by.
+  * After the comma comes the FUNDER, not a category. A grant has no category.
+  * "<Name> > <Heading>: amount" is one allocation inside it, and is a TOTAL
+    for the whole award, not a monthly figure. Write the grant on a line above
+    its headings. Headings must be in the same currency as the award.
+  * Headings need not add up to the award; Coffer reports the difference.
 - REVIEW DATE: if I mention a decision point — a contract renewal, a move —
   put "review_by: YYYY-MM-DD" under the covers line.
 - SCENARIOS: if I ask for a variant of a plan I already have, write
@@ -91,6 +108,9 @@ WHAT GOES WHERE
 - Income: money arriving on a schedule.
 - Goals: a lump sum being saved toward, optionally by a date. Not a monthly
   amount — the total.
+- Grants: money that is not mine. It stays out of my net worth, my burn rate
+  and my budgets. If I said "I got a grant" and I get to keep it, it is income;
+  if I have to spend it on their errand and report on it, it is a grant.
 
 AFTER THE CODE BLOCK
 In one short paragraph, tell me: anything you converted (a fortnightly figure to
@@ -122,6 +142,11 @@ covers: 2026-09 to 2027-08
 
 ## Goals
 - Cyprus deposit: 3000 by 2027-02-28
+
+## Grants
+- Museum fellowship: 20000 into Wallet from 2026-10-01 until 2027-06-30, The Museum
+- Museum fellowship > Travel: 5000
+- Museum fellowship > Materials: 12000
 ```
 
 ## If the import still refuses a line
