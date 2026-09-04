@@ -787,6 +787,25 @@
     gap: 0.6rem; font-size: 0.78rem;
   }
   .split-row.muted { color: var(--dim); }
+  /* One row per way of paying. The verdict pill is the column the eye runs
+     down, so it sits on the same line as the name and the detail hangs under
+     both rather than pushing them apart. */
+  .afford-rows { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.9rem; }
+  .afford-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 0.6rem;
+    align-items: center; text-align: left; width: 100%;
+    padding: 0.7rem 0.85rem; border: 1px solid var(--rule); border-radius: 14px;
+    background: transparent; color: inherit; cursor: pointer; font: inherit;
+  }
+  .afford-row.on { background: var(--tint); border-color: var(--rule-strong); }
+  .afford-row.off { opacity: 0.55; cursor: default; }
+  .afford-name { font-size: 0.86rem; font-weight: 600; min-width: 0; }
+  .afford-detail { grid-column: 1 / -1; font-size: 0.74rem; color: var(--dim); line-height: 1.45; }
+  .tappable { cursor: pointer; }
+  .tappable:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+  /* a row deliberately left out of a calculation, not a disabled one */
+  .row.muted .row-title, .row.muted .row-fig { color: var(--faint); }
+  .row.muted .row-fig { font-variant-numeric: tabular-nums; }
   .split-tag { font-size: 0.68rem; color: var(--dim); }
   .split-fig { font-family: var(--serif); font-size: 0.95rem; font-weight: 400; white-space: nowrap; }
   .pair { display: flex; align-items: stretch; justify-content: space-between; gap: 1rem; }
@@ -837,8 +856,9 @@
   .due-when.warn { color: var(--warn); }
   .due-amt { font-family: var(--serif); font-size: 1rem; font-weight: 400; }
 
-  .notices { padding: 0 0.35rem; margin-top: 0.9rem; }
-  .notice { font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0 0 0.4rem; }
+  .notices { padding: 0; margin: 0; }
+  .notice { font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0 0 0.55rem; }
+  .notice:last-child { margin-bottom: 0; }
   .notice.warn { color: var(--warn); }
   .notice b { color: var(--ink); font-weight: 600; }
   .notice.warn b { color: inherit; }
@@ -962,7 +982,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-03c";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04a";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1809,6 +1829,197 @@
     var b = burnRate();
     if (!(b.rate > 0)) return { months: null, burn: 0, free: freeAssets(), basis: b };
     return { months: freeAssets() / b.rate, burn: b.rate, free: freeAssets(), basis: b };
+  }
+
+  /* ---------------- the forward projection ----------------
+     runway() above is a single division: free money over burn. It answers
+     "how long at today's rate", which quietly assumes today repeats forever.
+     For contract income with a known end date that is exactly the wrong
+     assumption — the interesting month is the one after the contract stops.
+
+     So: walk forward a month at a time, the way simulatePayoff already walks
+     debts, and let each recurring line start and stop on its own dates.
+
+     Two rules that are easy to get wrong and expensive to get wrong:
+
+     1. The outgoing baseline is TRUE BURN, not burn plus recurring bills.
+        Rent is already inside trueBurnFor() because it gets logged every
+        month. Adding the recurring record on top would charge it twice. Only
+        *changes* inside the horizon are applied — a bill that ends, one that
+        starts later, a one-off on its own month.
+
+     2. Income is never averaged from history. Averaging past contract income
+        is the lie that makes freelance work look like a salary; a projection
+        built on it is confident about money nobody has promised. Only
+        scheduled recurring income counts, weighted by its confidence.
+     ------------------------------------------------- */
+
+  var PROJECT_MONTHS = 18;
+
+  // How long one cycle of a recurring record is, in days. Used to tell a bill
+  // that is already in the rhythm from one that genuinely starts later:
+  // nextDate is the NEXT due date, so an active monthly bill always has one in
+  // the future. Within a cycle means it is already running — and therefore
+  // already inside the logged burn.
+  var FREQ_DAYS = { weekly: 7, monthly: 31, yearly: 366, once: 0 };
+  function startsLater(startsOn, frequency) {
+    if (!startsOn) return false;
+    var span = FREQ_DAYS[frequency] != null ? FREQ_DAYS[frequency] : 31;
+    return daysUntil(startsOn) > span;
+  }
+
+  // applyPlan writes the recurring record with planKey but without confidence;
+  // confidence lives on state.plan.lines only. Reading state.recurring alone
+  // would treat a 40%-likely grant as certain money, so the join goes through
+  // planKey. No plan line, or none with a confidence, means "as certain as
+  // anything else here" — 100%.
+  function confidenceOf(r) {
+    if (!r || !r.planKey || !state.plan) return 1;
+    var lines = state.plan.lines || [];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].key === r.planKey && lines[i].confidence != null) {
+        return clamp(num(lines[i].confidence) / 100, 0, 1);
+      }
+    }
+    return 1;
+  }
+
+  // Every recurring line the projection will touch, resolved once so the
+  // toggles and the walk agree about what exists.
+  function projectionLines() {
+    return state.recurring.map(function (r) {
+      var base = toBase(r.amount, r.currency, r.rate);
+      return {
+        id: r.id,
+        name: r.name,
+        type: r.type === "income" ? "income" : "expense",
+        frequency: r.frequency,
+        once: r.frequency === "once",
+        startsOn: r.nextDate || null,
+        until: r.until || null,
+        base: base,
+        monthly: monthlyEquivalent(base, r.frequency),
+        confidence: r.type === "income" ? confidenceOf(r) : 1
+      };
+    });
+  }
+
+  /* Walk forward from free money now.
+
+       months   how far to look; 18 by default
+       opts.off        ids of income lines switched off ("what if it doesn't renew")
+       opts.extra      [{ mk, amount }] outflows to insert — how "can I afford it" asks
+       opts.burnDelta  a standing change to monthly burn, positive or negative
+                       (trimming a budget is a negative one)
+
+     Returns a point per month plus the first month the balance goes under,
+     which is the number the whole screen is built around. */
+  function projectForward(months, opts) {
+    var o = opts || {};
+    var off = o.off || {};
+    var horizon = months || PROJECT_MONTHS;
+    var b = burnRate();
+    var baseBurn = Math.max(0, b.rate + num(o.burnDelta));
+    var lines = projectionLines();
+    var hasSchedule = lines.some(function (L) { return L.type === "income"; });
+    var extra = {};
+    (o.extra || []).forEach(function (x) { extra[x.mk] = (extra[x.mk] || 0) + num(x.amount); });
+
+    // Only recurring EXPENSES that change inside the horizon adjust the
+    // baseline; a bill already running and still running is inside the burn.
+    var start = thisMonth();
+    var startDay = today();
+    var points = [];
+    var balance = freeAssets();
+    var hasIncome = false;
+    var crossing = null;
+
+    for (var i = 1; i <= horizon; i++) {
+      var mk = monthShift(start, i);
+      var mkStart = mk + "-01", mkEnd = lastDayOf(mk);
+      var income = 0, out = baseBurn;
+      var events = [];
+
+      lines.forEach(function (L) {
+        var live = (!L.startsOn || L.startsOn <= mkEnd) && (!L.until || L.until >= mkStart);
+
+        if (L.once) {
+          // a lump sum belongs to exactly one month; monthlyEquivalent returns
+          // 0 for "once" precisely so it cannot leak into the monthly path
+          if (!L.startsOn || monthOf(L.startsOn) !== mk) return;
+          if (L.type === "income") {
+            if (off[L.id]) return;
+            hasIncome = true;
+            income += L.base * L.confidence;
+            events.push({ kind: "lump", name: L.name, amount: L.base * L.confidence });
+          } else {
+            out += L.base;
+            events.push({ kind: "spend", name: L.name, amount: L.base });
+          }
+          return;
+        }
+
+        if (L.type === "income") {
+          if (!live) {
+            // the month a contract stops paying is the one worth marking
+            if (L.until && monthOf(L.until) === monthShift(mk, -1)) {
+              events.push({ kind: "ended", name: L.name });
+            }
+            return;
+          }
+          if (off[L.id]) return;
+          hasIncome = true;
+          income += L.monthly * L.confidence;
+          return;
+        }
+
+        // an expense already running today is inside trueBurnFor(); only a
+        // change relative to that baseline is applied
+        var runningNow = !startsLater(L.startsOn, L.frequency) && (!L.until || L.until >= startDay);
+        if (runningNow && !live) {
+          out -= L.monthly;                       // it stops inside the horizon
+          if (L.until && monthOf(L.until) === monthShift(mk, -1)) {
+            events.push({ kind: "billEnded", name: L.name, amount: L.monthly });
+          }
+        } else if (!runningNow && live) {
+          out += L.monthly;                       // it starts inside the horizon
+          if (L.startsOn && monthOf(L.startsOn) === mk) {
+            events.push({ kind: "billStarts", name: L.name, amount: L.monthly });
+          }
+        }
+      });
+
+      if (out < 0) out = 0;
+      if (extra[mk]) {
+        out += extra[mk];
+        events.push({ kind: "buy", amount: extra[mk] });
+      }
+
+      balance += income - out;
+      if (crossing == null && balance < 0) crossing = mk;
+      points.push({ mk: mk, balance: balance, income: income, out: out, events: events });
+    }
+
+    return {
+      points: points,
+      crossing: crossing,
+      hasIncome: hasIncome,
+      hasSchedule: hasSchedule,
+      burn: baseBurn,
+      start: freeAssets(),
+      basis: b,
+      horizon: horizon
+    };
+  }
+
+  // How many months the money lasts, read off the projection rather than
+  // divided out of it. Null means it does not run out inside the horizon.
+  function projectedMonths(pr) {
+    if (!pr.crossing) return null;
+    for (var i = 0; i < pr.points.length; i++) {
+      if (pr.points[i].mk === pr.crossing) return i;   // last month still above nought
+    }
+    return null;
   }
 
   // #14 — an income line that ends with nothing scheduled to replace it. This
@@ -3304,6 +3515,8 @@
     if (!points.length) return "";
 
     var vals = points.map(function (p) { return p.value; });
+    // a comparison series shares the scale, or the two lines lie about their gap
+    if (o.ghost && o.ghost.length === points.length) vals = vals.concat(o.ghost);
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
     if (o.baseZero && lo > 0) lo = 0;
     if (lo === hi) { lo -= 1; hi += 1; }
@@ -3332,6 +3545,24 @@
     var dots = '<circle cx="' + px(points.length - 1).toFixed(2) + '" cy="' + py(points[points.length - 1].value).toFixed(2) +
       '" r="1.5" fill="' + stroke + '" stroke="var(--surface)" stroke-width="0.6" />';
 
+    // where the series was before whatever is being tested against it
+    var ghost = (o.ghost && o.ghost.length === points.length)
+      ? '<path d="' + o.ghost.map(function (v, i) {
+          return (i ? "L" : "M") + px(i).toFixed(2) + " " + py(v).toFixed(2);
+        }).join(" ") + '" fill="none" stroke="var(--dim)" stroke-width="0.9" stroke-dasharray="2 2" ' +
+        'stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity="0.7" />'
+      : "";
+
+    // one moment worth pointing at — the month the money runs out
+    var mark = "";
+    if (o.mark != null && o.mark >= 0 && o.mark < points.length) {
+      var mx = px(o.mark), mc = o.markColor || "var(--alert)";
+      mark = '<line x1="' + mx.toFixed(2) + '" y1="' + pad + '" x2="' + mx.toFixed(2) + '" y2="' + (H - pad) +
+        '" stroke="' + mc + '" stroke-width="0.7" stroke-dasharray="1.6 1.6" vector-effect="non-scaling-stroke" />' +
+        '<circle cx="' + mx.toFixed(2) + '" cy="' + py(points[o.mark].value).toFixed(2) +
+        '" r="1.6" fill="' + mc + '" stroke="var(--surface)" stroke-width="0.6" />';
+    }
+
     return '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" ' +
       'style="height:' + (o.cssHeight || 46) + 'px" role="img" aria-label="' + esc(o.aria || "trend") + '">' +
       '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
@@ -3340,9 +3571,10 @@
       "</linearGradient></defs>" +
       zeroLine +
       '<path d="' + area + '" fill="url(#' + gid + ')" />' +
+      ghost +
       '<path d="' + line + '" fill="none" stroke="' + stroke + '" stroke-width="1.1" ' +
       'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />' +
-      dots + hover + "</svg>";
+      mark + dots + hover + "</svg>";
   }
 
   function axisRow(points) {
@@ -3558,13 +3790,16 @@
       // Prefer committed income as the denominator: if the salary is itself a
       // recurring item, guessing from logged history is both unnecessary and
       // wrong on the first of the month.
-      var incomeRef = load.income > 0 ? load.income : (cur.income > 0 ? cur.income : avgMonthlySaving(3) + burn);
+      var incomeRef = load.income > 0 ? load.income
+        : (cur.income > 0 ? cur.income : avgMonthlySaving(3) + burnRate().rate);
       var refName = load.income > 0 ? "your committed income" : "your income";
       var share = incomeRef > 0 ? load.expense / incomeRef : null;
       notes.push({
         tone: share != null && share > 0.6 ? "warn" : "info", mark: "↻",
         html: "<span class=\"fig\">" + fmt(load.expense, { round: true }) + "/mo</span> is already committed to recurring bills" +
-          (share != null ? " — about <b>" + Math.round(share * 100) + "%</b> of " + refName + "." : ".")
+          (share == null ? "."
+            : share < 0.01 ? " — under <b>1%</b> of " + refName + "."
+            : " — about <b>" + Math.round(share * 100) + "%</b> of " + refName + ".")
       });
     }
     if (load.income > 0) {
@@ -3748,7 +3983,9 @@
   function runwayBand() {
     var rw = runway();
     var m = rw.months;
-    return '<div class="band runway-band">' +
+    // the number, and the screen that says where it goes from here, one tap apart
+    return '<div class="band runway-band tappable" data-act="plan-tab" data-id="outlook" ' +
+      'role="button" tabindex="0" aria-label="See the months ahead">' +
       runwayGauge(m) +
       "<div>" +
       '<span class="label">Runway</span>' +
@@ -3759,6 +3996,7 @@
       (rw.basis && rw.basis.partial && m != null
         ? " · from only " + rw.basis.months + " month" + (rw.basis.months === 1 ? "" : "s") + " of data"
         : "") + "</p>" +
+      '<p class="band-sub" style="margin-top:0.25rem;font-weight:600">See the months ahead →</p>' +
       "</div></div>";
   }
 
@@ -4036,18 +4274,35 @@
       '<button class="btn sm quiet" data-act="plan-tab" data-id="bills">Manage bills</button></div></div>';
   }
 
+  // shortDate drops the year, which is fine for a bill due next week and not
+  // fine for a contract ending in a year and a half
+  function longDate(d) {
+    try {
+      var dt = parseISO(d);
+      var sameYear = dt.getFullYear() === new Date().getFullYear();
+      return dt.toLocaleDateString(undefined,
+        sameYear ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" });
+    } catch (e) { return d; }
+  }
+
   function shortDate(d) {
     try {
       return parseISO(d).toLocaleDateString(undefined, { day: "numeric", month: "short" });
     } catch (e) { return d; }
   }
 
+  // These used to sit loose on the page background between two cards, which
+  // read as leftover text rather than as a block worth reading. Same shell as
+  // everything else on Today.
   function noticesBlock() {
     var notes = buildInsights(viewMonth).slice(0, 3);
     if (!notes.length) return "";
-    return '<div class="notices">' + notes.map(function (nt) {
-      return '<p class="notice' + (nt.tone === "warn" || nt.tone === "bad" ? " warn" : "") + '">' + nt.html + "</p>";
-    }).join("") + '<button class="btn sm quiet" data-act="go-insights" style="margin-top:0.5rem">All insights →</button></div>';
+    return '<div class="card" style="margin-top:1rem"><div class="card-head">' +
+      "<h3>Everything worth noting</h3>" +
+      '<button class="btn sm quiet" data-act="go-insights">All insights \u2192</button></div>' +
+      '<div class="card-body"><div class="notices">' + notes.map(function (nt) {
+        return '<p class="notice' + (nt.tone === "warn" || nt.tone === "bad" ? " warn" : "") + '">' + nt.html + "</p>";
+      }).join("") + "</div></div></div>";
   }
 
   function renderToday() {
@@ -4216,6 +4471,7 @@
   }
 
   var PLAN_TABS = [
+    { id: "outlook", label: "Outlook" },
     { id: "budgets", label: "Budgets" },
     { id: "bills", label: "Bills" },
     { id: "income", label: "Income" },
@@ -4285,10 +4541,13 @@
       bills: "What you have committed to paying, and what it costs a month.",
       income: "What arrives on a cycle. It is what your committed bills are measured against.",
       goals: "What you're saving toward, and whether your current pace gets you there.",
-      plan: "A written plan, scored against what actually happened."
+      plan: "A written plan, scored against what actually happened.",
+      outlook: "Where the money goes from here, month by month, with every contract " +
+        "starting and stopping on its own date."
     }[sub];
 
     var right = sub === "goals" ? '<button class="btn primary" data-act="goal-add">Add a goal</button>'
+      : sub === "outlook" ? ""
       : sub === "plan" ? ""
       : !state.plan ? '<button class="btn sm" data-act="plan-tab" data-id="plan">Import a plan</button>'
       : monthStepper();
@@ -4296,11 +4555,438 @@
     var html = pageHead("Plan", blurb, right) +
       subNav("plan-tab", PLAN_TABS, sub);
 
-    if (sub === "budgets") html += budgetsBody();
+    if (sub === "outlook") html += outlookBody();
+    else if (sub === "budgets") html += budgetsBody();
     else if (sub === "bills") html += billsBody();
     else if (sub === "income") html += incomeBody();
     else if (sub === "goals") html += goalsBody();
     else html += planBody();
+    return html;
+  }
+
+  /* ---------------- Plan > Outlook ----------------
+     The runway number on Today says how long the money lasts if nothing
+     changes. This screen is for when something does. */
+
+  // which projected income lines the reader has switched off, to ask what
+  // happens if a contract does not renew. Not saved: it is a question, not a
+  // second plan.
+  var outlookOff = {};
+
+  function outlookSentence(pr) {
+    var m = projectedMonths(pr);
+    if (!pr.hasSchedule) {
+      return "Nothing is scheduled to come in, so this is your money running down at " +
+        fmt(pr.burn, { round: true }) + " a month and nothing replacing it.";
+    }
+    if (pr.crossing == null) {
+      var last = pr.points[pr.points.length - 1];
+      var cover = pr.burn > 0 ? last.balance / pr.burn : null;
+      if (cover != null && cover < 3) {
+        return "You do not run out inside " + pr.horizon + " months, but you end them on " +
+          fmt(last.balance, { round: true }) + " \u2014 " +
+          (cover < 1 ? "under a month" : "about " + Math.floor(cover) + " months") + " of cover left.";
+      }
+      return "You stay above water for the whole of the next " + pr.horizon + " months.";
+    }
+    // the last income to stop before the money did — however many months
+    // earlier it was, that is the thing that set this date
+    var idx = pr.points.map(function (x) { return x.mk; }).indexOf(pr.crossing);
+    var cause = null;
+    for (var i = 0; i <= idx && i < pr.points.length; i++) {
+      pr.points[i].events.forEach(function (e) { if (e.kind === "ended") cause = e.name; });
+    }
+    var when = m == null ? ""
+      : m <= 1 ? ", inside a month" 
+      : ", " + (m < NUM_WORDS.length ? NUM_WORDS[m] : m) + " months from now";
+    return "You run out in " + monthName(pr.crossing, true) + when +
+      (cause ? " \u2014 after " + cause + " stops." : ".");
+  }
+
+  function outlookChart(pr, ghostPoints) {
+    var pts = pr.points.map(function (x) {
+      return {
+        label: monthName(x.mk),
+        value: x.balance,
+        tip: monthName(x.mk, true) + "\n" + fmt(x.balance) +
+          "\nin " + fmt(x.income, { round: true }) + " · out " + fmt(x.out, { round: true })
+      };
+    });
+    var markIdx = pr.crossing == null ? null : pr.points.map(function (x) { return x.mk; }).indexOf(pr.crossing);
+    return areaChart(pts, {
+      cssHeight: 132, height: 42, baseZero: true,
+      color: pr.crossing == null ? "var(--calm)" : "var(--alert)",
+      mark: markIdx,
+      ghost: ghostPoints || null,
+      aria: "Projected balance over the next " + pr.horizon + " months"
+    }) +
+      '<div style="display:flex;justify-content:space-between;margin-top:0.4rem">' +
+      '<span class="hint">' + esc(monthName(pr.points[0].mk, true)) + "</span>" +
+      '<span class="hint">' + esc(monthName(pr.points[pr.points.length - 1].mk, true)) + "</span></div>";
+  }
+
+  // Contracts starting and stopping, bills ending, lump sums landing. Only the
+  // months where something actually happens earn a line.
+  function outlookEvents(pr) {
+    var rows = [];
+    pr.points.forEach(function (x) {
+      x.events.forEach(function (e) {
+        if (e.kind === "buy") return;      // the afford card explains itself
+        var text =
+          e.kind === "ended" ? esc(e.name) + " stops paying"
+          : e.kind === "off" ? esc(e.name) + " switched off"
+          : e.kind === "lump" ? esc(e.name) + " lands — " + fmt(e.amount, { round: true })
+          : e.kind === "spend" ? esc(e.name) + " goes out — " + fmt(e.amount, { round: true })
+          : e.kind === "billEnded" ? esc(e.name) + " ends — " + fmt(e.monthly || e.amount, { round: true }) + "/mo back"
+          : e.kind === "billStarts" ? esc(e.name) + " starts — " + fmt(e.amount, { round: true }) + "/mo"
+          : null;
+        if (text) rows.push({ mk: x.mk, text: text, kind: e.kind });
+      });
+    });
+    if (!rows.length) return "";
+    return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>What changes</h3>' +
+      '<span class="sub">' + rows.length + (rows.length === 1 ? " thing" : " things") + "</span></div>" +
+      '<div class="card-body flush"><div class="rows">' +
+      rows.slice(0, 12).map(function (r) {
+        var bad = r.kind === "ended" || r.kind === "off" || r.kind === "billStarts";
+        return '<div class="row"><span class="row-title">' + r.text + "</span>" +
+          '<span class="pill ' + (bad ? "warn" : "mute") + '">' + esc(monthName(r.mk, true)) + "</span></div>";
+      }).join("") + "</div></div></div>";
+  }
+
+  // "What if the contract doesn't renew" — one switch per income line, rather
+  // than a whole second plan to write and keep in step.
+  function outlookIncomeCard() {
+    var lines = projectionLines().filter(function (L) { return L.type === "income"; });
+    if (!lines.length) {
+      return '<div class="card pad" style="margin-top:1rem">' +
+        '<span class="label">Income</span>' +
+        '<p class="empty" style="margin:0.5rem 0 0.9rem">Nothing is scheduled to come in, so this projection is ' +
+        'just your savings running down. Add what you are expecting and it will be worth reading.</p>' +
+        '<button class="btn sm primary" data-act="plan-tab" data-id="income">Add income</button></div>';
+    }
+    return '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>What if this stops</h3>' +
+      '<span class="sub">tap to leave one out</span></div>' +
+      '<div class="card-body flush"><div class="rows">' +
+      lines.map(function (L) {
+        var isOff = !!outlookOff[L.id];
+        var per = L.once ? fmt(L.base, { round: true }) + " once" : fmt(L.monthly, { round: true }) + "/mo";
+        var bits = [per];
+        if (L.confidence < 1) bits.push("counted at " + Math.round(L.confidence * 100) + "%");
+        if (L.until) bits.push("until " + longDate(L.until));
+        return '<div class="row stacked' + (isOff ? " muted" : "") + '">' +
+          '<div class="stack-top"><span class="row-title">' + esc(L.name) + "</span>" +
+          '<span class="row-fig">' + (isOff ? "—" : fmt(L.once ? L.base * L.confidence : L.monthly * L.confidence, { round: true })) + "</span></div>" +
+          '<div class="stack-foot"><span class="row-sub">' + esc(bits.join(" · ")) + "</span>" +
+          '<button class="btn sm' + (isOff ? " primary" : " quiet") + '" data-act="outlook-toggle" data-id="' + L.id + '">' +
+          (isOff ? "Put it back" : "Leave it out") + "</button></div></div>";
+      }).join("") + "</div></div></div>";
+  }
+
+  /* ---------------- can I afford it ----------------
+     Never a yes or a no. "Yes" without saying what it costs you is the answer
+     that gets people into trouble, and "no" is rarely true — the real question
+     is which way of paying for it you can live with.
+
+     So: run the projection once per funding route and put them side by side.
+     Nothing here writes to the ledger; this is a question, not an entry. */
+
+  // the reader's current question, held for as long as they are looking at it
+  var afford = null;
+
+  var AFFORD_FLOOR_MONTHS = 3;    // "still standing" means three months of cover
+  var AFFORD_MAX_HORIZON = 60;    // beyond five years it is not a purchase plan
+
+  // Months of cover left at the end of a projection, which is what actually
+  // decides whether a route is survivable.
+  function coverAfter(pr) {
+    if (pr.crossing != null) return 0;
+    var last = pr.points[pr.points.length - 1];
+    return pr.burn > 0 ? last.balance / pr.burn : Infinity;
+  }
+
+  // The first month the purchase could be made without ever dropping below the
+  // floor. Walks forward rather than solving, because income is lumpy: the
+  // month after a grant lands can afford things the month before it cannot.
+  function firstAffordableMonth(amount, floor) {
+    for (var i = 0; i < PROJECT_MONTHS; i++) {
+      var mk = monthShift(thisMonth(), i + 1);
+      var pr = projectForward(PROJECT_MONTHS, { off: outlookOff, extra: [{ mk: mk, amount: amount }] });
+      var lowest = Infinity;
+      pr.points.forEach(function (x) { if (x.balance < lowest) lowest = x.balance; });
+      if (pr.crossing == null && lowest >= floor) return mk;
+    }
+    return null;
+  }
+
+  /* Every way of paying for it, each one a real projection rather than an
+     estimate. `a` is { amount, currency, rate, base, months, markup, date,
+     budgetCat, budgetCut }. */
+  function affordRoutes(a) {
+    var total = a.base;
+    var floor = burnRate().rate * AFFORD_FLOOR_MONTHS;
+    var buyMonth = monthOf(a.date || today());
+    if (buyMonth <= thisMonth()) buyMonth = monthShift(thisMonth(), 1);
+
+    /* Every route is measured over the SAME window, long enough to contain the
+       slowest of them. Left at eighteen months, a route paying over
+       thirty-eight only had eighteen months of its cost counted, which made
+       the slowest way to pay look like the cheapest — and the card
+       recommended it. Compare like with like or do not compare. */
+    var n = Math.max(2, Math.round(num(a.months) || 6));
+    var cut0 = num(a.budgetCut);
+    var trimMonths = (a.budgetCat && cut0 > 0) ? Math.ceil(total / cut0) : 0;
+    var horizon = Math.min(AFFORD_MAX_HORIZON, Math.max(PROJECT_MONTHS, n, trimMonths));
+    var routes = [];
+
+    // 1. all of it, on the date asked for
+    routes.push({
+      id: "now", label: "Pay it now",
+      detail: fmt(total, { round: true }) + " in " + monthName(buyMonth, true),
+      monthly: null,
+      paid: total,
+      pr: projectForward(horizon, { off: outlookOff, extra: [{ mk: buyMonth, amount: total }] })
+    });
+
+    // 2. spread, with whatever the plan adds on top. An instalment plan is
+    //    almost never free, and a route that hides the markup is not a
+    //    comparison, it is an advert.
+    var paid = total * (1 + (num(a.markup) || 0) / 100);
+    var per = paid / n;
+    var extras = [];
+    for (var i = 0; i < n; i++) extras.push({ mk: monthShift(buyMonth, i), amount: per });
+    routes.push({
+      id: "spread", label: n + " monthly payments",
+      detail: fmt(per, { round: true }) + " a month for " + n +
+        (paid - total > 0.5 ? " — " + fmt(paid, { round: true }) + " all in, " +
+          fmt(paid - total, { round: true }) + " more than the price" : ""),
+      monthly: per,
+      paid: paid,
+      overpay: paid - total,
+      pr: projectForward(horizon, { off: outlookOff, extra: extras })
+    });
+
+    // 3. wait until it fits
+    var when = firstAffordableMonth(total, floor);
+    routes.push({
+      id: "wait", label: "Save up for it",
+      detail: when == null
+        ? "No month in the next " + PROJECT_MONTHS + " months leaves " + AFFORD_FLOOR_MONTHS +
+          " months of cover behind"
+        : "Buy it in " + monthName(when, true) + " and you never go under " +
+          fmt(floor, { round: true }),
+      monthly: null,
+      paid: total,
+      blocked: when == null,
+      pr: when == null ? null
+        : projectForward(horizon, { off: outlookOff, extra: [{ mk: when, amount: total }] })
+    });
+
+    // 4. pay for it by spending less every month. Reuses the budgets already
+    //    set rather than inventing a second idea of what a category costs.
+    var cut = cut0;
+    if (a.budgetCat && cut > 0) {
+      var trimExtras = [];
+      for (var j = 0; j < trimMonths; j++) {
+        trimExtras.push({ mk: monthShift(buyMonth, j), amount: total / trimMonths });
+      }
+      var tooSlow = trimMonths > AFFORD_MAX_HORIZON;
+      routes.push({
+        id: "trim", label: "Trim " + a.budgetCat,
+        detail: fmt(cut, { round: true }) + " a month less on " + a.budgetCat +
+          (tooSlow
+            ? " would take " + trimMonths + " months \u2014 too far out to be a plan"
+            : " covers it in " + trimMonths + (trimMonths === 1 ? " month" : " months")),
+        monthly: cut,
+        paid: total,
+        blocked: tooSlow,
+        // the cut is a standing reduction in what you spend, and the purchase
+        // is paid out of exactly that
+        pr: tooSlow ? null
+          : projectForward(horizon, { off: outlookOff, burnDelta: -cut, extra: trimExtras })
+      });
+    }
+
+    // 5. out of a pocket already set aside. It is the cheapest route on paper
+    //    and the one with a cost the projection cannot see, so it says whose
+    //    money it was.
+    if (a.pocketRef) {
+      var ref = parseRef(a.pocketRef);
+      var acc = state.accounts.filter(function (x) { return x.id === ref.accountId; })[0];
+      var pk = acc && pocketById(acc, ref.pocketId);
+      if (pk) {
+        var held = pocketBalance(acc, pk);
+        var goal = state.goals.filter(function (g) { return g.pocketId === pk.id; })[0];
+        // whose money it is matters whether or not there is enough of it
+        var whose = goal ? " \u2014 it is what " + goal.name + " is being saved into" : "";
+        routes.push({
+          id: "pocket", label: "Take it from " + pk.name,
+          detail: (held >= total
+            ? fmt(held, { round: true }) + " is in there"
+            : "Only " + fmt(held, { round: true }) + " is in there, " +
+              fmt(total - held, { round: true }) + " short") + whose,
+          monthly: null,
+          paid: total,
+          blocked: held < total,
+          // an earmarked pocket is already inside free assets, so spending it
+          // moves the same money; a committed one was never counted
+          pr: held >= total
+            ? projectForward(horizon, { off: outlookOff, extra: [{ mk: buyMonth, amount: total }] })
+            : null
+        });
+      }
+    }
+
+    routes.horizon = horizon;
+    return routes;
+  }
+
+  function affordCard() {
+    if (!afford) return "";
+    var a = afford;
+    var b = burnRate();
+
+    // The money rules: a projection with nothing coming in cannot answer this,
+    // and a made-up date is worse than an admitted gap.
+    var probe = projectForward(PROJECT_MONTHS, { off: outlookOff });
+    if (!probe.hasSchedule) {
+      return '<div class="card pad" style="margin-top:1rem">' +
+        '<div class="card-head" style="padding:0"><h3>' + esc(a.label || "That purchase") + "</h3>" +
+        '<button class="ibtn" data-act="afford-clear" aria-label="Close">×</button></div>' +
+        '<p class="lead" style="color:var(--warn)">There is no income booked, so there is no honest answer to ' +
+        "give.</p>" +
+        '<p class="band-sub">Every route below would just be your savings going down by ' +
+        fmt(a.base, { round: true }) + ". Add what you are expecting under Plan \u203a Income and ask again." +
+        "</p></div>";
+    }
+    if (!(b.rate > 0)) {
+      return '<div class="card pad" style="margin-top:1rem">' +
+        '<div class="card-head" style="padding:0"><h3>' + esc(a.label || "That purchase") + "</h3>" +
+        '<button class="ibtn" data-act="afford-clear" aria-label="Close">×</button></div>' +
+        '<p class="lead" style="color:var(--warn)">Nothing is logged yet, so there is no running cost to ' +
+        "measure this against.</p>" +
+        '<p class="band-sub">Log a few weeks of spending and this becomes worth reading.</p></div>';
+
+    }
+
+    var routes = affordRoutes(a);
+    var baseline = routes.horizon === PROJECT_MONTHS
+      ? probe
+      : projectForward(routes.horizon, { off: outlookOff });
+    var baseCover = coverAfter(baseline);
+
+    // A route that runs you out is not an option; it is a warning. Only a
+    // route that survives the horizon can be recommended, and among those the
+    // one that keeps the most cover — cost breaks the tie.
+    var viable = routes.filter(function (r) { return !r.blocked && r.pr; });
+    viable.forEach(function (r) { r.cover = coverAfter(r.pr); });
+    var surviving = viable.filter(function (r) { return r.pr.crossing == null; });
+    var best = surviving.slice().sort(function (x, y) {
+      return (y.cover - x.cover) || (x.paid - y.paid);
+    })[0];
+    // nothing survives: still show the one that holds out longest, so the
+    // reader can see how far off it is rather than just being told no
+    var leastBad = best ? null : viable.slice().sort(function (x, y) {
+      return String(y.pr.crossing).localeCompare(String(x.pr.crossing)) || (x.paid - y.paid);
+    })[0];
+
+    var chosen = a.route && routes.filter(function (r) { return r.id === a.route; })[0];
+    var showing = (chosen && !chosen.blocked && chosen.pr) ? chosen : (best || leastBad);
+
+    var html = '<div class="card" style="margin-top:1rem"><div class="card-head">' +
+      "<h3>" + esc(a.label || "Can I afford it") + "</h3>" +
+      '<span class="sub">' + fmt(a.base, { round: true }) +
+      (isForeign(a.currency) ? " · " + esc(fmtIn(a.amount, a.currency)) : "") + "</span>" +
+      '<button class="ibtn" data-act="afford-clear" aria-label="Clear this question">×</button></div>' +
+      '<div class="card-body">';
+
+    if (!best) {
+      html += '<p class="lead" style="color:var(--alert)">No route to this leaves you standing.</p>' +
+        (leastBad
+          ? '<p class="band-sub">The kindest is ' + esc(leastBad.label.toLowerCase()) +
+            ", and it still runs you out in " + esc(monthName(leastBad.pr.crossing, true)) + "."
+          : '<p class="band-sub">Nothing here covers it.') + "</p>";
+    } else {
+      html += '<p class="lead" style="color:var(--' + (best.cover >= AFFORD_FLOOR_MONTHS ? "calm" : "warn") + ')">' +
+        esc(bestRouteSentence(best, baseCover)) + "</p>";
+    }
+
+    html += '<div class="afford-rows">' + routes.map(function (r) {
+      var cover = r.pr ? coverAfter(r.pr) : null;
+      var tone = r.blocked || !r.pr ? "mute"
+        : r.pr.crossing != null ? "bad"
+        : cover < AFFORD_FLOOR_MONTHS ? "warn" : "ok";
+      var verdict = r.blocked || !r.pr ? "not open to you"
+        : r.pr.crossing != null ? "runs out " + monthName(r.pr.crossing, true)
+        : cover >= 12 ? "still comfortable"
+        : Math.floor(cover) + (Math.floor(cover) === 1 ? " month" : " months") + " of cover left";
+      var on = showing && r.id === showing.id;
+      return '<button class="afford-row' + (on ? " on" : "") + (r.blocked ? " off" : "") + '" ' +
+        'data-act="afford-route" data-id="' + r.id + '">' +
+        '<span class="afford-name">' + esc(r.label) + "</span>" +
+        '<span class="pill ' + tone + '">' + esc(verdict) + "</span>" +
+        '<span class="afford-detail">' + esc(r.detail) + "</span>" +
+        "</button>";
+    }).join("") + "</div>";
+
+    if (showing && showing.pr) {
+      html += '<div style="margin-top:0.9rem">' +
+        outlookChart(showing.pr, baseline.points.map(function (x) { return x.balance; })) + "</div>" +
+        '<p class="band-sub">Solid is ' + esc(showing.label.toLowerCase()) +
+        "; dashed is where you were without it.</p>";
+    }
+
+    html += "</div></div>";
+    return html;
+  }
+
+  function bestRouteSentence(best, baseCover) {
+    var cover = best.cover;
+    var lost = baseCover === Infinity ? null : baseCover - cover;
+    if (cover >= AFFORD_FLOOR_MONTHS) {
+      return "Yes — " + best.label.toLowerCase() + ", and you finish the " + PROJECT_MONTHS +
+        " months with " + (cover >= 12 ? "more than a year" : Math.floor(cover) + " months") + " of cover" +
+        (lost != null && lost > 0.5 ? ", about " + Math.round(lost) + " fewer than if you did not" : "") + ".";
+    }
+    return "Only just — " + best.label.toLowerCase() + " leaves under " + AFFORD_FLOOR_MONTHS +
+      " months of cover at the end, which is thinner than it sounds.";
+  }
+
+
+
+  function outlookBody() {
+    if (!state.accounts.length && !state.transactions.length) return firstRunCard();
+
+    var pr = projectForward(PROJECT_MONTHS, { off: outlookOff });
+    var anyOff = Object.keys(outlookOff).some(function (k) { return outlookOff[k]; });
+    // when something is switched off, show where the line was as a ghost
+    var ghost = null;
+    if (anyOff) {
+      ghost = projectForward(PROJECT_MONTHS, {}).points.map(function (x) { return x.balance; });
+    }
+
+    var tone = pr.crossing == null ? "calm" : (projectedMonths(pr) >= 6 ? "warn" : "alert");
+    var html = '<div class="card pad">' +
+      '<span class="label">The next ' + pr.horizon + ' months</span>' +
+      '<p class="lead" style="color:var(--' + tone + ')">' + esc(outlookSentence(pr)) + "</p>" +
+      '<p class="band-sub">Starting from ' + fmt(pr.start, { round: true }) + ' reachable, at ' +
+      fmt(pr.burn, { round: true }) + " a month" +
+      (pr.basis && pr.basis.partial
+        ? " · burn from only " + pr.basis.months + " month" + (pr.basis.months === 1 ? "" : "s") + " of data"
+        : "") + "</p>" +
+      '<div style="margin-top:0.9rem">' + outlookChart(pr, ghost) + "</div>" +
+      (anyOff ? '<p class="band-sub" style="margin-top:0.5rem">The dashed line is where you were before ' +
+        "leaving income out.</p>" : "") +
+      '<div class="btn-row" style="margin-top:0.9rem">' +
+      '<button class="btn sm primary" data-act="afford-open">Can I afford something?</button></div>' +
+      "</div>";
+
+    html += affordCard();
+    html += outlookEvents(pr);
+    html += outlookIncomeCard();
+
+    html += '<p class="hint" style="margin-top:1rem;padding:0 0.35rem">This is scheduled money only — nothing here is ' +
+      "averaged from what you earned before. Work you have not written down does not appear.</p>";
     return html;
   }
 
@@ -5805,6 +6491,74 @@
       save(); applyTheme(); render();
     },
     "plan-tab": function (id) { planTab = id; view = "plan"; render(); },
+
+    /* ---- outlook ---- */
+    "afford-open": function () {
+      var cats = Object.keys(state.budgets);
+      // every pocket you could raid, named by account so two "Savings" are
+      // telling apart
+      var pockets = [];
+      openAccounts().forEach(function (acc) {
+        pocketsOf(acc).forEach(function (pk) {
+          pockets.push({ value: acctRef(acc.id, pk.id), label: acc.name + " \u203a " + pk.name });
+        });
+      });
+      openModal({
+        title: "Can I afford it?",
+        message: "Nothing here is logged \u2014 it runs your projection again with the purchase in it " +
+          "and shows you what each way of paying costs.",
+        confirmLabel: "Work it out",
+        fields: [
+          { key: "label", label: "What is it", type: "text", placeholder: "A used car", span: true },
+          { key: "amount", label: "Price", type: "number", min: 0, value: "" }
+        ].concat(currencyField()).concat([
+          { key: "date", label: "When", type: "date", value: monthShift(thisMonth(), 1) + "-01",
+            hint: "the month you would buy it in" },
+          { key: "months", label: "Spread over", type: "number", min: 2, step: "1", value: 6,
+            hint: "months, if you paid in instalments" },
+          { key: "markup", label: "Instalment markup", type: "number", min: 0, value: 0,
+            hint: "% added by the plan \u2014 0 if it is interest free" }
+        ]).concat(cats.length ? [{
+          key: "budgetCat", label: "Trim which budget", type: "select",
+          options: [{ value: "", label: "\u2014 none \u2014" }].concat(cats.map(function (c) {
+            return { value: c, label: c + " (" + fmt(num(state.budgets[c]), { round: true }) + "/mo)" };
+          })), value: ""
+        }, {
+          key: "budgetCut", label: "Trim it by", type: "number", min: 0, value: 0,
+          hint: "per month"
+        }] : []).concat(pockets.length ? [{
+          key: "pocketRef", label: "Or take it from", type: "select",
+          options: [{ value: "", label: "\u2014 none \u2014" }].concat(pockets), value: ""
+        }] : []),
+        validate: function (v) {
+          if (!(v.amount > 0)) return "Enter what it costs.";
+          if (v.budgetCat && !(v.budgetCut > 0)) return "Say how much a month you would trim from " + v.budgetCat + ".";
+        },
+        onConfirm: function (v) {
+          var cur = v.currency || baseCode();
+          afford = {
+            label: (v.label || "").trim() || "That purchase",
+            amount: v.amount, currency: cur, rate: rateFor(cur),
+            base: toBase(v.amount, cur, rateFor(cur)),
+            date: v.date || today(),
+            months: v.months, markup: v.markup,
+            budgetCat: v.budgetCat || null, budgetCut: v.budgetCut,
+            pocketRef: v.pocketRef || null,
+            route: null
+          };
+          planTab = "outlook"; view = "plan";
+          render();
+          window.scrollTo({ top: 0, behavior: "auto" });
+        }
+      });
+    },
+    "afford-route": function (id) { if (afford) { afford.route = id; render(); } },
+    "afford-clear": function () { afford = null; render(); },
+
+    "outlook-toggle": function (id) {
+      if (outlookOff[id]) delete outlookOff[id]; else outlookOff[id] = true;
+      render();
+    },
     "month-prev": function () { viewMonth = monthShift(viewMonth, -1); render(); },
     "month-next": function () { if (viewMonth < thisMonth()) { viewMonth = monthShift(viewMonth, 1); render(); } },
     "month-today": function () { viewMonth = thisMonth(); render(); },
