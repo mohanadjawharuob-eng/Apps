@@ -816,6 +816,33 @@
   .afford-row.off { opacity: 0.55; cursor: default; }
   .afford-name { font-size: 0.86rem; font-weight: 600; min-width: 0; }
   .afford-detail { grid-column: 1 / -1; font-size: 0.74rem; color: var(--dim); line-height: 1.45; }
+  /* A filter you reach for constantly should be one tap, not a select. Same
+     pill vocabulary as the sub-nav, scrolling sideways rather than wrapping. */
+  .chiprow {
+    display: flex; gap: 0.35rem; overflow-x: auto;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .chiprow::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; padding: 0.42rem 0.8rem; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; color: var(--dim);
+    background: var(--tint); border: 1px solid transparent; cursor: pointer;
+  }
+  .chip.on { background: var(--ac); color: var(--onac); }
+
+  /* the rest of the filters, folded away until wanted */
+  .fold { margin-top: 0.8rem; }
+  .fold > summary {
+    cursor: pointer; list-style: none; font-size: 0.78rem; font-weight: 600;
+    color: var(--dim); padding: 0.2rem 0; display: flex; align-items: center; gap: 0.4rem;
+  }
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::after {
+    content: "\203A"; margin-left: auto; transform: rotate(90deg);
+    transition: transform 0.15s ease; color: var(--faint);
+  }
+  .fold[open] > summary::after { transform: rotate(-90deg); }
+
   .tappable { cursor: pointer; }
   .tappable:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
   /* a row deliberately left out of a calculation, not a disabled one */
@@ -853,7 +880,13 @@
     margin-top: 0.5rem;
   }
   .budget-foot .pair-sub { flex: 1; min-width: 0; margin: 0; }
-  .budget-foot .card-tools { display: flex; gap: 0.1rem; flex: none; }
+  /* A tool cluster is a row of buttons wherever it appears. Scoped to
+     .budget-foot alone, every other use stacked them one per line and turned a
+     ledger entry into six lines of icons. */
+  .card-tools { display: flex; gap: 0.1rem; flex: none; align-items: center; }
+  .row.stacked .stack-foot .card-tools { margin-left: auto; }
+  /* pills sit beside the tools on that second line, not pushed past them */
+  .row.stacked .stack-foot .card-tools ~ .pill { margin-left: 0; }
 
   .triple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.75rem; }
   .card.tile-sm { padding: 0.85rem 0.95rem; border-radius: 16px; }
@@ -997,7 +1030,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04e";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04f";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -6232,9 +6265,63 @@
       " · " + rows.length + " of " + state.transactions.length + " shown";
   }
 
+  /* The ledger was a five-column table in a horizontal scroller. On a 390px
+     phone the description column — the one thing that says what an entry was —
+     sat off the left edge, and you had to scroll sideways to read your own
+     spending. It is now stacked rows in a card, the same shape Worth and
+     "Owed back to you" already use: what and how much on top, where and when
+     underneath. */
+  function ledgerRowHtml(t) {
+    var isTransfer = t.type === "transfer";
+    var base = txBase(t);
+    var amt = isTransfer ? fmt(base) : (t.type === "income" ? "+" : "−") + fmt(base).replace("-", "");
+    // a foreign entry shows the amount you actually handed over, small, under
+    // the converted figure — otherwise the ledger stops matching the receipt
+    if (isForeign(t.currency)) amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
+
+    var where = isTransfer
+      ? esc(accountName(t.accountId, t.pocketId)) + " → " + esc(accountName(t.toAccountId, t.toPocketId))
+      : esc(accountName(t.accountId, t.pocketId));
+    var cat = isTransfer
+      ? '<span class="pill mute">Transfer</span>'
+      : '<span class="cat-tag"><span class="cat-dot" style="background:' + catColor(t.category) +
+        '"></span>' + esc(t.category) + "</span>";
+
+    return '<div class="row stacked">' +
+      '<div class="stack-top">' +
+      '<span class="row-title">' + esc(t.desc || "—") + "</span>" +
+      '<span class="row-fig' + (t.type === "income" ? " gain" : "") + '">' + amt + "</span></div>" +
+      '<div class="stack-foot">' +
+      '<span class="row-sub">' + cat + " · " + where + "</span>" +
+      (isPending(t) ? '<span class="pill warn">owed back</span>' : "") +
+      (t.settledOn ? '<span class="pill ok">refunded</span>' : "") +
+      (t.grantId && !t.grantAward ? '<span class="pill mute">grant</span>' : "") +
+      (t.oneOff ? '<span class="pill mute">one-off</span>' : "") +
+      '<span class="card-tools">' +
+      '<button class="ibtn' + (hasPhoto(t.id) ? " on" : "") + '" data-act="tx-photo" data-id="' + t.id +
+        '" aria-label="' + (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '" title="' +
+        (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '">▣</button>' +
+      (t.refundable
+        ? '<button class="ibtn' + (t.settledOn ? " on" : "") + '" data-act="tx-settle" data-id="' + t.id +
+          '" aria-label="' + (t.settledOn ? "Mark as still owed" : "Record the money coming back") + '" title="' +
+          (t.settledOn ? "Refunded on " + t.settledOn + " — click to undo" : "Record the money coming back") +
+          '">↩</button>'
+        : "") +
+      '<button class="ibtn" data-act="tx-edit" data-id="' + t.id + '" aria-label="Edit" title="Edit">✎</button>' +
+      '<button class="ibtn danger" data-act="tx-del" data-id="' + t.id + '" aria-label="Delete" title="Delete">✕</button>' +
+      "</span></div></div>";
+  }
+
   function ledgerTableHtml() {
     var rows = filteredTx();
     var page = rows.slice(0, ledgerLimit);
+
+    if (!rows.length) {
+      return '<div class="card pad"><p class="empty" style="margin:0">' +
+        (state.transactions.length
+          ? "Nothing matches these filters."
+          : "No transactions yet — add your first one above.") + "</p></div>";
+    }
 
     // Grouped by day rather than stacked flat: a date heading carries the
     // day's in and out, so scrolling gives you shape instead of a wall.
@@ -6245,68 +6332,26 @@
       else if (t.type === "expense") d.out += txBase(t);
       d.n++;
     });
-    var lastDay = null;
 
-    var html = '<div class="tscroll"><table>' +
-      "<thead><tr><th>Description</th><th>Category</th><th>Account</th>" +
-      '<th class="num">Amount</th><th></th></tr></thead><tbody>';
+    // one card per day, so the day heading is the card's own head
+    var days = [], seen = {};
+    page.forEach(function (t) {
+      if (!seen[t.date]) { seen[t.date] = []; days.push(t.date); }
+      seen[t.date].push(t);
+    });
 
-    if (!rows.length) {
-      html += '<tr><td colspan="5"><p class="empty">' +
-        (state.transactions.length ? "Nothing matches these filters." : "No transactions yet — add your first one above.") +
-        "</p></td></tr>";
-    } else {
-      html += page.map(function (t) {
-        var isTransfer = t.type === "transfer";
-        var acc = isTransfer
-          ? esc(accountName(t.accountId, t.pocketId)) + " → " + esc(accountName(t.toAccountId, t.toPocketId))
-          : esc(accountName(t.accountId, t.pocketId));
-        var base = txBase(t);
-        var amt = isTransfer ? fmt(base) : (t.type === "income" ? "+" : "−") + fmt(base).replace("-", "");
-        // a foreign entry shows the amount you actually handed over, small,
-        // under the converted figure — otherwise the ledger stops matching
-        // the receipt in your pocket
-        if (isForeign(t.currency)) {
-          amt += '<span class="fx">' + esc(fmtIn(t.amount, t.currency)) + "</span>";
-        }
-        var head = "";
-        if (t.date !== lastDay) {
-          lastDay = t.date;
-          var d = dayTotals[t.date] || { inc: 0, out: 0, n: 0 };
-          var bits = [];
-          if (d.out > 0) bits.push('<span class="day-out">\u2212' + fmt(d.out).replace("-", "") + "</span>");
-          if (d.inc > 0) bits.push('<span class="day-in">+' + fmt(d.inc) + "</span>");
-          head = '<tr class="dayrow"><td colspan="5">' +
-            '<span class="day-name">' + esc(dayLabel(t.date)) + "</span>" +
-            '<span class="day-n">' + d.n + (d.n === 1 ? " entry" : " entries") + "</span>" +
-            '<span class="day-figs">' + bits.join("") + "</span></td></tr>";
-        }
-        var owed = isPending(t);
-        return head + '<tr>' +
-          "<td>" + esc(t.desc || "—") +
-          (owed ? ' <span class="pill warn">owed back</span>' : "") +
-          (t.settledOn ? ' <span class="pill ok">refunded</span>' : "") + "</td>" +
-          "<td>" + (isTransfer
-            ? '<span class="pill mute">Transfer</span>'
-            : '<span class="cat-tag"><span class="cat-dot" style="background:' + catColor(t.category) + '"></span>' + esc(t.category) + "</span>") + "</td>" +
-          "<td>" + acc + "</td>" +
-          '<td class="num' + (t.type === "income" ? " gain" : "") + '">' + amt + "</td>" +
-          '<td><span style="display:flex;gap:0.1rem;justify-content:flex-end">' +
-          '<button class="ibtn' + (hasPhoto(t.id) ? " on" : "") + '" data-act="tx-photo" data-id="' + t.id +
-            '" aria-label="' + (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '" title="' +
-            (hasPhoto(t.id) ? "View receipt" : "Attach a receipt") + '">▣</button>' +
-          (t.refundable
-            ? '<button class="ibtn' + (t.settledOn ? " on" : "") + '" data-act="tx-settle" data-id="' + t.id +
-              '" aria-label="' + (t.settledOn ? "Mark as still owed" : "Record the money coming back") + '" title="' +
-              (t.settledOn ? "Refunded on " + t.settledOn + " — click to undo" : "Record the money coming back") +
-              '">\u21a9</button>'
-            : "") +
-          '<button class="ibtn" data-act="tx-edit" data-id="' + t.id + '" aria-label="Edit transaction" title="Edit">✎</button>' +
-          '<button class="ibtn danger" data-act="tx-del" data-id="' + t.id + '" aria-label="Delete transaction" title="Delete">✕</button>' +
-          "</span></td></tr>";
-      }).join("");
-    }
-    html += "</tbody></table></div>";
+    var html = days.map(function (date) {
+      var d = dayTotals[date];
+      var figs = [];
+      if (d.out > 0) figs.push('<span class="day-out">−' + fmt(d.out, { round: true }).replace("-", "") + "</span>");
+      if (d.inc > 0) figs.push('<span class="day-in">+' + fmt(d.inc, { round: true }) + "</span>");
+      return '<div class="card" style="margin-bottom:0.75rem"><div class="card-head">' +
+        "<h3>" + esc(dayLabel(date)) + "</h3>" +
+        '<span class="sub">' + d.n + (d.n === 1 ? " entry" : " entries") + "</span>" +
+        '<span class="day-figs">' + figs.join("") + "</span></div>" +
+        '<div class="card-body flush"><div class="rows">' +
+        seen[date].map(ledgerRowHtml).join("") + "</div></div></div>";
+    }).join("");
 
     if (rows.length > page.length) {
       var more = Math.min(LEDGER_PAGE, rows.length - page.length);
@@ -6316,6 +6361,7 @@
     }
     return html;
   }
+
 
   function renderLedger() {
     var rows = filteredTx();
@@ -6335,15 +6381,33 @@
 
     html += quickAddCard() + '<div style="height:1rem"></div>';
 
-    /* filters */
-    html += '<div class="card"><div class="card-body"><div class="fields">' +
-      '<div class="field wide"><label class="label" for="f_text">Search</label>' +
-      '<input id="f_text" type="text" value="' + esc(filters.text) + '" placeholder="Description or category…" autocomplete="off" /></div>' +
-      '<div class="field"><label class="label" for="f_type">Type</label><select id="f_type">' +
-      ["all", "expense", "income", "transfer"].map(function (v) {
-        return '<option value="' + v + '"' + (filters.type === v ? " selected" : "") + ">" +
-          (v === "all" ? "All types" : v.charAt(0).toUpperCase() + v.slice(1)) + "</option>";
-      }).join("") + "</select></div>" +
+    /* Six labelled full-width fields stacked into a wall of form. Type is the
+       filter reached for most, so it becomes pills; the rest fold away behind
+       a disclosure, because a filter you are not using should not cost six
+       lines of screen. */
+    var narrowed = filters.category !== "all" || filters.account !== "all" ||
+      filters.from || filters.to;
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Find something</h3>' +
+      '<div class="btn-row">' +
+      '<button class="btn sm quiet" data-act="export-csv">Export CSV</button>' +
+      (filters.text || filters.type !== "all" || narrowed
+        ? '<button class="btn sm quiet" data-act="filter-clear">Clear</button>' : "") +
+      "</div></div>" +
+      '<div class="card-body">' +
+      '<input id="f_text" type="text" value="' + esc(filters.text) + '" ' +
+      'placeholder="Search a description or category…" autocomplete="off" aria-label="Search" />' +
+
+      '<div class="chiprow" style="margin-top:0.7rem">' +
+      [["all", "Everything"], ["expense", "Out"], ["income", "In"], ["transfer", "Transfers"]]
+        .map(function (v) {
+          return '<button class="chip' + (filters.type === v[0] ? " on" : "") +
+            '" data-act="filter-type" data-v="' + v[0] + '">' + v[1] + "</button>";
+        }).join("") + "</div>" +
+
+      '<details class="fold"' + (narrowed ? " open" : "") + '>' +
+      "<summary>Narrow it further" +
+      (narrowed ? ' <span class="pill mute">on</span>' : "") + "</summary>" +
+      '<div class="fields" style="margin-top:0.7rem">' +
       '<div class="field"><label class="label" for="f_cat">Category</label><select id="f_cat">' +
       '<option value="all">All categories</option>' + allCats.map(function (c) {
         return '<option value="' + esc(c) + '"' + (filters.category === c ? " selected" : "") + ">" + esc(c) + "</option>";
@@ -6357,16 +6421,12 @@
       }).join("") + "</select></div>" +
       '<div class="field"><label class="label" for="f_from">From</label><input id="f_from" type="date" value="' + esc(filters.from) + '" /></div>' +
       '<div class="field"><label class="label" for="f_to">To</label><input id="f_to" type="date" value="' + esc(filters.to) + '" /></div>' +
-      "</div>" +
-      '<div class="btn-row" style="margin-top:0.85rem;align-items:center">' +
-      '<button class="btn sm quiet" data-act="filter-clear">Clear filters</button>' +
-      '<button class="btn sm" data-act="export-csv">Export CSV</button>' +
-      '<span class="hint" style="margin-left:auto" id="txSummary">' + ledgerSummaryHtml(rows) + "</span>" +
-      "</div></div></div>";
+      "</div></details>" +
+      '<p class="hint" style="margin-top:0.7rem" id="txSummary">' + ledgerSummaryHtml(rows) + "</p>" +
+      "</div></div>";
 
-    /* table — id lets the search box refresh only this block */
-    html += '<div class="card" style="margin-top:1rem"><div class="card-body flush" id="txTable">' +
-      ledgerTableHtml() + "</div></div>";
+    /* the entries themselves — id lets the search box refresh only this block */
+    html += '<div id="txTable" style="margin-top:1rem">' + ledgerTableHtml() + "</div>";
 
     return html;
   }
@@ -6570,18 +6630,26 @@
   // How much is left to be paid under a contract before its end date. Nothing
   // computed this, and it is the figure that says how much a contract is worth
   // to you from here.
+  /* What is still owed under a contract before its end date.
+
+     A contract pays in whole instalments, not continuously, so this counts the
+     payment dates left rather than pro-rating a month. Pro-rated, a $600/month
+     contract that had already paid for September and ended on the 30th read as
+     "$512 left to be paid" — twenty-six days of a month that was already
+     settled. The honest answer there is nothing. */
   function contractRemaining(r) {
-    var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
     if (!r.until) return null;                    // open-ended: no total to give
-    var months = daysUntil(r.until) / 30.44;
-    if (months <= 0) return 0;
-    return permo * months;
+    var each = toBase(r.amount, r.currency, r.rate);
+    var d = r.nextDate, n = 0;
+    // the same 720-month guard the payoff simulation uses
+    while (d && d <= r.until && n < 720) { n++; d = advance(d, r.frequency); }
+    return { payments: n, total: each * n, each: each };
   }
 
   function contractCard(r) {
     var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
     var ended = recurEnded(r);
-    var left = contractRemaining(r);
+    var rem = contractRemaining(r);
     var d = r.nextDate ? daysUntil(r.nextDate) : null;
     var bits = [];
     if (r.payer) bits.push(esc(r.payer));
@@ -6623,9 +6691,12 @@
       (r.startedOn
         ? '<div class="split-row"><span>Running since</span><span>' + esc(longDate(r.startedOn)) + "</span></div>"
         : "") +
-      (left != null && left > 0.5
+      (rem != null
         ? '<div class="split-row"><span>Left to be paid</span><span class="fig">' +
-          fmt(left, { round: true }) + "</span></div>"
+          (rem.payments === 0 ? "nothing more"
+            : fmt(rem.total, { round: true }) +
+              '<span class="fx">' + rem.payments +
+              (rem.payments === 1 ? " payment" : " payments") + "</span>") + "</span></div>"
         : "") +
       (conf < 1
         ? '<div class="split-row"><span>Each payment</span><span>' +
@@ -9529,6 +9600,12 @@
       });
     },
 
+    "filter-type": function (id, el) {
+      filters.type = el.getAttribute("data-v") || "all";
+      ledgerLimit = LEDGER_PAGE;
+      render();
+    },
+
     "filter-clear": function () {
       filters = { text: "", type: "all", category: "all", account: "all", from: "", to: "" };
       ledgerLimit = LEDGER_PAGE;
@@ -10158,7 +10235,7 @@
       });
     }
 
-    bindChange("f_type", function (v) { filters.type = v; });
+    // f_type is pills now, handled by the filter-type action
     bindChange("f_cat", function (v) { filters.category = v; });
     bindChange("f_acc", function (v) { filters.account = v; });
     bindChange("f_from", function (v) { filters.from = v; });

@@ -145,11 +145,29 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   date could be set when it was created and then never corrected.
 - The typical-day figure divided the *current* month's spending by the *viewed*
   month's day count, so stepping back a month mixed two months together.
+- A contract's "left to be paid" pro-rated a month, so a $600/month contract
+  that had already paid for September and ended on the 30th read as "$512 left"
+  — twenty-six days of a month that was already settled. It counts the payment
+  dates left instead.
+- `.card-tools` was styled only inside `.budget-foot`, so anywhere else its
+  buttons stacked one per line.
 - **Restoring a backup silently dropped grants, recorded allowance days and the
   savings cushion.** `load()` and the restore each hand-copied the same key
   list and only `load()` was kept current. Both now go through one
   `adoptState()`, so the next thing added to the state shape cannot go missing
   from one path and not the other. There is a regression test for it.
+
+### Shipped: the Ledger in the Press idiom
+
+- **The ledger is stacked rows in day cards, not a table.** It was five columns
+  in a horizontal scroller, so on a 390px phone the description — the one
+  column that says what an entry was — sat off the left edge and you scrolled
+  sideways to read your own spending. Each day is now a card carrying its own
+  in and out, and each entry says what and how much on top, where and when
+  underneath, the same shape Worth and "Owed back to you" already used.
+- **Filters folded down.** Six labelled full-width fields became a search box, a
+  row of pills for the filter reached for most, and the rest behind a
+  disclosure that opens itself when something is set.
 
 ### Next
 - **Split transactions** — one shop trip across two categories.
