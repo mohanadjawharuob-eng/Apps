@@ -63,6 +63,22 @@ no package.json. What is in the repo is what runs.
   contractor earned last quarter is the lie that makes freelance work look like
   a salary. Confidence lives on `state.plan.lines`, never on the recurring
   record — join through `planKey`.
+- **An allowance inside a salary is not a fourth kind of restricted money.**
+  A travel allowance paid at so much a day is yours either way, so it counts as
+  income and net worth on arrival and its spending stays in `trueBurnFor()` and
+  `spendByCategory()` like anything else. What it changes is one thing:
+  `budgetRows()` draws the pot down before your own budget. It resets monthly
+  and whatever is left becomes ordinary money, so **there is no balance to
+  store** — the pot derives from `state.allowanceDays`, which holds the days
+  worked and the rate they were converted at.
+- **"Can I afford it" measures cost, not survival.** `freeAssets()` is the
+  runway's numerator and the wrong one here: it contains earmarked pockets,
+  which is where goal savings sit, so the tool used to offer up the deposit to
+  buy the car and then call the car affordable because the deposit existed.
+  `spareAssets()` holds back what goals have put aside plus a cushion. Anything
+  that talks about money over several months walks `surplusOver()` rather than
+  multiplying today's surplus — income stops, and two routes that multiply
+  independently will contradict each other.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright
@@ -94,7 +110,10 @@ it, or give it a `subNav` the way Plan does. Overview was allowed to reach seven
 blocks and became the thing everybody scrolled past.
 
 Two tabs now carry a `subNav`: **Plan** (Outlook · Budgets · Bills · Income ·
-Goals · Grants · The plan) and **Worth** (Accounts · Investments · Debts). New
+Goals · Grants · The plan) and **Worth** (Accounts · Investments · Debts).
+Plan › Income is itself three groups — contracts, one-off income, and ended
+contracts — because a two-year contract and a lump sum need different details
+about them. New
 work goes into one of those rather than into a seventh tab — six is the grid,
 and the bottom bar is the app's shape.
 

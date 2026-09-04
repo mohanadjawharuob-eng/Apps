@@ -997,7 +997,7 @@
           Enter wired up manually via submitOn().
      ============================================================ */
 
-  var BUILD = "2026-09-04c";   // shown in Settings, so "did it update?" is answerable
+  var BUILD = "2026-09-04d";   // shown in Settings, so "did it update?" is answerable
   var KEY = "coffer.v2";
   var LEGACY_KEY = "coffer.v1";
   var CAT_VARS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
@@ -1132,6 +1132,9 @@
       plan: null,
       // money held on someone else's behalf; see the grants block above
       grants: [],
+      // how many days were worked in a month, per income source with an
+      // allowance — an input, not a balance
+      allowanceDays: {},
       extraDebtPayment: 0
     };
   }
@@ -1200,6 +1203,9 @@
           // single-currency book, which is exactly what those files describe
           s.settings.base = p.settings.base || "USD";
           s.settings.rates = (p.settings.rates && typeof p.settings.rates === "object") ? p.settings.rates : {};
+          // absent from every backup written before the afford rebuild, which
+          // is fine: floorMonths() falls back to the default on its own
+          s.settings.floorMonths = num(p.settings.floorMonths) || null;
         }
         if (p.categories) {
           if (Array.isArray(p.categories.expense) && p.categories.expense.length) s.categories.expense = p.categories.expense;
@@ -1209,6 +1215,7 @@
           if (Array.isArray(p[k])) s[k] = p[k];
         });
         if (p.budgets && typeof p.budgets === "object") s.budgets = p.budgets;
+        if (p.allowanceDays && typeof p.allowanceDays === "object") s.allowanceDays = p.allowanceDays;
         if (p.photoIndex && typeof p.photoIndex === "object") s.photoIndex = p.photoIndex;
         // absent from every backup written before plans existed, which is fine:
         // no plan is a valid state, so there is nothing to migrate
@@ -1703,6 +1710,30 @@
     var pk = pocketById(a, r.pocketId);
     return pk ? pocketBalance(a, pk) : num(g.saved);
   }
+  /* What a goal needs every month to land on its date. goalsBody() worked this
+     out and threw it away, which is why nothing else in the app knew a goal
+     existed. Extracted so the goals screen and the afford tool cannot drift
+     apart, and so a projection can treat a promise as a commitment. */
+  function goalNeed(g) {
+    var left = Math.max(num(g.target) - goalSaved(g), 0);
+    if (left <= 0.005) return { left: 0, need: 0, months: 0, done: true, overdue: false };
+    if (!g.due) return { left: left, need: 0, months: null, done: false, overdue: false };
+    var dLeft = daysUntil(g.due);
+    if (dLeft < 0) return { left: left, need: left, months: 0, done: false, overdue: true };
+    var months = Math.max(dLeft / 30.44, 0.5);
+    return { left: left, need: left / months, months: months, done: false, overdue: false };
+  }
+  // Everything already put aside toward a goal, capped at its target: money
+  // past the target is spare again.
+  function goalsHeld() {
+    return state.goals.reduce(function (t, g) {
+      return t + Math.min(goalSaved(g), num(g.target));
+    }, 0);
+  }
+  function goalsMonthlyNeed() {
+    return state.goals.reduce(function (t, g) { return t + goalNeed(g).need; }, 0);
+  }
+
   function goalHolderLabel(g) {
     if (!g.holdsIn) return null;
     var r = parseRef(g.holdsIn);
@@ -2079,7 +2110,8 @@
         until: r.until || null,
         base: base,
         monthly: monthlyEquivalent(base, r.frequency),
-        confidence: r.type === "income" ? confidenceOf(r) : 1
+        confidence: r.type === "income" ? confidenceOf(r) : 1,
+        renews: r.type === "income" && r.renews != null ? clamp(num(r.renews), 0, 100) : null
       };
     });
   }
@@ -2091,6 +2123,8 @@
        opts.extra      [{ mk, amount }] outflows to insert — how "can I afford it" asks
        opts.burnDelta  a standing change to monthly burn, positive or negative
                        (trimming a budget is a negative one)
+       opts.holdGoals  set aside what your goals need each month, so the line
+                       shows money left AFTER promises are kept
 
      Returns a point per month plus the first month the balance goes under,
      which is the number the whole screen is built around. */
@@ -2100,6 +2134,7 @@
     var horizon = months || PROJECT_MONTHS;
     var b = burnRate();
     var baseBurn = Math.max(0, b.rate + num(o.burnDelta));
+    var goalHold = o.holdGoals ? goalsMonthlyNeed() : 0;
     var lines = projectionLines();
     var hasSchedule = lines.some(function (L) { return L.type === "income"; });
     var extra = {};
@@ -2143,7 +2178,14 @@
           if (!live) {
             // the month a contract stops paying is the one worth marking
             if (L.until && monthOf(L.until) === monthShift(mk, -1)) {
-              events.push({ kind: "ended", name: L.name });
+              events.push({ kind: "ended", name: L.name, renews: L.renews });
+            }
+            /* A contract with a stated chance of carrying on keeps paying at
+               that fraction past its end date. Unset means UNSAID, not nought:
+               nothing softens the cliff unless you say it should. */
+            if (L.renews != null && L.renews > 0 && !off[L.id]) {
+              hasIncome = true;
+              income += L.monthly * L.confidence * (L.renews / 100);
             }
             return;
           }
@@ -2169,6 +2211,7 @@
         }
       });
 
+      if (goalHold > 0) out += goalHold;
       if (out < 0) out = 0;
       if (extra[mk]) {
         out += extra[mk];
@@ -2186,6 +2229,7 @@
       hasIncome: hasIncome,
       hasSchedule: hasSchedule,
       burn: baseBurn,
+      goalHold: goalHold,
       start: freeAssets(),
       basis: b,
       horizon: horizon
@@ -2259,12 +2303,82 @@
     return out;
   }
 
+  /* ---------------- allowances inside an income ----------------
+     Not every lira of a salary is yours to spend. A travel allowance paid at
+     so much a day is money FOR travel: paying a taxi should draw that down
+     first and only reach your own budget once it is gone.
+
+     It resets every month and whatever is left simply becomes ordinary money,
+     so there is no balance to store — the pot is derived from the days you
+     went in, the way a budget is derived from a figure you set. What IS stored
+     is the days, and the rate they were converted at, because a $5/day
+     allowance in an LBP month must not re-value itself later. */
+  function allowanceSources() {
+    return state.recurring.filter(function (r) {
+      return r.type === "income" && r.allowance && r.allowance.category && num(r.allowance.rate) > 0;
+    });
+  }
+  function allowanceKey(r, mk) { return r.id + "|" + mk; }
+  function allowanceDays(r, mk) {
+    var e = (state.allowanceDays || {})[allowanceKey(r, mk)];
+    return e && num(e.days) > 0 ? e : null;
+  }
+  // What one source put toward its category in one month.
+  function allowanceFor(r, mk) {
+    var e = allowanceDays(r, mk);
+    if (!e) return 0;
+    var cur = r.allowance.currency || baseCode();
+    // the rate stored with the days, so a later rate change cannot move it
+    var rt = num(e.rate) > 0 ? num(e.rate) : rateFor(cur);
+    return toBase(num(e.days) * num(r.allowance.rate), cur, rt);
+  }
+  // Everything prepaid toward one category in one month, across every source.
+  function allowancePotFor(category, mk) {
+    return allowanceSources().reduce(function (t, r) {
+      return r.allowance.category === category ? t + allowanceFor(r, mk) : t;
+    }, 0);
+  }
+  // Months where a source has an allowance but nobody has said how many days.
+  function allowancesAwaiting() {
+    var out = [];
+    allowanceSources().forEach(function (r) {
+      [monthShift(thisMonth(), -1), thisMonth()].forEach(function (mk) {
+        if (allowanceDays(r, mk)) return;
+        // the current month is only worth asking about once it has ended,
+        // or once that month's pay has actually landed
+        if (mk === thisMonth()) {
+          var landed = monthTx(mk).some(function (t) {
+            return t.type === "income" && t.recurId === r.id;
+          });
+          if (!landed) return;
+        }
+        out.push({ source: r, mk: mk });
+      });
+    });
+    return out;
+  }
+
   function budgetRows(mk) {
     var spend = spendByCategory(mk);
-    return Object.keys(state.budgets).map(function (cat) {
+    // a category can have an allowance and no budget of its own; the pot is
+    // still worth showing, so it earns a row either way
+    var cats = Object.keys(state.budgets);
+    allowanceSources().forEach(function (r) {
+      var c = r.allowance.category;
+      if (cats.indexOf(c) < 0 && allowancePotFor(c, mk) > 0) cats.push(c);
+    });
+    return cats.map(function (cat) {
       var limit = num(state.budgets[cat]);
-      var spent = spend[cat] || 0;
-      return { category: cat, limit: limit, spent: spent, pct: limit > 0 ? spent / limit : 0, left: limit - spent };
+      var raw = spend[cat] || 0;
+      var prepaid = allowancePotFor(cat, mk);
+      var prepaidUsed = Math.min(raw, prepaid);
+      // allowance first, then your own money: the whole point of the thing
+      var spent = Math.max(0, raw - prepaid);
+      return {
+        category: cat, limit: limit, spent: spent, raw: raw,
+        prepaid: prepaid, prepaidUsed: prepaidUsed,
+        pct: limit > 0 ? spent / limit : 0, left: limit - spent
+      };
     }).sort(function (a, b) { return b.pct - a.pct; });
   }
 
@@ -4351,7 +4465,9 @@
       (rw.basis && rw.basis.partial && m != null
         ? " · from only " + rw.basis.months + " month" + (rw.basis.months === 1 ? "" : "s") + " of data"
         : "") + "</p>" +
-      '<p class="band-sub" style="margin-top:0.25rem;font-weight:600">See the months ahead →</p>' +
+      '<div class="btn-row" style="margin-top:0.55rem">' +
+      '<button class="btn sm quiet" data-act="plan-tab" data-id="outlook">See the months ahead</button>' +
+      '<button class="btn sm" data-act="afford-open">Can I afford it?</button></div>' +
       "</div></div>";
   }
 
@@ -4395,10 +4511,43 @@
     var todayTx = state.transactions.filter(function (t) { return t.date === t0; });
     var todayOut = todayTx.reduce(function (n, t) { return t.type === "expense" ? n + txBase(t) : n; }, 0);
     var todayIn = todayTx.reduce(function (n, t) { return t.type === "income" ? n + txBase(t) : n; }, 0);
-    // a fair yardstick: what an average day this month has cost, so far
-    var elapsedDays = Math.max(1, monthOf(t0) === viewMonth ? new Date().getDate() : daysInMonth(viewMonth));
-    var avgDay = monthSummary(monthOf(t0)).expense / elapsedDays;
-    var vsAvg = avgDay > 0 ? todayOut / avgDay : null;
+
+    /* A fair yardstick for a day.
+
+       Three things were wrong with it. It divided by elapsed days but took the
+       spending from monthSummary().expense — everything that left, so one
+       reimbursable flight or one laptop set a "typical day" nothing like a
+       typical day, and it disagreed with the burn pair directly above it.
+       It took the summary from the CURRENT month and the day count from
+       viewMonth, so stepping back to August divided September's spending by
+       August's days. And it never said how many days were behind it, which is
+       what makes the figure trustworthy rather than merely small.
+
+       It stays an average over every elapsed day, not only the days something
+       was spent: that is what makes it a PACE — avgDay times the days in the
+       month is roughly the month's spend, so it predicts. Dividing by spending
+       days answers a different question and predicts nothing. */
+    var mkNow = monthOf(t0);
+    var elapsedDays = Math.max(1, new Date().getDate());
+    var avgDay = trueBurnFor(mkNow) / elapsedDays;
+
+    // today measured the same way it is judged, or it is not a comparison
+    var todayBurn = todayTx.reduce(function (n, t) {
+      if (t.type !== "expense" || isPending(t) || t.oneOff || isGrantSpend(t)) return n;
+      return n + txBase(t);
+    }, 0);
+    var stripped = todayOut - todayBurn;
+
+    // distinct dates, not entries: two coffees on one day is one day
+    var seenDays = {};
+    monthTx(mkNow).forEach(function (t) {
+      if (t.type !== "expense" || isPending(t) || t.oneOff || isGrantSpend(t)) return;
+      seenDays[t.date] = 1;
+    });
+    var spendDays = Object.keys(seenDays).length;
+    // under three days the average is one purchase, and a percentage off it is
+    // noise dressed up as a finding
+    var vsAvg = (avgDay > 0 && spendDays >= 3) ? todayBurn / avgDay : null;
 
     return '<div class="card pad"><div class="card-tophead">' +
       '<span class="label">Spent today</span>' +
@@ -4415,8 +4564,16 @@
       '<div class="pair-rule"></div>' +
       '<div style="text-align:right"><div class="pair-fig" style="margin-top:0;color:var(--dim)">' +
       fmt(avgDay, { round: true }) + "</div>" +
-      '<div class="pair-sub">a typical day this month</div></div>' +
+      '<div class="pair-sub">a typical day this month</div>' +
+      '<div class="pair-sub" style="color:var(--faint)">' +
+      (spendDays === 0 ? "nothing spent yet this month"
+        : "you spent on " + spendDays + " of " + elapsedDays +
+          (elapsedDays === 1 ? " day" : " days")) + "</div></div>" +
       "</div>" +
+      (stripped > 0.005
+        ? '<p class="pair-sub" style="margin-top:0.5rem">' + fmt(stripped, { round: true }) +
+          " of today is a one-off or owed back, so it is not counted against a typical day.</p>"
+        : "") +
 
       (todayIn > 0
         ? '<p class="pair-sub" style="margin-top:0.6rem">' + fmt(todayIn) + " came in today as well.</p>"
@@ -4653,11 +4810,20 @@
   // everything else on Today.
   function noticesBlock() {
     var notes = buildInsights(viewMonth).slice(0, 3);
-    if (!notes.length) return "";
+    var asking = allowancesAwaiting();
+    if (!notes.length && !asking.length) return "";
     return '<div class="card" style="margin-top:1rem"><div class="card-head">' +
       "<h3>Everything worth noting</h3>" +
       '<button class="btn sm quiet" data-act="go-insights">All insights \u2192</button></div>' +
-      '<div class="card-body"><div class="notices">' + notes.map(function (nt) {
+      '<div class="card-body"><div class="notices">' +
+      asking.map(function (a) {
+        return '<p class="notice warn">How many days did you go in to <b>' + esc(a.source.name) +
+          "</b> in " + esc(monthName(a.mk, true)) + "? Until you say, none of the " +
+          esc(a.source.allowance.category) + " allowance is counted. " +
+          '<button class="btn sm" data-act="allowance-days" data-id="' + a.source.id +
+          '" data-mk="' + a.mk + '" style="margin-left:0.3rem">Say how many</button></p>';
+      }).join("") +
+      notes.map(function (nt) {
         return '<p class="notice' + (nt.tone === "warn" || nt.tone === "bad" ? " warn" : "") + '">' + nt.html + "</p>";
       }).join("") + "</div></div></div>";
   }
@@ -5119,7 +5285,8 @@
       budgets: "Monthly limits per category. The marker on each bar shows how far through the month you are — " +
         "a bar past its marker is running hot.",
       bills: "What you have committed to paying, and what it costs a month.",
-      income: "What arrives on a cycle. It is what your committed bills are measured against.",
+      income: "Contracts that pay on a cycle, and money that arrives once. Both are what your " +
+        "bills are measured against, and what every projection is built from.",
       goals: "What you're saving toward, and whether your current pace gets you there.",
       plan: "A written plan, scored against what actually happened.",
       outlook: "Where the money goes from here, month by month, with every contract " +
@@ -5216,7 +5383,8 @@
       x.events.forEach(function (e) {
         if (e.kind === "buy") return;      // the afford card explains itself
         var text =
-          e.kind === "ended" ? esc(e.name) + " stops paying"
+          e.kind === "ended" ? esc(e.name) + " stops paying" +
+            (e.renews != null && e.renews > 0 ? " \u2014 carried on at " + e.renews + "% from here" : "")
           : e.kind === "off" ? esc(e.name) + " switched off"
           : e.kind === "lump" ? esc(e.name) + " lands — " + fmt(e.amount, { round: true })
           : e.kind === "spend" ? esc(e.name) + " goes out — " + fmt(e.amount, { round: true })
@@ -5277,204 +5445,405 @@
   // the reader's current question, held for as long as they are looking at it
   var afford = null;
 
-  var AFFORD_FLOOR_MONTHS = 3;    // "still standing" means three months of cover
+  var AFFORD_FLOOR_MONTHS = 3;    // the default cushion, in months of true burn
   var AFFORD_MAX_HORIZON = 60;    // beyond five years it is not a purchase plan
+
+  // The cushion you refuse to go under, in months of true burn. Settable,
+  // because three months is my guess about someone else's nerve.
+  function floorMonths() {
+    var n = num(state.settings.floorMonths);
+    return n > 0 ? n : AFFORD_FLOOR_MONTHS;
+  }
+  function savingsFloor() { return burnRate().rate * floorMonths(); }
+
+  /* ---------------- money that is not already promised ----------------
+     freeAssets() answers "what could I reach", which is the right numerator
+     for a runway. It is the wrong one for "can I buy this": an EARMARKED
+     pocket stays in it, and an earmarked pocket is exactly where a goal's
+     savings sit. So the afford tool was offering up the Cyprus deposit as
+     spending money for a car, and then reporting that the car was affordable
+     because the deposit existed.
+
+     Spare money is what is left once every promise is honoured. */
+  function spareAssets() {
+    return freeAssets() - goalsHeld() - savingsFloor();
+  }
+
+  /* What a month actually leaves you, if you keep to your plan.
+
+     Outgoings use the BUDGET where a category has one and true burn where it
+     does not, because "if I stick to my budgets, what is left" is the question
+     being asked — and the two bases are reported separately, since a budget is
+     aspiration and burn is behaviour and confusing them is how a surplus
+     becomes a wish. */
+  function plannedOutgoings() {
+    var b = burnRate();
+    var burn = b.rate;
+    /* What the budgeted categories actually cost, averaged over the SAME
+       months the burn rate is built from. Read from this month alone it is
+       nothing on the 4th, and every budgeted category then got counted twice —
+       once as its budget and again inside the burn. */
+    var months = recentMonths(BURN_LOOKBACK, monthShift(thisMonth(), -1))
+      .filter(function (mk) { return monthTx(mk).length > 0; });
+    if (!months.length) months = [thisMonth()];
+    var budgeted = 0, budgetedSpend = 0;
+    Object.keys(state.budgets).forEach(function (cat) {
+      budgeted += num(state.budgets[cat]);
+      var t = 0;
+      months.forEach(function (mk) { t += spendByCategory(mk)[cat] || 0; });
+      budgetedSpend += t / months.length;
+    });
+    // whatever the budgets do not describe, taken from behaviour instead
+    var unbudgeted = Math.max(0, burn - budgetedSpend);
+    return { total: budgeted + unbudgeted, budgeted: budgeted, unbudgeted: unbudgeted, burn: burn };
+  }
+
+  function monthlyIncomeExpected() {
+    var t = 0;
+    projectionLines().forEach(function (L) {
+      if (L.type !== "income" || L.once) return;
+      if (L.until && L.until < today()) return;
+      t += L.monthly * L.confidence;
+    });
+    return t;
+  }
+
+  // What is left every month once the plan is paid and the promises are kept.
+  function monthlySurplus() {
+    var income = monthlyIncomeExpected();
+    var out = plannedOutgoings();
+    var goals = goalsMonthlyNeed();
+    return {
+      income: income, out: out.total, goals: goals,
+      surplus: income - out.total - goals,
+      basis: out
+    };
+  }
 
   // Months of cover left at the end of a projection, which is what actually
   // decides whether a route is survivable.
+  // Months of cover left at the end of a projection.
   function coverAfter(pr) {
     if (pr.crossing != null) return 0;
     var last = pr.points[pr.points.length - 1];
     return pr.burn > 0 ? last.balance / pr.burn : Infinity;
   }
 
-  // The first month the purchase could be made without ever dropping below the
-  // floor. Walks forward rather than solving, because income is lumpy: the
-  // month after a grant lands can afford things the month before it cannot.
-  function firstAffordableMonth(amount, floor) {
-    for (var i = 0; i < PROJECT_MONTHS; i++) {
-      var mk = monthShift(thisMonth(), i + 1);
-      var pr = projectForward(PROJECT_MONTHS, { off: outlookOff, extra: [{ mk: mk, amount: amount }] });
-      var lowest = Infinity;
-      pr.points.forEach(function (x) { if (x.balance < lowest) lowest = x.balance; });
-      if (pr.crossing == null && lowest >= floor) return mk;
+  /* ---------------- what a purchase actually costs ----------------
+
+     The first version of this asked "will it bankrupt me". Almost nothing
+     does, so it said yes to everything — and worse, it answered out of
+     freeAssets(), which contains the money already sitting in goal pockets.
+     It was offering up the deposit to buy the car, then calling the car
+     affordable because the deposit existed.
+
+     What you want to know before a large purchase is what it COSTS: how much
+     comes out of what you earn, how much has to be dug out of savings, and
+     which promise moves as a result. Every route reports those, and the
+     recommendation is the one that costs least rather than the one that
+     survives longest. */
+
+  // How far a goal slips if `taken` is pulled out of it, or if a monthly
+  // amount is diverted away from it.
+  function goalDelay(g, taken, divertedPerMonth) {
+    var need = goalNeed(g);
+    if (need.done || !g.due) return null;
+    var pace = need.need;
+    if (!(pace > 0)) return null;
+    var after = Math.max(0, pace - num(divertedPerMonth));
+    var left = need.left + num(taken);
+    var nowMonths = after > 0 ? left / after : Infinity;
+    var slip = nowMonths - need.months;
+    if (!(slip > 0.25)) return null;            // under a week either way is noise
+    return {
+      name: g.name,
+      slip: slip,
+      broken: !isFinite(nowMonths),
+      nowOn: isFinite(nowMonths) ? monthShift(thisMonth(), Math.ceil(nowMonths)) : null
+    };
+  }
+
+  // Which goals a raid on savings lands on. The goal furthest from its date
+  // gives way first, because it has the most room to recover.
+  function goalsHitBy(fromSavings) {
+    if (!(fromSavings > 0.005)) return [];
+    var pool = state.goals.filter(function (g) { return !goalNeed(g).done; })
+      .sort(function (x, y) {
+        var a = goalNeed(x).months, b = goalNeed(y).months;
+        return (b == null ? 1e9 : b) - (a == null ? 1e9 : a);
+      });
+    var out = [], left = fromSavings;
+    pool.forEach(function (g) {
+      if (left <= 0.005) return;
+      var take = Math.min(Math.min(goalSaved(g), num(g.target)), left);
+      if (take <= 0.005) return;
+      left -= take;
+      out.push({ goal: g, taken: take, delay: goalDelay(g, take, 0) });
+    });
+    return out;
+  }
+
+  /* How much surplus actually accumulates over the next `months`, walked month
+     by month rather than multiplied, because income stops. Multiplying today's
+     surplus promised twenty-six months of saving out of a contract with nine
+     months left in it — and made two routes contradict each other, one saying
+     the income covered it and the other saying it never would. Every route
+     that talks about money over time reads this. */
+  function surplusOver(months, flow) {
+    var out = flow.out + flow.goals;
+    var lines = projectionLines();
+    var pot = 0, hit = null;
+    for (var i = 1; i <= months; i++) {
+      var mk = monthShift(thisMonth(), i);
+      var mkStart = mk + "-01", mkEnd = lastDayOf(mk);
+      var income = 0;
+      lines.forEach(function (L) {
+        if (L.type !== "income") return;
+        if (L.once) {
+          if (L.startsOn && monthOf(L.startsOn) === mk) income += L.base * L.confidence;
+          return;
+        }
+        if (L.startsOn && L.startsOn > mkEnd) return;
+        if (L.until && L.until < mkStart) return;
+        income += L.monthly * L.confidence;
+      });
+      pot += income - out;
+      if (hit == null && pot >= 0) hit = pot;
+    }
+    return Math.max(0, pot);
+  }
+
+  // The earliest month the whole thing is payable out of surplus alone.
+  function firstMonthFromIncome(total, flow) {
+    for (var i = 1; i <= AFFORD_MAX_HORIZON; i++) {
+      if (surplusOver(i, flow) >= total) return i;
     }
     return null;
   }
 
-  /* Every way of paying for it, each one a real projection rather than an
-     estimate. `a` is { amount, currency, rate, base, months, markup, date,
-     budgetCat, budgetCut }. */
+  /* Every way of paying for it. `a` is
+     { amount, currency, rate, base, months, markup, date, budgetCat,
+       budgetCut }. */
   function affordRoutes(a) {
     var total = a.base;
-    var floor = burnRate().rate * AFFORD_FLOOR_MONTHS;
-    var buyMonth = monthOf(a.date || today());
-    if (buyMonth <= thisMonth()) buyMonth = monthShift(thisMonth(), 1);
-
-    /* Every route is measured over the SAME window, long enough to contain the
-       slowest of them. Left at eighteen months, a route paying over
-       thirty-eight only had eighteen months of its cost counted, which made
-       the slowest way to pay look like the cheapest — and the card
-       recommended it. Compare like with like or do not compare. */
+    var spare = spareAssets();
+    var flow = monthlySurplus();
+    var surplus = flow.surplus;
     var n = Math.max(2, Math.round(num(a.months) || 6));
-    var cut0 = num(a.budgetCut);
-    var trimMonths = (a.budgetCat && cut0 > 0) ? Math.ceil(total / cut0) : 0;
-    var horizon = Math.min(AFFORD_MAX_HORIZON, Math.max(PROJECT_MONTHS, n, trimMonths));
     var routes = [];
 
-    // 1. all of it, on the date asked for
-    routes.push({
-      id: "now", label: "Pay it now",
-      detail: fmt(total, { round: true }) + " in " + monthName(buyMonth, true),
-      monthly: null,
-      paid: total,
-      pr: projectForward(horizon, { off: outlookOff, extra: [{ mk: buyMonth, amount: total }] })
-    });
-
-    // 2. spread, with whatever the plan adds on top. An instalment plan is
-    //    almost never free, and a route that hides the markup is not a
-    //    comparison, it is an advert.
-    var paid = total * (1 + (num(a.markup) || 0) / 100);
-    var per = paid / n;
-    var extras = [];
-    for (var i = 0; i < n; i++) extras.push({ mk: monthShift(buyMonth, i), amount: per });
-    routes.push({
-      id: "spread", label: n + " monthly payments",
-      detail: fmt(per, { round: true }) + " a month for " + n +
-        (paid - total > 0.5 ? " — " + fmt(paid, { round: true }) + " all in, " +
-          fmt(paid - total, { round: true }) + " more than the price" : ""),
-      monthly: per,
-      paid: paid,
-      overpay: paid - total,
-      pr: projectForward(horizon, { off: outlookOff, extra: extras })
-    });
-
-    // 3. wait until it fits
-    var when = firstAffordableMonth(total, floor);
-    routes.push({
-      id: "wait", label: "Save up for it",
-      detail: when == null
-        ? "No month in the next " + PROJECT_MONTHS + " months leaves " + AFFORD_FLOOR_MONTHS +
-          " months of cover behind"
-        : "Buy it in " + monthName(when, true) + " and you never go under " +
-          fmt(floor, { round: true }),
-      monthly: null,
-      paid: total,
-      blocked: when == null,
-      pr: when == null ? null
-        : projectForward(horizon, { off: outlookOff, extra: [{ mk: when, amount: total }] })
-    });
-
-    // 4. pay for it by spending less every month. Reuses the budgets already
-    //    set rather than inventing a second idea of what a category costs.
-    var cut = cut0;
-    if (a.budgetCat && cut > 0) {
-      var trimExtras = [];
-      for (var j = 0; j < trimMonths; j++) {
-        trimExtras.push({ mk: monthShift(buyMonth, j), amount: total / trimMonths });
+    function route(o) {
+      o.fromIncome = num(o.fromIncome);
+      o.fromSavings = num(o.fromSavings);
+      // spare money is savings too, but nothing is waiting on it. Only what
+      // goes beyond it lands on a promise.
+      o.raid = Math.max(0, o.fromSavings - Math.max(0, spare));
+      o.hits = o.blocked ? [] : goalsHitBy(o.raid);
+      // a monthly commitment larger than the surplus eats into what the goals
+      // were being fed, which slows all of them at once
+      o.divertDelays = [];
+      if (!o.blocked && o.monthly > 0) {
+        var over = Math.max(0, o.monthly - Math.max(0, surplus));
+        if (over > 0) {
+          state.goals.forEach(function (g) {
+            var d = goalDelay(g, 0, Math.min(over, goalNeed(g).need));
+            if (d) o.divertDelays.push(d);
+          });
+        }
       }
+      o.underFloor = !o.blocked && (spare - o.fromSavings) < 0;
+      routes.push(o);
+      return o;
+    }
+
+    // 1. straight out of money nothing is waiting on
+    route({
+      id: "spare", label: "Out of spare money",
+      detail: spare >= total
+        ? fmt(spare, { round: true }) + " is spare once your goals and your cushion are covered"
+        : spare > 0
+          ? "Only " + fmt(spare, { round: true }) + " is spare, so " +
+            fmt(total - spare, { round: true }) + " of this digs into what you have put aside"
+          : "Nothing is spare once your goals and your cushion are covered",
+      monthly: 0, fromIncome: 0, fromSavings: total, paid: total, blocked: false
+    });
+
+    // 2. put the surplus aside until it covers the thing. This and "wait and
+    //    pay outright" were the same act described twice: you cannot pay a
+    //    seller monthly without their instalment plan, which is its own route.
+    var monthsFromIncome = firstMonthFromIncome(total, flow);
+    route({
+      id: "income", label: "Save up and buy it",
+      detail: surplus <= 0
+        ? "You have no surplus once your plan and your goals are paid"
+        : monthsFromIncome == null
+          ? "Your income does not add up to it inside five years \u2014 at " +
+            fmt(surplus, { round: true }) + " a month now, and less once your contracts end"
+          : "Put by " + fmt(total / monthsFromIncome, { round: true }) + " a month of your " +
+            fmt(surplus, { round: true }) + " surplus and buy it in " +
+            monthName(monthShift(thisMonth(), monthsFromIncome), true) +
+            ", touching nothing you have saved",
+      monthly: monthsFromIncome ? total / monthsFromIncome : 0,
+      months: monthsFromIncome,
+      fromIncome: total, fromSavings: 0, paid: total,
+      blocked: surplus <= 0 || monthsFromIncome == null
+    });
+
+    // 3. some now, the rest as you earn it — the bite, quantified both ways
+    var earnedOverN = surplusOver(n, flow);
+    var bite = Math.max(0, total - earnedOverN);
+    route({
+      id: "split", label: "Some now, the rest monthly",
+      detail: bite <= 0.005
+        ? "What you earn covers it over " + n + " months without touching savings"
+        : fmt(bite, { round: true }) + " out of savings now, then " +
+          fmt((total - bite) / n, { round: true }) + " a month for " + n,
+      monthly: (total - bite) / n, months: n,
+      fromIncome: total - bite, fromSavings: bite, paid: total, blocked: false
+    });
+
+    // 4. instalments, with whatever the plan charges on top
+    var paid = total * (1 + (num(a.markup) || 0) / 100);
+    route({
+      id: "spread", label: n + " monthly payments",
+      detail: fmt(paid / n, { round: true }) + " a month for " + n +
+        (paid - total > 0.5
+          ? " — " + fmt(paid, { round: true }) + " all in, " +
+            fmt(paid - total, { round: true }) + " more than the price"
+          : "") +
+        (paid > earnedOverN
+          ? ", which is " + fmt(paid - earnedOverN, { round: true }) + " more than you earn over those " + n
+          : ""),
+      monthly: paid / n, months: n,
+      fromIncome: Math.min(paid, earnedOverN),
+      fromSavings: Math.max(0, paid - earnedOverN),
+      paid: paid, overpay: paid - total, blocked: false
+    });
+
+    // 5. spend less every month instead
+    var cut = num(a.budgetCut);
+    if (a.budgetCat && cut > 0) {
+      var trimMonths = Math.ceil(total / cut);
       var tooSlow = trimMonths > AFFORD_MAX_HORIZON;
-      routes.push({
+      route({
         id: "trim", label: "Trim " + a.budgetCat,
-        detail: fmt(cut, { round: true }) + " a month less on " + a.budgetCat +
-          (tooSlow
-            ? " would take " + trimMonths + " months \u2014 too far out to be a plan"
-            : " covers it in " + trimMonths + (trimMonths === 1 ? " month" : " months")),
-        monthly: cut,
-        paid: total,
-        blocked: tooSlow,
-        // the cut is a standing reduction in what you spend, and the purchase
-        // is paid out of exactly that
-        pr: tooSlow ? null
-          : projectForward(horizon, { off: outlookOff, burnDelta: -cut, extra: trimExtras })
+        detail: tooSlow
+          ? fmt(cut, { round: true }) + " a month less on " + a.budgetCat + " would take " +
+            trimMonths + " months — too far out to be a plan"
+          : fmt(cut, { round: true }) + " a month less on " + a.budgetCat + " covers it in " +
+            trimMonths + (trimMonths === 1 ? " month" : " months") + ", lifting your surplus to " +
+            fmt(surplus + cut, { round: true }),
+        // the cut pays for it, so nothing is diverted from anything else
+        monthly: 0, months: trimMonths,
+        fromIncome: total, fromSavings: 0, paid: total, blocked: tooSlow
       });
     }
 
-    // 5. out of a pocket already set aside. It is the cheapest route on paper
-    //    and the one with a cost the projection cannot see, so it says whose
-    //    money it was.
-    if (a.pocketRef) {
-      var ref = parseRef(a.pocketRef);
-      var acc = state.accounts.filter(function (x) { return x.id === ref.accountId; })[0];
-      var pk = acc && pocketById(acc, ref.pocketId);
-      if (pk) {
-        var held = pocketBalance(acc, pk);
-        var goal = state.goals.filter(function (g) { return g.pocketId === pk.id; })[0];
-        // whose money it is matters whether or not there is enough of it
-        var whose = goal ? " \u2014 it is what " + goal.name + " is being saved into" : "";
-        routes.push({
-          id: "pocket", label: "Take it from " + pk.name,
-          detail: (held >= total
-            ? fmt(held, { round: true }) + " is in there"
-            : "Only " + fmt(held, { round: true }) + " is in there, " +
-              fmt(total - held, { round: true }) + " short") + whose,
-          monthly: null,
-          paid: total,
-          blocked: held < total,
-          // an earmarked pocket is already inside free assets, so spending it
-          // moves the same money; a committed one was never counted
-          pr: held >= total
-            ? projectForward(horizon, { off: outlookOff, extra: [{ mk: buyMonth, amount: total }] })
-            : null
-        });
-      }
-    }
-
-    routes.horizon = horizon;
+    routes.spare = spare;
+    routes.flow = flow;
     return routes;
+  }
+
+  // What a route costs, in the only two currencies that matter here.
+  function routeCost(r) {
+    var slips = r.hits.filter(function (h) { return h.delay; })
+      .map(function (h) { return h.delay; })
+      .concat(r.divertDelays || []);
+    var worst = slips.slice().sort(function (x, y) { return y.slip - x.slip; })[0] || null;
+    return {
+      savings: r.fromSavings, slips: slips, worst: worst,
+      broken: slips.some(function (d) { return d.broken; })
+    };
+  }
+
+  function routeVerdict(r) {
+    if (r.blocked) return { tone: "mute", text: "not open to you" };
+    var c = routeCost(r);
+    if (c.broken) return { tone: "bad", text: "breaks a goal" };
+    // the pill always answers "what does it cost"; the cushion warning has
+    // room to explain itself in the breakdown
+    if (r.underFloor) return { tone: "bad", text: fmt(r.raid, { round: true }) + " out of promises" };
+    if (c.worst) return { tone: "warn", text: c.worst.name + " slips " + Math.round(c.worst.slip) + "mo" };
+    if (r.raid > 0.005) return { tone: "warn", text: fmt(r.raid, { round: true }) + " out of promises" };
+    if (r.fromSavings > 0.005) return { tone: "ok", text: "out of spare money" };
+    return { tone: "ok", text: "out of what you earn" };
+  }
+
+  // Cheapest first: nothing broken, then least out of savings, then least delay.
+  function rankRoutes(routes) {
+    return routes.filter(function (r) { return !r.blocked; }).slice().sort(function (x, y) {
+      var cx = routeCost(x), cy = routeCost(y);
+      if (cx.broken !== cy.broken) return cx.broken ? 1 : -1;
+      if (x.underFloor !== y.underFloor) return x.underFloor ? 1 : -1;
+      var sx = cx.worst ? cx.worst.slip : 0, sy = cy.worst ? cy.worst.slip : 0;
+      if (Math.abs(sx - sy) > 0.25) return sx - sy;
+      if (Math.abs(x.raid - y.raid) > 0.5) return x.raid - y.raid;
+      if (Math.abs(x.fromSavings - y.fromSavings) > 0.5) return x.fromSavings - y.fromSavings;
+      return x.paid - y.paid;
+    });
+  }
+
+  function affordSentence(best) {
+    if (!best) return "There is no way to pay for this that leaves your plans standing.";
+    var c = routeCost(best);
+    var lead = best.label.toLowerCase();
+    if (c.broken) return "The kindest route is " + lead + ", and it still breaks " + c.worst.name + ".";
+    if (best.fromSavings <= 0.005 && !c.worst) {
+      return "Yes — " + lead +
+        (best.months && best.monthly > 0
+          ? ", " + fmt(best.monthly, { round: true }) + " a month for " + best.months
+          : "") +
+        ", and nothing you are saving for moves.";
+    }
+    if (best.fromSavings > 0.005 && c.worst) {
+      return "Only by taking " + fmt(best.fromSavings, { round: true }) +
+        " out of savings, which pushes " + c.worst.name + " back " + Math.round(c.worst.slip) +
+        (Math.round(c.worst.slip) === 1 ? " month" : " months") + ".";
+    }
+    if (best.fromSavings > 0.005) {
+      return "Yes, but " + fmt(best.fromSavings, { round: true }) +
+        " of it comes out of savings rather than out of what you earn.";
+    }
+    return "Yes — " + lead + ", though it pushes " + c.worst.name + " back " +
+      Math.round(c.worst.slip) + (Math.round(c.worst.slip) === 1 ? " month" : " months") + ".";
   }
 
   function affordCard() {
     if (!afford) return "";
     var a = afford;
-    var b = burnRate();
 
-    // The money rules: a projection with nothing coming in cannot answer this,
-    // and a made-up date is worse than an admitted gap.
+    function shell(inner) {
+      return '<div class="card pad" style="margin-top:1rem">' +
+        '<div class="card-head" style="padding:0"><h3>' + esc(a.label || "That purchase") + "</h3>" +
+        '<button class="ibtn" data-act="afford-clear" aria-label="Close">×</button></div>' + inner + "</div>";
+    }
+
+    // The money rules: no income means no honest answer, and a made-up date is
+    // worse than an admitted gap.
     var probe = projectForward(PROJECT_MONTHS, { off: outlookOff });
     if (!probe.hasSchedule) {
-      return '<div class="card pad" style="margin-top:1rem">' +
-        '<div class="card-head" style="padding:0"><h3>' + esc(a.label || "That purchase") + "</h3>" +
-        '<button class="ibtn" data-act="afford-clear" aria-label="Close">×</button></div>' +
-        '<p class="lead" style="color:var(--warn)">There is no income booked, so there is no honest answer to ' +
-        "give.</p>" +
-        '<p class="band-sub">Every route below would just be your savings going down by ' +
-        fmt(a.base, { round: true }) + ". Add what you are expecting under Plan \u203a Income and ask again." +
-        "</p></div>";
+      return shell('<p class="lead" style="color:var(--warn)">There is no income booked, so there is no ' +
+        "honest answer to give.</p>" +
+        '<p class="band-sub">Every route would just be your savings going down by ' +
+        fmt(a.base, { round: true }) + ". Add what you are expecting under Plan › Income and ask again.</p>");
     }
-    if (!(b.rate > 0)) {
-      return '<div class="card pad" style="margin-top:1rem">' +
-        '<div class="card-head" style="padding:0"><h3>' + esc(a.label || "That purchase") + "</h3>" +
-        '<button class="ibtn" data-act="afford-clear" aria-label="Close">×</button></div>' +
-        '<p class="lead" style="color:var(--warn)">Nothing is logged yet, so there is no running cost to ' +
-        "measure this against.</p>" +
-        '<p class="band-sub">Log a few weeks of spending and this becomes worth reading.</p></div>';
-
+    if (!(burnRate().rate > 0)) {
+      return shell('<p class="lead" style="color:var(--warn)">Nothing is logged yet, so there is no running ' +
+        "cost to measure this against.</p>" +
+        '<p class="band-sub">Log a few weeks of spending and this becomes worth reading.</p>');
     }
 
     var routes = affordRoutes(a);
-    var baseline = routes.horizon === PROJECT_MONTHS
-      ? probe
-      : projectForward(routes.horizon, { off: outlookOff });
-    var baseCover = coverAfter(baseline);
-
-    // A route that runs you out is not an option; it is a warning. Only a
-    // route that survives the horizon can be recommended, and among those the
-    // one that keeps the most cover — cost breaks the tie.
-    var viable = routes.filter(function (r) { return !r.blocked && r.pr; });
-    viable.forEach(function (r) { r.cover = coverAfter(r.pr); });
-    var surviving = viable.filter(function (r) { return r.pr.crossing == null; });
-    var best = surviving.slice().sort(function (x, y) {
-      return (y.cover - x.cover) || (x.paid - y.paid);
-    })[0];
-    // nothing survives: still show the one that holds out longest, so the
-    // reader can see how far off it is rather than just being told no
-    var leastBad = best ? null : viable.slice().sort(function (x, y) {
-      return String(y.pr.crossing).localeCompare(String(x.pr.crossing)) || (x.paid - y.paid);
-    })[0];
-
+    var ranked = rankRoutes(routes);
+    var best = ranked[0] || null;
     var chosen = a.route && routes.filter(function (r) { return r.id === a.route; })[0];
-    var showing = (chosen && !chosen.blocked && chosen.pr) ? chosen : (best || leastBad);
+    var showing = (chosen && !chosen.blocked) ? chosen : best;
+    var flow = routes.flow;
+
+    var bc = best ? routeCost(best) : null;
+    var tone = !best ? "alert"
+      : (bc.broken || best.underFloor) ? "alert"
+      : (best.fromSavings > 0.005 || bc.worst) ? "warn" : "calm";
 
     var html = '<div class="card" style="margin-top:1rem"><div class="card-head">' +
       "<h3>" + esc(a.label || "Can I afford it") + "</h3>" +
@@ -5483,69 +5852,92 @@
       '<button class="ibtn" data-act="afford-clear" aria-label="Clear this question">×</button></div>' +
       '<div class="card-body">';
 
-    if (!best) {
-      html += '<p class="lead" style="color:var(--alert)">No route to this leaves you standing.</p>' +
-        (leastBad
-          ? '<p class="band-sub">The kindest is ' + esc(leastBad.label.toLowerCase()) +
-            ", and it still runs you out in " + esc(monthName(leastBad.pr.crossing, true)) + "."
-          : '<p class="band-sub">Nothing here covers it.') + "</p>";
-    } else {
-      html += '<p class="lead" style="color:var(--' + (best.cover >= AFFORD_FLOOR_MONTHS ? "calm" : "warn") + ')">' +
-        esc(bestRouteSentence(best, baseCover)) + "</p>";
-    }
+    html += '<p class="lead" style="color:var(--' + tone + ')">' + esc(affordSentence(best)) + "</p>";
+
+    // the two figures every route is judged against, stated once
+    html += '<div class="split" style="margin-top:0.8rem">' +
+      '<div class="split-row"><span>Spare after goals and cushion</span><span class="fig">' +
+      fmt(routes.spare, { round: true }) + "</span></div>" +
+      '<div class="split-row"><span>Left over each month</span><span class="fig">' +
+      fmt(flow.surplus, { round: true }) + "</span></div></div>" +
+      '<p class="hint">' + fmt(flow.income, { round: true }) + " expected in, less " +
+      fmt(flow.out, { round: true }) +
+      (flow.basis.budgeted > 0
+        ? " of plan (" + fmt(flow.basis.budgeted, { round: true }) + " budgeted, " +
+          fmt(flow.basis.unbudgeted, { round: true }) + " from how you actually spend)"
+        : " from how you actually spend") +
+      (flow.goals > 0 ? ", less " + fmt(flow.goals, { round: true }) + " your goals need" : "") + ".</p>";
 
     html += '<div class="afford-rows">' + routes.map(function (r) {
-      var cover = r.pr ? coverAfter(r.pr) : null;
-      var tone = r.blocked || !r.pr ? "mute"
-        : r.pr.crossing != null ? "bad"
-        : cover < AFFORD_FLOOR_MONTHS ? "warn" : "ok";
-      var verdict = r.blocked || !r.pr ? "not open to you"
-        : r.pr.crossing != null ? "runs out " + monthName(r.pr.crossing, true)
-        : cover >= 12 ? "still comfortable"
-        : Math.floor(cover) + (Math.floor(cover) === 1 ? " month" : " months") + " of cover left";
+      var v = routeVerdict(r);
       var on = showing && r.id === showing.id;
       return '<button class="afford-row' + (on ? " on" : "") + (r.blocked ? " off" : "") + '" ' +
         'data-act="afford-route" data-id="' + r.id + '">' +
         '<span class="afford-name">' + esc(r.label) + "</span>" +
-        '<span class="pill ' + tone + '">' + esc(verdict) + "</span>" +
+        '<span class="pill ' + v.tone + '">' + esc(v.text) + "</span>" +
         '<span class="afford-detail">' + esc(r.detail) + "</span>" +
         "</button>";
     }).join("") + "</div>";
 
-    if (showing && showing.pr) {
-      html += '<div style="margin-top:0.9rem">' +
-        outlookChart(showing.pr, baseline.points.map(function (x) { return x.balance; })) + "</div>" +
-        '<p class="band-sub">Solid is ' + esc(showing.label.toLowerCase()) +
-        "; dashed is where you were without it.</p>";
-    }
+    if (showing) html += affordBreakdown(showing);
 
     html += "</div></div>";
     return html;
   }
 
-  function bestRouteSentence(best, baseCover) {
-    var cover = best.cover;
-    var lost = baseCover === Infinity ? null : baseCover - cover;
-    if (cover >= AFFORD_FLOOR_MONTHS) {
-      return "Yes — " + best.label.toLowerCase() + ", and you finish the " + PROJECT_MONTHS +
-        " months with " + (cover >= 12 ? "more than a year" : Math.floor(cover) + " months") + " of cover" +
-        (lost != null && lost > 0.5 ? ", about " + Math.round(lost) + " fewer than if you did not" : "") + ".";
+  // What the chosen route costs, spelled out rather than scored.
+  function affordBreakdown(r) {
+    var c = routeCost(r);
+    var rows = [];
+    if (r.fromIncome > 0.005) {
+      rows.push(["Out of what you earn", fmt(r.fromIncome, { round: true }) +
+        (r.months ? " over " + r.months + (r.months === 1 ? " month" : " months") : "")]);
     }
-    return "Only just — " + best.label.toLowerCase() + " leaves under " + AFFORD_FLOOR_MONTHS +
-      " months of cover at the end, which is thinner than it sounds.";
+    if (r.fromSavings > 0.005) {
+      rows.push(["Out of savings", fmt(r.fromSavings, { round: true }) +
+        (r.raid > 0.005 && r.raid < r.fromSavings - 0.005
+          ? " (" + fmt(r.raid, { round: true }) + " of it promised)" : "")]);
+    }
+    if (r.overpay > 0.5) rows.push(["Cost of spreading it", fmt(r.overpay, { round: true })]);
+
+    var goalLines = c.slips.length
+      ? c.slips.map(function (d) {
+          return '<p class="notice warn" style="margin:0.3rem 0 0">' + esc(d.name) +
+            (d.broken
+              ? " <b>would not be reached at all</b>."
+              : " slips about <b>" + Math.round(d.slip) +
+                (Math.round(d.slip) === 1 ? " month" : " months") + "</b>" +
+                (d.nowOn ? ", to " + esc(monthName(d.nowOn, true)) : "") + ".") + "</p>";
+        }).join("")
+      : '<p class="hint" style="margin:0.4rem 0 0">Nothing you are saving for moves.</p>';
+
+    return '<p class="label" style="margin-top:1rem">What that costs</p>' +
+      '<div class="split" style="margin-top:0.4rem">' +
+      rows.map(function (x) {
+        return '<div class="split-row"><span>' + esc(x[0]) + '</span><span class="fig">' + x[1] + "</span></div>";
+      }).join("") + "</div>" +
+      goalLines +
+      (r.underFloor
+        ? '<p class="notice warn" style="margin:0.3rem 0 0">This takes you under the ' + floorMonths() +
+          "-month cushion you set.</p>"
+        : "");
   }
-
-
-
   function outlookBody() {
     if (!state.accounts.length && !state.transactions.length) return firstRunCard();
 
     var pr = projectForward(PROJECT_MONTHS, { off: outlookOff });
     var anyOff = Object.keys(outlookOff).some(function (k) { return outlookOff[k]; });
-    // when something is switched off, show where the line was as a ghost
-    var ghost = null;
+    // when something is switched off, show where the line was as a ghost;
+    // otherwise show where it goes once your goals are actually funded, which
+    // is the gap between what you have and what is already promised
+    var ghost = null, ghostIs = null;
     if (anyOff) {
       ghost = projectForward(PROJECT_MONTHS, {}).points.map(function (x) { return x.balance; });
+      ghostIs = "where you were before leaving income out";
+    } else if (goalsMonthlyNeed() > 0) {
+      ghost = projectForward(PROJECT_MONTHS, { off: outlookOff, holdGoals: true })
+        .points.map(function (x) { return x.balance; });
+      ghostIs = "what is left once your goals are fed";
     }
 
     /* Green means a healthy state and nothing else. Not running out inside the
@@ -5555,7 +5947,7 @@
     var endCover = coverAfter(pr);
     var tone = pr.crossing != null
       ? (projectedMonths(pr) >= 6 ? "warn" : "alert")
-      : (endCover >= AFFORD_FLOOR_MONTHS ? "calm" : "warn");
+      : (endCover >= floorMonths() ? "calm" : "warn");
     var html = '<div class="card pad">' +
       '<span class="label">The next ' + pr.horizon + ' months</span>' +
       '<p class="lead" style="color:var(--' + tone + ')">' + esc(outlookSentence(pr)) + "</p>" +
@@ -5565,8 +5957,8 @@
         ? " · burn from only " + pr.basis.months + " month" + (pr.basis.months === 1 ? "" : "s") + " of data"
         : "") + "</p>" +
       '<div style="margin-top:0.9rem">' + outlookChart(pr, ghost) + "</div>" +
-      (anyOff ? '<p class="band-sub" style="margin-top:0.5rem">The dashed line is where you were before ' +
-        "leaving income out.</p>" : "") +
+      (ghostIs ? '<p class="band-sub" style="margin-top:0.5rem">The dashed line is ' + esc(ghostIs) +
+        ".</p>" : "") +
       '<div class="btn-row" style="margin-top:0.9rem">' +
       '<button class="btn sm primary" data-act="afford-open">Can I afford something?</button></div>' +
       "</div>";
@@ -5967,24 +6359,52 @@
       var over = b.pct >= 1;
       var hot = !over && b.pct > progress + 0.10;
       var colour = over ? "var(--alert)" : hot ? "var(--warn)" : "var(--calm)";
+      var ownWord = b.prepaid > 0.005 ? " of your own" : "";
       var note = over
-        ? "over by " + fmt(-b.left, { round: true }) + " of " + fmt(b.limit, { round: true })
+        ? "over by " + fmt(-b.left, { round: true }) + " of " + fmt(b.limit, { round: true }) + ownWord
         : hot
-          ? "running ahead — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true })
+          ? "running ahead — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true }) + ownWord
           : b.pct < progress - 0.10
-            ? "well under — " + fmt(b.left, { round: true }) + " still there"
-            : "on pace — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true });
+            ? "well under — " + fmt(b.left, { round: true }) + " still there" + ownWord
+            : "on pace — " + fmt(b.left, { round: true }) + " left of " + fmt(b.limit, { round: true }) + ownWord;
       var noteTone = over ? "var(--alert)" : hot ? "var(--warn)" : "var(--dim)";
+
+      /* An allowance is drawn down first, so it gets its own bar above the
+         budget rather than being folded into it. Two bars, because the money
+         is two different things: theirs-for-a-purpose, then yours. */
+      var prepaidBar = b.prepaid > 0.005
+        ? '<div style="margin-top:0.7rem">' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.6rem">' +
+          '<span class="hint">Prepaid</span><span class="hint">' +
+          fmt(b.prepaidUsed, { round: true }) + " of " + fmt(b.prepaid, { round: true }) + " used</span></div>" +
+          '<div class="thinbar" style="height:6px;margin-top:0.3rem">' +
+          '<div class="thinbar-fill" style="width:' +
+          (clamp(b.prepaid > 0 ? b.prepaidUsed / b.prepaid : 0, 0, 1) * 100).toFixed(1) +
+          '%;background:var(--ac)"></div></div></div>'
+        : "";
 
       return '<div class="card pad budget-card">' +
         '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:0.6rem">' +
         '<span style="font-size:0.88rem;font-weight:600">' + esc(b.category) + "</span>" +
-        '<span class="due-amt">' + fmt(b.spent, { round: true }) + "</span></div>" +
-        '<div class="thinbar" style="height:6px;margin-top:0.65rem">' +
-        '<div class="thinbar-fill" style="width:' + (clamp(b.pct, 0, 1) * 100).toFixed(1) +
-          '%;background:' + colour + '"></div></div>' +
+        '<span class="due-amt">' + fmt(b.raw, { round: true }) + "</span></div>" +
+        prepaidBar +
+        (b.prepaid > 0.005 && b.limit > 0
+          ? '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.6rem;margin-top:0.7rem">' +
+            '<span class="hint">Your own</span><span class="hint">' +
+            fmt(b.spent, { round: true }) + " of " + fmt(b.limit, { round: true }) + " used</span></div>"
+          : "") +
+        (b.limit > 0
+          ? '<div class="thinbar" style="height:6px;margin-top:' +
+            (b.prepaid > 0.005 ? "0.3rem" : "0.65rem") + '">' +
+            '<div class="thinbar-fill" style="width:' + (clamp(b.pct, 0, 1) * 100).toFixed(1) +
+            '%;background:' + colour + '"></div></div>'
+          : "") +
         '<div class="budget-foot">' +
-        '<p class="pair-sub" style="color:' + noteTone + ';font-size:0.72rem">' + esc(note) + "</p>" +
+        '<p class="pair-sub" style="color:' + noteTone + ';font-size:0.72rem">' +
+        (b.limit > 0 ? esc(note)
+          : b.prepaidUsed >= b.prepaid - 0.005
+            ? "the allowance is spent \u2014 anything more is your own money"
+            : "covered by the allowance so far") + "</p>" +
         '<span class="card-tools">' +
         '<button class="ibtn" data-act="budget-edit" data-cat="' + esc(b.category) + '" aria-label="Edit budget" title="Edit">✎</button>' +
         '<button class="ibtn danger" data-act="budget-del" data-cat="' + esc(b.category) + '" aria-label="Remove budget" title="Remove">✕</button>' +
@@ -6073,11 +6493,169 @@
     return html;
   }
 
+  /* ---------------- income, split by what it actually is ----------------
+     A two-year contract and a one-off grant were in the same list, which meant
+     neither could show what mattered about it. A contract has a payer, a
+     start, an end and a likelihood of carrying on; a lump sum has a date and a
+     likelihood of arriving at all. */
+
+  function isContract(r) { return r.type === "income" && r.frequency !== "once"; }
+  function isOneOff(r) { return r.type === "income" && r.frequency === "once"; }
+
+  // How much is left to be paid under a contract before its end date. Nothing
+  // computed this, and it is the figure that says how much a contract is worth
+  // to you from here.
+  function contractRemaining(r) {
+    var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
+    if (!r.until) return null;                    // open-ended: no total to give
+    var months = daysUntil(r.until) / 30.44;
+    if (months <= 0) return 0;
+    return permo * months;
+  }
+
+  function contractCard(r) {
+    var permo = monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency);
+    var ended = recurEnded(r);
+    var left = contractRemaining(r);
+    var d = r.nextDate ? daysUntil(r.nextDate) : null;
+    var bits = [];
+    if (r.payer) bits.push(esc(r.payer));
+    bits.push(esc(FREQ_LABEL[r.frequency] || r.frequency));
+    bits.push(esc(accountName(r.accountId, r.pocketId)));
+
+    var conf = confidenceOf(r);
+    var renews = r.renews == null ? null : clamp(num(r.renews), 0, 100);
+
+    var when = ended ? "ended " + esc(longDate(r.until))
+      : r.until ? "ends " + esc(longDate(r.until))
+      : "no end date";
+    var tone = ended ? "mute"
+      : r.until && daysUntil(r.until) < 90 ? "warn" : "ok";
+
+    // what of this month's pay is allowance rather than pay, if it is known
+    var alNow = r.allowance ? allowanceFor(r, thisMonth()) : 0;
+
+    return '<div class="card pad" style="margin-bottom:0.75rem' + (ended ? ";opacity:0.66" : "") + '">' +
+      '<div class="card-head" style="padding:0"><h3>' + esc(r.name) + "</h3>" +
+      '<span class="btn-row">' +
+      '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit">✎</button>' +
+      '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete">✕</button>' +
+      "</span></div>" +
+      '<div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;margin-top:0.4rem">' +
+      '<span class="tile-fig">' + fmt(permo, { round: true }) +
+      '<span class="hint" style="font-family:var(--sans)"> a month</span></span>' +
+      '<span class="pill ' + tone + '" style="margin-left:auto">' + when + "</span></div>" +
+      // the split they asked for: what of it is actually pay
+      (alNow > 0.005
+        ? '<p class="band-sub"><b>' + fmt(permo - alNow, { round: true }) + "</b> of it is pay, <b>" +
+          fmt(alNow, { round: true }) + "</b> is " + esc(r.allowance.category) +
+          " money this month</p>"
+        : "") +
+      '<p class="band-sub">' + bits.join(" · ") +
+      (isForeign(r.currency) ? " · " + esc(fmtIn(r.amount, r.currency)) + " each time" : "") + "</p>" +
+
+      '<div class="split" style="margin-top:0.75rem">' +
+      (r.startedOn
+        ? '<div class="split-row"><span>Running since</span><span>' + esc(longDate(r.startedOn)) + "</span></div>"
+        : "") +
+      (left != null && left > 0.5
+        ? '<div class="split-row"><span>Left to be paid</span><span class="fig">' +
+          fmt(left, { round: true }) + "</span></div>"
+        : "") +
+      (conf < 1
+        ? '<div class="split-row"><span>Each payment</span><span>' +
+          Math.round(conf * 100) + "% likely</span></div>"
+        : "") +
+      (r.until
+        ? '<div class="split-row"><span>Carries on after that</span><span>' +
+          (renews == null ? "not said" : renews + "% likely") + "</span></div>"
+        : "") +
+      (r.allowance && r.allowance.category
+        ? '<div class="split-row"><span>Of which ' + esc(r.allowance.category) + "</span><span>" +
+          esc(fmtIn(num(r.allowance.rate), r.allowance.currency || baseCode())) + " a day</span></div>"
+        : "") + "</div>" +
+
+      (!ended && d != null
+        ? '<div class="btn-row" style="margin-top:0.8rem">' +
+          '<button class="btn sm primary" data-act="recur-pay" data-id="' + r.id + '">' +
+          (d < 0 ? "It arrived — " + Math.abs(d) + " days ago" : d === 0 ? "It arrived today"
+            : "Due in " + d + " days") + "</button></div>"
+        : "") + "</div>";
+  }
+
+  function oneOffRow(r) {
+    var amt = toBase(r.amount, r.currency, r.rate);
+    var conf = confidenceOf(r);
+    var d = r.nextDate ? daysUntil(r.nextDate) : null;
+    var gone = !r.nextDate;
+    var bits = [];
+    if (r.payer) bits.push(esc(r.payer));
+    if (r.nextDate) bits.push("expected " + esc(longDate(r.nextDate)));
+    if (conf < 1) bits.push(Math.round(conf * 100) + "% likely, counted at " + fmt(amt * conf, { round: true }));
+    return '<div class="row stacked' + (gone ? " muted" : "") + '">' +
+      '<div class="stack-top"><span class="row-title">' + esc(r.name) + "</span>" +
+      '<span class="row-fig gain">+' + fmt(amt).replace("-", "") +
+      (isForeign(r.currency) ? '<span class="fx">' + esc(fmtIn(r.amount, r.currency)) + "</span>" : "") +
+      "</span></div>" +
+      '<div class="stack-foot"><span class="row-sub">' + (bits.join(" · ") || "no date set") + "</span>" +
+      (gone ? '<span class="pill mute">arrived</span>'
+        : '<button class="btn sm primary" data-act="recur-pay" data-id="' + r.id + '">It arrived</button>') +
+      '<button class="ibtn" data-act="recur-edit" data-id="' + r.id + '" aria-label="Edit">✎</button>' +
+      '<button class="ibtn danger" data-act="recur-del" data-id="' + r.id + '" aria-label="Delete">✕</button>' +
+      "</div></div>";
+  }
+
   function incomeBody() {
-    var load = recurringMonthlyLoad();
-    return recurCard("income", "Regular income",
-      "Nothing scheduled. <strong>Add your salary or anything else that arrives on a cycle</strong> — it is what " +
-      "your committed bills are measured against.", load.income, "ok");
+    var all = state.recurring.filter(function (r) { return r.type === "income"; });
+    var contracts = all.filter(isContract).filter(function (r) { return !recurEnded(r); }).sort(byDate);
+    var ended = all.filter(isContract).filter(recurEnded)
+      .sort(function (a, b) { return String(b.until).localeCompare(String(a.until)); });
+    var oneOffs = all.filter(isOneOff).sort(function (a, b) {
+      return String(a.nextDate || "9").localeCompare(String(b.nextDate || "9"));
+    });
+
+    if (!all.length) {
+      return '<div class="card pad"><span class="label">Income</span>' +
+        '<p class="empty" style="margin:0.5rem 0 0.9rem">Nothing scheduled. <strong>Add a contract or a ' +
+        "one-off</strong> — it is what your bills are measured against, and what every projection is built " +
+        "from.</p>" +
+        '<div class="btn-row">' +
+        '<button class="btn primary" data-act="recur-add" data-kind="income">Add a contract</button>' +
+        '<button class="btn" data-act="recur-add" data-kind="once">Add a one-off</button></div></div>';
+    }
+
+    var monthly = contracts.reduce(function (t, r) {
+      return t + monthlyEquivalent(toBase(r.amount, r.currency, r.rate), r.frequency) * confidenceOf(r);
+    }, 0);
+    var lumpTotal = oneOffs.filter(function (r) { return r.nextDate; })
+      .reduce(function (t, r) { return t + toBase(r.amount, r.currency, r.rate) * confidenceOf(r); }, 0);
+
+    var html = '<div class="sec-head"><span class="label">Contracts</span>' +
+      '<span class="btn-row">' +
+      (monthly > 0 ? '<span class="pill ok">' + fmt(monthly, { round: true }) + "/mo</span>" : "") +
+      '<button class="btn sm primary" data-act="recur-add" data-kind="income">Add</button></span></div>';
+    html += contracts.length
+      ? contracts.map(contractCard).join("")
+      : '<div class="card pad"><p class="empty" style="margin:0">No live contracts.</p></div>';
+
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>One-off income</h3>' +
+      '<span class="btn-row">' +
+      (lumpTotal > 0 ? '<span class="pill ok">' + fmt(lumpTotal, { round: true }) + " expected</span>" : "") +
+      '<button class="btn sm primary" data-act="recur-add" data-kind="once">Add</button></span></div>' +
+      '<div class="card-body flush">' +
+      (oneOffs.length
+        ? '<div class="rows">' + oneOffs.map(oneOffRow).join("") + "</div>"
+        : '<p class="empty">Nothing expected. <strong>A grant, a bonus, a project fee</strong> — money that ' +
+          "arrives once and should not be averaged into a monthly rate.</p>") +
+      "</div></div>";
+
+    if (ended.length) {
+      html += '<div class="sec-head"><span class="label">Ended</span>' +
+        '<span class="pair-sub" style="margin:0">' + ended.length +
+        (ended.length === 1 ? " contract" : " contracts") + "</span></div>" +
+        ended.map(contractCard).join("");
+    }
+    return html;
   }
 
   /* ============================================================
@@ -6380,13 +6958,12 @@
       var done = left <= 0.005;
 
       var needLine, tone = "mute";
+      var gn = goalNeed(g);
       if (done) { needLine = "Funded in full."; tone = "ok"; }
       else if (g.due) {
-        var dLeft = daysUntil(g.due);
-        var monthsLeft = Math.max(dLeft / 30.44, 0);
-        if (dLeft < 0) { needLine = "Target date has passed — " + fmt(left, { round: true }) + " still to go."; tone = "bad"; }
+        if (gn.overdue) { needLine = "Target date has passed — " + fmt(left, { round: true }) + " still to go."; tone = "bad"; }
         else {
-          var need = left / Math.max(monthsLeft, 0.5);
+          var need = gn.need;
           var ok = pace >= need;
           needLine = "Needs <b>" + fmt(need, { round: true }) + "/mo</b> to land by " + esc(g.due) +
             (pace > 0
@@ -6707,6 +7284,18 @@
       "your browser blocks downloads. Restoring replaces everything currently in this browser, after a confirmation.</p></div></div>";
 
     /* appearance */
+    html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Your cushion</h3>' +
+      '<span class="sub">' + floorMonths() + (floorMonths() === 1 ? " month" : " months") + "</span></div>" +
+      '<div class="card-body"><p class="hint" style="margin-bottom:0.7rem">' +
+      "How many months of running cost you refuse to go under. It is what " +
+      "<b>Can I afford it?</b> holds back before calling anything spare \u2014 right now " +
+      fmt(savingsFloor(), { round: true }) + " at " + fmt(burnRate().rate, { round: true }) + " a month.</p>" +
+      '<div class="btn-row">' +
+      [1, 2, 3, 6, 12].map(function (m) {
+        return '<button class="btn sm' + (floorMonths() === m ? " primary" : "") +
+          '" data-act="floor-set" data-v="' + m + '">' + m + " mo</button>";
+      }).join("") + "</div></div></div>";
+
     html += '<div class="card" style="margin-top:1rem"><div class="card-head"><h3>Appearance</h3>' +
       '<span class="sub">' + esc(currentTheme() === "system" ? "following your phone" : THEME_LABEL[currentTheme()].toLowerCase()) +
       "</span></div><div class=\"card-body\">" +
@@ -7080,6 +7669,12 @@
     /* ---- navigation ---- */
     "go-insights": function () { view = "insights"; render(); },
 
+    "floor-set": function (id, el) {
+      state.settings.floorMonths = num(el.getAttribute("data-v"));
+      save(); render();
+      toast("Cushion set to " + floorMonths() + " months of running cost.");
+    },
+
     "theme-set": function (id, el) {
       state.settings.theme = el.getAttribute("data-v");
       save(); applyTheme(); render();
@@ -7091,12 +7686,6 @@
       var cats = Object.keys(state.budgets);
       // every pocket you could raid, named by account so two "Savings" are
       // telling apart
-      var pockets = [];
-      openAccounts().forEach(function (acc) {
-        pocketsOf(acc).forEach(function (pk) {
-          pockets.push({ value: acctRef(acc.id, pk.id), label: acc.name + " \u203a " + pk.name });
-        });
-      });
       openModal({
         title: "Can I afford it?",
         message: "Nothing here is logged \u2014 it runs your projection again with the purchase in it " +
@@ -7120,9 +7709,6 @@
         }, {
           key: "budgetCut", label: "Trim it by", type: "number", min: 0, value: 0,
           hint: "per month"
-        }] : []).concat(pockets.length ? [{
-          key: "pocketRef", label: "Or take it from", type: "select",
-          options: [{ value: "", label: "\u2014 none \u2014" }].concat(pockets), value: ""
         }] : []),
         validate: function (v) {
           if (!(v.amount > 0)) return "Enter what it costs.";
@@ -7137,7 +7723,6 @@
             date: v.date || today(),
             months: v.months, markup: v.markup,
             budgetCat: v.budgetCat || null, budgetCut: v.budgetCut,
-            pocketRef: v.pocketRef || null,
             route: null
           };
           planTab = "outlook"; view = "plan";
@@ -8178,21 +8763,57 @@
     /* ---- recurring ---- */
     "recur-add": function (id, el) {
       if (needAccount()) return;
-      var kind = (el && el.getAttribute("data-kind")) === "income" ? "income" : "expense";
-      function fieldsFor(k) {
+      var asked = el && el.getAttribute("data-kind");
+      // shared by add and edit, so the two cannot offer different things
+      var allowanceFields = function (al) {
+        al = al || {};
         return [
-          { key: "name", label: "Name", placeholder: k === "income" ? "e.g. Salary" : "e.g. Rent", span: true },
+          { key: "allowCat", label: "Part of it is for", type: "select",
+            options: [{ value: "", label: "\u2014 nothing, it is all pay \u2014" }]
+              .concat(catOptions("expense")),
+            value: al.category || "",
+            hint: "an allowance inside the pay \u2014 travel money, a phone budget" },
+          { key: "allowRate", label: "At a day rate of", type: "number", min: 0,
+            value: al.rate == null ? "" : al.rate,
+            hint: "Coffer asks how many days you went in, and that much of the pay is " +
+              "spent on that category before your own budget is" }
+        ].concat([{
+          key: "allowCur", label: "Allowance currency", type: "select",
+          options: [baseCode()].concat(Object.keys(state.settings.rates || {}).filter(function (c) {
+            return c !== baseCode() && rateNum(c) > 0;
+          })),
+          value: al.currency || baseCode()
+        }]);
+      };
+      var readAllowance = function (v) {
+        if (!v.allowCat || !(v.allowRate > 0)) return null;
+        return { category: v.allowCat, rate: v.allowRate,
+                 currency: v.allowCur || baseCode(), per: "day" };
+      };
+      var kind = (asked === "income" || asked === "once") ? "income" : "expense";
+      var startAsOnce = asked === "once";
+      function fieldsFor(k) {
+        var isIn = k === "income";
+        return [
+          { key: "name", label: "Name", placeholder: isIn ? "e.g. Balamand salary" : "e.g. Rent", span: true },
           { key: "type", label: "Type", type: "select", options: ["expense", "income"], value: k },
           { key: "amount", label: "Amount", type: "number", min: 0 },
           { key: "category", label: "Category", type: "select", catKind: "auto", options: catOptions(k) },
           { key: "account", label: "Account", type: "select", options: accountOptions() },
           { key: "frequency", label: "Repeats", type: "select",
-            options: FREQ.map(function (f) { return { value: f, label: FREQ_LABEL[f] }; }), value: "monthly",
+            options: FREQ.map(function (f) { return { value: f, label: FREQ_LABEL[f] }; }),
+            value: startAsOnce ? "once" : "monthly",
             hint: "one-off is a single lump sum on a date \u2014 a grant, a bonus, a project fee" },
-          { key: "nextDate", label: k === "income" ? "Next expected" : "Next due", type: "date", value: today() },
+          { key: "nextDate", label: isIn ? "Next expected" : "Next due", type: "date", value: today() },
           { key: "until", label: "Ends", type: "date",
             hint: "optional \u2014 a contract's last date, after which this stops being projected" }
-        ].concat(currencyField());
+        ].concat(isIn ? [
+          { key: "payer", label: "Who pays it", placeholder: "optional", span: true },
+          { key: "startedOn", label: "Running since", type: "date",
+            hint: "optional \u2014 when this first started paying" },
+          { key: "renews", label: "Chance it carries on", type: "number", min: 0,
+            hint: "% likely past its end date. Left empty, the projection stops dead there." }
+        ].concat(allowanceFields(null)) : []).concat(currencyField());
       }
       function open(k) {
         openModal({
@@ -8212,6 +8833,12 @@
               amount: v.amount, frequency: v.frequency,
               nextDate: v.nextDate || today(),
               until: v.until || null,
+              payer: (v.payer || "").trim() || null,
+              startedOn: v.startedOn || null,
+              // empty means "not said", which is not the same as nought
+              renews: v.type === "income" && String(v.renews || "").trim() !== ""
+                ? clamp(num(v.renews), 0, 100) : null,
+              allowance: v.type === "income" ? readAllowance(v) : null,
               currency: v.currency || baseCode(), rate: rateFor(v.currency || baseCode())
             });
             save(); render(); toast(v.name.trim() + " scheduled.");
@@ -8222,7 +8849,8 @@
       }
       function reopen(k) {
         var keep = {};
-        ["name", "amount", "account", "frequency", "nextDate", "until", "currency"].forEach(function (key) {
+        ["name", "amount", "account", "frequency", "nextDate", "until", "currency",
+         "payer", "startedOn", "renews", "allowCat", "allowRate", "allowCur"].forEach(function (key) {
           var e2 = document.getElementById("mf_" + key);
           if (e2) keep[key] = e2.value;
         });
@@ -8239,6 +8867,8 @@
     "recur-edit": function (id) {
       var r = state.recurring.filter(function (x) { return x.id === id; })[0];
       if (!r) return;
+      var isIn = r.type === "income";
+      var al = r.allowance || {};
       openModal({
         title: "Edit " + r.name,
         fields: [
@@ -8246,19 +8876,51 @@
           { key: "type", label: "Type", type: "select", options: ["expense", "income"], value: r.type },
           { key: "amount", label: "Amount", type: "number", value: r.amount, min: 0 },
           { key: "category", label: "Category", type: "select", catKind: "auto",
-            options: catOptions(r.type === "income" ? "income" : "expense"), value: r.category },
-          { key: "account", label: "Account", type: "select", options: accountOptions(acctRef(r.accountId, r.pocketId)), value: acctRef(r.accountId, r.pocketId) },
+            options: catOptions(isIn ? "income" : "expense"), value: r.category },
+          { key: "account", label: "Account", type: "select",
+            options: accountOptions(acctRef(r.accountId, r.pocketId)), value: acctRef(r.accountId, r.pocketId) },
           { key: "frequency", label: "Repeats", type: "select", options: FREQ, value: r.frequency },
-          { key: "nextDate", label: "Next due", type: "date", value: r.nextDate }
-        ].concat(currencyField(r.currency)),
+          { key: "nextDate", label: "Next due", type: "date", value: r.nextDate },
+          // the edit dialog never carried this, so an end date could be set on
+          // the way in and then never corrected
+          { key: "until", label: "Ends", type: "date", value: r.until || "",
+            hint: "clear it to make this open-ended again" }
+        ].concat(isIn ? [
+          { key: "payer", label: "Who pays it", value: r.payer || "", span: true },
+          { key: "startedOn", label: "Running since", type: "date", value: r.startedOn || "" },
+          { key: "renews", label: "Chance it carries on", type: "number", min: 0,
+            value: r.renews == null ? "" : r.renews,
+            hint: "% likely past its end date. Left empty, the projection stops dead there." },
+          { key: "allowCat", label: "Part of it is for", type: "select",
+            options: [{ value: "", label: "\u2014 nothing, it is all pay \u2014" }].concat(catOptions("expense")),
+            value: al.category || "",
+            hint: "an allowance inside the pay \u2014 travel money, a phone budget" },
+          { key: "allowRate", label: "At a day rate of", type: "number", min: 0,
+            value: al.rate == null ? "" : al.rate },
+          { key: "allowCur", label: "Allowance currency", type: "select",
+            options: [baseCode()].concat(Object.keys(state.settings.rates || {}).filter(function (c) {
+              return c !== baseCode() && rateNum(c) > 0;
+            })), value: al.currency || baseCode() }
+        ] : []).concat(currencyField(r.currency)),
         validate: function (v) {
           if (!v.name.trim()) return "Give it a name.";
           if (v.amount <= 0) return "Enter an amount above zero.";
+          if (v.until && v.nextDate && v.until < v.nextDate) return "It cannot end before its next date.";
+          if (v.allowCat && !(v.allowRate > 0)) return "Give the " + v.allowCat + " allowance a day rate.";
         },
         onConfirm: function (v) {
           r.name = v.name.trim(); r.type = v.type; r.amount = v.amount; r.category = v.category;
           r.accountId = parseRef(v.account).accountId; r.pocketId = parseRef(v.account).pocketId;
           r.frequency = v.frequency; r.nextDate = v.nextDate;
+          r.until = v.until || null;
+          if (v.type === "income") {
+            r.payer = (v.payer || "").trim() || null;
+            r.startedOn = v.startedOn || null;
+            r.renews = String(v.renews || "").trim() !== "" ? clamp(num(v.renews), 0, 100) : null;
+            r.allowance = (v.allowCat && v.allowRate > 0)
+              ? { category: v.allowCat, rate: v.allowRate, currency: v.allowCur || baseCode(), per: "day" }
+              : null;
+          }
           if (v.currency) { r.currency = v.currency; r.rate = rateFor(v.currency); }
           save(); render(); toast("Updated.");
         }
@@ -8281,20 +8943,90 @@
       // Never file a future date. Logging early means it happened today;
       // logging late keeps the day it was actually due.
       var loggedDate = r.nextDate > today() ? today() : r.nextDate;
-      var tx = {
-        id: uid(), date: loggedDate, desc: r.name, type: r.type,
-        category: r.category, accountId: r.accountId, pocketId: r.pocketId || null, amount: num(r.amount),
-        currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
-      };
-      var prevDate = r.nextDate;
-      state.transactions.push(tx);
-      // a one-off has no next date: advance() returns null and the row retires
-      r.nextDate = advance(r.nextDate, r.frequency);
-      save(); render();
-      toast(r.name + " logged" + (r.nextDate ? " — next due " + r.nextDate : " — that was the only one") + ".",
-        function () {
-        state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
-        r.nextDate = prevDate;
+
+      function commit(amount, date) {
+        var tx = {
+          id: uid(), date: date, desc: r.name, type: r.type,
+          category: r.category, accountId: r.accountId, pocketId: r.pocketId || null,
+          amount: num(amount),
+          // which schedule this came from, so a month can tell whether its pay
+          // has actually landed
+          recurId: r.id,
+          currency: r.currency || baseCode(), rate: num(r.rate) > 0 ? num(r.rate) : rateFor(r.currency)
+        };
+        var prevDate = r.nextDate;
+        state.transactions.push(tx);
+        // a one-off has no next date: advance() returns null and the row retires
+        r.nextDate = advance(r.nextDate, r.frequency);
+        save(); render();
+        toast(r.name + " logged" + (r.nextDate ? " — next due " + r.nextDate : " — that was the only one") + ".",
+          function () {
+            state.transactions = state.transactions.filter(function (t) { return t.id !== tx.id; });
+            r.nextDate = prevDate;
+          });
+      }
+
+      /* A bill is a bill: one tap logs it. Money arriving is different — the
+         figure is rarely exactly what was scheduled, and if the pay carries an
+         allowance this is the moment to ask how many days were worked, since
+         "it arrived" and "how much of it was travel" are one question. */
+      if (r.type !== "income") { commit(r.amount, loggedDate); return; }
+
+      var al = r.allowance && r.allowance.category && num(r.allowance.rate) > 0 ? r.allowance : null;
+      var mk = monthOf(loggedDate);
+      openModal({
+        title: r.name + " arrived",
+        message: "Correct anything that came in differently. Nothing is assumed \u2014 the figures below " +
+          "are only what was scheduled.",
+        confirmLabel: "Log it",
+        fields: [
+          { key: "date", label: "Date", type: "date", value: loggedDate },
+          { key: "amount", label: "How much came in", type: "number", min: 0, value: r.amount,
+            hint: isForeign(r.currency) ? "in " + r.currency : null }
+        ].concat(al ? [{
+          key: "days", label: "Days you went in", type: "number", min: 0, step: "1",
+          value: (allowanceDays(r, mk) || {}).days || "",
+          hint: fmtIn(num(al.rate), al.currency || baseCode()) + " a day toward " + al.category +
+            " \u2014 spent before your own " + al.category + " budget is"
+        }] : []),
+        validate: function (v) { if (!(v.amount > 0)) return "Enter what came in."; },
+        onConfirm: function (v) {
+          if (al && v.days > 0) {
+            var cur = al.currency || baseCode();
+            if (!state.allowanceDays) state.allowanceDays = {};
+            // the rate is frozen here, so a later rate change cannot move a
+            // pot that has already been spent against
+            state.allowanceDays[allowanceKey(r, monthOf(v.date || loggedDate))] =
+              { days: num(v.days), rate: rateFor(cur) };
+          }
+          commit(v.amount, v.date || loggedDate);
+        }
+      });
+    },
+
+    "allowance-days": function (id, el) {
+      var r = state.recurring.filter(function (x) { return x.id === id; })[0];
+      var mk = el && el.getAttribute("data-mk");
+      if (!r || !mk || !r.allowance) return;
+      var cur = r.allowance.currency || baseCode();
+      openModal({
+        title: "Days at " + r.name,
+        message: "How many days did you go in during " + monthName(mk, true) + "? At " +
+          fmtIn(num(r.allowance.rate), cur) + " a day, that much of the pay is spent on " +
+          r.allowance.category + " before your own budget is.",
+        confirmLabel: "Save",
+        fields: [
+          { key: "days", label: "Days", type: "number", min: 0, step: "1",
+            value: (allowanceDays(r, mk) || {}).days || "" }
+        ],
+        validate: function (v) { if (!(v.days >= 0)) return "Enter the number of days."; },
+        onConfirm: function (v) {
+          if (!state.allowanceDays) state.allowanceDays = {};
+          state.allowanceDays[allowanceKey(r, mk)] = { days: num(v.days), rate: rateFor(cur) };
+          save(); render();
+          toast(fmt(allowanceFor(r, mk), { round: true }) + " of " + monthName(mk, true) +
+            "'s pay was " + r.allowance.category + " money.");
+        }
       });
     },
 
@@ -9316,7 +10048,13 @@
     // fold while you were reading it.
     var onTab = viewEl.querySelector(".subnav button.on");
     if (onTab && onTab.scrollIntoView) {
-      onTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+      // only when it is genuinely out of view: scrolling on every render pushed
+      // the earlier tabs off the left edge for no reason
+      var nav = onTab.parentNode;
+      var l = onTab.offsetLeft, r = l + onTab.offsetWidth;
+      if (l < nav.scrollLeft || r > nav.scrollLeft + nav.clientWidth) {
+        onTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     }
     // receipts live in IndexedDB, so their size can only be reported asynchronously
     var pstat = document.getElementById("photo_stat");

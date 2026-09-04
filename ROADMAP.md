@@ -99,6 +99,34 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   overspending or a deadline arriving with money unspent. Lives on
   **Plan › Grants**.
 
+### Shipped: what a purchase costs, and income that is a contract
+
+- **"Can I afford it?" rebuilt around cost.** It used to ask whether a purchase
+  would bankrupt you — almost nothing does, so it said yes to everything, and
+  it answered out of `freeAssets()`, which contains the money sitting in goal
+  pockets. Every route now reports where the money comes from and what it
+  costs: out of income, out of savings, which goal slips and by how many
+  months. `spareAssets()` holds goals and a settable cushion back; a route that
+  runs you out is a warning rather than an option.
+- **A monthly surplus that means something** — expected income less planned
+  outgoings less what the goals need, with the budget used where a category has
+  one and behaviour where it does not, and both bases named.
+- **Income split into contracts and one-off money.** A contract carries its
+  payer, when it started, when it ends, how likely each payment is, what is
+  left to be paid on it, and **how likely it is to carry on** past its end
+  date. Set that and the projection carries the contract at that fraction and
+  says it is doing so; leave it unset and the cliff stays exactly as hard as it
+  was. A one-off shows its expected date and retires once it has arrived.
+- **"It arrived"** — money landing is confirmed and corrected rather than
+  retyped, prefilled from the schedule.
+- **Allowances inside a salary** — a travel allowance at so much a day is money
+  for travel: Plan › Budgets draws that pot down before your own budget, and
+  the contract card says how much of the pay is actually pay. Coffer asks how
+  many days you went in, and freezes the rate with the answer.
+- **An honest typical day** — built from true burn rather than everything that
+  left, so a reimbursable flight and a one-off laptop stop setting it, with the
+  number of days behind it stated and the comparison withheld under three.
+
 ### Fixed along the way
 - `balanceOf` added a foreign account's opening figure, stored in its own
   currency, to transaction effects already converted to base — so a EUR account
@@ -110,6 +138,13 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   recurring bills, no recurring income and nothing logged that month — which is
   a freelancer between contracts.
 - The three insight lines on Today floated on the page background with no card.
+- `plannedOutgoings` read budgeted categories' spending from the current month,
+  which is empty early in a month, so every budgeted category was counted twice
+  — once as its budget and again inside the burn.
+- The recurring **edit** dialog had no `until` field at all: a contract's end
+  date could be set when it was created and then never corrected.
+- The typical-day figure divided the *current* month's spending by the *viewed*
+  month's day count, so stepping back a month mixed two months together.
 
 ### Next
 - **Split transactions** — one shop trip across two categories.
