@@ -44,6 +44,16 @@ no package.json. What is in the repo is what runs.
   owed back. Runway is built from true burn over `freeAssets()` (which drops
   committed pockets). If you add a place that shows "what I spend", pick the one
   that matches the question and be consistent with the charts beside it.
+- **Deleting a record has to take its money with it, or leave it alone.**
+  Deleting a grant removes its award and every entry spent from it, because the
+  grant record is the only reason the ledger knows that money was not yours —
+  keep the entries and the award becomes your income, the unspent balance
+  rejoins your net worth, and the spending starts counting against your own
+  budgets. Its pocket goes too, unless something of yours is filed in it.
+  Deleting a *pocket* is the opposite case and keeps every entry: they move to
+  Unallocated, the account total does not change, and only a pocket holding a
+  live grant refuses. A holding keeps the payouts it made, since that money
+  really did arrive, but they stop being counted as a return on anything.
 - **Three kinds of money are not yours to spend, and each is excluded
   differently.** Committed pockets are yours but out of the runway. Investments
   count toward net worth at their mark but are dropped from `freeAssets()`
@@ -69,6 +79,14 @@ no package.json. What is in the repo is what runs.
   contractor earned last quarter is the lie that makes freelance work look like
   a salary. Confidence lives on `state.plan.lines`, never on the recurring
   record — join through `planKey`.
+- **A contract ends on `r.until`, and its renewal ends on `r.renewUntil`.**
+  (`endsOn` belongs to grants; writing it on a recurring record means the
+  contract silently never ends, which is how the sample's headline cliff went
+  missing.) `renews` used to pay its weighted fraction to the edge of the
+  horizon — eighteen months of income from a job that finished, at 45%, which
+  flatters every figure built on it. The second date is how far a renewal is
+  expected to run; past it the line stops. Left empty it still runs on, because
+  that is what was said, and `renewUntil` is dropped when `renews` is.
 - **An allowance inside a salary is not a fourth kind of restricted money.**
   A travel allowance paid at so much a day is yours either way, so it counts as
   income and net worth on arrival and its spending stays in `trueBurnFor()` and
@@ -257,6 +275,22 @@ does the pre-paint theme reader at the top of the file — it runs before the
 main script and needs its own copy of the expression. Anything not under
 `/deep/` keeps the original key, so no existing install loses sight of its
 data.
+
+## The written report
+
+`buildReport()` in Insights writes the whole ledger down as prose — for an
+accountant, a visa application, or reading once a quarter. Two rules keep it
+worth trusting. **It computes nothing of its own**: every figure comes from the
+function the screen uses (`monthSummary`, `trueBurnFor`, `budgetRows`,
+`grantLeft`, `projectForward`), or the report and the app will eventually
+disagree and only one of them will be right. And **it states its own basis and
+its own limits** — how many months the burn rests on, what is still owed back,
+which rates are stale, whether a plan exists at all. A report that hides how
+thin its data is, is worse than no report.
+
+Read it after changing it. Two defects in the first draft — a dangling "with
+entries in" and a contract that appeared to stop twice — were invisible to
+every assertion and obvious on sight.
 
 ## Sample data
 

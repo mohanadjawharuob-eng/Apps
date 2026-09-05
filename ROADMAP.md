@@ -275,6 +275,37 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   so `index.html` stays byte-identical between the copies and the deep one
   starts empty: a safe place to load the sample and show somebody around.
 
+### Shipped: getting things out again, and the report
+
+- **A grant can be deleted, and its money goes with it.** Keeping its entries
+  would have inverted the whole point of a grant: the award would become your
+  income, its unspent balance would rejoin your net worth, and its spending
+  would start counting against your own budgets. The confirmation says what
+  goes and what it was worth, its pocket goes too unless something of yours is
+  filed there, and the lot is one undo.
+- **A pocket can be removed for good without losing a single entry.** The
+  action already did exactly that — entries stay in the account and move to
+  Unallocated — but its button lived only inside `accountsCard()`, the function
+  that stopped being called during the Worth rebuild. It is on the live card
+  now, and withheld from a pocket holding a live grant, which has to be closed
+  or deleted first.
+- **A renewal now has an end of its own.** `renews` paid its weighted fraction
+  to the edge of the projection — eighteen months of income from a contract
+  that finished, at 45% — which flattered every figure built on it. "And if it
+  does, until" caps it, and the outlook marks the month the renewal itself runs
+  out. On the sample this surfaces a shortfall the uncapped walk was hiding.
+- **Insights writes a report.** Everything the app knows in one document: what
+  you are worth and which part is not yours, month by month with both spending
+  numbers, the runway and the walk forward, categories, budgets, holdings,
+  grants, goals, debts — and a closing section on what the report *cannot* tell
+  you, because a burn rate resting on two months should say so. Copy or save as
+  Markdown; nothing leaves the device to make it.
+
+### Fixed alongside
+- **The sample's ending contract never ended.** It was written with `endsOn`,
+  which belongs to grants; the projection reads `r.until`. The demo's headline
+  feature — a contract cliff — quietly did not happen.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because
