@@ -306,6 +306,47 @@ expenses. None of those hold for contract work paid in a currency that moves, so
   which belongs to grants; the projection reads `r.until`. The demo's headline
   feature — a contract cliff — quietly did not happen.
 
+### Shipped: "Can I afford it" made readable, and a goal you are allowed to move
+
+Prompted by a real screen its owner could not read a word of.
+
+- **Goals are no longer immovable.** Every route measured the purchase against
+  savings the goals had declared untouchable, so with goals set beyond your
+  income the tool could only ever answer no — and it never asked the obvious
+  question, which is whether the goal should move. **Put `<goal>` back** pauses
+  the goal costing the most a month, pays for the thing out of income, touches
+  no savings, and reports the only cost there is: the goal lands later. It is
+  usually the cheapest route, and it is the decision the person was actually
+  making.
+- **And costed honestly.** What pausing a goal frees is not its monthly pace:
+  the surplus it is paused into may already be negative, and the first thing
+  the freed money does is close that gap. Reading the pace alone said one month
+  where two were needed — the flattering answer, and the exact mistake this
+  route exists to stop the rest of the card making.
+- **The shortfall is the finding, and it is stated first.** A month that does
+  not balance on its own is the answer to a question nobody asked but everyone
+  needs: the card now leads with *you are $252 short every month already;
+  nothing below fixes that*. And it does not open with "Yes" while saying so —
+  under a shortfall, savings spent are not coming back, so only a route paid
+  out of income or out of spending less is a plain yes.
+- **The figures read as a sum.** "$252" was printed three rows above anything
+  that said where it came from. In / budget and usual spending / what your
+  goals need / **short every month** is one block, and *spare to spend today* —
+  a pile, not a flow — is its own line with its own sentence.
+- **Words the app invented are gone.** "Out of promises" was the badge on most
+  of the cards and was defined nowhere on screen; the pill now says which of
+  the two it lands on — your safety cushion, or a named goal and by how long.
+  A negative is never printed as a minus figure ("spare: −$1,148" said the true
+  thing backwards), a route label is never lower-cased into a sentence
+  ("pausing cyprus move"), and prose never says a slip twice.
+- **The list says which row the sentence means.** *Ways to pay for it — the
+  highlighted one costs you least.*
+- **And the green headline above it no longer contradicts the card.** Outlook
+  leaves goals out, so it read "you stay above water" in green directly above a
+  card saying the month was short every month. If the goals-fed line crosses
+  zero inside the horizon the headline is amber, says *but only by leaving your
+  goals unfed*, and the dashed line names the month they run you out.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because

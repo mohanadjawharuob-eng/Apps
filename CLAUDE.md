@@ -103,6 +103,32 @@ no package.json. What is in the repo is what runs.
   that talks about money over several months walks `surplusOver()` rather than
   multiplying today's surplus — income stops, and two routes that multiply
   independently will contradict each other.
+- **A goal is a promise with a date on it, not a bill.** Every afford route
+  measured the purchase against savings the goals had declared untouchable, so
+  with goals set beyond the income the tool could only answer "no" and never
+  asked whether the goal should move. The `slip` route pauses the goal costing
+  the most a month. What that frees is **`surplus + pace`, never the pace** —
+  the surplus it is paused into may already be negative, and the first thing
+  the freed money does is close that gap; reading the pace alone said one month
+  where two were needed. And a pause is not a diversion: `goalDelay()` models
+  money taken away for good and reports every full pause as *breaking* the
+  goal, so a paused-then-resumed goal computes its own slip, which is exactly
+  the length of the pause.
+- **A screen that says you are short must not open with "Yes".** When
+  `monthlySurplus().surplus` is negative that is the finding, stated before
+  anything about the purchase, and only a route paid out of income or out of
+  spending less is still a plain yes — under a shortfall the savings pile is
+  going down anyway and nothing is putting back what comes out of it. The same
+  rule upward: Outlook leaves goals out, so if the goals-fed line crosses zero
+  inside the horizon the headline is amber and says so, or it reads "you stay
+  above water" in green directly above a card saying the month never balances.
+- **The screen may not use a word it has not defined.** "Out of promises" was
+  the badge on most of the afford cards and appeared nowhere else in the app;
+  a pill says which of the two it lands on, the cushion or a named goal. A
+  negative is never printed as a minus figure ("spare: −$1,148" says the true
+  thing backwards) — print `Math.abs()` under a label that carries the sign.
+  And `label.toLowerCase()` in a sentence put "pausing cyprus move" on screen:
+  a route naming a proper noun carries its own `phrase` for that slot.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright

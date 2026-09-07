@@ -192,9 +192,25 @@ Grant: 9000 Heritage grant from Beit Foundation until 2027-05-30
 
 Reachable from Today and from Outlook. Give it a thing and a price, and it runs
 the whole projection again with that purchase inside it — then shows what each
-way of paying actually costs you. Paying cash, spreading it over instalments,
-trimming a budget, taking it from savings: each route is priced in **months of
-runway**, not just in money.
+way of paying actually costs you. Out of spare money, saving up for it,
+spreading it over instalments, trimming a budget, **or putting one of your
+goals back a few months**: each route is priced in what it takes out of
+savings and in which promise moves, not in whether you survive it.
+
+That last route matters more than it sounds. A goal is a promise you made
+yourself with a date on it, not a bill — and if every route is measured against
+savings your goals have declared untouchable, then with ambitious goals the
+answer can only ever be no. So it offers the trade you are actually making:
+pause the goal costing the most a month, pay for the thing out of income, and
+the only price is that the goal lands later. It says how much later, and in
+which month.
+
+**It reads your month first.** If what you earn does not cover your budget and
+your goals, that is the finding, and it is stated before anything about the
+purchase: *you are $252 short every month already; nothing below fixes that.*
+It will not answer "yes" while that is true unless the route is paid out of
+income or out of spending less — money taken from savings in a month that does
+not balance is not coming back.
 
 It deliberately does not measure against everything you own. Money your goals
 have already put aside, and a cushion you set yourself, are both held back
