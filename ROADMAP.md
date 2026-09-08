@@ -379,6 +379,31 @@ hiding entirely.
 `routeColumns`, `affordHeadline` and `affordCostTiles`, and deleted rather than
 left as debris.
 
+### Shipped: an adviser that decides, and waits to be told
+
+Plan gains a first sub-tab, **Advice**, and Today gains one line pointing at
+it. It answers the question no other screen does: what should I change?
+
+- **This month as instructions**, not figures: what is expected in, what the
+  plan takes, what each promise is owed this month — with **Set aside**, which
+  writes the transfer into the goal's own pocket, filled in and asking only
+  where it comes from — and what is left once they are kept. A goal already
+  fed this month reads *done*, off the ledger rather than off a flag.
+- **What I would change**, each proposal three lines: what to do, what made me
+  say it, and what changes if you agree. *Lower Groceries to $135 — it is set
+  at $300 and you have spent $120 a month over 3 months — that frees $165 a
+  month toward what you are saving for.*
+- **Worth watching**: budgets running ahead of the month, goals past their date.
+
+Two things make it worth reading rather than just clever. It **proposes and
+never acts** — nothing moves until a tap, everything undoes, and *Not this*
+puts a proposal away for good. And **order is the whole of the intelligence**:
+budgets that do not describe what you actually spend are corrected first, the
+month is re-read as though they were, and a promise is only asked to move if
+it still does not fit — then the cheapest sufficient one, not the largest.
+Proposed against today's figures the first advice it gave was to take the date
+off a goal, while a $300 budget for something costing $120 sat two cards below.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because

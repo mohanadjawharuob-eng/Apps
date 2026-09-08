@@ -188,6 +188,44 @@ Goal: 6000 Cyprus move by 2027-04-01
 Grant: 9000 Heritage grant from Beit Foundation until 2027-05-30
 ```
 
+### Advice — what I would change
+
+The first thing under Plan, and the only screen that tells you something
+rather than showing you something.
+
+**This month**, as instructions rather than figures: what is expected in, what
+your budget and usual spending take, what each goal is owed this month — with
+a **Set aside** button that writes the transfer straight into that goal's own
+pocket, the amount already filled in — and what is left for you once they are
+all kept. A goal you have already fed this month reads *done*, because the app
+can see the transfer; a goal you track by hand cannot be seen, so nothing is
+claimed about it.
+
+**What I would change** is a short list of proposals. Each is three lines:
+what to do, what made me say it, and what changes if you agree.
+
+> **Lower Groceries to $135**
+> It is set at $300 and you have spent $120 a month over 3 months.
+> That frees $165 a month toward what you are saving for, with room above what
+> you actually spend.
+
+Two things about it are worth knowing.
+
+**It proposes and never acts.** Nothing on this screen moves a figure until
+you tap *Do it*, everything it does can be undone from the toast that follows,
+and *Not this* puts a proposal away for good — with a button to bring back
+everything you have waved away, whenever you want it.
+
+**It fixes the cheap things first.** Budgets that do not describe what you
+actually spend get corrected before any promise is asked to move — because a
+budget set at $300 for something costing $120 is a wrong number sitting inside
+every figure built on it, and correcting it is free. Only if the month still
+does not add up after that does it suggest moving a goal, and then the one
+that costs you the least, not the biggest one.
+
+**Worth watching** is the last part: budgets running ahead of the month, goals
+past their date. Nothing to accept there — only something to know.
+
 ### Can I afford it?
 
 Reachable from Today and from Outlook. Give it a thing and a price, and it runs

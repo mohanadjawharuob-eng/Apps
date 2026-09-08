@@ -143,6 +143,22 @@ no package.json. What is in the repo is what runs.
   thing backwards) — print `Math.abs()` under a label that carries the sign.
   And `label.toLowerCase()` in a sentence put "pausing cyprus move" on screen:
   a route naming a proper noun carries its own `phrase` for that slot.
+- **The adviser proposes and never acts.** `adviceProposals()` returns
+  changes; nothing moves a figure until a tap, and every `apply()` hands back
+  its own undo. It computes nothing of its own either — every figure comes
+  from `monthlySurplus`, `goalNeed`, `budgetRows` or `spendByCategory`, the
+  same rule the written report lives by, or the advice and the app will
+  eventually disagree and only one will be right. **Order is the whole of the
+  intelligence**: budgets that do not describe what you actually spend are
+  corrected first, the month is re-read as if they were (`freed` is exactly
+  what `plannedOutgoings()` would return with the new limits), and a promise
+  is asked to move only if it still does not fit. Proposed against today's
+  figures instead, the first advice it gave was to take the date off a goal
+  while a $300 budget for something costing $120 sat two cards below. And the
+  promise it moves is the **cheapest sufficient** one — the goal whose pace
+  can drop by the deficit with the least slip — not simply the largest.
+  `state.settings.adviceOff` holds what the reader has waved away; like every
+  other settings key it is adopted in `adoptState` and nowhere else.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright
