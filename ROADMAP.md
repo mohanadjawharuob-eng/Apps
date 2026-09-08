@@ -347,6 +347,38 @@ Prompted by a real screen its owner could not read a word of.
   zero inside the horizon the headline is amber, says *but only by leaving your
   goals unfed*, and the dashed line names the month they run you out.
 
+### Shipped: the afford card rebuilt to be read at a glance
+
+Same arithmetic, same honesty rules, a tenth of the reading. The card went
+from five stacked paragraphs to a shape you take in top to bottom:
+
+- **The alarm, if there is one.** One line: *$255 short every month already,
+  before this.*
+- **The answer in one sentence, its price in a second.** *Only by pausing
+  Cyprus move for 2 months.* / *Nothing comes out of savings, and Cyprus move
+  lands 2 months later, in July 2027.*
+- **Three tiles** — Savings, Income, Delays — which were four rows of prose
+  buried below five paragraphs, and are the three figures a decision turns on.
+- **Where you stand**, as two figures over one line of arithmetic instead of
+  a four-row ledger and two hints.
+- **Every route as one row**, under aligned columns the eye runs down. A route
+  spells itself out once, under the table, when it is the one being looked at.
+
+Four things the rebuild had to fix as it went. The verdict describes the
+cheapest route while the tiles describe whichever is tapped, so the tiles are
+now captioned with whose figures they are. A label is a column heading, not a
+clause — "Only by out of spare money" — so every route carries a `phrase`. A
+blocked route cannot be selected and so had nowhere to say why it was shut;
+its reason prints in its own row. And with a healthy month every route costs
+nothing and four rows read "— —", telling you nothing about which to pick, so
+each row carries its pace ("$1,400 a month for 3 months", "all of it today")
+and the Costs column now shows what an instalment plan adds, which it had been
+hiding entirely.
+
+`routeVerdict`, `affordSentence` and `affordBreakdown` were replaced by
+`routeColumns`, `affordHeadline` and `affordCostTiles`, and deleted rather than
+left as debris.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because

@@ -122,6 +122,20 @@ no package.json. What is in the repo is what runs.
   rule upward: Outlook leaves goals out, so if the goals-fed line crosses zero
   inside the horizon the headline is amber and says so, or it reads "you stay
   above water" in green directly above a card saying the month never balances.
+- **The afford card is a glance, not an essay.** It was five stacked
+  paragraphs — a sentence and a half per route — and its owner could not read
+  a word of it. The shape now: an alarm line if the month is short, the answer
+  in one sentence with its price in a second, three tiles (`Savings` ·
+  `Income` · `Delays`), where you stand as two figures over one line of
+  arithmetic, then every route as **one row under aligned columns** —
+  `Savings` and `Costs`, the only two currencies a route has. Prose belongs to
+  the route being looked at, once, under the table. Three rules hold it
+  together: the verdict describes the *cheapest* route while the tiles
+  describe the *selected* one, so the tiles are captioned with whose figures
+  they are; a route label is a column heading and not a clause, so each route
+  carries a `phrase` that reads after both "Yes —" and "Only by"; and a
+  blocked route can never be selected, so its reason prints in its own row or
+  it has nowhere to say why it is shut.
 - **The screen may not use a word it has not defined.** "Out of promises" was
   the badge on most of the afford cards and appeared nowhere else in the app;
   a pill says which of the two it lands on, the cushion or a named goal. A

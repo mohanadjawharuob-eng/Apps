@@ -212,6 +212,13 @@ It will not answer "yes" while that is true unless the route is paid out of
 income or out of spending less — money taken from savings in a month that does
 not balance is not coming back.
 
+**The card is built to be read in one glance**, top to bottom: the alarm if
+there is one, the answer in a sentence and its price in a second, three tiles
+for what it costs — out of savings, out of income, and what it delays — where
+you stand as two figures, and then every route as a single row under two
+columns you can run your eye down. Tap a row and it explains itself; the one
+that costs least is first and says so.
+
 It deliberately does not measure against everything you own. Money your goals
 have already put aside, and a cushion you set yourself, are both held back
 first — otherwise the tool offers up your house deposit and calls the car
