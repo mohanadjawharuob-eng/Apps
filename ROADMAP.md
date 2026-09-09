@@ -1,3 +1,52 @@
+## Shipped: Horizon, a hub of five equal pages, and grants as a mode
+
+Eight sub-tabs on one strip meant the last three sat off the edge of a phone
+and nobody opened them. Horizon opens on a hub instead: the projection and one
+piece of advice at the top, then **Contracts · Budgets · Goals · Bills &
+one-offs · The plan** as cards of identical size, because a bigger card reads
+as a more important page and these are five equal questions.
+
+- **Contracts have their own page.** A two-year retainer and a bonus were in
+  one list, so neither could show what mattered about it. One-off income moved
+  to **Bills & one-offs**, which is one question — what is dated — rather than
+  two half-empty screens.
+- **The adviser says one thing.** The most useful change, in the second person,
+  with the two taps that act on it and *show me another*. Under a shortfall it
+  names the shortfall first and then what to do about it; it used to throw six
+  cards at once.
+- **Grants are a mode.** Off by default (`state.settings.grantMode`), on from
+  Settings or automatically the first time a grant is added. A book that
+  already holds one is in the mode whether the setting says so or not, which
+  is also why switching it off with a live grant refuses. **The arithmetic
+  never changes with the switch** — there is a test that reads Worth in both
+  positions and compares it character for character.
+- **The tab always lands on the hub.** Remembering the last page opened meant
+  the tab showed a different screen depending on what you did ten minutes ago.
+
+## Shipped: the Ledger gets pictures, and an account can be removed without losing its history
+
+- **Out, month by month** above the entries, saying whether the month you are
+  reading is a normal one.
+- **A second Where it went**, with a range: this month by default, then 3, 6 or
+  12. Insights keeps its own, asked of the month. The average is over the
+  months that actually have entries, not the months in the range — dividing by
+  the range makes every average look better the further back you ask.
+- **Remove an account, keep every entry.** Closing keeps it on screen and
+  deleting takes the history with it; neither is what you want for a bank you
+  left three years ago. `state.forgotten` keeps the name so the rows still say
+  where the money went, and the confirmation says plainly that the balance
+  leaves your net worth.
+- **The report button moved into the Insights header**, so the first row is
+  the reading rather than a button.
+- **"Everything worth noting" is on Insights once.** Home's three-line summary
+  of it followed it here and became a second card with the same heading, four
+  rows above the full list it summarised, carrying a button that linked to the
+  page it was already on. The summary went; the one thing only it carried —
+  the allowance question, with its button — moved into the full card.
+- Six functions that had lost their only caller were deleted — `accountsCard`,
+  `worthHero`, `monthTilesCard`, `netWorthStrip`, `billsCard`, `forgetPhoto` —
+  each replaced by a note saying what renders now and why.
+
 # Roadmap
 
 What is built, what is queued, and what was considered and turned down. Updated

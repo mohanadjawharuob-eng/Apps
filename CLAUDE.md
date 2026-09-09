@@ -159,6 +159,30 @@ no package.json. What is in the repo is what runs.
   can drop by the deficit with the least slip — not simply the largest.
   `state.settings.adviceOff` holds what the reader has waved away; like every
   other settings key it is adopted in `adoptState` and nowhere else.
+- **Grants are a mode, and a mode may not move a figure.**
+  `state.settings.grantMode` decides whether anything grant-shaped renders —
+  the hub page, the Settings row, the report's restricted section. It decides
+  nothing else: `restrictedTotal()`, `trueBurnFor()` and `spendByCategory()`
+  exclude grant money in both positions of the switch, and `hub.js` reads
+  Worth with it off and on and compares the two character for character. A
+  book that already holds a grant is in the mode whether the setting says so
+  or not (`grantMode()` is `settings.grantMode || grants().length`), which is
+  what stops this shipping as a feature that hides money people are already
+  tracking — and is the same fact as "switching it off with a live grant
+  refuses".
+- **Removing an account is three different things.** *Closing* keeps it on the
+  screen and stops new money landing in it. *Deleting* (`account-del`) takes
+  its transactions with it. *Removing* (`account-forget`) is the third and the
+  one a pocket always had: the record goes, every entry stays exactly as
+  logged, and `state.forgotten[id]` keeps the name so `accountName()` can still
+  answer "Old BoC (removed)" — without it every one of those rows reads
+  "(removed account)" and the history stops being history. Its balance does
+  leave your net worth, because the account is gone, and the confirmation says
+  so with the figure rather than letting it be noticed later.
+- **An average is over the months that have entries.** `spendOver()` returns
+  `live` beside `total`, and the ranged Where-it-went divides by it. Dividing
+  by the months you asked for makes every average look better the further back
+  you ask, which is a plausible wrong number rather than a visible failure.
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright
@@ -260,17 +284,46 @@ have not left yet, refundables have not come back yet. Each refundable carries
 `tx-settle` as an icon-only button — the label lives in `title` and
 `aria-label`, never in ink.
 
-Two tabs now carry a `subNav`: **Plan** (Outlook · Budgets · Bills · Income ·
-Goals · Grants · The plan) and **Worth** (Accounts · Investments · Debts).
-Plan › Income is itself three groups — contracts, one-off income, and ended
-contracts — because a two-year contract and a lump sum need different details
-about them. New
-work goes into one of those rather than into a seventh tab — six is the grid,
-and the bottom bar is the app's shape.
+**Horizon is a hub, not a sub-nav.** Eight sub-tabs on one strip put the last
+three off the edge of a phone, and nobody opened them. The hub is the
+projection and one piece of advice as lead cards, then `PLAN_PAGES` as buttons
+that open full pages: **Contracts · Budgets · Goals · Bills & one-offs · The
+plan**, with **Grants** joining them only in grant mode. Every hub card is the
+**same size** — a bigger card reads as a more important page, and these are
+equal questions — so the sub-line is one clipped line and the icon takes the
+slack. `outlook` and `advice` are pages too, reached from the lead cards and
+from anywhere that links straight to them; they are in `PLAN_DEEP`, not on the
+grid. New work becomes a page here rather than a sixth tab.
+
+**The Horizon tab always lands on the hub** (`currentPlanTab()` returns
+`planTab || "hub"`, and the tab handler clears `planTab`). Opening on whichever
+page you last used means the tab shows a different screen depending on what you
+did ten minutes ago, which is why nobody could learn where anything was.
+
+**Bills & one-offs is one question — what is dated.** A bill leaves on a cycle
+and a lump sum lands once; both are things with a day attached that you have or
+have not settled, which is exactly what Home's Pending card is built from.
+Contracts are the other half and have their own page, because a payer, an end
+date and a likelihood of carrying on are what every projection is built from.
+The retired `income` sub-tab id still routes, to `contracts`.
+
+**Worth keeps its `subNav`** (Accounts · Investments · Debts) and is the screen
+the others are patterned on.
 
 When a screen is rebuilt, check nothing was the *only* caller of an action.
 `accountsCard()` stopped being called during the Worth rebuild and took pocket
-editing with it; the buttons still existed, nothing rendered them.
+editing with it; the buttons still existed, nothing rendered them. It stayed
+dead for two more rebuilds. **Scan for orphans after every reshape** —
+
+```
+python3 -c 'import re;s=open("coffer/index.html").read()
+for n in sorted(set(re.findall(r"^  function ([A-Za-z_$][\w$]*)\(",s,re.M))):
+  if len(re.findall(r"(?<![\w$.])"+n+r"(?![\w$])",s))<=1: print(n)'
+```
+
+— and either give the function a caller or delete it, leaving a note saying
+what renders instead. Six were removed this way; only `pad2` is allowed to
+survive uncalled, as a one-line utility.
 
 `accountOptions()` returns a **grouped** list — an account with pockets comes
 back as `{group, options}` and carries no `value` of its own. Anything that
@@ -310,14 +363,32 @@ write.
 
 The scripts drive the real UI, so **a reshaped screen breaks them and that is
 not a regression** — but a suite nobody trusts is a suite nobody runs, so fix
-them in the same change. Three traps account for almost every stale one:
-`innerText` reflects `text-transform`, so a heading uppercased in CSS reads
-`SALARY` and `.includes("Salary")` is false; the ledger and plan rows are
-`div.row` and `.card`, never `<tr>`, so `closest("tr")` returns null; and a
-control that moved to a sub-tab needs `.subnav button[data-id="…"]` clicked
-first. When a dialog gained a confirmation step, the script has to press
-through it — logging from the bar goes via `#omniSheet [data-act="omni-commit"]`
-now, and income asks what arrived before it writes.
+them in the same change. Four traps account for almost every stale one.
+
+- `innerText` reflects `text-transform`, so a heading uppercased in CSS reads
+  `SALARY` and `.includes("Salary")` is false. Write the *verdict* and its
+  failure message off the same comparison, too — one helper here tested
+  case-insensitively for PASS and case-sensitively for the detail line, and
+  printed `"Pending" missing` beside a `PASS` for a year.
+- The ledger and plan rows are `div.row` and `.card`, never `<tr>`, so
+  `closest("tr")` returns null. Home's Pending rows are `.pend-row`.
+- **A Horizon page is opened with `[data-act="plan-tab"][data-id="…"]`**, not
+  `.subnav button[data-id="…"]` — that selector belongs to Worth now. Matching
+  a hub card by its label fails too: its `innerText` is the name *plus* a
+  sub-line, so `/^Budgets$/` never matches.
+- **A grant-less book has no Grants page**, because grants are a mode. A script
+  that adds the first grant has to switch it on the way a person does: Home →
+  gear → `[data-act="grant-mode"][data-v="1"]`.
+
+When a dialog gained a confirmation step, the script has to press through it —
+logging from the bar goes via `#omniSheet [data-act="omni-commit"]` now, income
+asks what arrived before it writes, and loading the sample asks before it
+replaces anything.
+
+Two figures moved and take assertions with them. **Net worth to the cent is on
+Worth** (`.hero-fig`); Home prints it rounded in a `.stand-fig` tile. **The
+typical month's burn is on Insights**; Home's month card is `viewMonth`'s own
+figures, which is `$0` in a month whose only spending was a grant's.
 
 Check both inline scripts still parse after any edit:
 
@@ -375,8 +446,10 @@ every assertion and obvious on sight.
 exercise the app rather than describe it: two currencies, pockets in three
 states, a grant with lines, two holdings (one funded by a transfer, one held
 from before the ledger), a split, a cross-currency exchange with a spread, a
-contract that ends and a salary with an allowance inside it. If a feature has
-no representation here, nobody can be shown it.
+contract that ends, a salary with an allowance inside it, and a one-off fee
+with a date on it so the half of Bills & one-offs that is not a bill has
+something in it. If a feature has no representation here, nobody can be shown
+it.
 
 Three rules it must keep. **Nothing may be dated in the future** — and because
 that left the current month with four entries when the sample was loaded on the
