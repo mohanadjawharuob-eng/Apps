@@ -357,7 +357,12 @@ node <script>.js          # scripts live in the session scratchpad
 ```
 
 There is no test runner. Each script seeds `localStorage`, reloads, drives the
-UI, and prints what it found. Screenshot anything visual and *look at it* —
+UI, and prints what it found. **Not everything in the scratchpad is a test**,
+so never run them all with a `for f in *.js` — some are source drafts that do
+nothing, some render screenshots, and `icons.js` is a *generator* that writes
+Bustan's PWA icons back into `icons/`. A blanket sweep once left three
+committed PNGs modified as a side effect of a Coffer change. Name the scripts
+you mean, and `git status` before committing. Screenshot anything visual and *look at it* —
 a bug that renders 55 plants identically passes every assertion you thought to
 write.
 
