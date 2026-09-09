@@ -1,3 +1,28 @@
+## Shipped: a goal that says what would have to change for it to happen
+
+The Goals page had its own space and nothing in it — a list of goals, a pace
+line, and four buttons. Everything that decides whether a goal actually
+happens was one tab away. Each goal now carries, on the goal itself:
+
+- **What it is owed this month**, with the same *Set aside* tap Horizon has —
+  and, once fed, the figure that actually went in rather than the pace it
+  wants next month.
+- **What the adviser would change about this goal**, with *Do it* and *Not
+  this*. They are the same proposals Horizon makes, found by the id they are
+  named with, so the two screens cannot drift apart.
+- **A note that budgets are corrected first**, once above the goals rather
+  than repeated in every card, because order is the whole of the adviser's
+  intelligence and this page would otherwise read as though the goal were the
+  problem.
+
+Two defects the screenshot caught that no assertion would have. The pace line
+said "your recent pace of $1,312/mo covers it" eight lines above a proposal to
+move that same goal, because `avgMonthlySaving(3)` and `monthlySurplus()`
+answer different questions; the line now names the pace as behaviour and
+points at the answer below. And the `tone` that line computed on all four of
+its branches was read by nothing, so a goal past its date printed in the same
+grey as one comfortably on pace.
+
 ## Shipped: Horizon, a hub of five equal pages, and grants as a mode
 
 Eight sub-tabs on one strip meant the last three sat off the edge of a phone

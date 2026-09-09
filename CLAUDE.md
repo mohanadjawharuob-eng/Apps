@@ -183,6 +183,26 @@ no package.json. What is in the repo is what runs.
   `live` beside `total`, and the ranged Where-it-went divides by it. Dividing
   by the months you asked for makes every average look better the further back
   you ask, which is a plausible wrong number rather than a visible failure.
+- **A goal carries the adviser's reading of it, and computes none of it.**
+  The Goals page was a list, so the three things that decide whether a goal
+  happens — what it is owed this month, what would have to change for it to
+  fit, and the budgets corrected before it is asked to move — all lived on
+  another screen. `goalAdviceBlock()` is handed `adviceMonth()` and
+  `adviceProposals()` already built, once for the page rather than once per
+  card, and finds a goal's own proposals by the id they are named with
+  (`goal-date-<id>`, `goal-target-<id>`, `goal-pause-<id>`). The budget note
+  is one fact about the month, so it is said **once above the goals** — in
+  every card it was the same paragraph four times.
+- **`pace` and `monthlySurplus()` are both honest and they disagree.**
+  `avgMonthlySaving(3)` is what you actually kept; the adviser reads what the
+  month leaves once the plan is paid. A freelancer who underspent last quarter
+  has a pace that covers a goal the plan does not, so the card read "your
+  recent pace of $1,312/mo covers it" eight lines above a proposal to move
+  that same goal. When the adviser has a proposal for a goal, the line names
+  the pace as behaviour rather than plan and points at the answer below, and
+  its tone goes amber — green is a healthy state and nothing else. (That
+  `tone` was computed on all four branches of `goalsBody` and read by nothing,
+  so a goal past its date and a goal on pace printed in the same grey.)
 - **Never guess at money.** If a currency has no rate, an account name does not
   match, or a date is not `YYYY-MM-DD`, refuse and say why. A plausible wrong
   number is worse than a visible failure. "Can I afford it" refuses outright
