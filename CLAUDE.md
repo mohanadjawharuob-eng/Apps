@@ -225,6 +225,12 @@ mind before adding anything:
 - **Every monetary figure is set in `var(--serif)` at weight 400.** Prose in a
   figure slot gets `.words`, which drops back to the UI stack — the display
   serif is for numbers and phrases at that size just break.
+- **One type ramp, one press feel.** `--fs-xs` `--fs-sm` `--fs-md` `--fs-lg`
+  replace the eleven sizes that had accumulated between 0.66rem and 0.86rem,
+  chosen a card at a time. `--t` (120ms) is the only transition, applied to
+  every tappable thing in one rule rather than per component, with a
+  `:active` give and `prefers-reduced-motion` honoured once for all of them.
+  Nothing reacted to a tap before, which is most of why the app read as stiff.
 - **Cards are separated by fill, not elevation.** One shadow exists, on the log
   bar, because it floats over scrolling content.
 
@@ -234,10 +240,25 @@ which are aliased onto the new values.
 
 ## Coffer's shape
 
-Six tabs, one question each: Today, Ledger, Plan, Worth, Insights, Settings. A
-tab that grows past about three cards has stopped answering one question — split
-it, or give it a `subNav` the way Plan does. Overview was allowed to reach seven
-blocks and became the thing everybody scrolled past.
+**Five tabs, and a gear.** Home · Ledger · Horizon · Worth · Insights, with
+Settings on a gear in Home's header. Settings is opened a few times a year and
+was holding a sixth of the bottom bar; **that freed slot is what pays for
+everything else** — Horizon exists because of it. A tab that grows past about
+three cards has stopped answering one question — split it, or give it a
+`subNav` the way Worth does. Today was allowed to reach ten blocks, six of them
+another tab's card rendered in full, and became the thing everybody scrolled
+past; Overview died of the same thing at seven.
+
+**Home opens on the day and closes on the month**, in that order: what you
+spent today and what it went on, where you stand (net worth and runway as two
+tiles, not two full-width blocks), the advice line when there is one, the
+one-tap buttons, what is Pending, and the month's two spending numbers last. A
+summary of the month above the day it is made of is the wrong way round.
+
+**Pending is one card, because it is one question**: bills inside seven days
+have not left yet, refundables have not come back yet. Each refundable carries
+`tx-settle` as an icon-only button — the label lives in `title` and
+`aria-label`, never in ink.
 
 Two tabs now carry a `subNav`: **Plan** (Outlook · Budgets · Bills · Income ·
 Goals · Grants · The plan) and **Worth** (Accounts · Investments · Debts).

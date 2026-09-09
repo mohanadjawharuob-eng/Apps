@@ -404,6 +404,48 @@ it still does not fit — then the cheapest sufficient one, not the largest.
 Proposed against today's figures the first advice it gave was to take the date
 off a goal, while a $300 budget for something costing $120 sat two cards below.
 
+### Shipped: five tabs, and a Home that opens on your day
+
+Counting every block on every screen found Today at ten, six of them another
+tab's card rendered in full. Three attempts to fix it by moving blocks between
+tabs all failed the same way — each emptied one screen by filling another.
+
+The unlock was a question about the tab bar itself: **Settings is not a tab.**
+It is opened a few times a year and was holding a sixth of the bottom bar. On a
+gear in Home's header instead, the freed slot pays for the whole reshape.
+
+- **Home · Ledger · Horizon · Worth · Insights.** Plan becomes Horizon, which
+  is what it actually is — the outlook, the adviser, and everything you have
+  committed to. "Plan" claimed less than the tab holds.
+- **Home opens on the day and closes on the month.** Spent today first, *and
+  what it went on* — a tappable list of the day's expenses, so a mistyped taxi
+  can be corrected where you notice it. Then net worth and the runway as two
+  tiles rather than two full-width blocks. Then the advice line, the one-tap
+  buttons, Pending, and the month's two spending numbers last.
+- **One tap gets pictures.** A ten-icon set on the same 20px stroke grid as the
+  tab bar, pickable per button and guessed from the category for every button
+  made before the field existed. Four to a row instead of a wrapping strip of
+  coloured dots.
+- **Pending is one card.** Bills inside seven days and money owed back are the
+  same question — nothing has settled — and each refundable carries the
+  existing `tx-settle` as a 28px icon-only button, labelled in `title` and
+  `aria-label` rather than in ink.
+- **The polish pass.** One type ramp (`--fs-xs` … `--fs-lg`) replacing eleven
+  ad-hoc sizes, and one transition token applied to every tappable thing in a
+  single rule with a `:active` give and reduced motion honoured once.
+
+Four functions lost their only caller, which is exactly how `accountsCard()`
+took pocket editing with it during the Worth rebuild. Each was placed
+deliberately rather than left: the fortnight of bills went to Plan › Bills,
+*Everything worth noting* to the head of Insights, and `threeTiles` and
+`owedBackCard` were deleted because Insights and Pending already show what they
+showed — replaced, not homeless.
+
+Also fixed on the way: `todayCard()` had listed the day's entries all along,
+including transfers, in a block below the fold. So the day was briefly listed
+twice; the older list is gone and the survivor is expenses only, because a
+transfer between your own pockets is not something you spent.
+
 ### Next
 - **Sub-tabs elsewhere** if any other tab grows past three cards.
 - **Merging two categories** — rename refuses a name that already exists, because
