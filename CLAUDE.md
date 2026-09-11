@@ -40,10 +40,48 @@ no package.json. What is in the repo is what runs.
   the two must convert first (`acctOpeningBase`) — adding them raw is a real
   bug that shipped once.
 - **Two spending numbers, deliberately.** `monthSummary().expense` is everything
-  that left; `.spend` and `trueBurnFor()` exclude one-offs and money you are
-  owed back. Runway is built from true burn over `freeAssets()` (which drops
+  that left; `.spend` and `trueBurnFor()` exclude one-offs and money that came
+  back. Runway is built from true burn over `freeAssets()` (which drops
   committed pockets). If you add a place that shows "what I spend", pick the one
   that matches the question and be consistent with the charts beside it.
+- **A refundable costs what you paid less what came back — settled or not.**
+  Every cost site used to key off `isPending` (`refundable && !settledOn`), so a
+  reimbursed flight was left out of the burn while the money was still out and
+  counted in full the day it arrived. That is backwards: the app was sure it
+  was not a cost while that was uncertain, and called it a cost once it was
+  certain it had not been one. One reimbursed trip a month shortened the
+  runway, ate the category budget and filled Where-it-went with money that was
+  never yours. `netCost(t)` is the one answer — still out: nothing; fully
+  refunded: nothing; short: the difference — and `costParts(t)` scales a split
+  by the same ratio so no caller has to know. The residual lands in the month
+  you SPENT it and under its own category, so a refund arriving in May corrects
+  March rather than charging May for a March flight; past months move, and that
+  is a correction of fact, not a re-valuation. The refund entry (`refundFor`)
+  comes out of income for the same reason — **both halves come out together**,
+  or a reimbursement reads as a month where you both spent and earned money you
+  never had. `isPending` survives for one job only: whether something is still
+  outstanding, which is what Home's Pending card asks.
+- **Goals are planned on what you spend, not on the limits you set.**
+  `plannedOutgoings()` used to count a budgeted category at its LIMIT and
+  everything else at behaviour. That only holds while the budgets describe what
+  you do; set above it — the ordinary case, because a budget is written once
+  and hopefully — every one quietly removed the difference from what reached a
+  goal, so a goal got pushed out for money that was never going to be spent.
+  Outgoings are the burn rate now. **A consequence worth knowing: correcting a
+  budget no longer frees anything**, so no proposal may claim it does, and the
+  adviser's re-read step is gone. Budgets keep the job they are good at —
+  saying a category is running hot before the month ends — and `slack`
+  (limits minus observed) exists only so `budgetSlackNote()` can explain why
+  the two figures differ.
+- **A goal that watches a total holds nothing back.** `g.tracks` is `pocket`
+  (money actually set aside — the default), `free` (reachable money) or `worth`
+  (net worth). Only a pocket goal reaches `goalsHeld()`, and only a pocket goal
+  can be told to set money aside: `free` and `worth` are whole-position figures
+  that already contain the money, so reserving against them would subtract it
+  from `spareAssets()` and credit it as progress at once — the same dollars
+  twice, in opposite directions. Watching goals are therefore dropped from
+  `adviceMonth().moves` (there is nowhere to move money to) and `goal-fund`
+  refuses on one.
 - **Deleting a record has to take its money with it, or leave it alone.**
   Deleting a grant removes its award and every entry spent from it, because the
   grant record is the only reason the ledger knows that money was not yours —

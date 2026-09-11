@@ -1,3 +1,34 @@
+## Shipped: what a refundable actually cost, and what a goal is planned on
+
+Three changes that all push the same way — your spending was being overstated
+and your goals were being pushed out for it.
+
+**A reimbursed expense is not spending, before or after it settles.** Every
+cost site keyed off "am I still waiting for this money", so a work flight was
+left out of the burn rate while it was outstanding and counted in full the day
+it came back. The app was confident it was not a cost while that was uncertain,
+and called it a cost once it was certain it had not been one. It now costs what
+you paid less what actually came back: nothing if fully reimbursed, the
+difference if short, and that difference lands in the month you spent it and
+under its own category. The refund entry comes out of income to match — both
+halves move together or the month describes neither. `refund.js` asserted the
+old behaviour by name ("burn now includes the flight"); that test was the bug
+written down, and it now asserts the opposite.
+
+**Goals are planned on what you spend, not on the limits you set.** Budgets
+counted at their limit removed the difference from what reached a goal, so a
+budget written hopefully once pushed a goal out by money that was never going
+to be spent. Outgoings are the burn rate now. The consequence is that
+correcting a budget no longer frees anything, so the adviser stopped claiming
+it does — budgets keep the job they are good at, and a single line names the
+gap between the limits and the spending instead.
+
+**A goal can watch a total instead of holding money.** `tracks` is a pocket
+(the default), your reachable money, or your net worth. The invariant that
+keeps the arithmetic straight: a goal watching a total reserves nothing, since
+that total already contains the money — counting it would subtract it from
+spare cash and credit it as progress at the same time.
+
 ## Shipped: a goal that says what would have to change for it to happen
 
 The Goals page had its own space and nothing in it — a list of goals, a pace
