@@ -1,3 +1,43 @@
+## Shipped: the months ahead stop losing the rest of this month
+
+Found by checking my own arithmetic against the app's, after its owner said an
+end-of-December figure looked low and produced a better sum than mine.
+
+`projectForward()` drew its first point for NEXT month, starting from what is
+reachable NOW. Nothing covered the days in between. This book's largest
+contract pays $600 on the 30th; on the 12th that money sat on Contracts, in
+Home's Pending card, and nowhere on the chart, and every one of the eighteen
+points was a month's income low. For anyone paid at month end the whole
+projection was understated, quietly, for as long as the screen has existed.
+
+The stub is what is still due after today and before the month is out, less
+the share of the burn belonging to the days that have not happened yet. It is
+applied to the opening balance rather than drawn as a point, because the
+x-axis is months and this is a part-month, and the band says so — "Plus the
+rest of September 2026 — $600 still due (AUB) against $221 of burn over its
+last 18 days, so the line opens at $5,156" — because a chart opening on a
+figure that matches nothing else on screen is its own bug.
+
+One payment, not a monthly equivalent: `startsOn` is the date the record is
+actually next due, so a weekly line contributes the one occurrence this stub
+can see rather than four and a third. That undercounts, which is the safe
+direction. A purchase asked about in the current month went through the same
+hole and is picked up here too.
+
+`pr.opening` is captured before the walk. Read off `balance` at the end of it,
+the "opening" was the balance eighteen months out — which is how the first
+draft printed $1,556 under a $4,777 account.
+
+Five assertions in `outlook.js` were the old behaviour written down. They now
+compute the stub from today's date rather than carrying a constant, since it is
+nearly a whole month on the 2nd and almost nothing on the 29th. `stub.js` is
+new and drives both shapes: a payment still to come, and a month with nothing
+left due but days of burn still to run.
+
+Also: three strings still sent people to "Plan › Income" and "Plan › Bills",
+screens the reshape renamed. They now read Horizon › Contracts and Horizon ›
+Bills & one-offs.
+
 ## Shipped: set what an account really holds
 
 The follow-on from the over-allocation work, and the answer to "how can we fix

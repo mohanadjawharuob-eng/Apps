@@ -117,6 +117,27 @@ no package.json. What is in the repo is what runs.
   contractor earned last quarter is the lie that makes freelance work look like
   a salary. Confidence lives on `state.plan.lines`, never on the recurring
   record — join through `planKey`.
+- **The projection starts next month from today's balance, so the rest of THIS
+  month has to be folded in.** `projectForward()` walked from `i = 1`, which is
+  next month, off `freeAssets()`, which is now — and everything between the two
+  fell through the gap. A salary due on the 30th was on Contracts, in Home's
+  Pending card and nowhere on the chart, so every point for eighteen months sat
+  a month's income low and anyone paid at month end read their whole future
+  understated. The `stub` closes it: income whose `startsOn` falls after today
+  and inside this month, less `(burn + goalHold) * daysLeft / daysInMonth`,
+  applied to the opening balance rather than drawn, because the x-axis is
+  months and this is a part-month. `opts.extra` for the current month goes in
+  here too — a purchase asked about *this* month never reached the loop either.
+  It counts **one payment** (`L.base`), not `L.monthly`: a weekly line
+  contributes the single occurrence the stub can see rather than four and a
+  third, which undercounts, and undercounting is the safe direction for a
+  figure someone plans against. `pr.opening` is captured **before** the walk —
+  read off `balance` at the end it is the figure eighteen months out — and the
+  band states it, or the chart opens on a number matching nothing else on
+  screen. `outlook.js` computes the stub from today's date rather than writing
+  it down, because it is nearly a whole month on the 2nd and almost nothing on
+  the 29th.
+
 - **A contract ends on `r.until`, and its renewal ends on `r.renewUntil`.**
   (`endsOn` belongs to grants; writing it on a recurring record means the
   contract silently never ends, which is how the sample's headline cliff went
