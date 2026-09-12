@@ -1,3 +1,25 @@
+## Shipped: the pace shows its working
+
+"You're currently keeping $48/mo" against a month that plainly held more than
+that. The figure was not miscomputed — it was three calendar months averaged
+into a monthly rate, over a window that ended last month, on income that
+arrives in lumps. One dry month in three drags it to nothing, and the current
+month, the best one, was not in the window at all.
+
+Four faults, all fixed. The goals screen read it over 3 months while Insights
+read the same thing over 6, so one question had two answers. A month with no
+income counted as a month of saving. A pace of nought or below was silently
+dropped, so the case that most needed saying said nothing. And it never stated
+what it rested on.
+
+It now carries its basis: which months, how many had income, and what each one
+contributed — "What you kept: Jun −$450 · Jul −$450 · Aug +$150 · income in 1
+of 3 months" — said once above the goals. When income landed in fewer than half
+the months it says the average is a poor guide rather than printing it flat.
+
+Found by looking at a real ledger and refusing to accept the number, which is
+the only way this class of defect ever gets found.
+
 ## Shipped: what a refundable actually cost, and what a goal is planned on
 
 Three changes that all push the same way — your spending was being overstated

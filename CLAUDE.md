@@ -231,8 +231,23 @@ no package.json. What is in the repo is what runs.
   (`goal-date-<id>`, `goal-target-<id>`, `goal-pause-<id>`). The budget note
   is one fact about the month, so it is said **once above the goals** — in
   every card it was the same paragraph four times.
+- **The pace never appears as a bare figure.** `avgMonthlySaving()` returns
+  `{rate, months, incomeMonths, parts, lumpy}`, not a number, because a number
+  here is close to useless: income that arrives in lumps makes a monthly
+  average say more about WHEN you were last paid than about how you are doing.
+  Three months with one dry month average to almost nothing, and the answer
+  swings wildly as that month falls in and out of the window. It was also read
+  over 3 months on Goals and 6 on Insights, so one question had two answers
+  with nothing saying why — there is **one window** now. `paceWords()` states
+  the span, `paceBreakdown()` lists what each month contributed (said once
+  above the goals, not repeated in every card), and `lumpy` — income in fewer
+  than half the months — makes the screen say the average is a poor guide
+  rather than printing it flat. The pace is stated even when it is nought or
+  below; it used to be dropped unless positive, so the one case that most
+  needed saying printed nothing. A negative is "gone $250 a month backwards",
+  never "kept −$250".
 - **`pace` and `monthlySurplus()` are both honest and they disagree.**
-  `avgMonthlySaving(3)` is what you actually kept; the adviser reads what the
+  The pace is what you actually kept; the adviser reads what the
   month leaves once the plan is paid. A freelancer who underspent last quarter
   has a pace that covers a goal the plan does not, so the card read "your
   recent pace of $1,312/mo covers it" eight lines above a proposal to move
