@@ -243,11 +243,26 @@ no package.json. What is in the repo is what runs.
   month, not a rate.
 - **A warning states its cause, or it reads as the app being broken.**
   "Over-allocated $185.10" on an account card was a conclusion with nothing
-  attached — and it is almost always one ordinary thing: money set aside into a
-  pocket, then spent straight from the account without being filed under that
-  pocket, so the pocket keeps its figure while the account drains. The row now
-  says that and names the two ways out. Same rule as the pace and the written
-  report: a figure that cannot be checked or acted on is worse than no figure.
+  attached. The row now prints the two figures it came from — what the account
+  holds and what its pockets claim — so the reader can tell which side is
+  wrong: if the account line disagrees with the bank, the fault is in an entry;
+  if the pockets line disagrees with the pockets above it, the fault is in the
+  app. Same rule as the pace and the written report: a figure that cannot be
+  checked or acted on is worse than no figure.
+- **Over-allocation has two causes and the note names both.** It said only the
+  common one — money set aside into a pocket and then spent straight from the
+  account without the pocket being named, so the pocket keeps its figure while
+  the account drains. The first real book it met was the other one: money that
+  arrived and was never logged (or an opening figure entered too low), which
+  leaves the **pockets right and the account short** and presents identically.
+  Told to look for spending that did not exist, its owner concluded the app was
+  broken. `balanceFloor(acc)` walks the account's history in date order and
+  returns the lowest it ever was — a mis-filed pocket keeps the account
+  plausible the whole way through, a missing deposit takes it below zero
+  somewhere, and that dip is the only evidence in the book which of the two it
+  is. It is stated with its date and against the opening figure, and only when
+  it is actually negative. (Sort before walking: `state.transactions` is in the
+  order things were entered, not the order they happened.)
 - **A pace needs three months, the same as a burn rate.**
   `avgMonthlySaving()` returns `partial` when it has fewer than three, and the
   screens then refuse to state a rate or a shortfall built on one — they say

@@ -1,3 +1,33 @@
+## Shipped: over-allocation names both of its causes
+
+The first real book to show the warning was the case the note did not cover.
+Bank held $2,968.40; its four pockets claimed $3,253.50; the row said
+"Over-allocated $285.10" and explained it as money set aside and then spent
+straight from the account. Its owner went looking for that spending, could not
+find it, and reasonably concluded the app had broken it — the ledger was right
+and the note was pointing the wrong way.
+
+What had actually happened is the other cause, and it presents identically: the
+pockets are right and the ACCOUNT is short, because money arrived that was
+never logged (or an opening figure was entered too low). The two are
+indistinguishable from an end balance. They are not indistinguishable from the
+history: money spent out of a pocket without the pocket being named leaves the
+account plausible the whole way through, while a missing deposit takes it below
+zero somewhere. That book read **−$8.40 on 27 August**, which a current account
+cannot do.
+
+`balanceFloor(acc)` walks the account in date order — sorted, because
+`state.transactions` is in entry order, not event order — and returns the
+lowest it ever was with the day it was there. The note names both causes, and
+prints the dip with its date and against the opening figure only when there is
+one. `overalloc.js` now drives both shapes and asserts that the dip line
+appears in exactly one of them.
+
+Nothing about the arithmetic moved. `unallocatedOf`, `pocketBalance`,
+`balanceOf` and `effectOn` are untouched; the figure has been derivable since
+the pockets were created, and was on screen the whole time under the label
+"Not allocated".
+
 ## Shipped: "Over-allocated" says why
 
 Reported as a figure that could not possibly be true. It was true: the account
