@@ -1,3 +1,18 @@
+## Shipped: "Over-allocated" says why
+
+Reported as a figure that could not possibly be true. It was true: the account
+held $214.90 while its pocket claimed $400, so the pockets were over the
+account by the difference. What was missing was the cause — money set aside
+into a pocket and then spent straight from the account, so the pocket keeps its
+figure while the account drains. The row now says that and names the two ways
+out: file the spending under the pocket, or bring the pocket down.
+
+Checked first that none of the three preceding ships had moved it — the whole
+Worth screen renders character for character identically on the build before
+them and the build after, on a ledger carrying a pending refundable, a settled
+one, a partial refund, a one-off, a grant, an investment, a committed pocket
+and two currencies.
+
 ## Shipped: "kept" stops counting one-offs, and a rate needs three months
 
 Reported from a real ledger: "you're currently keeping $48/mo" in a month whose

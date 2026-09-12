@@ -241,6 +241,13 @@ no package.json. What is in the repo is what runs.
   was then held up against a goal as what its owner manages every month. The
   plan close-out keeps `net` on purpose: it is a retrospective on one named
   month, not a rate.
+- **A warning states its cause, or it reads as the app being broken.**
+  "Over-allocated $185.10" on an account card was a conclusion with nothing
+  attached — and it is almost always one ordinary thing: money set aside into a
+  pocket, then spent straight from the account without being filed under that
+  pocket, so the pocket keeps its figure while the account drains. The row now
+  says that and names the two ways out. Same rule as the pace and the written
+  report: a figure that cannot be checked or acted on is worse than no figure.
 - **A pace needs three months, the same as a burn rate.**
   `avgMonthlySaving()` returns `partial` when it has fewer than three, and the
   screens then refuse to state a rate or a shortfall built on one — they say
