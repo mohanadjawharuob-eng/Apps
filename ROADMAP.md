@@ -1,3 +1,34 @@
+## Shipped: set what an account really holds
+
+The follow-on from the over-allocation work, and the answer to "how can we fix
+it now?". The book's owner had two accounts — "Savings" and "Cyprus refundable
+trip so far" — created for money that was already in them, with an opening
+figure of nought. Everything that then left those accounts came from nowhere:
+"Savings" reads **−$2,226**, the Bank dipped to −$8.40 in August, and the Bank's
+four pockets claimed $285.10 more than it held. One missing number, three
+symptoms, none of them fixable by editing an entry, because no entry was wrong.
+
+Balances are derived from the opening plus every transaction, which makes each
+entry checkable against a receipt and leaves the opening as the one figure with
+nothing to test it against. `account-true` — ⇄ on every account card — asks
+what the account really holds and moves the opening by the difference.
+
+An adjustment transaction was the obvious alternative and is wrong: it does the
+same arithmetic while lying about a month, landing in income or in the burn
+rate and changing what its owner appears to have spent. This touches no entry,
+so no month moves, and the dialog and the test both say so.
+
+The opening keeps the rate it was frozen at — `opening += delta * acctRate`
+raises the base balance by exactly the difference and re-values nothing, which
+is the rule that stops a rate change moving a recorded figure. The currency
+picker opens on the account's own currency, so the prefill is converted into it
+first; a base figure sitting under a EUR label is an invitation to type a EUR
+number into a dollar box.
+
+On the real book: $1,462 opening → $1,747.10, Bank reads $3,253.50, the
+over-allocation goes to nought, net worth $4,492.09 → $4,777.19, and the burn
+rate stays at $369 a month.
+
 ## Shipped: over-allocation names both of its causes
 
 The first real book to show the warning was the case the note did not cover.

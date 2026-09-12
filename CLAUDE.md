@@ -263,6 +263,23 @@ no package.json. What is in the repo is what runs.
   is. It is stated with its date and against the opening figure, and only when
   it is actually negative. (Sort before walking: `state.transactions` is in the
   order things were entered, not the order they happened.)
+- **An opening figure is the one number a ledger cannot check, so there is a
+  way to correct it.** Balances are derived from opening plus entries, which
+  makes every entry checkable against a receipt and leaves the opening as the
+  single stated figure with nothing to test it. Two accounts created with an
+  opening of nought for money that was already in them put the first real book
+  $2,226 out: every dollar that left them came from nowhere, and it surfaced
+  three screens away as pockets claiming more than their account held.
+  `account-true` asks what the account really holds and moves the **opening**
+  by the difference. An adjustment *transaction* would do the same arithmetic
+  and lie about a month — it would land in income or in the burn rate — so the
+  dialog says no entry is touched and `reconcile.js` asserts the burn rate does
+  not move. The opening keeps the rate it was frozen at (`opening += delta *
+  acctRate`), because recomputing it at today's rate would re-value a figure
+  that is already recorded; for the same reason the picker opens on the
+  account's own currency and the prefill is converted into it, since a base
+  figure under a EUR label invites a EUR number typed into a dollar box.
+
 - **A pace needs three months, the same as a burn rate.**
   `avgMonthlySaving()` returns `partial` when it has fewer than three, and the
   screens then refuse to state a rate or a shortfall built on one — they say
