@@ -1,3 +1,23 @@
+## Shipped: "kept" stops counting one-offs, and a rate needs three months
+
+Reported from a real ledger: "you're currently keeping $48/mo" in a month whose
+true burn was $369 against $600 of salary. Two faults behind it.
+
+**"Kept" was income less everything that left, one-offs included.** A $183
+one-off inside August made it $48 instead of $231 — and that $48 was then used
+as a *rate*, held up against a goal and turned into "short by $629/mo". A thing
+bought once is not a reason to say you cannot save every month.
+`monthSummary().kept` now takes one-offs out, the same basis as the burn rate,
+and the pace averages that. `.net` stays as it was for the plan close-out,
+which is a retrospective on one month rather than a rate.
+
+**And a rate was being computed from one month.** The book started in August,
+so there was exactly one month of history — the app averaged it and stated a
+monthly shortfall on it. The burn rate has guarded this since it shipped; the
+pace did not. Under three months it now says how many it has and points at what
+the month leaves instead. The current month is named as still running, so a
+month where real money arrived no longer looks like it went missing.
+
 ## Shipped: the pace shows its working
 
 "You're currently keeping $48/mo" against a month that plainly held more than

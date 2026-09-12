@@ -231,6 +231,25 @@ no package.json. What is in the repo is what runs.
   (`goal-date-<id>`, `goal-target-<id>`, `goal-pause-<id>`). The budget note
   is one fact about the month, so it is said **once above the goals** — in
   every card it was the same paragraph four times.
+- **"Kept" is income less TRUE BURN, not income less what left.**
+  `monthSummary().kept` sits beside `.net`: `net` is the month's real cash
+  movement (one-offs included, because they really did leave), `kept` takes
+  one-offs out as well. `avgMonthlySaving()` averages `kept`, because it is
+  making a **rate** — a laptop bought once is not a reason to say you cannot
+  save every month. A real book read "$600 salary, +$48 kept" in a month whose
+  true burn was $369, because a $183 one-off was inside the figure; that $48
+  was then held up against a goal as what its owner manages every month. The
+  plan close-out keeps `net` on purpose: it is a retrospective on one named
+  month, not a rate.
+- **A pace needs three months, the same as a burn rate.**
+  `avgMonthlySaving()` returns `partial` when it has fewer than three, and the
+  screens then refuse to state a rate or a shortfall built on one — they say
+  how many months there are and point at what the month leaves instead. Before
+  this, a ledger a fortnight old reported "$48 a month" off a single August and
+  declared a goal short by $629 a month on it. The current month stays out
+  (it is half over, so its spending has not finished even when its income has)
+  and the screen **says so by name**, or a month where real money arrived looks
+  like it went missing.
 - **The pace never appears as a bare figure.** `avgMonthlySaving()` returns
   `{rate, months, incomeMonths, parts, lumpy}`, not a number, because a number
   here is close to useless: income that arrives in lumps makes a monthly
