@@ -226,6 +226,11 @@
     padding: 0.3rem 0.5rem; font-size: 0.78rem; max-width: 260px;
   }
   .tip.on { opacity: 1; }
+  .report {
+    background: var(--sheet); border: 1px solid var(--rule); padding: 1.1rem 1.2rem;
+    font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--ink);
+    white-space: pre-wrap; overflow-x: auto; margin: 0 0 0.8rem;
+  }
   .chart { display: block; max-width: 100%; }
   .meter { height: 5px; background: var(--rule-soft); overflow: hidden; }
   .meter-fill { height: 100%; background: var(--blue); }
@@ -363,7 +368,7 @@
     renderView: function (v) {
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
-      if (v === "week")     return renderWeek();
+      if (v === "week")     return reportOn ? renderReport() : renderWeek();
       if (v === "kit")      return renderKit();
       return renderSettings();
     },
@@ -374,7 +379,7 @@
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; },
 
     actions: {}
   };
@@ -1106,6 +1111,7 @@
       '<button class="btn" data-act="week-prev">‹ earlier</button>' +
       (isNow ? "" : '<button class="btn" data-act="week-now">this week</button>') +
       '<button class="btn" data-act="week-next" ' + (isNow ? "disabled" : "") + '>later ›</button>' +
+      '<button class="btn" data-act="report-new">Report</button>' +
       '<button class="btn" data-act="span-add">Add time</button></div>');
 
     h += '<div class="tiles">' +
@@ -1223,6 +1229,234 @@
       fields: [{ key: "benchId", label: "Bench", type: "select", span: true,
         options: spanBenchOpts(), value: live(state.benches)[0].id }],
       onConfirm: function (v) { onPick(v.benchId); }
+    });
+  }
+
+
+  /* ================= the written report ================= */
+
+  // For a meeting, or an email, or a funder. Two rules keep it worth trusting.
+  // It computes NOTHING of its own: every figure comes from the same function
+  // the screen uses, or the report and the app will eventually disagree and
+  // only one of them will be right. And it states its own basis and its own
+  // limits — how many weeks it rests on, what is unattributed, what is still
+  // open — because a report that hides how thin its data is, is worse than no
+  // report at all.
+  var reportOn = null;   // {claimantId, from, to} — view state, never saved
+
+  function wordDate(d) {
+    return parseISO(d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  }
+  function pad(s, n) { s = String(s); return s + new Array(Math.max(1, n - s.length + 1)).join(" "); }
+
+  function weeksBetween(from, to) {
+    var out = [], w = weekStart(from), guard = 0;
+    while (w <= to && guard++ < 400) { out.push(w); w = addDays(w, 7); }
+    return out;
+  }
+
+  function boardsForClaimant(claimantId) {
+    return boards().filter(function (b) {
+      if (!claimantId) return true;
+      var bn = byId(state.benches, b.benchId);
+      return bn && bn.claimantId === claimantId;
+    });
+  }
+
+  function buildReport(o) {
+    var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
+    var from = o.from, to = o.to;
+    var L = [];
+    L.push((c ? c.name : "Every claimant") + " — " + wordDate(from) + " to " + wordDate(to));
+    L.push("");
+
+    /* ---- hours, straight from the same sums the week screen reads ---- */
+    var weeks = weeksBetween(from, to);
+    var owed = c ? owedOf(c) : { unit: "h", owed: 0 };
+    var rows = weeks.map(function (w) {
+      var wTo = addDays(w, 6);
+      var lo = w < from ? from : w, hi = wTo > to ? to : wTo;
+      var got = c
+        ? (owed.unit === "d" ? daysFor(c.id, lo, hi) : minsFor(c.id, lo, hi))
+        : state.spans.reduce(function (t, sp) { return t + minsIn(sp, lo, hi); }, 0);
+      var whole = (w >= from && wTo <= to);
+      // Any entry at all, for anyone, means the week was lived in the app and a
+      // nought for this claimant is a real nought. No entry anywhere means the
+      // week is simply unrecorded, and it is not measured against anything.
+      var lived = state.spans.some(function (sp) { return minsIn(sp, lo, hi) > 0; });
+      return { w: w, lo: lo, hi: hi, got: got, whole: whole, lived: lived };
+    });
+    var withEntries = rows.filter(function (r) { return r.got > 0; });
+    var totalGot = rows.reduce(function (t, r) { return t + r.got; }, 0);
+
+    L.push("HOURS");
+    if (!withEntries.length) {
+      L.push("  Nothing was logged in this period, so every figure below that depends on hours is absent rather than nought. The difference matters, and the app will not print a nought it cannot stand behind.");
+    } else {
+      L.push("  " + amountWords(totalGot, owed.unit) + " across " +
+             withEntries.length + (withEntries.length === 1 ? " week" : " weeks") +
+             " with entries, of " + weeks.length + " in the period.");
+      L.push("");
+      rows.forEach(function (r) {
+        var line = "    " + pad("w/c " + niceDate(r.w), 18) +
+          pad(r.lived ? amountWords(r.got, owed.unit) : "—", 12);
+        if (!r.lived) line += "nothing recorded that week";
+        else if (owed.owed && r.whole) {
+          var d = owed.owed - r.got;
+          line += d > 0 ? "short by " + amountWords(d, owed.unit)
+                        : (d < 0 ? "over by " + amountWords(-d, owed.unit) : "met");
+        } else if (owed.owed) {
+          line += "part week, not measured";
+        }
+        L.push(line.replace(/\s+$/, ""));
+      });
+      if (owed.owed) {
+        var full = rows.filter(function (r) { return r.whole && r.lived; });
+        var behind = full.reduce(function (t, r) { return t + Math.max(0, owed.owed - r.got); }, 0);
+        L.push("");
+        if (!full.length) {
+          L.push("  No whole week in this period has an entry, so nothing here is measured against the " + amountWords(owed.owed, owed.unit) + " a week.");
+        } else {
+          L.push("  Against " + amountWords(owed.owed, owed.unit) + " a week, the " + full.length +
+                 (full.length === 1 ? " whole week" : " whole weeks") + " with entries fall short by " +
+                 amountWords(behind, owed.unit) + " in total. Weeks with nothing recorded are left out of that figure rather than counted as noughts.");
+        }
+      }
+    }
+    L.push("");
+
+    /* ---- what the time went on: the notes, and nothing invented ---- */
+    var notes = [];
+    state.spans.forEach(function (sp) {
+      if (!sp.note) return;
+      if (minsIn(sp, from, to) <= 0) return;
+      if (c && claimantOfSpan(sp) !== c.id) return;
+      if (notes.indexOf(sp.note) < 0) notes.push(sp.note);
+    });
+    L.push("WHAT THE TIME WENT ON");
+    L.push(notes.length ? "  " + notes.join("; ") + "."
+                        : "  No stretch in this period carries a note, so this section is empty rather than guessed at.");
+    L.push("");
+
+    /* ---- the work itself ---- */
+    var bs = boardsForClaimant(c ? c.id : "");
+    var runs = bs.filter(function (b) { return b.kind === "run"; });
+    L.push("THE WORK");
+    if (!runs.length) {
+      L.push("  No runs are filed against " + (c ? "this claimant" : "anything") + ".");
+    } else {
+      runs.forEach(function (b) {
+        var p = runProgress(b);
+        var act = activeNodes(b);
+        var late = act.filter(function (n) { return nodeState(b, n) === "over"; });
+        L.push("  " + b.name);
+        L.push("    " + (b.closedOn ? "closed " + niceDate(b.closedOn) : "open") +
+               " · " + p.done + " of " + p.total + " steps done" +
+               (late.length ? " · " + late.length + " late" : ""));
+        act.forEach(function (n) {
+          var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
+          var st = nodeState(b, n);
+          L.push("      " + pad(n.label, 34) +
+                 (st === "over" ? "late by " + overdueBy(n) + "d"
+                  : st === "waiting" ? "waiting " + daysWaiting(n) + "d"
+                  : "in hand") +
+                 (who ? " — with " + who : ""));
+        });
+        var uf = unfiled(b);
+        if (!b.closedOn && !act.length && uf.length) {
+          L.push("      not filed: " + uf.map(function (n) { return n.label; }).join(", "));
+        }
+      });
+    }
+    L.push("");
+
+    /* ---- what is owed in the other direction ---- */
+    var waits = [];
+    runs.forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        if (n.act !== "send" && n.act !== "watch") return;
+        var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
+        waits.push({ b: b, n: n, who: who });
+      });
+    });
+    function waitLine(x, lead) {
+      return "  " + pad(lead, 26) + x.n.label + " — " + daysWaiting(x.n) + "d" +
+             (overdueBy(x.n) > 0 ? ", " + overdueBy(x.n) + "d past its chase" : "");
+    }
+    var onPeople = waits.filter(function (x) { return x.who; });
+    var onWorld  = waits.filter(function (x) { return !x.who; });
+    L.push("WAITING ON SOMEONE ELSE");
+    if (!onPeople.length) L.push("  Nobody.");
+    else onPeople.forEach(function (x) { L.push(waitLine(x, x.who)); });
+    L.push("");
+    if (onWorld.length) {
+      L.push("WAITING, WITH NOBODY NAMED");
+      onWorld.forEach(function (x) { L.push(waitLine(x, x.b.name)); });
+      L.push("");
+    }
+
+    /* ---- and what all of it rests on ---- */
+    var susp = suspenseMins(from, to);
+    var openNow = openSpan();
+    L.push("WHAT THIS RESTS ON");
+    L.push("  " + withEntries.length + " of " + weeks.length +
+           (weeks.length === 1 ? " week" : " weeks") + " in this period have any entry at all.");
+    if (susp) {
+      L.push("  " + fmtMins(susp) + " in this period is at no bench. It is excluded from every figure above rather than being attributed to anyone.");
+    }
+    if (openNow) {
+      L.push("  One stretch is still open and is counted nowhere until it ends.");
+    }
+    if (rows.some(function (r) { return !r.whole; })) {
+      L.push("  The first and last weeks are partial, so they are summed but not measured against a weekly figure.");
+    }
+    L.push("  Every figure is summed from logged stretches. Nothing is estimated, averaged or filled in.");
+    L.push("");
+    L.push("Written " + wordDate(today()) + " by Mashghal, from this device only.");
+    return L.join("\n");
+  }
+
+  function renderReport() {
+    var o = reportOn;
+    var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
+    var text = buildReport(o);
+    var h = pageHead("Report", esc((c ? c.name : "Every claimant") + " · " + o.from + " to " + o.to),
+      '<div class="tools">' +
+      '<button class="btn" data-act="report-back">Back to the week</button>' +
+      '<button class="btn" data-act="report-copy">Copy</button>' +
+      '<button class="btn" data-act="report-save">Save as text</button>' +
+      '<button class="btn" data-act="report-new">Change the range</button></div>');
+    h += '<pre class="report" id="reportText">' + esc(text) + "</pre>";
+    h += '<p class="hint">Read it before you send it. Every figure here comes from the same function the screens use, so if a number looks wrong the screen will be wrong in the same way — which is the point.</p>';
+    return h;
+  }
+
+  function reportDialog() {
+    var cs = live(state.claimants);
+    openModal({
+      title: "Write a report", confirmLabel: "Write it",
+      message: "For a meeting or an email. It reads the same figures the screens do and states what it does not know.",
+      fields: [
+        { key: "claimantId", label: "About", type: "select", span: true,
+          options: [{ value: "", label: "Everything" }].concat(cs.map(function (c) {
+            return { value: c.id, label: c.name };
+          })), value: reportOn ? reportOn.claimantId : (cs.length ? cs[0].id : "") },
+        { key: "from", label: "From", type: "text", value: reportOn ? reportOn.from : addDays(weekStart(today()), -28), hint: "YYYY-MM-DD" },
+        { key: "to", label: "To", type: "text", value: reportOn ? reportOn.to : today(), hint: "YYYY-MM-DD" }
+      ],
+      validate: function (v) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.from.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(v.to.trim())) {
+          return "Both dates must be YYYY-MM-DD.";
+        }
+        if (v.to.trim() < v.from.trim()) return "The end has to come after the start.";
+        return null;
+      },
+      onConfirm: function (v) {
+        reportOn = { claimantId: v.claimantId, from: v.from.trim(), to: v.to.trim() };
+        view = "week";
+        render();
+      }
     });
   }
 
@@ -1929,6 +2163,27 @@
       weekOf = n; render();
     },
     "week-now":  function () { weekOf = ""; render(); },
+
+    /* ---- the report ---- */
+    "report-new":  function () { reportDialog(); },
+    "report-back": function () { reportOn = null; render(); },
+    "report-copy": function () {
+      var el = document.getElementById("reportText");
+      if (!el) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.textContent).then(function () { toast("Copied"); },
+          function () { toast("This browser would not let the page copy it — select it and copy by hand."); });
+      } else {
+        toast("This browser has no clipboard for pages — select it and copy by hand.");
+      }
+    },
+    "report-save": function () {
+      var el = document.getElementById("reportText");
+      if (!el) return;
+      var c = reportOn && reportOn.claimantId ? byId(state.claimants, reportOn.claimantId) : null;
+      var name = (c ? c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "everything");
+      download("mashghal-" + name + "-" + today() + ".txt", el.textContent, "text/plain");
+    },
 
     /* ---- vocabulary ---- */
     "claimant-add": function () { claimantDialog(null); },
