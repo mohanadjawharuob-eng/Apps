@@ -1,7 +1,29 @@
 # Working in this repo
 
 Six small offline web apps served from GitHub Pages. No build step, no bundler,
-no package.json. What is in the repo is what runs.
+no package.json. What is in the repo is what runs. (`handoff/` is not an app —
+it is a page of screenshots for a design round.)
+
+**Daybook, Kitchen, Timesheet and Mashghal share a byte-identical runtime.**
+The block that begins `Shared runtime for all of these apps` carries
+`loadState`/`persist` over `APP.storeKey`, the in-page modal with its field
+spec, `confirmAction`, `toast`, the backup and restore dialogs, `download`,
+the chart and tile helpers, and the date helpers. An `APP` object supplies
+`storeKey`, `tabs`, `blank`, `hydrate`, `renderView` and `actions`. Two
+sandbox lessons are encoded in it: **native `confirm()` silently returns
+false** and **`<form>` submit never fires**, so every confirmation is an
+in-page modal and every action is a button with Enter wired by hand. Copy it
+verbatim into a new app and never improve one copy alone — a fix belongs in
+all four at once, and this is the test:
+
+```
+for f in daybook kitchen timesheet mashghal; do
+  sed -n '/Shared runtime for all of these apps/,/^<\/script>$/p' $f/index.html |
+  sed '$d' | md5sum
+done
+```
+
+Four identical hashes, or a copy has drifted.
 
 ## Rules that are not negotiable
 
@@ -489,6 +511,88 @@ The Ledger's "Add something" card and the log bar's sheet render the **same**
 control in the document. Every lookup goes through `omniEl()`, which scopes to
 the visible one — `getElementById` returns the copy under the scrim, and for a
 while nothing you changed in the log bar was wired to anything.
+
+## Mashghal's rules
+
+Work leaves a wake — the report, the copy sent to certain people, the file put
+somewhere — and the app holds the wake. Four nouns and nothing else:
+
+- **A board** is a procedure (a template) or a run of one.
+- **A node** is a step (`do` · `send` · `watch` · `ask` · `file`) or a thing
+  (person, file, photo, kit, note).
+- **An edge** is `flow` (sequence) or `link` (association, with no ordering
+  meaning whatsoever).
+- **A due** is a live step of an open run, and is derived, never typed.
+
+- **A procedure is a graph, not a checklist.** The first real example had a
+  send that opened a wait on two named people, a decision, and a loop back to
+  an earlier step; the next had a run sitting at four nodes at once, a dated
+  step and a wait with nobody to chase. A flat `steps[]` array holds none of
+  that. And a run is at a *set* of steps, not one: `activeNodes()` derives that
+  set from `enteredAt`/`doneAt` rather than storing a position, so it can never
+  disagree with the dates.
+- **Sequence and association are different edges and must never be conflated.**
+  A run advances along `flow` edges alone and never touches a `link`, which is
+  what lets a reference photo or a pair of headphones hang off a step without
+  becoming a predecessor. Draw them differently too — inked with a head, versus
+  dashed without one.
+- **A run freezes its procedure when it starts.** `startRun()` deep-copies the
+  template, so editing the template can never move a run already under way and
+  a run's own attachments can never leak back into the template. Same
+  discipline as Coffer's frozen rates.
+- **A run is never advanced for you.** An `ask` is answered by a person, never
+  inferred from elapsed time, and finishing an `ask` opens *only* the exit that
+  was chosen — which is exactly how the revision cycle loops.
+- **The archive lock.** `run-close` refuses while a `file` step is undone, and
+  says which. Asked what actually gets forgotten, the owner named three things:
+  chasing people, getting back to where they were, and filing. So an overdue
+  `send`/`watch` outranks everything on every screen, every run shows where it
+  stands without being opened, and a printed-but-never-archived run stays on
+  the list rather than being tidied away.
+- **Silence is not always failure.** `overdueBy()` returns 0 when a step has no
+  chase interval — a wait with no chase set can sit for ever without being
+  called late, because nobody said when to chase it.
+- **Nothing is hardcoded.** Claimants, modes, benches and board kinds are all
+  added, renamed and removed by the reader; the sample seeds one person's set,
+  it is not the app's vocabulary. Removal follows the `forgotten` pattern so a
+  past board still reads "U. of Balamand (removed)" rather than losing its
+  history.
+- **A board carries a kind and only optionally a bench.** A visa or a
+  scholarship belongs to no employer. That is the brief's "life underneath that
+  belongs to none of them".
+- **No notifications, and the app says so.** Push needs a server and a secret
+  key, and a public Pages repo cannot hold one — already turned down for
+  Coffer. What is late is waiting when you open it.
+
+## Mashghal's shape
+
+**Four tabs: Boards · Waiting · Kit · Settings.** Boards lists procedures and
+runs; opening one shows the canvas over an editable list of steps, things and
+connections. Waiting is the only screen the phone really needs.
+
+**The Boards tab always lands on the list.** Which board is open is *view
+state* — a module-level `openId`, never part of `state`, so it reaches no
+backup and does not survive a reload. Keeping it in settings meant the tab
+showed a different screen depending on what you did ten minutes ago, which is
+the same trap Coffer's Horizon tab fell into.
+
+**The canvas is ArcGIS ModelBuilder, deliberately.** Rectangles with a cut
+corner are steps, ovals are things, and the owner reads that vocabulary
+professionally. It pans, zooms and drags, positions persist on the node, and
+`autoLayout()` seeds them in a serpentine so nobody ever meets a blank sheet —
+its BFS ignores back edges, or the loop in a revision cycle drags its own
+target off to the right. "Tidy" re-runs it.
+
+## Mashghal's look
+
+An unlit drafting room, committed dark because the brief asked for it — so
+there is no light palette, and every colour is painted explicitly. Four hues
+that each mean something: **blueprint blue** for process, **brass** for things,
+**red oxide** for late, **verdigris** for done. The sheet carries a real survey
+grid (fine at 40, heavy at 200) that pans and zooms with the work, paper grain
+over the top, and a **title block** in the corner the way every site drawing
+has one. Serif for headings and the board name, sans for the work, mono only
+for what is genuinely data — clocks, counts, act labels.
 
 ## State
 

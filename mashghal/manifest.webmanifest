@@ -1,0 +1,32 @@
+{
+  "id": "/Apps/mashghal/",
+  "name": "Mashghal — Boards, Runs & What They Leave Behind",
+  "short_name": "Mashghal",
+  "description": "Mashghal — work leaves a wake, and this holds the wake",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#131210",
+  "theme_color": "#131210",
+  "icons": [
+    {
+      "src": "../icons/mashghal-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/mashghal-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/mashghal-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

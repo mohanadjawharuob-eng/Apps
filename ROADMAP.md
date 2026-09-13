@@ -773,6 +773,58 @@ empty states, the under-three-months runway and the modal shell.
   coordinates in 35 species. Needs the archetypes reworked at the larger grid,
   not a scale factor.
 
+## Mashghal (`mashghal/`)
+
+A workspace that knows which job you are doing, grown out of a seed brief that
+asked for four identities, their tools and their hours. Two rounds of questions
+moved its centre: not an hours tracker but a **record of what gets forgotten and
+a way of preparing what comes next** — in its owner's words, *"مش بس عن إنه
+يحاسب على الوقت، هو أكثر تحضير وتسجيل لما أنسى"*.
+
+### Shipped: procedures, runs and what they leave behind
+- **A procedure is a graph.** The first real example — a brochure — had a send
+  opening a wait on two named people, a decision, and a loop back to an earlier
+  step. The second, GIS aerials, sat at four steps at once, with a dated step
+  and a wait with nobody to chase. Five acts: do · send · watch · decide · file.
+- **A run freezes its procedure** when it starts, so editing a template never
+  disturbs work under way.
+- **The archive lock** — a run will not close while a filing step is undone,
+  because filing is one of the three things its owner named as forgotten
+  (the others: chasing people, and knowing where you left off).
+- **Waiting** derives every live step of every open run, worst first. Nothing on
+  that screen is typed.
+- **A ModelBuilder canvas** — cut-corner rectangles for steps, ovals for things,
+  inked arrows for sequence and dashed lines for association, on a survey grid
+  with a title block. Pans, zooms, drags; `autoLayout` seeds a serpentine so
+  there is never a blank sheet.
+- **Nothing is hardcoded** — claimants, modes, benches and board kinds are all
+  the reader's to add and remove, with the `forgotten` pattern keeping history
+  readable afterwards.
+
+### Next
+- **Sync** — an encrypted secret gist, per-record merge on `updatedAt`, a
+  borrowed-laptop mode that keeps the token and state in `sessionStorage` only,
+  and a wipe-this-device button that never touches the gist. Decided, not built.
+- **Spans and the week** — the switch, the repair screen, suspense for time that
+  cannot be attributed, and the cumulative shortfall a claimant is behind by.
+  `state.spans` is already in the shape so a backup never loses it.
+- **Reports** over a date range, drawing on closed runs — the thing that makes
+  the logging worth doing.
+- **A step that holds a small matrix.** GIS work runs over a grid (layer × area
+  × year); one node per cell would be forty nodes on one board. Open question.
+- **More than one recipient on a send.** The model holds `to` as an array; the
+  dialog currently offers a single picker.
+
+### Considered and turned down
+- **Notifications.** Push needs a server and a secret key; a public Pages repo
+  cannot hold one, and the owner does not host their server continuously. The
+  route if it is ever wanted is a scheduled GitHub Actions workflow reading a
+  minimal digest, with the credential in GitHub Secrets — best-effort by
+  nature, since free-tier schedules are delayed under load and disabled after
+  60 days of repository inactivity.
+- **Reading Timesheet's hours.** Same origin, so it is possible. Two apps
+  disagreeing about one week with no rule for which wins is worse than retyping.
+
 ## Daybook, Kitchen, Timesheet
 
 Stable. No queued work.
