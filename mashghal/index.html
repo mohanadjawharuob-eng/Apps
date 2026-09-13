@@ -4474,5 +4474,22 @@ function boot() {
   if ('serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('./sw.js').catch(function () {});
+
+    /* When a new worker takes over, the page on screen is still the old one —
+       skipWaiting and clients.claim swap the controller but never reload the
+       document. That is the other half of why a change took two launches to
+       show up on the phone. Reloading once on the swap closes it.
+
+       Guarded on there already being a controller, because controllerchange
+       also fires on the very first registration, and reloading then is a
+       pointless flash on a first visit. */
+    if (navigator.serviceWorker.controller) {
+      var swapped = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (swapped) return;
+        swapped = true;
+        location.reload();
+      });
+    }
   }
 </script>
