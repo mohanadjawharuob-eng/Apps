@@ -634,14 +634,55 @@ target off to the right. "Tidy" re-runs it.
 
 ## Mashghal's look
 
-An unlit drafting room, committed dark because the brief asked for it — so
-there is no light palette, and every colour is painted explicitly. Four hues
-that each mean something: **blueprint blue** for process, **brass** for things,
-**red oxide** for late, **verdigris** for done. The sheet carries a real survey
-grid (fine at 40, heavy at 200) that pans and zooms with the work, paper grain
-over the top, and a **title block** in the corner the way every site drawing
-has one. Serif for headings and the board name, sans for the work, mono only
-for what is genuinely data — clocks, counts, act labels.
+**Evening ink**, from `mashghal/DESIGN-HANDOFF.md` — chosen out of three
+directions a design round came back with, and committed dark because the brief
+asked for it, so there is no light palette and every colour is painted
+explicitly. It replaced the first build's drafting room, which was one cold
+hue with state carried by hairlines and uppercase mono labels, and read as an
+instrument panel. Four rules hold it:
+
+- **Two hues, and each says one thing.** **Sage** is in hand and healthy.
+  **Apricot** is late, and late is the only alarm — there is no red in the
+  palette at all. Everything else is neutral.
+- **Waiting carries no colour.** A step waiting three days against a five-day
+  chase is not a problem, and the first build coloured it amber as though it
+  were. The ladder, in the order it has to be legible: **late** apricot ·
+  **in hand** sage · **waiting** dim grey · **not started** faint · **done**
+  receded, and it sinks. `stateTone()` and `NODE_INK` are the same ladder, one
+  for the rows and one for the canvas, and a change belongs in both. The state
+  is written as a **word** beside the colour, so the board survives a reader
+  who cannot separate the hues.
+- **Nothing emphatic borrows a state hue.** A primary button is neither late
+  nor healthy, so it takes contrast — ink on the page colour. A `danger`
+  button is quiet at rest (a row of apricot `×` buttons competed with the one
+  step that was actually overdue) and colours only under the finger; inside
+  `#overlay` it is loud, because there is one action there and it is the moment
+  of consequence.
+- **A claimant's or a kind's colour is identity, not state**, so it comes from
+  its own muted family and never from sage or apricot. Those two are read as
+  "how is this going" everywhere else.
+
+A line on the sheet is a path and not a state, so it carries no hue either:
+sequence is neutral, dead sequence dimmer, and a loop back is legible by the
+**arc over the top** rather than by colour. Association is dashed and brass.
+The sheet keeps its survey grid (fine at 40, heavy at 200) panning and zooming
+with the work, the paper grain over the top, and the **title block** in the
+corner the way every site drawing has one — and now a **legend** at the foot in
+plain words, `— comes after · ·· belongs with, no order`, because the
+distinction the whole model rests on should be written where the sheet is read.
+
+Bricolage Grotesque 500 with negative tracking carries display, names and
+figures, and is **embedded as a base64 woff2** because the app must open with
+no network. Work Sans for the work and Newsreader for serif asides are named
+first and fall back to system sans and Georgia — embedding all six faces came
+to 415KB against a 189KB app. Mono only for what is genuinely machine-read:
+clocks, counts, act labels. Panels round at 12px and float; **no shadow inside
+a frame** — separation comes from fill.
+
+**On a phone, a row wraps its buttons onto their own line** (under 560px). A
+pill, a sentence and two buttons on one line left the sentence about ten
+characters wide, and an upkeep row naming a place and the thing it protects
+wrapped to nine.
 
 ## State
 

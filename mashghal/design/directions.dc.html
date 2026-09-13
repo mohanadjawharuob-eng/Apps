@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#08090a;}
+a{color:oklch(0.82 0.13 195);text-decoration:none;}
+a:hover{color:oklch(0.9 0.09 195);}
+</style>
+</helmet>
+
+<section style="font-family:'Karla',system-ui,sans-serif;background:#15171c;color:#e9e5dd;padding:56px 64px 96px;display:flex;flex-direction:column;gap:14px;">
+  <div style="display:flex;align-items:baseline;gap:16px;">
+    <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:15px;color:#9a958a;border:1px solid #3a3e48;border-radius:999px;padding:3px 11px;">3a</span>
+    <h1 style="margin:0;font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:500;letter-spacing:-0.015em;">Mashghal — evening ink</h1>
+  </div>
+  <p style="margin:0 0 34px;max-width:660px;font-size:15px;line-height:1.65;color:#9a958a;text-wrap:pretty;">A third way: dark, but soft rather than technical. Panels that float instead of grids that clamp, apricot where <a href="#2a">2a</a> used red, and lettering with a bit of a hand in it. Same two screens you'd actually live in.</p>
+
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-size:14px;color:#7d7970;">A run, open on the desk</div>
+    <div data-screen-label="Desk — run (ink)" style="width:1760px;height:980px;background:#1b1e24;border:1px solid #2b2f38;border-radius:18px;display:flex;overflow:hidden;">
+      <div style="width:300px;flex:0 0 300px;background:#171a1f;display:flex;flex-direction:column;padding:26px 18px;gap:24px;">
+        <div style="padding:0 8px;display:flex;flex-direction:column;gap:3px;">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:500;">Mashghal</div>
+          <div style="font-size:12.5px;color:#7d7970;">This computer only</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;"><span style="font-size:15px;color:#9a958a;">Waiting</span><span style="font-size:13.5px;color:#e0a06a;">2 late</span></div>
+          <div style="padding:12px 14px;background:#242932;border-radius:12px;font-size:15px;font-weight:500;">Boards</div>
+          <div style="padding:12px 14px;font-size:15px;color:#9a958a;">Vocabulary</div>
+          <div style="padding:12px 14px;font-size:15px;color:#9a958a;">The book</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:20px;padding:0 8px;overflow:hidden;">
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="font-size:12.5px;color:#6a6760;">GIS, Lebanese University</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;margin:0 -11px;background:#21262e;border-radius:10px;"><span style="width:7px;height:7px;border-radius:99px;background:#7fb39a;"></span><span style="font-size:14px;flex:1;">Aerial photographs</span><span style="font-size:13px;color:#7d7970;">4</span></div>
+            <div style="display:flex;align-items:center;gap:10px;"><span style="width:7px;height:7px;border-radius:99px;background:#e0a06a;"></span><span style="font-size:14px;flex:1;color:#9a958a;">Site survey, Batroun</span><span style="font-size:13px;color:#e0a06a;">1</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="font-size:12.5px;color:#6a6760;">Heritage foundation</div>
+            <div style="display:flex;align-items:center;gap:10px;"><span style="width:7px;height:7px;border-radius:99px;border:1px solid #4a4e57;"></span><span style="font-size:14px;flex:1;color:#9a958a;">Brochure</span><span style="font-size:12.5px;color:#e0a06a;">not filed</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="font-size:12.5px;color:#6a6760;">Procedures</div>
+            <div style="font-size:14px;color:#9a958a;">Digitise a photo set</div>
+            <div style="font-size:14px;color:#9a958a;">Print a brochure</div>
+            <div style="font-size:14px;color:#9a958a;">Take on heritage work</div>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding:0 8px;font-size:14px;color:#7d7970;">Write a new procedure</div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="flex:0 0 84px;display:flex;align-items:center;gap:20px;padding:0 34px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:500;letter-spacing:-0.015em;">Aerial photographs — Bekaa, 1956 / 1962 / 1974</div>
+            <div style="font-size:12.5px;color:#7d7970;">Started 14 August, from “Digitise a photo set”, third revision</div>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:18px;">
+            <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#e8b183;"><span style="width:7px;height:7px;border-radius:99px;background:#e0a06a;"></span>One late</span>
+            <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#93c4ac;"><span style="width:7px;height:7px;border-radius:99px;background:#7fb39a;"></span>Four in hand</span>
+            <span style="font-size:13.5px;color:#7d7970;">can't be closed yet</span>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;background:#1e222a;border-radius:16px 0 0 0;overflow:hidden;">
+          <div style="position:absolute;left:44px;top:34px;width:1400px;height:620px;">
+            <svg width="1400" height="620" style="position:absolute;left:0;top:0;pointer-events:none;">
+              <defs>
+                <marker id="i-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4e545f"></path></marker>
+                <marker id="i-ahl" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9a6f47"></path></marker>
+              </defs>
+              <g fill="none" stroke="#3c414b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#i-ah)">
+                <path d="M230,182 H265 V195 H294"></path>
+                <path d="M135,214 V376 H294"></path>
+                <path d="M530,195 H585 V96 H634"></path>
+                <path d="M530,195 H585 V246 H634"></path>
+                <path d="M870,96 H910 V160 H944"></path>
+                <path d="M870,246 H910 V160 H944"></path>
+                <path d="M1130,160 H1184"></path>
+              </g>
+              <path d="M1040,120 V30 H415 V114" fill="none" stroke="#8a6440" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#i-ahl)"></path>
+              <g fill="none" stroke="#343943" stroke-width="1.4" stroke-dasharray="1 6" stroke-linecap="round">
+                <path d="M980,330 L862,138"></path>
+                <path d="M170,470 L296,244"></path>
+                <path d="M182,545 L300,262"></path>
+              </g>
+            </svg>
+
+            <div style="position:absolute;left:40px;top:150px;width:190px;height:64px;background:#1a1e25;border-radius:13px;padding:12px 15px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-size:14px;color:#7d7970;">Scan &amp; georeference</div>
+              <div style="font-size:12.5px;color:#61656e;">Done 21 August</div>
+            </div>
+
+            <div style="position:absolute;left:300px;top:114px;width:230px;height:168px;background:#242932;border-radius:13px;box-sizing:border-box;padding:14px 16px;display:flex;flex-direction:column;gap:11px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14.5px;font-weight:500;">Digitise layers</span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#93c4ac;"><span style="width:6px;height:6px;border-radius:99px;background:#7fb39a;"></span>in hand</span>
+              </div>
+              <div style="display:grid;grid-template-columns:42px repeat(3,1fr);gap:5px;align-items:center;">
+                <span></span>
+                <span style="font-size:11px;color:#7d7970;text-align:center;">’56</span>
+                <span style="font-size:11px;color:#7d7970;text-align:center;">’62</span>
+                <span style="font-size:11px;color:#7d7970;text-align:center;">’74</span>
+                <span style="font-size:11px;color:#9a958a;">Anjar</span>
+                <span style="height:17px;border-radius:5px;background:#4d7566;"></span>
+                <span style="height:17px;border-radius:5px;background:#4d7566;"></span>
+                <span style="height:17px;border-radius:5px;border:1.5px solid #7fb39a;"></span>
+                <span style="font-size:11px;color:#9a958a;">Qabb</span>
+                <span style="height:17px;border-radius:5px;background:#4d7566;"></span>
+                <span style="height:17px;border-radius:5px;border:1.5px solid #7fb39a;"></span>
+                <span style="height:17px;border-radius:5px;background:#2e333c;"></span>
+                <span style="font-size:11px;color:#9a958a;">Terbol</span>
+                <span style="height:17px;border-radius:5px;background:#2e333c;"></span>
+                <span style="height:17px;border-radius:5px;background:#2e333c;"></span>
+                <span style="height:17px;border-radius:5px;background:#2e333c;"></span>
+              </div>
+              <div style="font-size:12.5px;color:#7d7970;">Three done, two in hand, four to go</div>
+            </div>
+
+            <div style="position:absolute;left:640px;top:56px;width:230px;height:84px;background:#2a2119;border:1px solid #58412c;border-radius:13px;box-sizing:border-box;padding:13px 15px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Send set for review</span>
+                <span style="font-size:12.5px;color:#1b1e24;background:#e0a06a;border-radius:999px;padding:1px 9px;">late</span>
+              </div>
+              <div style="font-size:12.5px;color:#bb9573;line-height:1.45;">With R. Haddad six days.<br>You meant to chase after five.</div>
+            </div>
+
+            <div style="position:absolute;left:640px;top:210px;width:230px;height:80px;background:#242932;border-radius:13px;box-sizing:border-box;padding:13px 15px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Upload from survey team</span>
+                <span style="font-size:12.5px;color:#7d7970;">waiting</span>
+              </div>
+              <div style="font-size:12.5px;color:#7d7970;line-height:1.45;">Twelve days. Nobody to chase,<br>so it isn't late.</div>
+            </div>
+
+            <div style="position:absolute;left:950px;top:118px;width:180px;height:84px;background:#1a1e25;border:1px solid #3a3e48;border-radius:13px;box-sizing:border-box;padding:13px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:500;">Another pass?</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#7d7970;">yours to answer<span style="color:#bb9573;">· twice so far</span></div>
+            </div>
+            <div style="position:absolute;left:1142px;top:150px;font-size:12.5px;color:#61656e;">stops here</div>
+            <div style="position:absolute;left:640px;top:8px;font-size:13px;color:#bb9573;">goes back — twice so far</div>
+
+            <div style="position:absolute;left:1190px;top:118px;width:190px;height:84px;background:#20252c;border:1.5px dashed #58412c;border-radius:13px;box-sizing:border-box;padding:13px 15px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-size:14.5px;font-weight:500;">File to project drive</div>
+              <div style="font-size:12.5px;color:#bb9573;">Until this is done, nothing closes.</div>
+            </div>
+
+            <div style="position:absolute;left:300px;top:340px;width:230px;height:80px;background:#242932;border-left:4px solid #7fb39a;border-radius:13px;box-sizing:border-box;padding:13px 15px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Supervisor meeting</span>
+                <span style="font-size:13.5px;color:#93c4ac;">Fri 18</span>
+              </div>
+              <div style="font-size:12.5px;color:#7d7970;">Eleven o'clock. Fixed by the day, not by you.</div>
+            </div>
+
+            <div style="position:absolute;left:880px;top:326px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#1a1e25;border:1px solid #343943;border-radius:999px;">
+              <span style="font-size:12.5px;color:#6a6760;">person</span>
+              <span style="font-size:14px;color:#c9c4ba;">R. Haddad</span>
+            </div>
+            <div style="position:absolute;left:60px;top:440px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#1a1e25;border:1px solid #343943;border-radius:999px;">
+              <span style="font-size:12.5px;color:#6a6760;">file</span>
+              <span style="font-size:14px;color:#c9c4ba;">1956 index sheet</span>
+            </div>
+            <div style="position:absolute;left:72px;top:515px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#1a1e25;border:1px solid #343943;border-radius:999px;">
+              <span style="font-size:12.5px;color:#6a6760;">photograph</span>
+              <span style="font-size:14px;color:#c9c4ba;">frame 1962-04</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ showLegend }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:44px;bottom:26px;display:flex;align-items:center;gap:30px;padding:14px 22px;background:#1a1e25;border-radius:999px;">
+              <div style="display:flex;align-items:center;gap:9px;"><svg width="38" height="8"><path d="M0,4 H32" stroke="#3c414b" stroke-width="1.6" fill="none" marker-end="url(#i-ah)"></path></svg><span style="font-size:12.5px;color:#9a958a;">comes after</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><svg width="38" height="8"><path d="M0,4 H36" stroke="#343943" stroke-width="1.4" stroke-dasharray="1 6" stroke-linecap="round" fill="none"></path></svg><span style="font-size:12.5px;color:#9a958a;">belongs with, in no order</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:16px;height:11px;background:#2e333c;border-radius:3px;"></span><span style="font-size:12.5px;color:#9a958a;">a step</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:18px;height:11px;border:1px solid #4a4e57;border-radius:999px;"></span><span style="font-size:12.5px;color:#9a958a;">a thing or a person</span></div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:34px;">
+    <div style="font-size:14px;color:#7d7970;">The screen you open first</div>
+    <div data-screen-label="Desk — waiting (ink)" style="width:1760px;height:980px;background:#1b1e24;border:1px solid #2b2f38;border-radius:18px;display:flex;overflow:hidden;">
+      <div style="width:300px;flex:0 0 300px;background:#171a1f;display:flex;flex-direction:column;padding:26px 18px;gap:26px;">
+        <div style="padding:0 8px;display:flex;flex-direction:column;gap:3px;">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:500;">Mashghal</div>
+          <div style="font-size:12.5px;color:#7d7970;">This computer only</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#242932;border-radius:12px;"><span style="font-size:15px;font-weight:500;">Waiting</span><span style="font-size:13.5px;color:#e0a06a;">2 late</span></div>
+          <div style="padding:12px 14px;font-size:15px;color:#9a958a;">Boards</div>
+          <div style="padding:12px 14px;font-size:15px;color:#9a958a;">Vocabulary</div>
+          <div style="padding:12px 14px;font-size:15px;color:#9a958a;">The book</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:0 8px;">
+          <div style="font-size:12.5px;color:#6a6760;">Open work</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="width:7px;height:7px;border-radius:99px;background:#7fb39a;"></span><span style="font-size:14px;flex:1;">Aerial photographs</span><span style="font-size:13px;color:#7d7970;">4</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="width:7px;height:7px;border-radius:99px;background:#e0a06a;"></span><span style="font-size:14px;flex:1;color:#9a958a;">Brochure</span><span style="font-size:13px;color:#e0a06a;">1</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="width:7px;height:7px;border-radius:99px;border:1px solid #4a4e57;"></span><span style="font-size:14px;flex:1;color:#9a958a;">Site survey, Batroun</span></div>
+        </div>
+        <div style="margin-top:auto;padding:16px 12px;background:#171a1f;border:1px solid #262a32;border-radius:12px;font-size:13px;color:#7d7970;line-height:1.7;">No server, nothing syncing. This list is only true while you're looking at it. Last copy 4 September.</div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:40px 52px 36px;gap:30px;">
+        <div style="display:flex;align-items:baseline;gap:16px;">
+          <h2 style="margin:0;font-family:'Bricolage Grotesque',sans-serif;font-size:31px;font-weight:500;letter-spacing:-0.015em;">Two things are late.</h2>
+          <span style="font-size:13.5px;color:#7d7970;">Saturday 13 September, 8:41</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:28px;max-width:1160px;">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:28px;padding:24px 28px;background:#2a2119;border:1px solid #58412c;border-radius:16px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:500;">R. Haddad hasn't sent the review back</div>
+                <div style="font-size:13.5px;color:#a9968a;">Aerial photographs · GIS, Lebanese University</div>
+              </div>
+              <div style="text-align:right;display:flex;flex-direction:column;gap:3px;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:500;color:#e8b183;line-height:1;">6 days</div>
+                <div style="font-size:12.5px;color:#bb9573;">a day past your reminder</div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <span style="font-size:14px;color:#1b1e24;background:#e0a06a;border-radius:11px;padding:13px 19px;font-weight:500;">I chased today</span>
+                <span style="font-size:14px;color:#e9e5dd;background:#1f242b;border:1px solid #3a3e48;border-radius:11px;padding:13px 19px;">It came back</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:28px;padding:24px 28px;background:#252026;border:1px solid #453a38;border-radius:16px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:500;">N. Aoun and S. Frem, second version</div>
+                <div style="font-size:13.5px;color:#a9968a;">Brochure · Heritage foundation · neither has answered</div>
+              </div>
+              <div style="text-align:right;display:flex;flex-direction:column;gap:3px;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:500;color:#e8b183;line-height:1;">5 days</div>
+                <div style="font-size:12.5px;color:#bb9573;">chase them today</div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <span style="font-size:14px;color:#1b1e24;background:#e0a06a;border-radius:11px;padding:13px 19px;font-weight:500;">I chased today</span>
+                <span style="font-size:14px;color:#e9e5dd;background:#1f242b;border:1px solid #3a3e48;border-radius:11px;padding:13px 19px;">It came back</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:14px;color:#7d7970;">Finished, but not put away</div>
+            <div style="display:flex;align-items:center;gap:28px;padding:22px 28px;background:#1f242b;border:1.5px dashed #58412c;border-radius:16px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:500;">The brochure's final version is still on your machine</div>
+                <div style="font-size:13.5px;color:#9a958a;">It looks done from the outside. It isn't, and the run knows.</div>
+              </div>
+              <span style="font-size:14px;color:#e9e5dd;background:#242932;border:1px solid #3a3e48;border-radius:11px;padding:13px 19px;">Filed it</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:14px;color:#7d7970;">Waiting, and that's fine</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:24px;padding:19px 26px;background:#1f242b;border-radius:14px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:16px;">Upload from the survey team</div>
+                  <div style="font-size:13px;color:#7d7970;">You never set a reminder for this one, so it can wait for ever.</div>
+                </div>
+                <div style="font-size:16px;color:#9a958a;">12 days</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:24px;padding:19px 26px;background:#1f242b;border-radius:14px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:16px;">Digitise Qabb Ilyas, 1962</div>
+                  <div style="font-size:13px;color:#7d7970;">In your hands. Waiting on nobody but you.</div>
+                </div>
+                <div style="font-size:16px;color:#9a958a;">3 days</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:24px;padding:19px 26px;background:#1f242b;border-left:4px solid #7fb39a;border-radius:14px;">
+                <div style="flex:1;font-size:16px;">Supervisor meeting, eleven o'clock</div>
+                <div style="font-size:15px;color:#93c4ac;">Friday 18, in five days</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:auto;font-size:14px;color:#6a6760;">Nothing here was typed in by hand. Every line came out of a procedure, or out of a day passing.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:34px;">
+    <div style="font-size:14px;color:#7d7970;">Writing a procedure — prose with arrows, read back to you</div>
+    <div data-screen-label="Desk — procedure authoring (ink)" style="width:1760px;height:980px;background:#1b1e24;border:1px solid #2b2f38;border-radius:18px;display:flex;overflow:hidden;">
+      <div style="width:540px;flex:0 0 540px;background:#171a1f;display:flex;flex-direction:column;">
+        <div style="padding:26px 28px 20px;display:flex;flex-direction:column;gap:4px;">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:500;">Print a brochure</div>
+          <div style="font-size:13px;color:#7d7970;">First revision · type it the way you already write it</div>
+        </div>
+        <div style="flex:1;padding:8px 28px;font-size:15.5px;line-height:2.1;color:#c9c4ba;">
+          design it<br>
+          → send a draft to <span style="color:#93c4ac;">N. Aoun</span>, <span style="color:#93c4ac;">S. Frem</span> <span style="color:#7d7970;">(remind me after 5 days)</span><br>
+          → fix their notes<br>
+          → send v2, ask for a backup<br>
+          → go round again, or stop?<br>
+          <span style="color:#7d7970;">&nbsp;&nbsp;&nbsp;again → fix their notes</span><br>
+          <span style="color:#7d7970;">&nbsp;&nbsp;&nbsp;stop → file the final version</span><br>
+          → watch the printing<br>
+          → archive<br><br>
+          <span style="color:#7d7970;">keep the press quote near “watch the printing”</span>
+        </div>
+        <div style="padding:22px 28px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="font-size:14.5px;font-weight:500;color:#1b1e24;background:#7fb39a;border-radius:11px;padding:13px 20px;">Read it back — eight steps</span>
+            <span style="font-size:13px;color:#7d7970;">Nothing exists until you accept it.</span>
+          </div>
+          <div style="padding:15px 17px;background:#20252c;border:1.5px dashed #58412c;border-radius:13px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:13px;color:#e8b183;">One line it couldn't place</div>
+            <div style="font-size:13.5px;color:#a9968a;line-height:1.6;">“keep the press quote near watch the printing” — a step of its own, or a thing hanging off one? It won't guess. Left for you.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="flex:0 0 72px;display:flex;align-items:center;gap:14px;padding:0 34px;">
+          <span style="font-size:13.5px;color:#9a958a;">Draft — drag to arrange, drop an edge to connect</span>
+          <span style="margin-left:auto;font-size:13.5px;color:#7d7970;">seven accepted, one left</span>
+        </div>
+        <div style="flex:1;position:relative;background:#1e222a;border-radius:16px 0 0 0;overflow:hidden;">
+          <div style="position:absolute;left:44px;top:44px;width:1120px;height:600px;">
+            <svg width="1120" height="600" style="position:absolute;left:0;top:0;pointer-events:none;">
+              <g fill="none" stroke="#3c414b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#i-ah)">
+                <path d="M210,56 H254"></path>
+                <path d="M470,56 H514"></path>
+                <path d="M730,56 V150 H120 V194"></path>
+                <path d="M210,222 H254"></path>
+                <path d="M470,222 H514"></path>
+                <path d="M730,222 H774"></path>
+                <path d="M884,250 V330 H120 V374"></path>
+                <path d="M210,402 H254"></path>
+              </g>
+              <path d="M829,194 V110 H310 V194" fill="none" stroke="#8a6440" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#i-ahl)"></path>
+            </svg>
+            <div style="position:absolute;left:20px;top:28px;width:190px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;font-size:14.5px;">Design it</div>
+            <div style="position:absolute;left:255px;top:28px;width:215px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+              <span style="font-size:14.5px;">Send draft to two people</span>
+              <span style="font-size:12px;color:#93c4ac;">starts a wait · remind after 5d</span>
+            </div>
+            <div style="position:absolute;left:515px;top:28px;width:215px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;font-size:14.5px;">Fix their notes</div>
+            <div style="position:absolute;left:20px;top:194px;width:190px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;font-size:14.5px;">Fix their notes</div>
+            <div style="position:absolute;left:255px;top:194px;width:215px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+              <span style="font-size:14.5px;">Send v2, ask for a backup</span>
+              <span style="font-size:12px;color:#93c4ac;">starts a wait · remind after 5d</span>
+            </div>
+            <div style="position:absolute;left:515px;top:194px;width:215px;height:56px;background:#1a1e25;border:1px solid #3a3e48;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+              <span style="font-size:14.5px;">Go round again, or stop?</span>
+              <span style="font-size:12px;color:#9a958a;">two ways out — one goes back</span>
+            </div>
+            <div style="position:absolute;left:775px;top:194px;width:215px;height:56px;background:#20252c;border:1.5px dashed #4a4e57;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+              <span style="font-size:14.5px;">File the final version</span>
+              <span style="font-size:12px;color:#9a958a;">putting away · will block closing</span>
+            </div>
+            <div style="position:absolute;left:20px;top:374px;width:190px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;font-size:14.5px;">Watch the printing</div>
+            <div style="position:absolute;left:255px;top:374px;width:215px;height:56px;background:#242932;border-radius:12px;box-sizing:border-box;padding:0 16px;display:flex;align-items:center;font-size:14.5px;">Archive</div>
+            <div style="position:absolute;left:515px;top:366px;width:240px;height:72px;background:#20252c;border:1.5px dashed #58412c;border-radius:12px;box-sizing:border-box;padding:0 18px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
+              <span style="font-size:12px;color:#e8b183;">not placed yet</span>
+              <span style="font-size:13.5px;color:#c9c4ba;">press quote — a step, or a thing?</span>
+            </div>
+            <div style="position:absolute;left:240px;top:118px;font-size:13px;color:#bb9573;">goes back</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:34px;">
+    <div style="font-size:14px;color:#7d7970;">In your pocket — read, answer, nothing more</div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;">
+    <div data-screen-label="Phone — waiting (ink)" style="width:400px;height:860px;background:#1b1e24;border:1px solid #2b2f38;border-radius:30px;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:26px 20px 12px;display:flex;flex-direction:column;gap:4px;">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:27px;font-weight:500;letter-spacing:-0.015em;">Waiting</div>
+        <div style="font-size:13px;color:#7d7970;">Saturday, 8:41 · two late, one to put away</div>
+        <div style="font-size:13px;color:#6a6760;">Nothing will buzz at you. This is the whole list.</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:11px;padding:8px 16px 14px;overflow:hidden;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:#2a2119;border:1px solid #58412c;border-radius:16px;padding:13px 15px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:500;line-height:1.25;">R. Haddad, review</span>
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:500;color:#e8b183;">6d</span>
+            </div>
+            <div style="font-size:13px;color:#bb9573;">A day past your reminder · aerial photographs</div>
+            <div style="display:flex;gap:9px;">
+              <span style="flex:1;text-align:center;font-size:14px;font-weight:500;color:#1b1e24;background:#e0a06a;border-radius:12px;padding:14px 0;">Chased</span>
+              <span style="flex:1;text-align:center;font-size:14px;color:#e9e5dd;background:#1f242b;border:1px solid #3a3e48;border-radius:12px;padding:14px 0;">Came back</span>
+            </div>
+          </div>
+          <div style="background:#252026;border:1px solid #453a38;border-radius:16px;padding:13px 15px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:500;line-height:1.25;">N. Aoun &amp; S. Frem, v2</span>
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:500;color:#e8b183;">5d</span>
+            </div>
+            <div style="font-size:13px;color:#bb9573;">Chase them today · brochure</div>
+            <div style="display:flex;gap:9px;">
+              <span style="flex:1;text-align:center;font-size:14px;font-weight:500;color:#1b1e24;background:#e0a06a;border-radius:12px;padding:14px 0;">Chased</span>
+              <span style="flex:1;text-align:center;font-size:14px;color:#e9e5dd;background:#1f242b;border:1px solid #3a3e48;border-radius:12px;padding:14px 0;">Came back</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="font-size:13px;color:#7d7970;">Finished, not put away</div>
+          <div style="padding:14px 16px;background:#1f242b;border:1.5px dashed #58412c;border-radius:16px;display:flex;flex-direction:column;gap:9px;">
+            <div style="font-size:16px;">File the brochure's final version</div>
+            <div style="font-size:13px;color:#9a958a;">Looks done. Isn't.</div>
+            <span style="text-align:center;font-size:14px;color:#e9e5dd;background:#242932;border:1px solid #3a3e48;border-radius:12px;padding:13px 0;">Filed it</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:13px;color:#7d7970;">Waiting, and that's fine</div>
+          <div style="padding:14px 16px;background:#1f242b;border-radius:14px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Upload, survey team</span><span style="font-size:12.5px;color:#7d7970;">nobody to chase</span></div>
+            <span style="font-size:15px;color:#9a958a;">12d</span>
+          </div>
+          <div style="padding:14px 16px;background:#1f242b;border-radius:14px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Digitise Qabb Ilyas ’62</span><span style="font-size:12.5px;color:#7d7970;">in your hands</span></div>
+            <span style="font-size:15px;color:#9a958a;">3d</span>
+          </div>
+          <div style="padding:14px 16px;background:#1f242b;border-left:4px solid #7fb39a;border-radius:14px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;font-size:15px;">Supervisor meeting</div>
+            <span style="font-size:14.5px;color:#93c4ac;">Fri, 11:00</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:0 0 72px;background:#171a1f;display:flex;align-items:center;padding:0 8px;">
+        <div style="flex:1;text-align:center;font-size:14px;font-weight:500;">Waiting</div>
+        <div style="flex:1;text-align:center;font-size:14px;color:#7d7970;">Boards</div>
+        <div style="flex:1;text-align:center;font-size:14px;color:#7d7970;">Book</div>
+      </div>
+    </div>
+
+    <div data-screen-label="Phone — run (ink)" style="width:400px;height:860px;background:#1b1e24;border:1px solid #2b2f38;border-radius:30px;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:24px 20px 12px;display:flex;flex-direction:column;gap:3px;">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:500;letter-spacing:-0.015em;">Aerial photographs</div>
+        <div style="font-size:13px;color:#7d7970;">Four in hand, one late</div>
+      </div>
+      <div style="flex:0 0 230px;margin:6px 16px 10px;position:relative;background:#1e222a;border-radius:16px;overflow:hidden;">
+        <svg width="368" height="230" style="position:absolute;left:0;top:0;">
+          <g fill="none" stroke="#3c414b" stroke-width="1.4" stroke-linejoin="round">
+            <path d="M92,56 H118"></path><path d="M216,56 H242"></path>
+            <path d="M58,72 V132 H118"></path><path d="M216,132 H282 V76"></path>
+            <path d="M282,132 H310"></path>
+          </g>
+          <path d="M282,42 V22 H150 V42" fill="none" stroke="#8a6440" stroke-width="1.4"></path>
+          <path d="M282,168 L226,198" fill="none" stroke="#343943" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round"></path>
+        </svg>
+        <div style="position:absolute;left:22px;top:44px;width:70px;height:26px;background:#1a1e25;border-radius:7px;"></div>
+        <div style="position:absolute;left:119px;top:40px;width:96px;height:34px;background:#2d3f39;border:1px solid #7fb39a;border-radius:8px;"></div>
+        <div style="position:absolute;left:243px;top:40px;width:80px;height:34px;background:#2a2119;border:1px solid #58412c;border-radius:8px;"></div>
+        <div style="position:absolute;left:119px;top:118px;width:96px;height:30px;background:#242932;border-radius:8px;"></div>
+        <div style="position:absolute;left:264px;top:118px;width:36px;height:30px;background:#1a1e25;border:1px solid #3a3e48;border-radius:8px;"></div>
+        <div style="position:absolute;left:311px;top:118px;width:48px;height:30px;background:#20252c;border:1.5px dashed #58412c;border-radius:8px;"></div>
+        <div style="position:absolute;left:172px;top:186px;width:58px;height:24px;background:#1a1e25;border:1px solid #343943;border-radius:999px;"></div>
+        <div style="position:absolute;right:14px;bottom:10px;font-size:11.5px;color:#61656e;">pinch to look, not to arrange</div>
+      </div>
+      <div style="flex:1;padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden;">
+        <div style="font-size:13px;color:#7d7970;">Where this run is — four places</div>
+        <div style="background:#2a2119;border:1px solid #58412c;border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Send set for review</span><span style="font-size:12.5px;color:#bb9573;">R. Haddad · late</span></div>
+          <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:500;color:#e8b183;">6d</span>
+        </div>
+        <div style="background:#242932;border-left:4px solid #7fb39a;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:15px;">Digitise layers</span><span style="font-size:12.5px;color:#93c4ac;">in hand</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">
+            <span style="height:15px;border-radius:4px;background:#4d7566;"></span><span style="height:15px;border-radius:4px;background:#4d7566;"></span><span style="height:15px;border-radius:4px;border:1.5px solid #7fb39a;"></span>
+            <span style="height:15px;border-radius:4px;background:#4d7566;"></span><span style="height:15px;border-radius:4px;border:1.5px solid #7fb39a;"></span><span style="height:15px;border-radius:4px;background:#2e333c;"></span>
+            <span style="height:15px;border-radius:4px;background:#2e333c;"></span><span style="height:15px;border-radius:4px;background:#2e333c;"></span><span style="height:15px;border-radius:4px;background:#2e333c;"></span>
+          </div>
+        </div>
+        <div style="background:#1f242b;border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Upload from survey team</span><span style="font-size:12.5px;color:#7d7970;">nobody to chase</span></div>
+          <span style="font-size:15px;color:#9a958a;">12d</span>
+        </div>
+        <div style="background:#1f242b;border-left:4px solid #7fb39a;border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;font-size:15px;">Supervisor meeting</div>
+          <span style="font-size:14.5px;color:#93c4ac;">Fri, 11:00</span>
+        </div>
+        <div style="margin-top:auto;font-size:12.5px;color:#61656e;line-height:1.6;">Arranging is a desk job. Here you only look, and answer.</div>
+      </div>
+    </div>
+
+    <div data-screen-label="Phone — one step (ink)" style="width:400px;height:860px;background:#1b1e24;border:1px solid #2b2f38;border-radius:30px;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:24px 20px 12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:14px;color:#9a958a;">← Aerial photographs</span>
+        <span style="margin-left:auto;font-size:13px;color:#61656e;">step 4 of 9</span>
+      </div>
+      <div style="margin:0 16px;padding:18px;background:#2a2119;border:1px solid #58412c;border-radius:18px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+          <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:500;line-height:1.2;letter-spacing:-0.015em;">Send set for review</span>
+          <span style="font-size:12.5px;color:#1b1e24;background:#e0a06a;border-radius:999px;padding:2px 10px;">late</span>
+        </div>
+        <div style="font-size:13.5px;color:#bb9573;line-height:1.5;">Sent 7 September, six days ago. You asked to be reminded after five.</div>
+        <div style="display:flex;gap:9px;">
+          <span style="flex:1;text-align:center;font-size:14px;font-weight:500;color:#1b1e24;background:#e0a06a;border-radius:12px;padding:15px 0;">I chased today</span>
+          <span style="flex:1;text-align:center;font-size:14px;color:#e9e5dd;background:#1f242b;border:1px solid #3a3e48;border-radius:12px;padding:15px 0;">It came back</span>
+        </div>
+      </div>
+      <div style="flex:1;padding:20px 20px 16px;display:flex;flex-direction:column;gap:18px;overflow:hidden;">
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="font-size:13px;color:#7d7970;">Waiting on</div>
+          <div style="display:flex;align-items:center;gap:11px;padding:0 18px;height:54px;background:#1a1e25;border:1px solid #343943;border-radius:999px;">
+            <span style="font-size:15px;color:#c9c4ba;">R. Haddad</span>
+            <span style="margin-left:auto;font-size:13px;color:#7d7970;">chased twice</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="font-size:13px;color:#7d7970;">Belongs with this step</div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;">
+            <span style="padding:11px 17px;background:#1a1e25;border:1px solid #343943;border-radius:999px;font-size:14px;color:#c9c4ba;">1956 index sheet</span>
+            <span style="padding:11px 17px;background:#1a1e25;border:1px solid #343943;border-radius:999px;font-size:14px;color:#c9c4ba;">frame 1962-04</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="font-size:13px;color:#7d7970;">Next, and only you can answer it</div>
+          <div style="background:#242932;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:500;">Another pass?</span>
+              <span style="font-size:12.5px;color:#bb9573;">been round twice</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="padding:14px 16px;background:#1f242b;border-radius:11px;font-size:14.5px;color:#e9e5dd;display:flex;justify-content:space-between;"><span>Go round again</span><span style="color:#bb9573;">back to digitising</span></span>
+              <span style="padding:14px 16px;background:#1f242b;border-radius:11px;font-size:14.5px;color:#e9e5dd;display:flex;justify-content:space-between;"><span>Stop here</span><span style="color:#7d7970;">on to filing</span></span>
+            </div>
+            <div style="font-size:12.5px;color:#7d7970;line-height:1.5;">Nothing moves on its own. It will sit here until you say.</div>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding:14px 16px;background:#20252c;border:1.5px dashed #58412c;border-radius:13px;font-size:13px;color:#a9968a;line-height:1.6;">This run can't be closed yet — “file to project drive” is still undone.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<section style="font-family:'Work Sans',system-ui,sans-serif;background:#efe9dc;color:#26231d;padding:56px 64px 96px;display:flex;flex-direction:column;gap:14px;">
+  <div style="display:flex;align-items:baseline;gap:16px;">
+    <span style="font-family:'Newsreader',serif;font-size:15px;color:#8a8172;border:1px solid #d6cdb9;border-radius:999px;padding:3px 11px;">2a</span>
+    <h1 style="margin:0;font-family:'Newsreader',serif;font-size:30px;font-weight:400;letter-spacing:-0.01em;">Mashghal — the quieter one</h1>
+  </div>
+  <p style="margin:0 0 34px;max-width:660px;font-size:15px;line-height:1.65;color:#6d6557;text-wrap:pretty;">Same structure as <a href="#1a">1a</a>, same information, different manners. Paper instead of terminal, sentence case instead of shouting, one warm red kept for the only thing that should ever alarm you. Nothing is in capitals unless a person's initials are.</p>
+
+  <!-- ===== DESK · a run ===== -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:#8a8172;">A run, open on the desk</div>
+    <div data-screen-label="Desk — run (warm)" style="width:1760px;height:980px;background:#fbf8f1;border:1px solid #ded5c2;border-radius:14px;display:flex;overflow:hidden;box-shadow:0 1px 2px rgba(60,50,30,0.05),0 18px 40px -28px rgba(60,50,30,0.28);">
+
+      <div style="width:296px;flex:0 0 296px;border-right:1px solid #e7dfcf;background:#f6f1e6;display:flex;flex-direction:column;">
+        <div style="padding:22px 22px 18px;display:flex;flex-direction:column;gap:2px;">
+          <div style="font-family:'Newsreader',serif;font-size:22px;">Mashghal</div>
+          <div style="font-size:12px;color:#8a8172;">Lives on this computer only</div>
+        </div>
+        <div style="padding:4px 14px;display:flex;flex-direction:column;gap:2px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#efe7d7;border-radius:9px;">
+            <span style="font-size:14.5px;font-weight:500;">Waiting</span>
+            <span style="font-family:'Newsreader',serif;font-size:14px;color:#a8452c;">2 late</span>
+          </div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">Boards</div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">Vocabulary</div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">The book</div>
+        </div>
+        <div style="height:1px;background:#e7dfcf;margin:16px 22px;"></div>
+        <div style="padding:0 22px;display:flex;flex-direction:column;gap:20px;overflow:hidden;">
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:14px;color:#9b9283;">GIS, Lebanese University</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fffdf8;border:1px solid #ded5c2;border-radius:9px;">
+              <span style="width:7px;height:7px;border-radius:99px;background:#3f6f5f;"></span>
+              <span style="font-size:14px;flex:1;">Aerial photographs</span>
+              <span style="font-family:'Newsreader',serif;font-size:14px;color:#8a8172;">4</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;">
+              <span style="width:7px;height:7px;border-radius:99px;background:#a8452c;"></span>
+              <span style="font-size:14px;flex:1;color:#6d6557;">Site survey, Batroun</span>
+              <span style="font-family:'Newsreader',serif;font-size:14px;color:#a8452c;">1</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:14px;color:#9b9283;">Heritage foundation</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;">
+              <span style="width:7px;height:7px;border-radius:99px;border:1px solid #b8ae9b;"></span>
+              <span style="font-size:14px;flex:1;color:#6d6557;">Brochure</span>
+              <span style="font-size:12px;color:#a8452c;">not filed</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:14px;color:#9b9283;">Procedures</div>
+            <div style="padding:7px 10px;font-size:14px;color:#6d6557;">Digitise a photo set</div>
+            <div style="padding:7px 10px;font-size:14px;color:#6d6557;">Print a brochure</div>
+            <div style="padding:7px 10px;font-size:14px;color:#6d6557;">Take on heritage work</div>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding:20px 22px;font-size:14px;color:#8a8172;">Write a new procedure</div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="flex:0 0 78px;border-bottom:1px solid #e7dfcf;display:flex;align-items:center;gap:20px;padding:0 30px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="font-family:'Newsreader',serif;font-size:22px;">Aerial photographs — Bekaa, 1956 / 1962 / 1974</div>
+            <div style="font-size:12.5px;color:#8a8172;">Started 14 August, from “Digitise a photo set”, third revision</div>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:18px;">
+            <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#a8452c;"><span style="width:7px;height:7px;border-radius:99px;background:#a8452c;"></span>One late</span>
+            <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#3f6f5f;"><span style="width:7px;height:7px;border-radius:99px;background:#3f6f5f;"></span>Four in hand</span>
+            <span style="font-size:13.5px;color:#8a8172;font-style:italic;font-family:'Newsreader',serif;">can't be closed yet</span>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;background:#fbf8f1;overflow:hidden;">
+          <div style="position:absolute;left:44px;top:34px;width:1400px;height:620px;">
+            <svg width="1400" height="620" style="position:absolute;left:0;top:0;pointer-events:none;">
+              <defs>
+                <marker id="w-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#b8ae9b"></path></marker>
+                <marker id="w-ahl" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c98b6e"></path></marker>
+              </defs>
+              <g fill="none" stroke="#cdc3ae" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#w-ah)">
+                <path d="M230,182 H265 V195 H294"></path>
+                <path d="M135,214 V376 H294"></path>
+                <path d="M530,195 H585 V96 H634"></path>
+                <path d="M530,195 H585 V246 H634"></path>
+                <path d="M870,96 H910 V160 H944"></path>
+                <path d="M870,246 H910 V160 H944"></path>
+                <path d="M1130,160 H1184"></path>
+              </g>
+              <path d="M1040,120 V30 H415 V114" fill="none" stroke="#d9a189" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#w-ahl)"></path>
+              <g fill="none" stroke="#ded5c2" stroke-width="1.3" stroke-dasharray="1 6" stroke-linecap="round">
+                <path d="M980,330 L862,138"></path>
+                <path d="M170,470 L296,244"></path>
+                <path d="M182,545 L300,262"></path>
+              </g>
+            </svg>
+
+            <div style="position:absolute;left:40px;top:150px;width:190px;height:64px;background:#f4efe4;border:1px solid #e7dfcf;border-radius:11px;padding:11px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-size:14px;color:#8a8172;">Scan &amp; georeference</div>
+              <div style="font-size:12px;color:#a39a8a;">Done 21 August</div>
+            </div>
+
+            <div style="position:absolute;left:300px;top:114px;width:230px;height:168px;background:#fffdf8;border:1px solid #ded5c2;border-radius:11px;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(60,50,30,0.05);">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14.5px;font-weight:500;">Digitise layers</span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#3f6f5f;"><span style="width:6px;height:6px;border-radius:99px;background:#3f6f5f;"></span>in hand</span>
+              </div>
+              <div style="display:grid;grid-template-columns:42px repeat(3,1fr);gap:5px;align-items:center;">
+                <span></span>
+                <span style="font-size:11px;color:#a39a8a;text-align:center;">’56</span>
+                <span style="font-size:11px;color:#a39a8a;text-align:center;">’62</span>
+                <span style="font-size:11px;color:#a39a8a;text-align:center;">’74</span>
+                <span style="font-size:11px;color:#8a8172;">Anjar</span>
+                <span style="height:17px;border-radius:4px;background:#8fae9f;"></span>
+                <span style="height:17px;border-radius:4px;background:#8fae9f;"></span>
+                <span style="height:17px;border-radius:4px;border:1.5px solid #3f6f5f;"></span>
+                <span style="font-size:11px;color:#8a8172;">Qabb</span>
+                <span style="height:17px;border-radius:4px;background:#8fae9f;"></span>
+                <span style="height:17px;border-radius:4px;border:1.5px solid #3f6f5f;"></span>
+                <span style="height:17px;border-radius:4px;background:#ece5d7;"></span>
+                <span style="font-size:11px;color:#8a8172;">Terbol</span>
+                <span style="height:17px;border-radius:4px;background:#ece5d7;"></span>
+                <span style="height:17px;border-radius:4px;background:#ece5d7;"></span>
+                <span style="height:17px;border-radius:4px;background:#ece5d7;"></span>
+              </div>
+              <div style="font-size:12px;color:#8a8172;">Three done, two in hand, four to go</div>
+            </div>
+
+            <div style="position:absolute;left:640px;top:56px;width:230px;height:84px;background:#fbeee8;border:1px solid #dda58d;border-radius:11px;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Send set for review</span>
+                <span style="font-family:'Newsreader',serif;font-size:13px;color:#fbf8f1;background:#a8452c;border-radius:999px;padding:1px 9px;">late</span>
+              </div>
+              <div style="font-size:12.5px;color:#a8452c;line-height:1.45;">With R. Haddad six days.<br>You meant to chase after five.</div>
+            </div>
+
+            <div style="position:absolute;left:640px;top:210px;width:230px;height:80px;background:#fffdf8;border:1px solid #ded5c2;border-radius:11px;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Upload from survey team</span>
+                <span style="font-size:12px;color:#8a8172;">waiting</span>
+              </div>
+              <div style="font-size:12.5px;color:#8a8172;line-height:1.45;">Twelve days. Nobody to chase,<br>so it isn't late.</div>
+            </div>
+
+            <div style="position:absolute;left:950px;top:118px;width:180px;height:84px;background:#f4efe4;border:1px solid #cdc3ae;border-radius:11px 11px 11px 11px;box-sizing:border-box;padding:12px 15px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-family:'Newsreader',serif;font-size:17px;">Another pass?</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:12px;color:#8a8172;">yours to answer</span>
+                <span style="font-size:12px;color:#b06a4c;">· been round twice</span>
+              </div>
+            </div>
+            <div style="position:absolute;left:1142px;top:150px;font-size:12.5px;color:#a39a8a;">stops here</div>
+            <div style="position:absolute;left:640px;top:8px;font-family:'Newsreader',serif;font-style:italic;font-size:14px;color:#b06a4c;">goes back — twice so far</div>
+
+            <div style="position:absolute;left:1190px;top:118px;width:190px;height:84px;background:#faf4e8;border:1.5px dashed #d9a189;border-radius:11px;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="font-size:14.5px;font-weight:500;">File to project drive</div>
+              <div style="font-size:12.5px;color:#b06a4c;">Until this is done, nothing closes.</div>
+            </div>
+
+            <div style="position:absolute;left:300px;top:340px;width:230px;height:80px;background:#fffdf8;border:1px solid #ded5c2;border-radius:11px;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14.5px;font-weight:500;">Supervisor meeting</span>
+                <span style="font-family:'Newsreader',serif;font-size:14px;color:#3f6f5f;">Fri 18</span>
+              </div>
+              <div style="font-size:12.5px;color:#8a8172;">Eleven o'clock. Fixed by the day, not by you.</div>
+            </div>
+
+            <div style="position:absolute;left:880px;top:326px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:13px;color:#9b9283;">person</span>
+              <span style="font-size:14px;color:#4d463a;">R. Haddad</span>
+            </div>
+            <div style="position:absolute;left:60px;top:440px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:13px;color:#9b9283;">file</span>
+              <span style="font-size:14px;color:#4d463a;">1956 index sheet</span>
+            </div>
+            <div style="position:absolute;left:72px;top:515px;display:flex;align-items:center;gap:11px;height:54px;padding:0 20px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:13px;color:#9b9283;">photograph</span>
+              <span style="font-size:14px;color:#4d463a;">frame 1962-04</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ showLegend }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:44px;bottom:26px;display:flex;align-items:center;gap:30px;padding:14px 20px;background:#f6f1e6;border:1px solid #e7dfcf;border-radius:999px;">
+              <div style="display:flex;align-items:center;gap:9px;"><svg width="38" height="8"><path d="M0,4 H32" stroke="#cdc3ae" stroke-width="1.5" fill="none" marker-end="url(#w-ah)"></path></svg><span style="font-size:12.5px;color:#6d6557;">comes after</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><svg width="38" height="8"><path d="M0,4 H36" stroke="#ded5c2" stroke-width="1.3" stroke-dasharray="1 6" stroke-linecap="round" fill="none"></path></svg><span style="font-size:12.5px;color:#6d6557;">belongs with, in no order</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:16px;height:11px;border:1px solid #cdc3ae;border-radius:3px;"></span><span style="font-size:12.5px;color:#6d6557;">a step</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:18px;height:11px;border:1px solid #cdc3ae;border-radius:999px;"></span><span style="font-size:12.5px;color:#6d6557;">a thing or a person</span></div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DESK · waiting ===== -->
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:34px;">
+    <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:#8a8172;">What is waiting — the screen you open first</div>
+    <div data-screen-label="Desk — waiting (warm)" style="width:1760px;height:980px;background:#fbf8f1;border:1px solid #ded5c2;border-radius:14px;display:flex;overflow:hidden;box-shadow:0 1px 2px rgba(60,50,30,0.05),0 18px 40px -28px rgba(60,50,30,0.28);">
+      <div style="width:296px;flex:0 0 296px;border-right:1px solid #e7dfcf;background:#f6f1e6;display:flex;flex-direction:column;">
+        <div style="padding:22px;font-family:'Newsreader',serif;font-size:22px;">Mashghal</div>
+        <div style="padding:0 14px;display:flex;flex-direction:column;gap:2px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#efe7d7;border-radius:9px;"><span style="font-size:14.5px;font-weight:500;">Waiting</span><span style="font-family:'Newsreader',serif;font-size:14px;color:#a8452c;">2 late</span></div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">Boards</div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">Vocabulary</div>
+          <div style="padding:10px 12px;font-size:14.5px;color:#6d6557;">The book</div>
+        </div>
+        <div style="margin-top:auto;padding:22px;font-family:'Newsreader',serif;font-size:14.5px;font-style:italic;color:#9b9283;line-height:1.7;">No server, nothing to sync. This list is only true while you are looking at it. Last copy kept 4 September.</div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:40px 52px;gap:30px;">
+        <div style="display:flex;align-items:baseline;gap:16px;">
+          <h2 style="margin:0;font-family:'Newsreader',serif;font-size:30px;font-weight:400;">Good morning. Two things are late.</h2>
+          <span style="font-size:13.5px;color:#8a8172;">Saturday 13 September, 8:41</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:26px;max-width:1160px;">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:stretch;background:#fbeee8;border:1px solid #dda58d;border-radius:12px;overflow:hidden;">
+              <div style="width:5px;background:#a8452c;"></div>
+              <div style="flex:1;padding:22px 26px;display:flex;align-items:center;gap:28px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-family:'Newsreader',serif;font-size:22px;">R. Haddad hasn't sent the review back</div>
+                  <div style="font-size:13.5px;color:#8a7466;">Aerial photographs · GIS, Lebanese University</div>
+                </div>
+                <div style="text-align:right;display:flex;flex-direction:column;gap:2px;">
+                  <div style="font-family:'Newsreader',serif;font-size:32px;color:#a8452c;line-height:1;">6 days</div>
+                  <div style="font-size:12.5px;color:#b06a4c;">a day past your own reminder</div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                  <span style="font-size:14px;color:#fbf8f1;background:#a8452c;border-radius:9px;padding:12px 18px;">I chased today</span>
+                  <span style="font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:9px;padding:12px 18px;">It came back</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:stretch;background:#fbeee8;border:1px solid #e4b6a0;border-radius:12px;overflow:hidden;">
+              <div style="width:5px;background:#c07050;"></div>
+              <div style="flex:1;padding:22px 26px;display:flex;align-items:center;gap:28px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div style="font-family:'Newsreader',serif;font-size:22px;">N. Aoun and S. Frem, second version</div>
+                  <div style="font-size:13.5px;color:#8a7466;">Brochure · Heritage foundation · neither has answered</div>
+                </div>
+                <div style="text-align:right;display:flex;flex-direction:column;gap:2px;">
+                  <div style="font-family:'Newsreader',serif;font-size:32px;color:#a8452c;line-height:1;">5 days</div>
+                  <div style="font-size:12.5px;color:#b06a4c;">chase them today</div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                  <span style="font-size:14px;color:#fbf8f1;background:#a8452c;border-radius:9px;padding:12px 18px;">I chased today</span>
+                  <span style="font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:9px;padding:12px 18px;">It came back</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:#8a8172;">Finished, but not put away</div>
+            <div style="display:flex;align-items:center;gap:28px;padding:20px 26px;background:#faf4e8;border:1.5px dashed #d9a189;border-radius:12px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+                <div style="font-family:'Newsreader',serif;font-size:20px;">The brochure's final version is still on your machine</div>
+                <div style="font-size:13.5px;color:#8a7466;">It looks done from the outside. It isn't, and the run knows.</div>
+              </div>
+              <span style="font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:9px;padding:12px 18px;">Filed it</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:#8a8172;">Waiting, and that's fine</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:24px;padding:18px 24px;background:#fffdf8;border:1px solid #e7dfcf;border-radius:12px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:16px;">Upload from the survey team</div>
+                  <div style="font-size:13px;color:#8a8172;">You never set a reminder for this one, so it can wait for ever.</div>
+                </div>
+                <div style="font-family:'Newsreader',serif;font-size:18px;color:#8a8172;">12 days</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:24px;padding:18px 24px;background:#fffdf8;border:1px solid #e7dfcf;border-radius:12px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:16px;">Digitise Qabb Ilyas, 1962</div>
+                  <div style="font-size:13px;color:#8a8172;">In your hands. Waiting on nobody but you.</div>
+                </div>
+                <div style="font-family:'Newsreader',serif;font-size:18px;color:#8a8172;">3 days</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:24px;padding:18px 24px;background:#fffdf8;border:1px solid #e7dfcf;border-left:4px solid #8fae9f;border-radius:12px;">
+                <div style="flex:1;font-size:16px;">Supervisor meeting, eleven o'clock</div>
+                <div style="font-family:'Newsreader',serif;font-size:16px;color:#3f6f5f;">Friday 18, in five days</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:auto;font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#9b9283;">Nothing on this page was typed in by hand. Every line came out of a procedure, or out of a day passing.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PHONES ===== -->
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:34px;">
+    <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:#8a8172;">In your pocket — read, answer, nothing more</div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;">
+
+      <div data-screen-label="Phone — waiting (warm)" style="width:400px;height:860px;background:#fbf8f1;border:1px solid #ded5c2;border-radius:28px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 40px -28px rgba(60,50,30,0.3);">
+        <div style="padding:24px 20px 16px;display:flex;flex-direction:column;gap:4px;">
+          <div style="font-family:'Newsreader',serif;font-size:27px;">Waiting</div>
+          <div style="font-size:13px;color:#8a8172;">Saturday, 8:41 · two late, one to put away</div>
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:13.5px;color:#a39a8a;">Nothing will buzz at you. This is the whole list.</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:15px;padding:6px 16px 14px;overflow:hidden;">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#fbeee8;border:1px solid #dda58d;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+                <span style="font-family:'Newsreader',serif;font-size:20px;line-height:1.25;">R. Haddad, review</span>
+                <span style="font-family:'Newsreader',serif;font-size:22px;color:#a8452c;">6d</span>
+              </div>
+              <div style="font-size:13px;color:#a8452c;">A day past your reminder · aerial photographs</div>
+              <div style="display:flex;gap:9px;">
+                <span style="flex:1;text-align:center;font-size:14px;color:#fbf8f1;background:#a8452c;border-radius:10px;padding:13px 0;">Chased</span>
+                <span style="flex:1;text-align:center;font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:10px;padding:13px 0;">Came back</span>
+              </div>
+            </div>
+            <div style="background:#fbeee8;border:1px solid #e4b6a0;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+                <span style="font-family:'Newsreader',serif;font-size:20px;line-height:1.25;">N. Aoun &amp; S. Frem, v2</span>
+                <span style="font-family:'Newsreader',serif;font-size:22px;color:#a8452c;">5d</span>
+              </div>
+              <div style="font-size:13px;color:#a8452c;">Chase them today · brochure</div>
+              <div style="display:flex;gap:9px;">
+                <span style="flex:1;text-align:center;font-size:14px;color:#fbf8f1;background:#a8452c;border-radius:10px;padding:13px 0;">Chased</span>
+                <span style="flex:1;text-align:center;font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:10px;padding:13px 0;">Came back</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#8a8172;">Finished, not put away</div>
+            <div style="padding:13px 15px;background:#faf4e8;border:1.5px dashed #d9a189;border-radius:14px;display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:16px;">File the brochure's final version</div>
+              <div style="font-size:13px;color:#8a7466;">Looks done. Isn't.</div>
+              <span style="text-align:center;font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:10px;padding:14px 0;">Filed it</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#8a8172;">Waiting, and that's fine</div>
+            <div style="padding:13px 16px;background:#fffdf8;border:1px solid #e7dfcf;border-radius:14px;display:flex;align-items:center;gap:12px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Upload, survey team</span><span style="font-size:12.5px;color:#8a8172;">nobody to chase</span></div>
+              <span style="font-family:'Newsreader',serif;font-size:17px;color:#8a8172;">12d</span>
+            </div>
+            <div style="padding:13px 16px;background:#fffdf8;border:1px solid #e7dfcf;border-radius:14px;display:flex;align-items:center;gap:12px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:15px;">Digitise Qabb Ilyas ’62</span><span style="font-size:12.5px;color:#8a8172;">in your hands</span></div>
+              <span style="font-family:'Newsreader',serif;font-size:17px;color:#8a8172;">3d</span>
+            </div>
+            <div style="padding:13px 16px;background:#fffdf8;border:1px solid #e7dfcf;border-left:4px solid #8fae9f;border-radius:14px;display:flex;align-items:center;gap:12px;">
+              <div style="flex:1;font-size:15px;">Supervisor meeting</div>
+              <span style="font-family:'Newsreader',serif;font-size:15px;color:#3f6f5f;">Fri, 11:00</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex:0 0 72px;border-top:1px solid #e7dfcf;background:#f6f1e6;display:flex;align-items:center;padding:0 8px;">
+          <div style="flex:1;text-align:center;font-size:14px;color:#26231d;font-weight:500;">Waiting</div>
+          <div style="flex:1;text-align:center;font-size:14px;color:#8a8172;">Boards</div>
+          <div style="flex:1;text-align:center;font-size:14px;color:#8a8172;">Book</div>
+        </div>
+      </div>
+
+      <div data-screen-label="Phone — one step (warm)" style="width:400px;height:860px;background:#fbf8f1;border:1px solid #ded5c2;border-radius:28px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 40px -28px rgba(60,50,30,0.3);">
+        <div style="padding:22px 20px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:14px;color:#8a8172;">← Aerial photographs</span>
+          <span style="margin-left:auto;font-size:13px;color:#a39a8a;">step 4 of 9</span>
+        </div>
+        <div style="margin:0 16px;padding:20px 18px;background:#fbeee8;border:1px solid #dda58d;border-radius:16px;display:flex;flex-direction:column;gap:13px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font-family:'Newsreader',serif;font-size:25px;line-height:1.2;">Send set for review</span>
+            <span style="font-family:'Newsreader',serif;font-size:13px;color:#fbf8f1;background:#a8452c;border-radius:999px;padding:2px 10px;">late</span>
+          </div>
+          <div style="font-size:13.5px;color:#a8452c;line-height:1.5;">Sent 7 September, six days ago. You asked to be reminded after five.</div>
+          <div style="display:flex;gap:9px;">
+            <span style="flex:1;text-align:center;font-size:14px;color:#fbf8f1;background:#a8452c;border-radius:10px;padding:16px 0;">I chased today</span>
+            <span style="flex:1;text-align:center;font-size:14px;color:#4d463a;background:#fffdf8;border:1px solid #ded5c2;border-radius:10px;padding:16px 0;">It came back</span>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;gap:22px;overflow:hidden;">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#8a8172;">Waiting on</div>
+            <div style="display:flex;align-items:center;gap:11px;padding:0 18px;height:56px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;">
+              <span style="font-size:15px;color:#4d463a;">R. Haddad</span>
+              <span style="margin-left:auto;font-size:13px;color:#8a8172;">chased twice</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#8a8172;">Belongs with this step</div>
+            <div style="display:flex;flex-wrap:wrap;gap:9px;">
+              <span style="padding:12px 18px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;font-size:14px;color:#4d463a;">1956 index sheet</span>
+              <span style="padding:12px 18px;background:#f4efe4;border:1px solid #e0d8c8;border-radius:999px;font-size:14px;color:#4d463a;">frame 1962-04</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:#8a8172;">Next, and only you can answer it</div>
+            <div style="background:#fffdf8;border:1px solid #ded5c2;border-radius:14px;padding:17px;display:flex;flex-direction:column;gap:13px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+                <span style="font-family:'Newsreader',serif;font-size:21px;">Another pass?</span>
+                <span style="font-size:12.5px;color:#b06a4c;">been round twice</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <span style="padding:15px 16px;border:1px solid #ded5c2;border-radius:10px;font-size:14.5px;color:#4d463a;display:flex;justify-content:space-between;"><span>Go round again</span><span style="color:#b06a4c;">back to digitising</span></span>
+                <span style="padding:15px 16px;border:1px solid #ded5c2;border-radius:10px;font-size:14.5px;color:#4d463a;display:flex;justify-content:space-between;"><span>Stop here</span><span style="color:#8a8172;">on to filing</span></span>
+              </div>
+              <div style="font-size:13px;color:#8a8172;line-height:1.5;">Nothing moves on its own. It will sit here until you say.</div>
+            </div>
+          </div>
+          <div style="margin-top:auto;padding:15px 16px;background:#faf4e8;border:1.5px dashed #d9a189;border-radius:12px;font-size:13.5px;color:#8a7466;line-height:1.6;">This run can't be closed yet — “file to project drive” is still undone.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showLegend&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Desk canvas&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showLegend: this.props.showLegend ?? true };
+  }
+}
+
+</script>
+</body>
+</html>
