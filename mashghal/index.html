@@ -114,6 +114,8 @@
   .btn.quiet { border-color: transparent; }
   .btn.danger { color: var(--oxide); border-color: var(--oxide-deep); }
   .btn:focus-visible, .tab:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.38; cursor: default; }
+  .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
 
   .pill {
     display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono);
@@ -229,6 +231,40 @@
   .meter-fill { height: 100%; background: var(--blue); }
   .meter-pace { height: 100%; background: var(--brass); }
 
+  /* ---------------- the switch bar ---------------- */
+  .switchbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; }
+  .sb {
+    display: flex; align-items: center; gap: 0.7rem;
+    background: var(--raised); border-top: 1px solid var(--rule);
+    padding: 0.55rem 1rem calc(0.55rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 26px -20px #000;
+  }
+  .sb-txt { flex: 1; min-width: 0; }
+  .sb-txt b { display: block; font-size: 0.92rem; font-weight: 500; }
+  .sb-txt small { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .sb-dot { width: 7px; height: 7px; flex: none; background: var(--blue); animation: tick 2.6s ease-in-out infinite; }
+  @keyframes tick { 0%, 100% { opacity: 0.35 } 50% { opacity: 1 } }
+  .sb-idle .sb-txt b { color: var(--dim); font-weight: 400; }
+  .sb-warn { border-top-color: var(--oxide); }
+  .sb-warn .sb-txt b { color: var(--oxide); }
+  body { padding-bottom: 4rem; }
+
+  /* ---------------- the week ---------------- */
+  .wk { display: flex; gap: 0.7rem; padding: 0.7rem 0; border-bottom: 1px solid var(--rule-soft); }
+  .wk:last-child { border-bottom: 0; }
+  .wk-dot { width: 6px; flex: none; margin-top: 0.25rem; height: 1.6rem; }
+  .wk-main { flex: 1; min-width: 0; }
+  .wk-top { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.3rem; }
+  .wk-top span { font-family: var(--mono); font-size: 0.82rem; color: var(--dim); }
+  .wk-main small { display: block; font-size: 0.76rem; color: var(--faint); margin-top: 0.3rem; }
+  .dayhead {
+    display: flex; align-items: baseline; gap: 0.6rem; margin: 1rem 0 0.2rem;
+    padding-top: 0.6rem; border-top: 1px solid var(--rule-soft);
+  }
+  .dayhead:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .dayhead b { font-size: 0.86rem; }
+  .dayhead span { flex: 1; font-family: var(--mono); font-size: 0.74rem; color: var(--faint); }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -240,6 +276,8 @@
   </aside>
   <main class="view" id="view"></main>
 </div>
+
+<div class="switchbar" id="sbar"></div>
 
 <div class="toasts" id="toasts"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
@@ -289,6 +327,7 @@
     tabs: [
       { id: "boards",  label: "Boards",   ico: "◱" },
       { id: "waiting", label: "Waiting",  ico: "◴" },
+      { id: "week",    label: "The week", ico: "▤" },
       { id: "kit",     label: "Kit",      ico: "◈" },
       { id: "settings",label: "Settings", ico: "⚙" }
     ],
@@ -324,16 +363,18 @@
     renderView: function (v) {
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
+      if (v === "week")     return renderWeek();
       if (v === "kit")      return renderKit();
       return renderSettings();
     },
 
-    afterRender: function () { mountCanvas(); },
+    // The switch bar lives outside the view, so render() never touches it.
+    afterRender: function () { mountCanvas(); mountBar(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; },
 
     actions: {}
   };
@@ -890,6 +931,299 @@
       '<div class="note"><span class="note-mark info">·</span><div>A run freezes its procedure when it starts, so editing the procedure never disturbs work already under way.</div></div>' +
       "</div></div>";
     return h;
+  }
+
+
+  /* ================= time, spans, and the week ================= */
+
+  // A span is a stretch of time at one bench. Hours are never stored as a
+  // total anywhere — every figure on the week is summed from these, so no
+  // figure can drift away from the record it came from.
+  var LONG_DAY = 14 * 60;   // minutes past which an open span is not believed
+  var weekOf = "";          // which week is being read; view state, never saved
+
+  function nowStamp() {
+    var d = new Date();
+    return iso(d) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  function stampDay(s) { return String(s).slice(0, 10); }
+  function stampMin(s) {
+    var t = String(s).slice(11);
+    return num(t.slice(0, 2)) * 60 + num(t.slice(3, 5));
+  }
+  function minsBetween(a, b) {
+    return daysBetween(stampDay(a), stampDay(b)) * 1440 + stampMin(b) - stampMin(a);
+  }
+  function fmtMins(m) {
+    m = Math.round(m);
+    if (m <= 0) return "0h";
+    var h = Math.floor(m / 60), r = m % 60;
+    return h ? (r ? h + "h " + r + "m" : h + "h") : r + "m";
+  }
+
+  function openSpan() {
+    for (var i = state.spans.length - 1; i >= 0; i--) {
+      if (!state.spans[i].endedAt) return state.spans[i];
+    }
+    return null;
+  }
+  // An open span that started yesterday, or has run longer than any real day,
+  // is not an amount of time — it is a question. It is never counted and never
+  // closed on your behalf.
+  function runaway() {
+    var sp = openSpan();
+    if (!sp) return null;
+    var m = minsBetween(sp.startedAt, nowStamp());
+    return (m > LONG_DAY || stampDay(sp.startedAt) !== today()) ? sp : null;
+  }
+
+  // Minutes of one span that fall inside a range of days. An open span
+  // contributes nothing: it is not an hour until it has ended.
+  function minsIn(sp, fromDay, toDay) {
+    if (!sp.endedAt) return 0;
+    var lo = fromDay + "T00:00", hi = toDay + "T23:59";
+    if (sp.endedAt < lo || sp.startedAt > hi) return 0;
+    var a = sp.startedAt < lo ? lo : sp.startedAt;
+    var b = sp.endedAt > hi ? hi : sp.endedAt;
+    return Math.max(0, minsBetween(a, b));
+  }
+  function claimantOfSpan(sp) {
+    var bn = byId(state.benches, sp.benchId);
+    return bn ? bn.claimantId : "";
+  }
+  function minsFor(claimantId, fromDay, toDay) {
+    return state.spans.reduce(function (t, sp) {
+      return claimantOfSpan(sp) === claimantId ? t + minsIn(sp, fromDay, toDay) : t;
+    }, 0);
+  }
+  // Days a claimant was touched at all. A claimant owed days is not owed hours,
+  // and counting one in the other's unit is a plausible wrong number.
+  function daysFor(claimantId, fromDay, toDay) {
+    var seen = {};
+    state.spans.forEach(function (sp) {
+      if (claimantOfSpan(sp) !== claimantId) return;
+      for (var i = 0; i < 7; i++) {
+        var d = addDays(fromDay, i);
+        if (d > toDay) break;
+        if (minsIn(sp, d, d) > 0) seen[d] = 1;
+      }
+    });
+    return Object.keys(seen).length;
+  }
+  // Time at no bench at all. It is shown and never distributed — the app does
+  // not know whose it was, and guessing would put hours on an employer's name.
+  function suspenseMins(fromDay, toDay) {
+    return state.spans.reduce(function (t, sp) {
+      return sp.benchId ? t : t + minsIn(sp, fromDay, toDay);
+    }, 0);
+  }
+
+  function owedOf(c) {
+    if (c.kind === "budget") return { unit: "h", owed: num(c.hours) * 60 };
+    if (c.kind === "floor")  return { unit: "h", owed: num(c.hours) * 60, floor: true };
+    if (c.kind === "days")   return { unit: "d", owed: num(c.hours) };
+    return { unit: c.kind === "watch" ? "" : "h", owed: 0 };
+  }
+
+  function standing(fromDay) {
+    var toDay = addDays(fromDay, 6);
+    return live(state.claimants).filter(function (c) { return c.kind !== "watch"; })
+      .map(function (c) {
+        var o = owedOf(c);
+        var got = o.unit === "d" ? daysFor(c.id, fromDay, toDay) : minsFor(c.id, fromDay, toDay);
+        return { c: c, unit: o.unit, owed: o.owed, got: got, floor: !!o.floor,
+                 short: o.owed ? Math.max(0, o.owed - got) : 0 };
+      });
+  }
+
+  // How far behind a claimant has fallen, added up over whole weeks and never
+  // reset. It is a co-occurrence and not a cause: the app never says one
+  // claimant took the hours another lost, because it cannot know that.
+  function behindBy(c) {
+    var o = owedOf(c);
+    if (!o.owed) return null;
+    var first = state.spans.reduce(function (m, sp) {
+      var d = stampDay(sp.startedAt);
+      return (!m || d < m) ? d : m;
+    }, "");
+    if (!first) return null;
+    var w = weekStart(first), thisWeek = weekStart(today()), total = 0, weeks = 0, guard = 0;
+    while (w < thisWeek && guard++ < 400) {
+      var to = addDays(w, 6);
+      var got = o.unit === "d" ? daysFor(c.id, w, to) : minsFor(c.id, w, to);
+      total += Math.max(0, o.owed - got);
+      weeks++;
+      w = addDays(w, 7);
+    }
+    return weeks ? { amount: total, unit: o.unit, weeks: weeks } : null;
+  }
+  function amountWords(n, unit) {
+    return unit === "d" ? (n + (n === 1 ? " day" : " days")) : fmtMins(n);
+  }
+
+  /* ---------------- the switch bar ---------------- */
+
+  function switchBarHtml() {
+    var sp = openSpan(), run = runaway();
+    if (run) {
+      return '<div class="sb sb-warn"><span class="sb-txt"><b>Still at ' +
+        esc(benchLabel(run.benchId) || "no bench") + '</b>' +
+        '<small>since ' + esc(niceDate(stampDay(run.startedAt))) + " " + esc(String(run.startedAt).slice(11)) +
+        " — say when you left, or this is not an amount of time</small></span>" +
+        '<span class="tools"><button class="btn primary" data-act="span-close">Close it</button></span></div>';
+    }
+    if (sp) {
+      var m = minsBetween(sp.startedAt, nowStamp());
+      return '<div class="sb"><span class="sb-dot"></span><span class="sb-txt"><b>' +
+        esc(benchLabel(sp.benchId) || "Not said yet") + "</b>" +
+        "<small>since " + esc(String(sp.startedAt).slice(11)) + " · " + fmtMins(m) + "</small></span>" +
+        '<span class="tools"><button class="btn" data-act="span-switch">Switch</button>' +
+        '<button class="btn" data-act="span-stop">Stop</button></span></div>';
+    }
+    return '<div class="sb sb-idle"><span class="sb-txt"><b>Not at a bench</b>' +
+      "<small>nothing is being counted</small></span>" +
+      '<span class="tools"><button class="btn" data-act="span-start">Start</button></span></div>';
+  }
+  function mountBar() {
+    var el = document.getElementById("sbar");
+    if (el) el.innerHTML = switchBarHtml();
+  }
+
+  /* ---------------- the week screen ---------------- */
+
+  function currentWeek() { return weekOf || weekStart(today()); }
+
+  function renderWeek() {
+    var from = currentWeek(), to = addDays(from, 6);
+    var isNow = from === weekStart(today());
+    var rows = standing(from);
+    var total = state.spans.reduce(function (t, sp) { return t + minsIn(sp, from, to); }, 0);
+    var susp = suspenseMins(from, to);
+
+    var h = pageHead("The week",
+      esc(dayName(from) + " " + from + " to " + to),
+      '<div class="tools">' +
+      '<button class="btn" data-act="week-prev">‹ earlier</button>' +
+      (isNow ? "" : '<button class="btn" data-act="week-now">this week</button>') +
+      '<button class="btn" data-act="week-next" ' + (isNow ? "disabled" : "") + '>later ›</button>' +
+      '<button class="btn" data-act="span-add">Add time</button></div>');
+
+    h += '<div class="tiles">' +
+      tile("Counted", fmtMins(total), "across " + rows.length + " claimants") +
+      tile("Not said", fmtMins(susp), susp ? "waiting to be attributed" : "nothing unattributed", susp ? "loss" : "") +
+      "</div>";
+
+    if (susp) {
+      h += '<div class="card" style="border-left:2px solid var(--oxide)"><h3>Time at no bench</h3>' +
+        '<p class="hint" style="margin:0.2rem 0 0.7rem">' + fmtMins(susp) +
+        " this week is at no bench. It is not counted against anyone and it will not be guessed at — say whose it was.</p>" +
+        state.spans.filter(function (sp) { return !sp.benchId && minsIn(sp, from, to) > 0; })
+          .map(function (sp) { return spanRow(sp, true); }).join("") + "</div>";
+    }
+
+    h += '<div class="sect">Where the week went</div>';
+    if (!rows.length) {
+      h += '<p class="empty">No claimants yet — add one in Kit and the week has something to measure against.</p>';
+    } else {
+      h += '<div class="card">' + rows.map(function (r) {
+        var pct = r.owed ? Math.min(100, Math.round(r.got / r.owed * 100)) : 0;
+        var fig = r.unit === "d" ? r.got + (r.owed ? " of " + r.owed : "") + (r.got === 1 && !r.owed ? " day" : " days")
+                                 : fmtMins(r.got) + (r.owed ? " of " + fmtMins(r.owed) : "");
+        var note;
+        if (!r.owed) note = "on demand — nothing is owed";
+        else if (r.short) note = (r.floor ? "under its floor by " : "short by ") + amountWords(r.short, r.unit);
+        else note = r.floor ? "over its floor" : "met";
+        var beh = behindBy(r.c);
+        return '<div class="wk"><span class="wk-dot" style="background:' + esc(r.c.colour) + '"></span>' +
+          '<div class="wk-main"><div class="wk-top"><b>' + esc(r.c.name) + "</b><span>" + esc(fig) + "</span></div>" +
+          '<div class="meter"><div class="' + (r.short ? "meter-pace" : "meter-fill") +
+          '" style="width:' + pct + '%"></div></div>' +
+          '<small>' + esc(note) +
+          (beh && beh.amount ? " · <span style=\"color:var(--oxide)\">" + esc(amountWords(beh.amount, beh.unit)) +
+            " behind over " + beh.weeks + (beh.weeks === 1 ? " earlier week" : " earlier weeks") + "</span>" : "") +
+          "</small></div></div>";
+      }).join("") + "</div>";
+      h += '<p class="hint">A claimant behind is stated on its own. The app never says one claimant took the hours another lost — it cannot know that, and a plausible wrong reason is worse than none.</p>';
+    }
+
+    h += '<div class="sect">The days</div><div class="card">';
+    for (var i = 0; i < 7; i++) {
+      var day = addDays(from, i);
+      var todays = state.spans.filter(function (sp) { return minsIn(sp, day, day) > 0; })
+        .sort(function (a, b) { return a.startedAt < b.startedAt ? -1 : 1; });
+      var dayMins = todays.reduce(function (t, sp) { return t + minsIn(sp, day, day); }, 0);
+      h += '<div class="dayhead"><b>' + esc(dayName(day, "long")) + "</b><span>" +
+        (dayMins ? fmtMins(dayMins) : "nothing") + "</span>" +
+        '<button class="btn quiet" data-act="span-add" data-id="' + day + '">+</button></div>';
+      h += todays.length ? todays.map(function (sp) { return spanRow(sp, false); }).join("")
+                         : '<p class="empty" style="margin:0 0 0.5rem">—</p>';
+    }
+    h += "</div>";
+    return h;
+  }
+
+  function spanRow(sp, flag) {
+    var open = !sp.endedAt;
+    return '<div class="row"><span class="pill ' + (sp.benchId ? "p-blue" : "p-oxide") + '">' +
+      (open ? "open" : fmtMins(minsBetween(sp.startedAt, sp.endedAt))) + "</span>" +
+      '<span class="grow"><b>' + esc(sp.benchId ? benchLabel(sp.benchId) : "Not said yet") + "</b><small>" +
+      esc(String(sp.startedAt).slice(11) + (open ? " — still open" : " – " + String(sp.endedAt).slice(11)) +
+          (stampDay(sp.startedAt) !== stampDay(sp.endedAt || sp.startedAt) ? " (crosses midnight)" : "") +
+          (sp.note ? " · " + sp.note : "")) + "</small></span>" +
+      '<span class="tools"><button class="btn quiet" data-act="span-edit" data-id="' + sp.id + '">' +
+      (flag ? "Say whose" : "Edit") + "</button>" +
+      '<button class="btn quiet danger" data-act="span-del" data-id="' + sp.id + '">×</button></span></div>';
+  }
+
+  function spanBenchOpts() {
+    return [{ value: "", label: "Not said yet — goes to suspense" }].concat(
+      opts(state.benches, function (b) { return benchLabel(b.id); }));
+  }
+  function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v).trim()); }
+  function hhmm(v) { v = String(v).trim(); return num(v.slice(0, 2)) * 60 + num(v.slice(3, 5)); }
+
+  function spanDialog(sp, day) {
+    var isNew = !sp;
+    openModal({
+      title: isNew ? "Add time" : "Edit time",
+      confirmLabel: isNew ? "Add" : "Save",
+      message: isNew ? "For a stretch you did not tap in for. Nothing here is guessed — if you do not know whose it was, leave the bench unsaid." : "",
+      fields: [
+        { key: "day", label: "Day", type: "text", value: sp ? stampDay(sp.startedAt) : (day || today()),
+          span: true, hint: "YYYY-MM-DD" },
+        { key: "from", label: "From", type: "text", value: sp ? String(sp.startedAt).slice(11) : "09:00" },
+        { key: "to", label: "To", type: "text", value: sp && sp.endedAt ? String(sp.endedAt).slice(11) : "17:00" },
+        { key: "benchId", label: "Bench", type: "select", span: true, options: spanBenchOpts(),
+          value: sp ? sp.benchId : "" },
+        { key: "note", label: "Note", type: "text", span: true, value: sp ? (sp.note || "") : "" }
+      ],
+      validate: function (v) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+        if (!timeOk(v.from) || !timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
+        if (hhmm(v.to) <= hhmm(v.from)) return "It has to end after it started.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = sp;
+          if (!t) { t = { id: uid(), source: "repair" }; state.spans.push(t); }
+          t.startedAt = v.day.trim() + "T" + v.from.trim();
+          t.endedAt = v.day.trim() + "T" + v.to.trim();
+          t.benchId = v.benchId;
+          t.note = v.note.trim();
+        });
+      }
+    });
+  }
+
+  function pickBench(title, onPick) {
+    if (!live(state.benches).length) { toast("Add a bench in Kit first."); return; }
+    openModal({
+      title: title, confirmLabel: "Go",
+      fields: [{ key: "benchId", label: "Bench", type: "select", span: true,
+        options: spanBenchOpts(), value: live(state.benches)[0].id }],
+      onConfirm: function (v) { onPick(v.benchId); }
+    });
   }
 
   /* ================= the canvas ================= */
@@ -1525,6 +1859,77 @@
       toast("Tidied");
     },
 
+    /* ---- the switch ---- */
+    "span-start": function () {
+      pickBench("Where are you starting?", function (benchId) {
+        go(function () {
+          state.spans.push({ id: uid(), startedAt: nowStamp(), endedAt: "",
+                             benchId: benchId, note: "", source: "switch" });
+        });
+      });
+    },
+    // Switching is one act, not two: the span you were in ends at the moment
+    // the next one starts, so no minute belongs to both and none falls between.
+    "span-switch": function () {
+      var sp = openSpan();
+      pickBench("Switching to", function (benchId) {
+        go(function () {
+          var at = nowStamp();
+          if (sp) sp.endedAt = at;
+          state.spans.push({ id: uid(), startedAt: at, endedAt: "",
+                             benchId: benchId, note: "", source: "switch" });
+        });
+      });
+    },
+    "span-stop": function () {
+      var sp = openSpan(); if (!sp) return;
+      var was = sp.endedAt;
+      go(function () { sp.endedAt = nowStamp(); });
+      toast("Stopped after " + fmtMins(minsBetween(sp.startedAt, sp.endedAt)),
+            function () { sp.endedAt = was; });
+    },
+    // A runaway is closed by being told when it ended, never by assuming now.
+    "span-close": function () {
+      var sp = runaway(); if (!sp) return;
+      openModal({
+        title: "When did you leave?",
+        message: "This has been open since " + esc(niceDate(stampDay(sp.startedAt))) +
+          ". It is not being counted until it has an end, and the app will not invent one.",
+        confirmLabel: "Close it",
+        fields: [
+          { key: "day", label: "Day", type: "text", value: stampDay(sp.startedAt), span: true, hint: "YYYY-MM-DD" },
+          { key: "to", label: "Time", type: "text", value: "17:00", span: true, hint: "HH:MM" }
+        ],
+        validate: function (v) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+          if (!timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
+          if (v.day.trim() + "T" + v.to.trim() <= sp.startedAt) return "It has to end after it started.";
+          return null;
+        },
+        onConfirm: function (v) {
+          go(function () { sp.endedAt = v.day.trim() + "T" + v.to.trim(); });
+          toast("Closed at " + fmtMins(minsBetween(sp.startedAt, sp.endedAt)));
+        }
+      });
+    },
+
+    /* ---- repairing the week ---- */
+    "span-add":  function (day) { spanDialog(null, day || ""); },
+    "span-edit": function (id) { spanDialog(byId(state.spans, id), ""); },
+    "span-del":  function (id) {
+      var sp = byId(state.spans, id); if (!sp) return;
+      var i = state.spans.indexOf(sp);
+      go(function () { state.spans.splice(i, 1); });
+      toast("Removed that stretch", function () { state.spans.splice(i, 0, sp); });
+    },
+    "week-prev": function () { weekOf = addDays(currentWeek(), -7); render(); },
+    "week-next": function () {
+      var n = addDays(currentWeek(), 7);
+      if (n > weekStart(today())) return;
+      weekOf = n; render();
+    },
+    "week-now":  function () { weekOf = ""; render(); },
+
     /* ---- vocabulary ---- */
     "claimant-add": function () { claimantDialog(null); },
     "claimant-edit": function (id) { claimantDialog(byId(state.claimants, id)); },
@@ -1888,6 +2293,32 @@
       edge(a1, a2, "flow"), edge(a2, a3, "flow"), edge(a3, a4, "flow"), edge(a4, a5, "flow"),
       edge(a2, a0, "link"), edge(a1, a1t, "link")
     ];
+
+    /* --- the week, so the standing has something to stand on --- */
+    // Nothing may be dated in the future, so a day that has not happened yet is
+    // simply skipped and the current week fills in as the week goes on.
+    function span(day, from, to, benchId, note) {
+      if (day > today()) return;
+      s.spans.push({ id: uid(), startedAt: day + "T" + from, endedAt: day + "T" + to,
+                     benchId: benchId, note: note || "", source: "repair" });
+    }
+    var wkNow = weekStart(today()), wkLast = addDays(wkNow, -7);
+
+    // Last week, whole: AUB short of its twenty, Balamand's two days met.
+    span(addDays(wkLast, 0), "09:00", "13:00", bGis.id, "area 1 buildings");
+    span(addDays(wkLast, 1), "10:00", "13:30", bGis.id);
+    span(addDays(wkLast, 1), "14:30", "18:00", bDes.id, "brochure layout");
+    span(addDays(wkLast, 2), "09:30", "13:30", bGis.id);
+    span(addDays(wkLast, 2), "15:00", "17:00", bLec.id, "reading");
+    span(addDays(wkLast, 4), "09:00", "15:00", bDes.id, "brochure, second pass");
+    span(addDays(wkLast, 3), "11:00", "14:00", bGis.id);
+
+    // This week, so far.
+    span(addDays(wkNow, 0), "09:00", "12:00", bGis.id, "metadata");
+    span(addDays(wkNow, 1), "09:30", "13:30", bGis.id);
+    span(addDays(wkNow, 2), "10:00", "15:00", bDes.id);
+    span(addDays(wkNow, 3), "09:00", "11:30", bGis.id);
+    span(addDays(wkNow, 4), "16:00", "17:30", "", "");   // at no bench — suspense
 
     s.boards = [broch, gis, spring, soton, lect, visa];
     s.boards.forEach(autoLayout);
