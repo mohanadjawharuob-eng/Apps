@@ -2286,9 +2286,79 @@
       })
       .catch(function (e) {
         syncing = false;
+        syncFail = e && e.message ? e.message : "it failed";
         render();
-        toast(e && e.message ? e.message : "Sync failed, and nothing was changed.");
+        if (!quiet) toast(e && e.message ? e.message : "Sync failed, and nothing was changed.");
       });
+  }
+
+  /* ---------------- syncing without being asked ----------------
+     It used to be a button, and the button is exactly the failure: a board
+     written on the phone stayed on the phone, because nobody pressed anything.
+     "Sync is something you press" was a UX choice and it cost real work.
+
+     What is NOT relaxed is the merge. Every automatic pass is the same
+     pull-merge-push as the button, so the rule that matters — never push
+     without having pulled, or you overwrite someone's day — is untouched.
+     Only the trigger changed.
+
+     Three triggers, because they answer different failures:
+       a change, debounced, so an edit reaches the other device by itself;
+       a heartbeat, so the OTHER device's edits reach this one while it sits open;
+       coming back to the tab or to the network, which is the moment a phone
+       picks up everything it missed in a pocket. */
+  var AUTO_DEBOUNCE = 4000;    // after the last edit, not the first
+  var AUTO_HEARTBEAT = 90000;  // ~30 calls an hour, against a 5000/hr budget
+  var autoTimer = null, beatTimer = null, syncFail = "", lastAuto = 0;
+
+  function autoOn() { return syncOn() && !syncing; }
+
+  function nudgeSync(why) {
+    if (!autoOn()) return;
+    if (document.hidden) return;   // a hidden tab has nothing new to say
+    if (Date.now() - lastAuto < 2500) return;
+    lastAuto = Date.now();
+    syncFail = "";
+    syncNow(true);                 // quiet: no toast unless it actually fails
+  }
+
+  // Debounced, so typing a name does not fire a request per keystroke.
+  function syncSoon() {
+    if (!syncOn()) return;
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(function () { autoTimer = null; nudgeSync("edit"); }, AUTO_DEBOUNCE);
+  }
+
+  function startHeartbeat() {
+    if (beatTimer) clearInterval(beatTimer);
+    beatTimer = setInterval(function () { nudgeSync("heartbeat"); }, AUTO_HEARTBEAT);
+  }
+
+  function wireAutoSync() {
+    startHeartbeat();
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) nudgeSync("back to the tab");
+    });
+    window.addEventListener("online", function () { nudgeSync("back online"); });
+    // A last push on the way out, best effort — the tab may not get to finish.
+    window.addEventListener("pagehide", function () {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; nudgeSync("leaving"); }
+    });
+  }
+
+  // What the screen says about it, in words rather than a spinner.
+  function syncWords() {
+    var cfg = syncCfg();
+    if (!syncOn()) return "Off — this device keeps its own book";
+    if (syncing) return "Syncing now…";
+    if (!navigator.onLine) return "Offline — it will catch up by itself";
+    if (syncFail) return "Last attempt failed: " + syncFail + ". It will try again.";
+    if (!cfg.lastPulledAt) return "Set up, but it has not run yet";
+    var mins = Math.round((Date.now() - new Date(cfg.lastPulledAt).getTime()) / 60000);
+    if (mins < 1) return "Up to date, a moment ago";
+    if (mins === 1) return "Up to date, a minute ago";
+    if (mins < 60) return "Up to date, " + mins + " minutes ago";
+    return "Last synced " + Math.round(mins / 60) + "h ago";
   }
 
   function syncSetupDialog() {
@@ -2397,8 +2467,8 @@
     var cfg = syncCfg();
     var h = '<div class="card"><h3>Sync</h3>';
     if (cfg.mode !== "gist") {
-      h += '<p class="card-sub">Off — this device keeps its own book</p>' +
-        '<p class="hint" style="margin:0 0 0.7rem">Sealed on this device with a passphrase, then kept in a secret gist, so the phone and any laptop read the same book. It never happens on its own: sync is something you press.</p>' +
+      h += '<p class="card-sub">' + esc(syncWords()) + "</p>" +
+        '<p class="hint" style="margin:0 0 0.7rem">Sealed on this device with a passphrase, then kept in a secret gist, so the phone and any laptop read the same book. Once it is set up it runs by itself — a board written on the phone reaches the laptop without anyone pressing anything.</p>' +
         '<div class="tools"><button class="btn" data-act="sync-setup">Set it up</button></div></div>';
       return h;
     }
@@ -2406,13 +2476,14 @@
       return { id: id, d: state.devices[id] };
     }).sort(function (a, b) { return a.d.at < b.d.at ? 1 : -1; });
 
-    h += '<p class="card-sub">' + esc(cfg.deviceName || "unnamed") +
+    h += '<p class="card-sub">' + esc(syncWords()) + "</p>" +
+      '<p class="hint" style="margin:0 0 0.4rem">' + esc(cfg.deviceName || "unnamed device") +
       (cfg.borrowed ? " · borrowed, cleared when the tab closes" : "") +
       " · gist " + esc(String(cfg.gistId).slice(0, 10)) + "… (clipped — 32 characters in full)</p>";
     h += '<p class="hint" style="margin:0 0 0.7rem">' +
       (cfg.lastPulledAt ? "Last synced " + esc(String(cfg.lastPulledAt).slice(0, 16).replace("T", " ")) + "."
                         : "Not synced from here yet.") +
-      " Syncing pulls, merges record by record, then pushes — pressing it can only add, never quietly replace.</p>";
+      " It runs by itself: a few seconds after you change something, every minute and a half while this is open, and the moment you come back to the tab or to the network. Each pass pulls, merges record by record, then pushes — so it can only add, never quietly replace. The button is there for when you want it now.</p>";
     h += '<div class="tools"><button class="btn primary" data-act="sync-now">Sync now</button>' +
       '<button class="btn" data-act="sync-setup">Change</button>' +
       '<button class="btn" data-act="sync-copy-id">Copy gist id</button>' +
@@ -2975,7 +3046,7 @@
   /* ================= actions ================= */
 
   function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
-  function go(fn) { fn(); stampRecords(); save(); render(); }
+  function go(fn) { fn(); stampRecords(); save(); render(); syncSoon(); }
 
   function editNode(b, n) { APP.actions["node-edit"](b.id + ":" + n.id); }
 
@@ -3549,17 +3620,26 @@
         title: "Load the example?",
         message: "Everything in the app now is replaced.", confirmLabel: "Replace it"
       }, function () {
+        var keepSync = syncCfg();
         state = sampleData(); openId = "";
+        state.settings.sync = keepSync;
+        snap = {};                 // a fresh book: nothing to compare against
+        ensureStamps();
         save(); render();
         toast("Example loaded");
+        syncSoon();
       });
     },
     "wipe": function () {
       confirmAction({
         title: "Erase everything?",
-        message: "Every board, run and claimant on this device. Export a backup first if you might want it."
+        message: "Every board, run and claimant on this device. Export a backup first if you might want it. How this device reaches a synced book is kept — use Wipe this device in Sync to drop that too."
       }, function () {
-        state = APP.blank(); save(); render();
+        var keepSync = syncCfg();
+        state = APP.blank();
+        state.settings.sync = keepSync;
+        snap = {};
+        save(); render();
         toast("Erased");
       });
     }
@@ -3909,10 +3989,15 @@
       ensureStamps();
       save();
       render();
+      wireAutoSync();
       return;
     }
     if (ensureStamps()) save();
     if (borrowed()) armBorrowed();
+    // Opening the app is itself a reason to pull: the other device has been
+    // writing while this one was shut.
+    wireAutoSync();
+    nudgeSync("opened");
   };
 
 
