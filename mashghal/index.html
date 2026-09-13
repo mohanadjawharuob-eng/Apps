@@ -348,8 +348,11 @@
         spans: [],       // {id,startedAt,endedAt,benchId,note,source}
         assets: [],      // {id,name,kind,notes,archived}
         cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
-        settings: { showDone: true },
-        forgotten: {}    // id -> name, so a removed thing still reads in history
+        settings: { showDone: true,
+                    sync: { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" } },
+        forgotten: {},   // id -> name, so a removed thing still reads in history
+        tombstones: {},  // id -> when it was deleted, so a merge cannot resurrect it
+        devices: {}      // deviceId -> {name, at} so you can see what is still signed in
       };
     },
 
@@ -360,9 +363,17 @@
       ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
-      if (parsed.forgotten && typeof parsed.forgotten === "object") s.forgotten = parsed.forgotten;
+      ["forgotten", "tombstones", "devices"].forEach(function (k) {
+        if (parsed[k] && typeof parsed[k] === "object") s[k] = parsed[k];
+      });
       if (parsed.settings) {
         if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
+        if (parsed.settings.sync && typeof parsed.settings.sync === "object") {
+          ["mode", "gistId", "deviceName", "lastPulledAt"].forEach(function (k) {
+            if (typeof parsed.settings.sync[k] === "string") s.settings.sync[k] = parsed.settings.sync[k];
+          });
+          s.settings.sync.borrowed = !!parsed.settings.sync.borrowed;
+        }
       }
       return s;
     },
@@ -921,6 +932,8 @@
   function renderSettings() {
     var runs = boards("run").length, tpls = boards("template").length;
     var h = pageHead("Settings", "Everything is on this device and nowhere else.");
+
+    h += syncCard();
 
     h += '<div class="card"><h3>Your book</h3>' +
       '<p class="card-sub">' + tpls + " procedures · " + runs + " runs · " +
@@ -1621,6 +1634,384 @@
     return h;
   }
 
+
+  /* ================= sync ================= */
+
+  // The book is encrypted on this device and only then sent. A secret gist is
+  // unlisted, not private — anyone holding the link can read it — so the
+  // encryption is the whole of the privacy and not a belt over braces.
+  //
+  // Nothing here ever reaches `state`: the token and the passphrase live in
+  // their own storage keys, so a backup of the book carries neither.
+  var SYNC_LISTS = ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var TOK_KEY = "mashghal.sync.token";
+  var PASS_KEY = "mashghal.sync.pass";
+  var DEV_KEY = "mashghal.sync.device";
+  var GIST_FILE = "mashghal.json";
+  var snap = {};          // id -> the record as last stamped
+  var syncing = false;
+
+  function borrowed() { return !!(state.settings.sync && state.settings.sync.borrowed); }
+  function vault() {
+    try { return borrowed() ? window.sessionStorage : window.localStorage; }
+    catch (e) { return null; }
+  }
+  function secret(k) { try { var v = vault(); return v ? (v.getItem(k) || "") : ""; } catch (e) { return ""; } }
+  function setSecret(k, v) { try { var s = vault(); if (s) s.setItem(k, v); } catch (e) {} }
+  function dropSecrets() {
+    [window.localStorage, window.sessionStorage].forEach(function (s) {
+      try { [TOK_KEY, PASS_KEY].forEach(function (k) { s.removeItem(k); }); } catch (e) {}
+    });
+  }
+  function deviceId() {
+    var id = "";
+    try { id = localStorage.getItem(DEV_KEY) || ""; } catch (e) {}
+    if (!id) { id = uid(); try { localStorage.setItem(DEV_KEY, id); } catch (e) {} }
+    return id;
+  }
+  function syncCfg() {
+    if (!state.settings.sync) {
+      state.settings.sync = { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" };
+    }
+    return state.settings.sync;
+  }
+  function syncOn() { return syncCfg().mode === "gist" && syncCfg().gistId && secret(TOK_KEY) && secret(PASS_KEY); }
+
+  /* ---------------- stamping and merging ---------------- */
+
+  function stampNow() {
+    var d = new Date();
+    return d.toISOString();
+  }
+  function bare(r) {
+    var o = {}, k;
+    for (k in r) { if (k !== "updatedAt") o[k] = r[k]; }
+    return JSON.stringify(o);
+  }
+  // Which records changed since the last pass, so a merge can be per record
+  // rather than per file. Whole-file last-write-wins eventually eats a day of
+  // spans logged on the phone, and it does it silently.
+  function stampRecords() {
+    var now = stampNow(), seen = {};
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (!r || !r.id) return;
+        seen[r.id] = 1;
+        var j = bare(r);
+        if (snap[r.id] !== j) { r.updatedAt = now; snap[r.id] = j; }
+      });
+    });
+    Object.keys(snap).forEach(function (id) {
+      if (!seen[id]) { state.tombstones[id] = now; delete snap[id]; }
+    });
+  }
+  // A record that predates sync has no stamp and would lose every comparison,
+  // so it is given one the first time it is seen rather than being treated as
+  // infinitely old.
+  function ensureStamps() {
+    var now = stampNow(), touched = false;
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (r && r.id && !r.updatedAt) { r.updatedAt = now; touched = true; }
+        if (r && r.id) snap[r.id] = bare(r);
+      });
+    });
+    return touched;
+  }
+
+  function mergeList(mine, theirs, tomb) {
+    var pick = {};
+    mine.concat(theirs).forEach(function (r) {
+      if (!r || !r.id) return;
+      var cur = pick[r.id];
+      if (!cur || (r.updatedAt || "") > (cur.updatedAt || "")) pick[r.id] = r;
+    });
+    return Object.keys(pick).map(function (id) { return pick[id]; })
+      .filter(function (r) { return !(tomb[r.id] && tomb[r.id] > (r.updatedAt || "")); });
+  }
+
+  function payload() {
+    var o = { v: 1, tombstones: state.tombstones, forgotten: state.forgotten, devices: state.devices };
+    SYNC_LISTS.forEach(function (k) { o[k] = state[k] || []; });
+    return o;
+  }
+  // Merge is symmetrical and loses nothing it can avoid losing: a record that
+  // exists on one side only survives unless a tombstone newer than it says it
+  // was deleted on purpose.
+  function mergeIn(remote) {
+    var tomb = {};
+    [state.tombstones, remote.tombstones || {}].forEach(function (src) {
+      Object.keys(src).forEach(function (id) {
+        if (!tomb[id] || src[id] > tomb[id]) tomb[id] = src[id];
+      });
+    });
+    var counts = { added: 0, updated: 0, removed: 0 };
+    SYNC_LISTS.forEach(function (k) {
+      var before = {};
+      (state[k] || []).forEach(function (r) { before[r.id] = r.updatedAt || ""; });
+      var merged = mergeList(state[k] || [], remote[k] || [], tomb);
+      merged.forEach(function (r) {
+        if (before[r.id] === undefined) counts.added++;
+        else if (before[r.id] !== (r.updatedAt || "")) counts.updated++;
+      });
+      counts.removed += Object.keys(before).length - merged.filter(function (r) { return before[r.id] !== undefined; }).length;
+      state[k] = merged;
+    });
+    state.tombstones = tomb;
+    Object.keys(remote.forgotten || {}).forEach(function (id) {
+      if (!state.forgotten[id]) state.forgotten[id] = remote.forgotten[id];
+    });
+    var rd = remote.devices || {};
+    Object.keys(rd).forEach(function (id) {
+      if (!state.devices[id] || rd[id].at > state.devices[id].at) state.devices[id] = rd[id];
+    });
+    return counts;
+  }
+
+  /* ---------------- the sealing ---------------- */
+
+  function b64(buf) {
+    var a = new Uint8Array(buf), s = "";
+    for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+    return btoa(s);
+  }
+  function unb64(s) {
+    var b = atob(s), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function subtle() {
+    return (window.crypto && window.crypto.subtle) ? window.crypto.subtle : null;
+  }
+  function deriveKey(pass, salt) {
+    var enc = new TextEncoder();
+    return subtle().importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) {
+        return subtle().deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: 250000, hash: "SHA-256" },
+          base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      });
+  }
+  function seal(text, pass) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(pass, salt).then(function (key) {
+      return subtle().encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(text));
+    }).then(function (ct) {
+      return JSON.stringify({ v: 1, kdf: "PBKDF2-SHA256", it: 250000,
+                              salt: b64(salt), iv: b64(iv), ct: b64(ct) }, null, 1);
+    });
+  }
+  function unseal(blob, pass) {
+    var o;
+    try { o = JSON.parse(blob); } catch (e) { return Promise.reject(new Error("That is not a Mashghal file.")); }
+    if (!o || !o.ct || !o.salt || !o.iv) return Promise.reject(new Error("That file is not sealed the way this app seals things."));
+    return deriveKey(pass, unb64(o.salt)).then(function (key) {
+      return subtle().decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.ct));
+    }).then(function (pt) {
+      return JSON.parse(new TextDecoder().decode(pt));
+    }, function () {
+      throw new Error("Wrong passphrase — nothing was changed.");
+    });
+  }
+
+  /* ---------------- the gist ---------------- */
+
+  function ghFetch(url, token, opts) {
+    opts = opts || {};
+    opts.headers = { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" };
+    if (opts.body) opts.headers["Content-Type"] = "application/json";
+    return fetch(url, opts).then(function (res) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("GitHub refused the token. It may have expired, or it may not carry gist access.");
+      }
+      if (res.status === 404) throw new Error("That gist was not found by this token.");
+      if (!res.ok) throw new Error("GitHub answered " + res.status + ".");
+      return res.json();
+    }, function (e) {
+      if (e instanceof TypeError) throw new Error("No answer from GitHub — you may be offline.");
+      throw e;
+    });
+  }
+  function gistRead(id, token) {
+    return ghFetch("https://api.github.com/gists/" + id, token).then(function (g) {
+      var f = g.files && g.files[GIST_FILE];
+      if (!f) throw new Error("That gist has no " + GIST_FILE + " in it.");
+      if (f.truncated && f.raw_url) return fetch(f.raw_url).then(function (r) { return r.text(); });
+      return f.content;
+    });
+  }
+  function gistWrite(id, token, content) {
+    var files = {}; files[GIST_FILE] = { content: content };
+    return ghFetch("https://api.github.com/gists/" + id, token,
+      { method: "PATCH", body: JSON.stringify({ files: files }) });
+  }
+  function gistCreate(token, content) {
+    var files = {}; files[GIST_FILE] = { content: content };
+    return ghFetch("https://api.github.com/gists", token, {
+      method: "POST",
+      body: JSON.stringify({ description: "Mashghal — sealed", "public": false, files: files })
+    });
+  }
+
+  /* ---------------- the act ---------------- */
+
+  function noteDevice() {
+    state.devices[deviceId()] = {
+      name: syncCfg().deviceName || "unnamed device",
+      at: stampNow(),
+      borrowed: borrowed()
+    };
+  }
+
+  // Pull, merge, push — one act, because pushing without having pulled is how
+  // one device quietly overwrites another's day.
+  function syncNow(quiet) {
+    if (syncing) return;
+    if (!syncOn()) { toast("Sync is not set up on this device."); return; }
+    if (!subtle()) { toast("This browser has no Web Crypto, so nothing can be sealed."); return; }
+    syncing = true;
+    var cfg = syncCfg(), tok = secret(TOK_KEY), pass = secret(PASS_KEY);
+    if (!quiet) toast("Syncing…");
+    stampRecords();
+    gistRead(cfg.gistId, tok)
+      .then(function (blob) {
+        if (!String(blob || "").trim()) return null;
+        return unseal(blob, pass);
+      })
+      .then(function (remote) {
+        var counts = remote ? mergeIn(remote) : { added: 0, updated: 0, removed: 0 };
+        noteDevice();
+        stampRecords();
+        cfg.lastPulledAt = stampNow();
+        save();
+        return seal(JSON.stringify(payload()), pass).then(function (sealed) {
+          return gistWrite(cfg.gistId, tok, sealed);
+        }).then(function () { return counts; });
+      })
+      .then(function (counts) {
+        syncing = false;
+        render();
+        var bits = [];
+        if (counts.added) bits.push(counts.added + " new");
+        if (counts.updated) bits.push(counts.updated + " updated");
+        toast(bits.length ? "Synced — " + bits.join(", ") : "Synced — nothing had changed elsewhere");
+      })
+      .catch(function (e) {
+        syncing = false;
+        render();
+        toast(e && e.message ? e.message : "Sync failed, and nothing was changed.");
+      });
+  }
+
+  function syncSetupDialog() {
+    var cfg = syncCfg();
+    openModal({
+      title: "Set up sync", wide: true, confirmLabel: "Save",
+      message: "Your book is sealed on this device with the passphrase and only then sent, so GitHub holds characters it cannot read. " +
+        "A <b>secret</b> gist is unlisted rather than private — anyone with the link can fetch it — which is why the sealing is the whole of the privacy. " +
+        "Use a fine-grained token with gist access and nothing else.",
+      fields: [
+        { key: "token", label: "GitHub token", type: "text", span: true, value: secret(TOK_KEY),
+          placeholder: "github_pat_…", hint: "Stored on this device only, never in a backup." },
+        { key: "pass", label: "Passphrase", type: "text", span: true, value: secret(PASS_KEY),
+          hint: "Lose this and the gist is unreadable. There is no recovery, by design." },
+        { key: "gistId", label: "Gist id", type: "text", span: true, value: cfg.gistId,
+          hint: "Leave blank on the first device and one will be made for you." },
+        { key: "deviceName", label: "Call this device", type: "text", span: true,
+          value: cfg.deviceName, placeholder: "Legion" },
+        { key: "borrowed", label: "Is this your own machine?", type: "select", span: true,
+          options: [{ value: "no", label: "Yes — remember it here" },
+                    { value: "yes", label: "No — forget everything when I close the tab" }],
+          value: cfg.borrowed ? "yes" : "no" }
+      ],
+      validate: function (v) {
+        if (!v.token.trim()) return "A token is needed to reach the gist.";
+        if (v.pass.trim().length < 8) return "Use a passphrase of at least eight characters.";
+        if (!v.deviceName.trim()) return "Name the device, so you can tell from your phone which laptop is still signed in.";
+        return null;
+      },
+      onConfirm: function (v) {
+        cfg.borrowed = v.borrowed === "yes";
+        cfg.deviceName = v.deviceName.trim();
+        cfg.mode = "gist";
+        setSecret(TOK_KEY, v.token.trim());
+        setSecret(PASS_KEY, v.pass.trim());
+        if (cfg.borrowed) armBorrowed();
+        if (v.gistId.trim()) {
+          cfg.gistId = v.gistId.trim();
+          save(); render();
+          syncNow();
+          return;
+        }
+        toast("Making a gist…");
+        seal(JSON.stringify(payload()), v.pass.trim())
+          .then(function (sealed) { return gistCreate(v.token.trim(), sealed); })
+          .then(function (g) {
+            cfg.gistId = g.id;
+            noteDevice(); save(); render();
+            toast("Sync is on. The gist id is " + g.id);
+          })
+          .catch(function (e) {
+            cfg.mode = "none"; save(); render();
+            toast(e && e.message ? e.message : "Could not make the gist.");
+          });
+      }
+    });
+  }
+
+  // On a machine that is not yours, nothing should outlive the tab.
+  function armBorrowed() {
+    if (armBorrowed.done) return;
+    armBorrowed.done = true;
+    window.addEventListener("pagehide", function () {
+      if (!borrowed()) return;
+      try { localStorage.removeItem(APP.storeKey); localStorage.removeItem(DEV_KEY); } catch (e) {}
+      dropSecrets();
+    });
+  }
+
+  function syncCard() {
+    var cfg = syncCfg();
+    var h = '<div class="card"><h3>Sync</h3>';
+    if (cfg.mode !== "gist") {
+      h += '<p class="card-sub">Off — this device keeps its own book</p>' +
+        '<p class="hint" style="margin:0 0 0.7rem">Sealed on this device with a passphrase, then kept in a secret gist, so the phone and any laptop read the same book. It never happens on its own: sync is something you press.</p>' +
+        '<div class="tools"><button class="btn" data-act="sync-setup">Set it up</button></div></div>';
+      return h;
+    }
+    var devs = Object.keys(state.devices || {}).map(function (id) {
+      return { id: id, d: state.devices[id] };
+    }).sort(function (a, b) { return a.d.at < b.d.at ? 1 : -1; });
+
+    h += '<p class="card-sub">' + esc(cfg.deviceName || "unnamed") +
+      (cfg.borrowed ? " · borrowed, cleared when the tab closes" : "") +
+      " · gist " + esc(String(cfg.gistId).slice(0, 10)) + "…</p>";
+    h += '<p class="hint" style="margin:0 0 0.7rem">' +
+      (cfg.lastPulledAt ? "Last synced " + esc(String(cfg.lastPulledAt).slice(0, 16).replace("T", " ")) + "."
+                        : "Not synced from here yet.") +
+      " Syncing pulls, merges record by record, then pushes — pressing it can only add, never quietly replace.</p>";
+    h += '<div class="tools"><button class="btn primary" data-act="sync-now">Sync now</button>' +
+      '<button class="btn" data-act="sync-setup">Change</button>' +
+      '<button class="btn danger" data-act="sync-wipe">Wipe this device</button></div>';
+
+    if (devs.length) {
+      h += '<div class="sect" style="margin-top:1.2rem">Devices on this book</div>';
+      h += devs.map(function (x) {
+        var mine = x.id === deviceId();
+        return '<div class="row"><span class="pill ' + (mine ? "p-blue" : "p-grey") + '">' +
+          (mine ? "this one" : "elsewhere") + "</span>" +
+          '<span class="grow"><b>' + esc(x.d.name) + "</b><small>" +
+          esc("last wrote " + String(x.d.at).slice(0, 16).replace("T", " ") + (x.d.borrowed ? " · borrowed" : "")) +
+          "</small></span>" +
+          (mine ? "" : '<span class="tools"><button class="btn quiet danger" data-act="device-forget" data-id="' +
+            x.id + '">Forget</button></span>') + "</div>";
+      }).join("");
+      h += '<p class="hint">If a laptop you no longer have is still listed, wiping it is not enough on its own — revoke the token at github.com/settings/tokens, because anyone who copied it before the wipe still holds it.</p>';
+    }
+    return h + "</div>";
+  }
+
   /* ================= the canvas ================= */
 
   var SW = 186, SH = 78, CUT = 11, TW = 148, TH = 32;
@@ -1967,7 +2358,7 @@
   /* ================= actions ================= */
 
   function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
-  function go(fn) { fn(); save(); render(); }
+  function go(fn) { fn(); stampRecords(); save(); render(); }
 
   function editNode(b, n) { APP.actions["node-edit"](b.id + ":" + n.id); }
 
@@ -2434,6 +2825,30 @@
       });
     },
 
+    /* ---- sync ---- */
+    "sync-setup": function () { syncSetupDialog(); },
+    "sync-now":   function () { syncNow(); },
+    "device-forget": function (id) {
+      go(function () { delete state.devices[id]; });
+    },
+    // Wiping clears this machine and never touches the gist. The book is safe;
+    // this only empties the browser in front of you.
+    "sync-wipe": function () {
+      confirmAction({
+        title: "Wipe this device?",
+        confirmLabel: "Wipe it",
+        message: "Everything in this browser goes: the book, the token and the passphrase. " +
+          "<b>The gist is not touched</b> — your record is safe and any other device still has it. " +
+          "This does not revoke the token, so if you are leaving a machine you do not own, revoke it at github.com/settings/tokens as well."
+      }, function () {
+        dropSecrets();
+        try { localStorage.removeItem(APP.storeKey); localStorage.removeItem(DEV_KEY); } catch (e) {}
+        state = APP.blank(); snap = {};
+        save(); render();
+        toast("This device is empty. The gist still has your book.");
+      });
+    },
+
     /* ---- settings ---- */
     "backup": function () {
       backupDialog("mashghal-backup-" + today() + ".json", JSON.stringify(state, null, 2),
@@ -2799,9 +3214,13 @@
   APP.afterBoot = function () {
     if (!state.boards.length && !state.claimants.length && !state.modes.length) {
       state = sampleData();
+      ensureStamps();
       save();
       render();
+      return;
     }
+    if (ensureStamps()) save();
+    if (borrowed()) armBorrowed();
   };
 
 
