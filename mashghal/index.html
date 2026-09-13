@@ -1694,10 +1694,14 @@
     function mk(o) { o.id = uid(); return o; }
     function back(n) { return addDays(today(), -n); }
 
-    var kWork = mk({ name: "Work", colour: "#7fa9ce" });
-    var kTrain = mk({ name: "Training", colour: "#74a086" });
+    var kWork  = mk({ name: "Work", colour: "#8a9ac9" });
+    var kTrain = mk({ name: "Trainings and workshops", colour: "#8fae6a" });
     var kAdmin = mk({ name: "Admin", colour: "#a08fb5" });
-    s.kinds = [kWork, kTrain, kAdmin];
+    var kLife  = mk({ name: "Life", colour: "#cf8f5e" });
+    var kAppl  = mk({ name: "Applications", colour: "#c2b15c" });
+    var kPaper = mk({ name: "Research papers", colour: "#5fa3ad" });
+    var kProj  = mk({ name: "Projects", colour: "#bd7a96" });
+    s.kinds = [kWork, kTrain, kAdmin, kLife, kAppl, kPaper, kProj];
 
     var cAub = mk({ name: "AUB Tripoli 21st C", kind: "budget", hours: "20", colour: "#7fa9ce", archived: false });
     var cBal = mk({ name: "U. of Balamand", kind: "days", hours: "2", colour: "#c9a227", archived: false });
@@ -1805,7 +1809,23 @@
       edge(v4, v5, "flow"), edge(v5, v6, "flow"), edge(v1, v0, "link")
     ];
 
-    s.boards = [broch, gis, spring, lect, visa];
+    /* --- an application: a run, and not an employer --- */
+    var a0 = thing("Supervisor", "person"), a1t = thing("Portfolio PDF", "file");
+    var a1 = step("Draft the statement", "do", { doneAt: back(26), enteredAt: back(34) });
+    var a2 = step("Ask for references", "send", { to: [a0.id], chaseDays: 10, enteredAt: back(21) });
+    var a3 = step("Submit the application", "do", {});
+    var a4 = step("Decision", "watch", { chaseDays: 30 });
+    var a5 = step("File the offer letter", "file", {});
+    var soton = mk({ kind: "run", name: "Southampton — Maritime Archaeology",
+      kindId: kAppl.id, benchId: "", fromBoardId: "",
+      nodes: [a0, a1t, a1, a2, a3, a4, a5], edges: [],
+      startedOn: back(34), closedOn: "", archived: false });
+    soton.edges = [
+      edge(a1, a2, "flow"), edge(a2, a3, "flow"), edge(a3, a4, "flow"), edge(a4, a5, "flow"),
+      edge(a2, a0, "link"), edge(a1, a1t, "link")
+    ];
+
+    s.boards = [broch, gis, spring, soton, lect, visa];
     s.boards.forEach(autoLayout);
     return s;
   }
