@@ -564,15 +564,64 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
   key, and a public Pages repo cannot hold one — already turned down for
   Coffer. What is late is waiting when you open it.
 
+## Mashghal's other rules
+
+- **Hours are derived from spans and no total is stored.** A span is a stretch
+  at one bench; every figure on the week is summed from them, so none can drift
+  from the record. Switching is one act, so the old span ends exactly when the
+  new one starts and no minute belongs to both.
+- **Three things the app refuses to invent.** An open span is not an hour and
+  counts nowhere. An open span from yesterday, or longer than `LONG_DAY`, is a
+  question rather than an amount, and is closed only by being told when you
+  left. Time at no bench goes to suspense, is shown, and is never distributed —
+  guessing would put hours on an employer's name.
+- **A claimant owed days is measured in days.** `owedOf()` carries the unit;
+  counting one in the other's is exactly the plausible wrong number this repo
+  refuses.
+- **A week is measurable only if it has an entry for somebody.** Any entry means
+  a nought for this claimant is real; no entry anywhere means the week was not
+  lived in the app, prints as a dash, and is left out of every total. The report
+  called three unused August weeks "short by 20h" each before this rule existed.
+- **The report computes nothing of its own and states its own limits** — the
+  same two rules Coffer's `buildReport()` lives by. Read it after changing it;
+  both defects in the first draft were invisible to assertions and obvious on
+  sight.
+- **A cadence has no due date.** Every so often since it was last done, so
+  arrears never compound: there is one of each, however far past. It carries a
+  place, so the phone offers only what is doable where you are, and it can name
+  the bench or thing it protects — a stale backup is a threat to the work behind
+  it, not a chore.
+- **The kit is what a mode hands you**, and the re-entry note is what you left
+  behind: one line per bench, asked at the moment of leaving because that is the
+  only moment you still know, and read back on arrival.
+- **Sync is sealed here and merged per record.** Whole-file last-write-wins eats
+  a day logged on the phone, silently — so every record carries `updatedAt`, a
+  hard delete leaves a tombstone, and `go()` stamps only what changed. Pull,
+  merge, push is one act; pushing without pulling overwrites someone's day.
+  Neither the token nor the passphrase is ever in `state`, so a backup carries
+  neither.
+- **The launcher is handed an id, never a path.** `mashghal://enter/<id>` and
+  nothing else; the PowerShell handler refuses any other shape and looks the id
+  up in a file already on the machine. A handler that ran what a link told it to
+  would be an RCE hole registered on your own laptop.
+- **The digest is numbers only.** No label, no name, no note — it can leak in
+  full and say nothing about the work. A scheduled job cannot hold the
+  passphrase, so the file is written to be worth nothing instead.
+
 ## Mashghal's shape
 
-**Four tabs: Boards · Waiting · Kit · Settings.** Boards lists procedures and
-runs; opening one shows the canvas over an editable list of steps, things and
-connections. Waiting is the only screen the phone really needs.
+**Five tabs: Boards · Waiting · The week · Kit · Settings**, and a switch bar
+pinned to the bottom of every screen showing where you are, since when, and the
+note you left. Boards lists procedures and runs; opening one shows the canvas
+over an editable list. Waiting is the only screen the phone really needs — dues
+worst-first, unfinished runs, and upkeep filtered by place. The week is the
+standing, suspense and repair, and holds the report. Kit is the vocabulary plus
+each mode's kit.
 
-**The Boards tab always lands on the list.** Which board is open is *view
-state* — a module-level `openId`, never part of `state`, so it reaches no
-backup and does not survive a reload. Keeping it in settings meant the tab
+**Every tab always lands on its list.** Which board is open, which week is
+shown, which report is built and which mode's kit is open are all *view state* —
+module-level `openId`, `weekOf`, `reportOn`, `openMode`, `placeFilter`, none of
+them in `state`, so none reaches a backup or survives a reload. Keeping it in settings meant the tab
 showed a different screen depending on what you did ten minutes ago, which is
 the same trap Coffer's Horizon tab fell into.
 

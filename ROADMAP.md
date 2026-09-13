@@ -801,19 +801,36 @@ a way of preparing what comes next** — in its owner's words, *"مش بس عن 
   the reader's to add and remove, with the `forgotten` pattern keeping history
   readable afterwards.
 
+### Shipped: the week, the report, upkeep, the kit and sync
+- **Spans and the week** — the switch bar, per-claimant standing in its own
+  unit, suspense for time at no bench, a repair screen, and the cumulative
+  shortfall a claimant is behind by, never reset and stated as co-occurrence.
+- **The written report** over any range, which computes nothing of its own and
+  states its own limits — including which weeks it will not judge.
+- **Upkeep and the things it protects** — intervals rather than due dates,
+  place-aware, each able to name the bench or thing it stands behind.
+- **The kit and the re-entry note** — a mode's software, paths and links, and
+  one line per bench asked at the moment of leaving.
+- **Sync** — sealed on the device, merged per record on `updatedAt`, tombstones
+  so a delete survives a merge, borrowed-laptop mode, a devices list, and a
+  wipe that never touches the gist. The crypto and the merge are tested; the
+  network path to GitHub is written but unproven until a real token is used.
+- **The launcher** (`mashghal/companion/`) — a `.reg` and one PowerShell script,
+  handed an opaque bench id and nothing else.
+- **The digest mail** (`mashghal/mailer/`) — a scheduled GitHub Actions workflow
+  reading a numbers-only digest. Best-effort by nature.
+
 ### Next
-- **Sync** — an encrypted secret gist, per-record merge on `updatedAt`, a
-  borrowed-laptop mode that keeps the token and state in `sessionStorage` only,
-  and a wipe-this-device button that never touches the gist. Decided, not built.
-- **Spans and the week** — the switch, the repair screen, suspense for time that
-  cannot be attributed, and the cumulative shortfall a claimant is behind by.
-  `state.spans` is already in the shape so a backup never loses it.
-- **Reports** over a date range, drawing on closed runs — the thing that makes
-  the logging worth doing.
 - **A step that holds a small matrix.** GIS work runs over a grid (layer × area
-  × year); one node per cell would be forty nodes on one board. Open question.
-- **More than one recipient on a send.** The model holds `to` as an array; the
-  dialog currently offers a single picker.
+  × year); one node per cell would be forty nodes on one board. Open question,
+  and the first one in `DESIGN-BRIEF.md`.
+- **Observations** — fragmentation and learned tool pairs. Deliberately last:
+  they are the only part of the idea that is about watching yourself rather
+  than doing the work, and it is not yet clear they earn their place.
+- **Canvas selection** — clicking a node opens its editor; there is no select,
+  multi-select or delete from the sheet.
+- **A second design pass.** `DESIGN-BRIEF.md` is written for a designer and
+  deliberately withholds the current look.
 
 ### Considered and turned down
 - **Notifications.** Push needs a server and a secret key; a public Pages repo

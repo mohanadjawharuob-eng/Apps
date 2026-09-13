@@ -12,7 +12,7 @@ no account, no server, nothing sent anywhere.
 | [Kitchen](./kitchen/) | Weekly meal plan, one merged shopping list | `kitchen.v1` |
 | [Timesheet](./timesheet/) | Hours per client, then invoice them | `timesheet.v1` |
 | [Bustan](./garden/) | Plants, watering by real weather, seasonal almanac | `bustan.v1` |
-| [Mashghal](./mashghal/) | Procedures with loops and decisions, runs of them, and what is late | `mashghal.v1` |
+| [Mashghal](./mashghal/) | Procedures with loops and decisions, runs of them, hours per claimant, and what is late | `mashghal.v1` |
 
 Two things worth knowing about before changing anything here:
 [`CLAUDE.md`](./CLAUDE.md) for the conventions every app follows, and

@@ -342,13 +342,13 @@
         version: 1,
         kinds: [],       // {id,name,colour}
         claimants: [],   // {id,name,kind,hours,colour,archived}
-        modes: [],       // {id,name,archived}
-        benches: [],     // {id,modeId,claimantId,archived}
+        modes: [],       // {id,name,software[],links[],archived}
+        benches: [],     // {id,modeId,claimantId,note,noteAt,archived}
         boards: [],      // see newBoard()
         spans: [],       // {id,startedAt,endedAt,benchId,note,source}
         assets: [],      // {id,name,kind,notes,archived}
         cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
-        settings: { showDone: true,
+        settings: { showDone: true, companion: false,
                     sync: { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" } },
         forgotten: {},   // id -> name, so a removed thing still reads in history
         tombstones: {},  // id -> when it was deleted, so a merge cannot resurrect it
@@ -368,6 +368,7 @@
       });
       if (parsed.settings) {
         if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
+        if (typeof parsed.settings.companion === "boolean") s.settings.companion = parsed.settings.companion;
         if (parsed.settings.sync && typeof parsed.settings.sync === "object") {
           ["mode", "gistId", "deviceName", "lastPulledAt"].forEach(function (k) {
             if (typeof parsed.settings.sync[k] === "string") s.settings.sync[k] = parsed.settings.sync[k];
@@ -382,7 +383,7 @@
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
-      if (v === "kit")      return renderKit();
+      if (v === "kit")      return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
       return renderSettings();
     },
 
@@ -392,7 +393,7 @@
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; },
 
     actions: {}
   };
@@ -899,8 +900,11 @@
     h += '<div class="sect">Modes</div><div class="card">' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="mode-add">Add mode</button></div>' +
       (live(state.modes).length ? live(state.modes).map(function (m) {
-        return '<div class="row"><span class="grow"><b>' + esc(m.name) + "</b></span>" +
-          '<span class="tools"><button class="btn quiet" data-act="mode-edit" data-id="' + m.id + '">Edit</button>' +
+        var sw = modeSoftware(m).length, lk = modeLinks(m).length;
+        return '<div class="row"><span class="grow"><b>' + esc(m.name) + "</b><small>" +
+          esc(sw + (sw === 1 ? " program" : " programs") + " · " + lk + (lk === 1 ? " link" : " links")) +
+          "</small></span>" +
+          '<span class="tools"><button class="btn" data-act="mode-open" data-id="' + m.id + '">Its kit</button>' +
           '<button class="btn quiet danger" data-act="mode-del" data-id="' + m.id + '">×</button></span></div>';
       }).join("") : '<p class="empty">No modes yet.</p>') + "</div>";
 
@@ -947,6 +951,12 @@
       '<p class="hint" style="margin:0 0 0.6rem">Loads a brochure procedure mid-cycle, a GIS run sitting at four steps at once, a lecture, and a visa template with no employer. It replaces whatever is in the app now.</p>' +
       '<div class="tools"><button class="btn" data-act="sample">Load the example</button>' +
       '<button class="btn danger" data-act="wipe">Erase everything</button></div></div>';
+
+    h += '<div class="card"><h3>The launcher</h3>' +
+      '<p class="card-sub">' + (state.settings.companion ? "Launch links are on" : "Off") + "</p>" +
+      '<p class="hint" style="margin:0 0 0.6rem">A browser cannot open ArcGIS Pro. A registry entry and one PowerShell script can — see <code>mashghal/companion/</code>. A link carries an opaque bench id and nothing else; every path it opens comes from a file you exported onto your own machine.</p>' +
+      '<div class="tools"><button class="btn" data-act="companion-toggle">' +
+      (state.settings.companion ? "Turn the links off" : "Turn the links on") + "</button></div></div>";
 
     h += '<div class="card"><h3>What this app will not do</h3>' +
       '<div class="notes">' +
@@ -1100,7 +1110,8 @@
       var m = minsBetween(sp.startedAt, nowStamp());
       return '<div class="sb"><span class="sb-dot"></span><span class="sb-txt"><b>' +
         esc(benchLabel(sp.benchId) || "Not said yet") + "</b>" +
-        "<small>since " + esc(String(sp.startedAt).slice(11)) + " · " + fmtMins(m) + "</small></span>" +
+        "<small>since " + esc(String(sp.startedAt).slice(11)) + " · " + fmtMins(m) +
+        (noteOf(sp.benchId) ? " · left off: " + esc(noteOf(sp.benchId).note) : "") + "</small></span>" +
         '<span class="tools"><button class="btn" data-act="span-switch">Switch</button>' +
         '<button class="btn" data-act="span-stop">Stop</button></span></div>';
     }
@@ -1648,6 +1659,7 @@
   var PASS_KEY = "mashghal.sync.pass";
   var DEV_KEY = "mashghal.sync.device";
   var GIST_FILE = "mashghal.json";
+  var DIGEST_FILE = "digest.json";
   var snap = {};          // id -> the record as last stamped
   var syncing = false;
 
@@ -1728,6 +1740,21 @@
     });
     return Object.keys(pick).map(function (id) { return pick[id]; })
       .filter(function (r) { return !(tomb[r.id] && tomb[r.id] > (r.updatedAt || "")); });
+  }
+
+  // What a mailer may see. Numbers only — no label, no name, no note. A file
+  // in an unlisted gist should be able to leak without telling anyone anything
+  // about the work, so it says how much is late and not what.
+  function digestPayload() {
+    var late = dues().filter(function (d) { return d.st === "over"; });
+    var worst = late.reduce(function (m, d) { return Math.max(m, d.over); }, 0);
+    return {
+      v: 1, at: stampNow(),
+      late: late.length, worstDaysPast: worst,
+      waiting: dues().length,
+      unfiled: stuck().length,
+      upkeepPast: upkeepLate().length
+    };
   }
 
   function payload() {
@@ -1842,7 +1869,9 @@
     });
   }
   function gistWrite(id, token, content) {
-    var files = {}; files[GIST_FILE] = { content: content };
+    var files = {};
+    files[GIST_FILE] = { content: content };
+    files[DIGEST_FILE] = { content: JSON.stringify(digestPayload(), null, 1) };
     return ghFetch("https://api.github.com/gists/" + id, token,
       { method: "PATCH", body: JSON.stringify({ files: files }) });
   }
@@ -2010,6 +2039,171 @@
       h += '<p class="hint">If a laptop you no longer have is still listed, wiping it is not enough on its own — revoke the token at github.com/settings/tokens, because anyone who copied it before the wipe still holds it.</p>';
     }
     return h + "</div>";
+  }
+
+
+  /* ================= the kit, and where you left off ================= */
+
+  // What a mode hands you when you arrive: the software, the paths, the
+  // filtered inboxes. And what you left behind: one line per bench, written
+  // when you leave and read back when you return, because the cost of four
+  // identities is not the software — it is the twenty minutes of "where was I".
+  var openMode = "";   // view state, never saved
+
+  function modeSoftware(m) { return m.software || (m.software = []); }
+  function modeLinks(m) { return m.links || (m.links = []); }
+
+  function benchesOfMode(id) {
+    return live(state.benches).filter(function (b) { return b.modeId === id; });
+  }
+  function noteOf(benchId) {
+    var b = byId(state.benches, benchId);
+    return b && b.note ? b : null;
+  }
+
+  function kitModeDetail(m) {
+    var sw = modeSoftware(m), lk = modeLinks(m), bs = benchesOfMode(m.id);
+    var h = pageHead(m.name, "A mode and everything it hands you",
+      '<div class="tools"><button class="btn" data-act="mode-back">All of Kit</button>' +
+      '<button class="btn" data-act="mode-edit" data-id="' + m.id + '">Rename</button>' +
+      '<button class="btn" data-act="sw-add" data-id="' + m.id + '">Add software</button>' +
+      '<button class="btn" data-act="link-add" data-id="' + m.id + '">Add a link</button>' +
+      '<button class="btn" data-act="kit-export" data-id="' + m.id + '">For the launcher</button></div>');
+
+    h += '<div class="sect">Software and files</div><div class="card">';
+    h += sw.length ? sw.map(function (x) {
+      return '<div class="row"><span class="pill p-blue">' + (x.path ? "path" : "no path") + "</span>" +
+        '<span class="grow"><b>' + esc(x.label) + "</b>" +
+        (x.path ? "<small>" + esc(x.path) + "</small>" : "") + "</span>" +
+        '<span class="tools">' +
+        (x.path ? '<button class="btn" data-act="sw-copy" data-id="' + m.id + ":" + x.id + '">Copy path</button>' : "") +
+        '<button class="btn quiet" data-act="sw-edit" data-id="' + m.id + ":" + x.id + '">Edit</button>' +
+        '<button class="btn quiet danger" data-act="sw-del" data-id="' + m.id + ":" + x.id + '">×</button></span></div>';
+    }).join("") : '<p class="empty">Nothing yet. A path here is one you can paste into Win+R.</p>';
+    h += "</div>";
+
+    h += '<div class="sect">Links</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">Anything a URL can reach, including a filtered search. <code>obsidian://search?query=…</code> works on Windows and on Android; webmail takes a search URL. Desktop Outlook does not, so for that one keep the search string here and paste it.</p>';
+    h += lk.length ? lk.map(function (x) {
+      return '<div class="row"><span class="pill p-brass">link</span>' +
+        '<span class="grow"><b>' + esc(x.label) + "</b><small>" + esc(x.url) + "</small></span>" +
+        '<span class="tools"><a class="btn" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open</a>' +
+        '<button class="btn quiet" data-act="link-edit" data-id="' + m.id + ":" + x.id + '">Edit</button>' +
+        '<button class="btn quiet danger" data-act="link-del" data-id="' + m.id + ":" + x.id + '">×</button></span></div>';
+    }).join("") : '<p class="empty">No links yet.</p>';
+    h += "</div>";
+
+    h += '<div class="sect">Where you left off</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">One line per bench, written when you leave and read back when you return.</p>';
+    h += bs.length ? bs.map(function (b) {
+      return '<div class="row"><span class="pill ' + (b.note ? "p-verd" : "p-grey") + '">' +
+        (b.note ? "left a note" : "nothing") + "</span>" +
+        '<span class="grow"><b>' + esc(benchLabel(b.id)) + "</b>" +
+        (b.note ? "<small>" + esc(b.note + " · " + niceDate(stampDay(b.noteAt || ""))) + "</small>" : "") + "</span>" +
+        '<span class="tools">' +
+        (state.settings.companion ? '<a class="btn" href="mashghal://enter/' + esc(b.id) + '">Launch</a>' : "") +
+        '<button class="btn quiet" data-act="note-edit" data-id="' + b.id + '">Edit</button></span></div>';
+    }).join("") : '<p class="empty">This mode has no benches yet.</p>';
+    h += "</div>";
+    return h;
+  }
+
+  function swDialog(m, x) {
+    openModal({
+      title: x ? "Edit software" : "Add software",
+      confirmLabel: x ? "Save" : "Add",
+      message: x ? "" : "A name, and the path you would paste into Win+R to open it.",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: x ? x.label : "", placeholder: "ArcGIS Pro" },
+        { key: "path", label: "Path", type: "text", span: true, value: x ? (x.path || "") : "",
+          hint: "Left blank it is just a reminder that this mode uses it." }
+      ],
+      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = x;
+          if (!t) { t = { id: uid() }; modeSoftware(m).push(t); }
+          t.label = v.label.trim(); t.path = v.path.trim();
+        });
+      }
+    });
+  }
+  function linkDialog(m, x) {
+    openModal({
+      title: x ? "Edit link" : "Add a link",
+      confirmLabel: x ? "Save" : "Add",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: x ? x.label : "", placeholder: "AUB mail, this project" },
+        { key: "url", label: "URL", type: "text", span: true, value: x ? x.url : "",
+          placeholder: "obsidian://search?query=AUB", hint: "Any scheme, not only http." }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (!/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) return "A URL needs a scheme — https:, obsidian:, mailto: and so on.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = x;
+          if (!t) { t = { id: uid() }; modeLinks(m).push(t); }
+          t.label = v.label.trim(); t.url = v.url.trim();
+        });
+      }
+    });
+  }
+  function noteDialog(b) {
+    openModal({
+      title: "Where you left off",
+      message: "One line, for the version of you that comes back to " + esc(benchLabel(b.id)) + ".",
+      confirmLabel: "Save",
+      fields: [{ key: "note", label: "Note", type: "text", span: true, value: b.note || "",
+        placeholder: "still to export the cemetery layer" }],
+      onConfirm: function (v) {
+        go(function () {
+          b.note = v.note.trim();
+          b.noteAt = v.note.trim() ? nowStamp() : "";
+        });
+      }
+    });
+  }
+  // Asked at the moment of leaving, when it is the only moment you still know.
+  function askNote(benchId, after) {
+    var b = byId(state.benches, benchId);
+    if (!b) { if (after) after(); return; }
+    openModal({
+      title: "Where did you leave off?",
+      message: "One line, for when you come back to " + esc(benchLabel(b.id)) + ". Skip it and the old note stays as it was.",
+      confirmLabel: "Save it", cancelLabel: "Skip",
+      fields: [{ key: "note", label: "Note", type: "text", span: true, value: "",
+        placeholder: "still to export the cemetery layer" }],
+      onConfirm: function (v) {
+        if (v.note.trim()) {
+          go(function () { b.note = v.note.trim(); b.noteAt = nowStamp(); });
+        }
+        if (after) after();
+      },
+      onCancel: function () { if (after) after(); }
+    });
+  }
+  function greet(benchId) {
+    var b = noteOf(benchId);
+    if (b) toast("You left off: " + b.note);
+  }
+
+  // What the local launcher reads. The page never sends a path anywhere — it
+  // writes this file for you, and the launcher looks a bench up in it. Nothing
+  // arrives from the web except an id.
+  function kitExport(m) {
+    var out = { v: 1, mode: m.name, benches: {} };
+    benchesOfMode(m.id).forEach(function (b) {
+      out.benches[b.id] = {
+        label: benchLabel(b.id),
+        software: modeSoftware(m).map(function (x) { return { label: x.label, path: x.path || "" }; }),
+        links: modeLinks(m).map(function (x) { return { label: x.label, url: x.url }; })
+      };
+    });
+    download("mashghal-" + m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".json",
+             JSON.stringify(out, null, 2), "application/json");
   }
 
   /* ================= the canvas ================= */
@@ -2652,12 +2846,13 @@
           state.spans.push({ id: uid(), startedAt: nowStamp(), endedAt: "",
                              benchId: benchId, note: "", source: "switch" });
         });
+        greet(benchId);
       });
     },
     // Switching is one act, not two: the span you were in ends at the moment
     // the next one starts, so no minute belongs to both and none falls between.
     "span-switch": function () {
-      var sp = openSpan();
+      var sp = openSpan(), leaving = sp ? sp.benchId : "";
       pickBench("Switching to", function (benchId) {
         go(function () {
           var at = nowStamp();
@@ -2665,6 +2860,9 @@
           state.spans.push({ id: uid(), startedAt: at, endedAt: "",
                              benchId: benchId, note: "", source: "switch" });
         });
+        // Ask about the bench being left, then greet the one being entered.
+        if (leaving && leaving !== benchId) askNote(leaving, function () { greet(benchId); });
+        else greet(benchId);
       });
     },
     "span-stop": function () {
@@ -2673,6 +2871,7 @@
       go(function () { sp.endedAt = nowStamp(); });
       toast("Stopped after " + fmtMins(minsBetween(sp.startedAt, sp.endedAt)),
             function () { sp.endedAt = was; });
+      if (sp.benchId) askNote(sp.benchId);
     },
     // A runaway is closed by being told when it ended, never by assuming now.
     "span-close": function () {
@@ -2783,6 +2982,39 @@
         toast("Removed " + c.name);
       });
     },
+    "mode-open": function (id) { openMode = id; render(); },
+    "mode-back": function () { openMode = ""; render(); },
+    "note-edit": function (id) { var b = byId(state.benches, id); if (b) noteDialog(b); },
+    "kit-export": function (id) { var m = byId(state.modes, id); if (m) kitExport(m); },
+    "sw-add":  function (id) { var m = byId(state.modes, id); if (m) swDialog(m, null); },
+    "sw-edit": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (m) swDialog(m, byId(modeSoftware(m), p[1]));
+    },
+    "sw-del": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (!m) return;
+      go(function () { m.software = modeSoftware(m).filter(function (x) { return x.id !== p[1]; }); });
+    },
+    "sw-copy": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      var x = m && byId(modeSoftware(m), p[1]);
+      if (!x || !x.path) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(x.path).then(function () { toast("Copied — Win+R, paste, Enter"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+    "link-add":  function (id) { var m = byId(state.modes, id); if (m) linkDialog(m, null); },
+    "link-edit": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (m) linkDialog(m, byId(modeLinks(m), p[1]));
+    },
+    "link-del": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (!m) return;
+      go(function () { m.links = modeLinks(m).filter(function (x) { return x.id !== p[1]; }); });
+    },
     "mode-add": function () { modeDialog(null); },
     "mode-edit": function (id) { modeDialog(byId(state.modes, id)); },
     "mode-del": function (id) {
@@ -2826,6 +3058,12 @@
     },
 
     /* ---- sync ---- */
+    "companion-toggle": function () {
+      go(function () { state.settings.companion = !state.settings.companion; });
+      toast(state.settings.companion
+        ? "Launch links are on. They do nothing until the launcher is installed."
+        : "Launch links are off.");
+    },
     "sync-setup": function () { syncSetupDialog(); },
     "sync-now":   function () { syncNow(); },
     "device-forget": function (id) {
@@ -3042,14 +3280,27 @@
     var cHff = mk({ name: "Honor Frost Foundation", kind: "ondemand", hours: "", colour: "#74a086", archived: false });
     s.claimants = [cAub, cBal, cHff];
 
-    var mGis = mk({ name: "GIS", archived: false });
-    var mDes = mk({ name: "Designs", archived: false });
-    var mLec = mk({ name: "Lectures", archived: false });
+    var mGis = mk({ name: "GIS", archived: false, software: [
+      { id: uid(), label: "ArcGIS Pro", path: "C:\\Program Files\\ArcGIS\\Pro\\bin\\ArcGISPro.exe" },
+      { id: uid(), label: "QGIS", path: "C:\\Program Files\\QGIS\\bin\\qgis-bin.exe" },
+      { id: uid(), label: "Area 1 project", path: "D:\\aub21\\area1\\area1.aprx" }
+    ], links: [
+      { id: uid(), label: "Notes on this project", url: "obsidian://search?query=area%201" },
+      { id: uid(), label: "Project mail", url: "https://mail.google.com/mail/u/0/#search/area+1" }
+    ] });
+    var mDes = mk({ name: "Designs", archived: false, software: [
+      { id: uid(), label: "Adobe Express", path: "" },
+      { id: uid(), label: "Brand kit", path: "D:\\balamand\\brand\\kit.indd" }
+    ], links: [
+      { id: uid(), label: "Brochure notes", url: "obsidian://search?query=brochure" }
+    ] });
+    var mLec = mk({ name: "Lectures", archived: false, software: [], links: [] });
     s.modes = [mGis, mDes, mLec];
 
-    var bGis = mk({ modeId: mGis.id, claimantId: cAub.id, archived: false });
-    var bDes = mk({ modeId: mDes.id, claimantId: cBal.id, archived: false });
-    var bLec = mk({ modeId: mLec.id, claimantId: cHff.id, archived: false });
+    var bGis = mk({ modeId: mGis.id, claimantId: cAub.id, archived: false,
+      note: "still to export the cemetery layer", noteAt: back(3) + "T17:10" });
+    var bDes = mk({ modeId: mDes.id, claimantId: cBal.id, archived: false, note: "", noteAt: "" });
+    var bLec = mk({ modeId: mLec.id, claimantId: cHff.id, archived: false, note: "", noteAt: "" });
     s.benches = [bGis, bDes, bLec];
 
     function step(label, act, o) {
