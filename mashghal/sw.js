@@ -1,5 +1,5 @@
 /* Offline shell for Mashghal. Scope: /Apps/mashghal/ */
-var CACHE = 'pwa-mashghal-v5';
+var CACHE = 'pwa-mashghal-v6';
 var PRECACHE = [
   "./",
   "../icons/mashghal-192.png",

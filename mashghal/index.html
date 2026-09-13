@@ -345,7 +345,9 @@
         modes: [],       // {id,name,archived}
         benches: [],     // {id,modeId,claimantId,archived}
         boards: [],      // see newBoard()
-        spans: [],       // phase 3 — declared now so a backup never loses it
+        spans: [],       // {id,startedAt,endedAt,benchId,note,source}
+        assets: [],      // {id,name,kind,notes,archived}
+        cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
         settings: { showDone: true },
         forgotten: {}    // id -> name, so a removed thing still reads in history
       };
@@ -355,7 +357,7 @@
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["kinds", "claimants", "modes", "benches", "boards", "spans"].forEach(function (k) {
+      ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       if (parsed.forgotten && typeof parsed.forgotten === "object") s.forgotten = parsed.forgotten;
@@ -813,9 +815,10 @@
       tile("Open", String(list.length), list.length === 1 ? "step in hand" : "steps in hand") +
       tile("Late", String(late), late ? "past their chase" : "nothing overdue", late ? "loss" : "") +
       tile("Runs", String(boards("run").filter(function (b) { return !b.closedOn; }).length), "under way") +
+      tile("Upkeep", String(upkeepLate().length), "past its interval", upkeepLate().length ? "loss" : "") +
       "</div>";
 
-    if (!list.length && !s.length) {
+    if (!list.length && !s.length && !live(state.cadences).length) {
       h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
       return h;
     }
@@ -823,6 +826,7 @@
     if (list.length) {
       h += '<div class="sect">In hand</div><div class="card">' + list.map(dueRow).join("") + "</div>";
     }
+    h += upkeepCard();
     if (s.length) {
       h += '<div class="sect">Unfinished</div><div class="card">' + s.map(function (b) {
         var uf = unfiled(b);
@@ -896,6 +900,8 @@
         return '<div class="row"><span class="grow"><b>' + esc(benchLabel(bn.id)) + "</b></span>" +
           '<span class="tools"><button class="btn quiet danger" data-act="bench-del" data-id="' + bn.id + '">×</button></span></div>';
       }).join("") : '<p class="empty">No benches yet.</p>') + "</div>";
+
+    h += kitUpkeepHtml();
 
     h += '<div class="sect">Board kinds</div><div class="card">' +
       '<p class="hint" style="margin:0 0 0.5rem">A visa or a scholarship belongs to no employer, so a board carries a kind and only sometimes a bench.</p>' +
@@ -1458,6 +1464,161 @@
         render();
       }
     });
+  }
+
+
+  /* ================= upkeep and the things it protects ================= */
+
+  // A cadence is not a task and has no due date. It runs every so often since
+  // the last time it was done, so falling behind never compounds into a pile of
+  // missed occurrences — there is one of each, and it is however far past.
+  var PLACES = { desk: "At the desk", away: "Away from the desk", out: "Out of the house" };
+  var ASSET_KINDS = { laptop: "Laptop", phone: "Phone", audio: "Audio", other: "Other" };
+  var placeFilter = "";   // view state, never saved
+
+  function cadenceState(cd) {
+    if (!cd.lastDoneOn) return { never: true, over: 0, since: 0, tone: "p-brass", word: "never done" };
+    var since = daysBetween(cd.lastDoneOn, today());
+    var over = since - num(cd.everyDays);
+    if (over > 0) return { over: over, since: since, tone: "p-oxide", word: over + "d past" };
+    if (over > -3) return { over: over, since: since, tone: "p-brass", word: "due in " + (-over) + "d" };
+    return { over: over, since: since, tone: "p-grey", word: (-over) + "d to go" };
+  }
+  function protects(cd) {
+    if (cd.protectsAssetId) return nameOf(state.assets, cd.protectsAssetId, "thing");
+    if (cd.protectsBenchId) return benchLabel(cd.protectsBenchId);
+    return "";
+  }
+  function upkeep() {
+    return live(state.cadences).map(function (cd) {
+      return { cd: cd, st: cadenceState(cd) };
+    }).sort(function (a, b) {
+      var ra = a.st.never ? 1e6 : a.st.over, rb = b.st.never ? 1e6 : b.st.over;
+      return rb - ra;
+    });
+  }
+  function upkeepLate() {
+    return upkeep().filter(function (x) { return x.st.never || x.st.over > 0; });
+  }
+
+  function upkeepCard() {
+    var all = upkeep();
+    if (!all.length) {
+      return '<div class="sect">Upkeep</div><p class="empty">No cadences yet. They live in Kit — a backup, a firmware update, a haircut.</p>';
+    }
+    var shown = placeFilter ? all.filter(function (x) { return x.cd.place === placeFilter; }) : all;
+    var h = '<div class="sect">Upkeep</div>';
+    h += '<div class="tools" style="margin-bottom:0.6rem">' +
+      ['', 'desk', 'away', 'out'].map(function (pl) {
+        return '<button class="btn' + (placeFilter === pl ? " primary" : "") +
+          '" data-act="place-filter" data-id="' + pl + '">' +
+          (pl ? esc(PLACES[pl]) : "Anywhere") + "</button>";
+      }).join("") + "</div>";
+
+    h += '<div class="card">';
+    h += shown.length ? shown.map(function (x) {
+      var p = protects(x.cd);
+      return '<div class="row"><span class="pill ' + x.st.tone + '">' + esc(x.st.word) + "</span>" +
+        '<span class="grow"><b>' + esc(x.cd.label) + "</b><small>" +
+        esc("every " + x.cd.everyDays + "d · " + (PLACES[x.cd.place] || "anywhere") +
+            (x.cd.lastDoneOn ? " · last " + niceDate(x.cd.lastDoneOn) : " · not done yet") +
+            (p ? " · protects " + p : "")) + "</small></span>" +
+        '<span class="tools"><button class="btn" data-act="cadence-done" data-id="' + x.cd.id + '">Done now</button>' +
+        '<button class="btn quiet" data-act="cadence-edit" data-id="' + x.cd.id + '">Edit</button></span></div>';
+    }).join("") : '<p class="empty">Nothing to do ' + esc((PLACES[placeFilter] || "").toLowerCase()) + ".</p>";
+    h += "</div>";
+    return h;
+  }
+
+  function assetOpts() {
+    return [{ value: "", label: "Nothing in particular" }].concat(opts(state.assets));
+  }
+  function cadenceDialog(cd) {
+    openModal({
+      title: cd ? "Edit upkeep" : "New upkeep",
+      confirmLabel: cd ? "Save" : "Add",
+      message: cd ? "" : "Every so often since it was last done, not on a date. Falling behind never piles up — there is one of each, however far past it is.",
+      fields: [
+        { key: "label", label: "What", type: "text", value: cd ? cd.label : "", span: true, placeholder: "Back up the GIS project" },
+        { key: "everyDays", label: "Every (days)", type: "number", min: 1, value: cd ? num(cd.everyDays) : 30 },
+        { key: "place", label: "Where", type: "select", value: cd ? cd.place : "desk",
+          options: Object.keys(PLACES).map(function (k) { return { value: k, label: PLACES[k] }; }) },
+        { key: "lastDoneOn", label: "Last done", type: "text", span: true,
+          value: cd ? (cd.lastDoneOn || "") : "", hint: "YYYY-MM-DD, or blank if never" },
+        { key: "protectsAssetId", label: "Protects a thing", type: "select", span: true,
+          options: assetOpts(), value: cd ? (cd.protectsAssetId || "") : "" },
+        { key: "protectsBenchId", label: "…or protects a bench", type: "select", span: true,
+          options: [{ value: "", label: "No bench" }].concat(opts(state.benches, function (b) { return benchLabel(b.id); })),
+          value: cd ? (cd.protectsBenchId || "") : "" }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (num(v.everyDays) < 1) return "It has to repeat at least every day.";
+        if (v.lastDoneOn.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(v.lastDoneOn.trim())) return "A date must be YYYY-MM-DD, or blank.";
+        if (v.lastDoneOn.trim() > today()) return "It cannot have been done in the future.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = cd;
+          if (!t) { t = { id: uid(), archived: false }; state.cadences.push(t); }
+          t.label = v.label.trim();
+          t.everyDays = num(v.everyDays);
+          t.place = v.place;
+          t.lastDoneOn = v.lastDoneOn.trim();
+          t.protectsAssetId = v.protectsAssetId;
+          t.protectsBenchId = v.protectsAssetId ? "" : v.protectsBenchId;
+        });
+      }
+    });
+  }
+
+  function assetDialog(a) {
+    openModal({
+      title: a ? "Edit thing" : "New thing",
+      confirmLabel: a ? "Save" : "Add",
+      message: a ? "" : "A tool you depend on is something with upkeep, not a given.",
+      fields: [
+        { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true, placeholder: "Lenovo Legion" },
+        { key: "kind", label: "What is it", type: "select", value: a ? a.kind : "other",
+          options: Object.keys(ASSET_KINDS).map(function (k) { return { value: k, label: ASSET_KINDS[k] }; }) },
+        { key: "notes", label: "Notes", type: "text", span: true, value: a ? (a.notes || "") : "" }
+      ],
+      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = a;
+          if (!t) { t = { id: uid(), archived: false }; state.assets.push(t); }
+          t.name = v.name.trim(); t.kind = v.kind; t.notes = v.notes.trim();
+        });
+      }
+    });
+  }
+
+  function kitUpkeepHtml() {
+    var h = '<div class="sect">Things you depend on</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">A laptop, a phone, a pair of headphones. Upkeep can be attached to one.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="asset-add">Add a thing</button></div>' +
+      (live(state.assets).length ? live(state.assets).map(function (a) {
+        return '<div class="row"><span class="pill p-brass">' + esc(ASSET_KINDS[a.kind] || a.kind) + "</span>" +
+          '<span class="grow"><b>' + esc(a.name) + "</b>" + (a.notes ? "<small>" + esc(a.notes) + "</small>" : "") + "</span>" +
+          '<span class="tools"><button class="btn quiet" data-act="asset-edit" data-id="' + a.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="asset-del" data-id="' + a.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">Nothing yet.</p>') + "</div>";
+
+    h += '<div class="sect">Upkeep</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">Every so often since it was last done. It shows up on Waiting, filtered by where you have to be to do it.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="cadence-add">Add upkeep</button></div>' +
+      (live(state.cadences).length ? live(state.cadences).map(function (cd) {
+        var st = cadenceState(cd), p = protects(cd);
+        return '<div class="row"><span class="pill ' + st.tone + '">' + esc(st.word) + "</span>" +
+          '<span class="grow"><b>' + esc(cd.label) + "</b><small>" +
+          esc("every " + cd.everyDays + "d · " + (PLACES[cd.place] || "anywhere") + (p ? " · protects " + p : "")) +
+          "</small></span>" +
+          '<span class="tools"><button class="btn quiet" data-act="cadence-edit" data-id="' + cd.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="cadence-del" data-id="' + cd.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">Nothing yet.</p>') + "</div>";
+    return h;
   }
 
   /* ================= the canvas ================= */
@@ -2164,6 +2325,38 @@
     },
     "week-now":  function () { weekOf = ""; render(); },
 
+    /* ---- upkeep ---- */
+    "place-filter": function (id) { placeFilter = id || ""; render(); },
+    "cadence-add":  function () { cadenceDialog(null); },
+    "cadence-edit": function (id) { cadenceDialog(byId(state.cadences, id)); },
+    "cadence-done": function (id) {
+      var cd = byId(state.cadences, id); if (!cd) return;
+      var was = cd.lastDoneOn;
+      go(function () { cd.lastDoneOn = today(); });
+      toast(cd.label + " — next in " + cd.everyDays + " days", function () { cd.lastDoneOn = was; });
+    },
+    "cadence-del": function (id) {
+      var cd = byId(state.cadences, id); if (!cd) return;
+      confirmAction({ title: "Remove " + cd.label + "?", message: "It stops appearing on Waiting." }, function () {
+        go(function () { state.forgotten[id] = cd.label; cd.archived = true; });
+      });
+    },
+    "asset-add":  function () { assetDialog(null); },
+    "asset-edit": function (id) { assetDialog(byId(state.assets, id)); },
+    "asset-del":  function (id) {
+      var a = byId(state.assets, id); if (!a) return;
+      var uses = live(state.cadences).filter(function (cd) { return cd.protectsAssetId === id; });
+      confirmAction({
+        title: "Remove " + a.name + "?",
+        message: uses.length
+          ? "The " + uses.length + (uses.length === 1 ? " cadence" : " cadences") +
+            " attached to it stay, and stop naming what they protect."
+          : "Nothing is attached to it."
+      }, function () {
+        go(function () { state.forgotten[id] = a.name; a.archived = true; });
+      });
+    },
+
     /* ---- the report ---- */
     "report-new":  function () { reportDialog(); },
     "report-back": function () { reportOn = null; render(); },
@@ -2548,6 +2741,27 @@
       edge(a1, a2, "flow"), edge(a2, a3, "flow"), edge(a3, a4, "flow"), edge(a4, a5, "flow"),
       edge(a2, a0, "link"), edge(a1, a1t, "link")
     ];
+
+    /* --- things that need looking after --- */
+    var aLap = mk({ name: "Lenovo Legion", kind: "laptop", notes: "no RTX", archived: false });
+    var aPho = mk({ name: "Nothing Phone", kind: "phone", notes: "", archived: false });
+    var aHed = mk({ name: "Nothing headphones", kind: "audio", notes: "", archived: false });
+    var aBud = mk({ name: "CMF earbuds", kind: "audio", notes: "", archived: false });
+    s.assets = [aLap, aPho, aHed, aBud];
+
+    function cadence(label, every, lastAgo, place, o) {
+      s.cadences.push(mk(Object.assign({
+        label: label, everyDays: every, place: place, archived: false,
+        lastDoneOn: lastAgo === null ? "" : back(lastAgo),
+        protectsAssetId: "", protectsBenchId: ""
+      }, o || {})));
+    }
+    // One of each state: past its interval, never done, nearly due, and fine.
+    cadence("Back up the GIS project", 14, 21, "desk", { protectsBenchId: bGis.id });
+    cadence("Headphone firmware", 90, null, "away", { protectsAssetId: aHed.id });
+    cadence("Haircut", 42, 40, "out");
+    cadence("Update the phone", 30, 12, "away", { protectsAssetId: aPho.id });
+    cadence("Clean the laptop fan", 180, 60, "desk", { protectsAssetId: aLap.id });
 
     /* --- the week, so the standing has something to stand on --- */
     // Nothing may be dated in the future, so a day that has not happened yet is
