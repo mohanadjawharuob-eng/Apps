@@ -356,7 +356,11 @@
   }
   .cvleg span { display: inline-flex; align-items: center; gap: 0.32rem; }
   .cvleg i { width: 20px; height: 0; border-top: 1.5px solid var(--line); }
-  .cvleg i.l-link { border-top: 1.5px dashed var(--brass); }
+  .cvleg i.l-link { border-top: 1.5px dotted var(--rule-mid); }
+  /* The two shapes as well as the two lines: the sheet says step-versus-thing
+     by radius alone, so the legend has to show the radius. */
+  .cvleg i.l-step { width: 17px; height: 11px; border: 0; background: var(--raised); border-radius: 3px; }
+  .cvleg i.l-thing { width: 19px; height: 11px; border: 1px solid var(--rule); border-radius: 999px; }
 
   g[data-id] .nd { transform-box: fill-box; transform-origin: center; transition: transform var(--t), filter var(--t); cursor: move; }
   g[data-id]:hover .nd { transform: translateY(-2px) scale(1.02); filter: brightness(1.13); }
@@ -2673,7 +2677,33 @@
 
   /* ================= the canvas ================= */
 
-  var SW = 186, SH = 78, CUT = 11, TW = 148, TH = 32;
+  /* The design draws steps as rounded cards whose height follows what is on
+     them — 56 for a bare step, 84 once there is a line of prose under the name,
+     taller again for one holding a grid. Cut corners and one fixed size were
+     the ModelBuilder reading; these are cards. */
+  var SW = 215, SH1 = 56, SH2 = 84, TH = 40, CUT = 0;
+  var CELL = 17, CGAP = 5, CLAB = 44;
+
+  function gridOf(n) {
+    var g = n.grid;
+    if (!g || !g.rows || !g.cols || !g.rows.length || !g.cols.length) return null;
+    return g;
+  }
+  function gridH(g) {
+    return 11 + 15 + g.rows.length * (CELL + CGAP) + 20;
+  }
+  function thingW(n) {
+    return Math.min(260, 64 + String(n.label || "").length * 7.2);
+  }
+function dims(n) {
+    if (n.t !== "step") return { w: thingW(n), h: TH };
+    var g = gridOf(n);
+    var lines = wrap(n.label || "", n._room || 26).length;   // wrap() caps at two
+    var h = lines > 1 ? SH2 : SH1;
+    if (g) h = 34 + lines * 17 + gridH(g);
+    else if (n._says) h = Math.max(h, SH2);
+    return { w: SW, h: h };
+  }
   var NS = "http://www.w3.org/2000/svg";
   var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
 
@@ -2690,7 +2720,9 @@
       '<div class="tblock"><div><b>Board</b><span>' + esc(b.name) + "</span></div>" +
       "<div><b>Bench</b><span>" + esc(b.benchId ? benchLabel(b.benchId) : "none") + "</span></div></div>" +
       '<div class="cvleg"><span><i></i>comes after</span>' +
-      '<span><i class="l-link"></i>belongs with, no order</span></div>' +
+      '<span><i class="l-link"></i>belongs with, in no order</span>' +
+      '<span><i class="l-step"></i>a step</span>' +
+      '<span><i class="l-thing"></i>a thing or a person</span></div>' +
       "</div>";
   }
 
@@ -2699,7 +2731,7 @@
     for (var k in a) { if (a[k] !== null && a[k] !== undefined) e.setAttribute(k, a[k]); }
     return e;
   }
-  function dims(n) { return n.t === "step" ? { w: SW, h: SH } : { w: TW, h: TH }; }
+
   function centre(n) { var d = dims(n); return { x: n.x + d.w / 2, y: n.y + d.h / 2 }; }
   function anchor(n, tx, ty) {
     var c = centre(n), d = dims(n), dx = tx - c.x, dy = ty - c.y;
@@ -2712,7 +2744,11 @@
   // Nobody should ever meet a blank sheet. Steps are ranked by how far they
   // sit from an entry point and laid out in columns; things are parked above
   // or below whatever they are linked to.
-  function autoLayout(b) {
+  /* How far along the flow each step sits. Used twice: to lay the sheet out,
+     and to tell a genuine loop back from an edge that merely happens to run
+     leftwards on screen. Its BFS ignores back edges, or the loop in a revision
+     cycle drags its own target off to the right. */
+  function flowDepth(b) {
     var depth = {}, steps = b.nodes.filter(function (n) { return n.t === "step"; });
     var queue = entryNodes(b).map(function (n) { return n.id; });
     queue.forEach(function (id) { depth[id] = 0; });
@@ -2720,12 +2756,16 @@
     while (queue.length && guard++ < 500) {
       var id = queue.shift();
       nextOf(b, id).forEach(function (e) {
-        // A back edge is a cycle, not a deeper rank — ignore it, or the
-        // loop in a revision cycle drags its own target off to the right.
         if (depth[e.b] === undefined) { depth[e.b] = depth[id] + 1; queue.push(e.b); }
       });
     }
-    steps.forEach(function (n, i) { if (depth[n.id] === undefined) depth[n.id] = i; });
+    steps.forEach(function (n, i) { if (depth[n.id] === undefined) depth[n.id] = 100 + i; });
+    return depth;
+  }
+
+  function autoLayout(b) {
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var depth = flowDepth(b);
 
     var cols = {};
     steps.forEach(function (n) {
@@ -2733,13 +2773,29 @@
       cols[d] = cols[d] || [];
       cols[d].push(n);
     });
-    // Serpentine: five across, then drop a row and come back the other way.
+    /* Serpentine: five across, then drop a row and come back the other way.
+       Stacked by MEASURED height, not a fixed pitch — a step holding a matrix
+       is twice as tall as a bare one, and a constant 110 drew it straight
+       through its neighbour. The band pitch is the tallest card in the band for
+       the same reason. */
+    var bandH = {};
     Object.keys(cols).forEach(function (d) {
+      var band = Math.floor(num(d) / 5), tall = 0;
+      cols[d].forEach(function (n) { tall = Math.max(tall, dims(n).h); });
+      bandH[band] = Math.max(bandH[band] || 0, tall);
+    });
+    var bandY = {}, acc = 300;
+    Object.keys(bandH).map(Number).sort(function (a, z) { return a - z; })
+      .forEach(function (band) { bandY[band] = acc; acc += bandH[band] + 150; });
+
+    Object.keys(cols).forEach(function (d) {
+      var y = bandY[Math.floor(num(d) / 5)] || 300;
       cols[d].forEach(function (n, j) {
         var col = num(d) % 5, band = Math.floor(num(d) / 5);
         if (band % 2 === 1) col = 4 - col;
         n.x = 60 + col * 262;
-        n.y = 300 + band * 230 + j * 110;
+        n.y = y;
+        y += dims(n).h + 34;     // the next step in this column clears this one
       });
     });
     b.nodes.filter(function (n) { return n.t === "thing"; }).forEach(function (n, i) {
@@ -2747,25 +2803,19 @@
       var host = link ? nodeOf(b, link.a === n.id ? link.b : link.a) : null;
       if (host && host.t === "step") {
         n.x = host.x + 18;
-        n.y = host.y + (i % 2 === 0 ? -140 : SH + 70);
+        n.y = host.y + (i % 2 === 0 ? -(TH + 78) : dims(host).h + 62);
       } else {
         n.x = 60 + i * 170; n.y = 120;
       }
     });
   }
 
-  function stepPath(w, h) { return "M0,0 H" + w + " V" + (h - CUT) + " L" + (w - CUT) + "," + h + " H0 Z"; }
-  function curvePath(x1, y1, x2, y2) {
-    var dx = x2 - x1, dy = y2 - y1;
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      var k = Math.max(30, Math.abs(dx) * 0.42);
-      return "M" + x1 + "," + y1 + " C" + (x1 + k) + "," + y1 + " " + (x2 - k) + "," + y2 + " " + x2 + "," + y2;
-    }
-    var j = Math.max(26, Math.abs(dy) * 0.45);
-    return "M" + x1 + "," + y1 + " C" + x1 + "," + (y1 + j) + " " + x2 + "," + (y2 - j) + " " + x2 + "," + y2;
-  }
-
-  /* The sheet is drawn in JS, so it cannot inherit a custom property the way
+  /* Cards, not cut-corner boxes. The cut corner was the ModelBuilder reading,
+     and the design replaced it — shape now says step-versus-thing by the
+     radius alone: 13 for a step, fully round for a thing. */
+  var NR = 13;
+  // curvePath is gone — drawEdges routes right-angled paths through orth().
+/* The sheet is drawn in JS, so it cannot inherit a custom property the way
      the rest of the app does — it reads them instead, once per draw. Hardcoded
      hexes here are what would leave an ink-dark board drawn on paper the moment
      a light theme existed, and the palette would then live in two places that
@@ -2796,7 +2846,8 @@
     inkFlush();
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     var defs = svgEl("defs");
-    [["mar", ink("line")], ["mar-dim", ink("line-dim")]].forEach(function (p) {
+    [["mar", ink("line")], ["mar-dim", ink("line-dim")],
+     ["mar-back", ink("brass")]].forEach(function (p) {
       var m = svgEl("marker", { id: p[0], viewBox: "0 0 10 8", refX: 9, refY: 4,
         markerWidth: 9, markerHeight: 7.5, orient: "auto-start-reverse" });
       m.appendChild(svgEl("polygon", { points: "0,0 10,4 0,8", fill: p[1] }));
@@ -2817,45 +2868,121 @@
     drawEdges(b, svg); drawNodes(b, svg);
   }
 
+  /* Right-angled, the way the artboards draw them and the way a site drawing
+     does. Beziers looked soft and, worse, two curves leaving the same node were
+     hard to tell apart; an orthogonal run reads as a route. Sequence is
+     neutral, because a line is a path and not a state. An association is a fine
+     dotted line with no head — that distinction is the whole model. A loop back
+     arcs over the top in brass and SAYS "goes back", because the one thing a
+     reader needs to know about a cycle is that it is one. */
+  function side(n, which) {
+    var d = dims(n);
+    if (which === "r") return { x: n.x + d.w, y: n.y + d.h / 2 };
+    if (which === "l") return { x: n.x, y: n.y + d.h / 2 };
+    if (which === "t") return { x: n.x + d.w / 2, y: n.y };
+    return { x: n.x + d.w / 2, y: n.y + d.h };
+  }
+
+  // An L or a Z, never a diagonal: out of one side, along, and in to the other.
+  function orth(A, Z) {
+    var da = dims(A), dz = dims(Z);
+    var goingRight = Z.x >= A.x + da.w - 8;
+    var p1 = goingRight ? side(A, "r") : side(A, "b");
+    var p2 = goingRight ? side(Z, "l") : side(Z, "t");
+    if (goingRight) {
+      var mx = (p1.x + p2.x) / 2;
+      if (Math.abs(p1.y - p2.y) < 3) return "M" + p1.x + "," + p1.y + " H" + p2.x;
+      return "M" + p1.x + "," + p1.y + " H" + mx + " V" + p2.y + " H" + p2.x;
+    }
+    var my = (p1.y + p2.y) / 2;
+    if (Math.abs(p1.x - p2.x) < 3) return "M" + p1.x + "," + p1.y + " V" + p2.y;
+    return "M" + p1.x + "," + p1.y + " V" + my + " H" + p2.x + " V" + p2.y;
+  }
+
+  /* An edge a -> b goes back only if b can reach a again along flow edges —
+     that is what makes it a cycle, and a cycle is the only thing a reader needs
+     warning about.
+
+     Three wrong tests came before this one, each caught by the next.
+     "Is the target to the left" called the brochure's last three steps loops,
+     because they run down and leftwards while being perfectly forward.
+     Comparing flow depth called a JOIN a loop: "digitise the layers" and
+     "types and metadata" both sat at rank 1, because the second is also fed by
+     an earlier watch, so a forward edge between them was inked brass and
+     labelled "goes back". Plain reachability then flagged EVERY edge in a
+     cycle, since each of them can reach its own source — three brass arrows
+     round the revision loop instead of one. The stack test marks exactly the
+     edge that closes it. */
+  function backEdges(b) {
+    var back = {}, onStack = {}, done = {};
+    function visit(id) {
+      onStack[id] = 1;
+      nextOf(b, id).forEach(function (e) {
+        // Pointing at a node still on the stack means pointing at an ancestor,
+        // which is exactly one edge per cycle — the one that closes it.
+        if (onStack[e.b]) { back[e.id] = 1; return; }
+        if (!done[e.b]) visit(e.b);
+      });
+      onStack[id] = 0;
+      done[id] = 1;
+    }
+    entryNodes(b).forEach(function (n) { if (!done[n.id]) visit(n.id); });
+    // A cycle nothing leads into still has to have its closing edge marked.
+    b.nodes.forEach(function (n) { if (n.t === "step" && !done[n.id]) visit(n.id); });
+    return back;
+  }
+
   function drawEdges(b, svg) {
+    var back$ = backEdges(b);
     var g = svg._gE;
     while (g.firstChild) g.removeChild(g.firstChild);
     b.edges.forEach(function (e) {
       var A = nodeOf(b, e.a), Z = nodeOf(b, e.b);
       if (!A || !Z) return;
-      var ca = centre(A), cz = centre(Z);
       var on = hov && (hov === e.a || hov === e.b);
-      var p1 = anchor(A, cz.x, cz.y), p2 = anchor(Z, ca.x, ca.y);
 
       if (e.k === "link") {
-        g.appendChild(svgEl("path", { d: curvePath(p1.x, p1.y, p2.x, p2.y), fill: "none",
-          stroke: ink("brass"), "stroke-width": on ? 1.7 : 1.3, "stroke-dasharray": "3.5 5.5",
-          "stroke-opacity": on ? 0.95 : 0.5, "stroke-linecap": "round" }));
+        var ca = centre(A), cz = centre(Z);
+        g.appendChild(svgEl("path", {
+          d: "M" + ca.x + "," + ca.y + " L" + cz.x + "," + cz.y,
+          fill: "none", stroke: ink("rule-mid"), "stroke-width": on ? 1.6 : 1.3,
+          "stroke-dasharray": "1 6", "stroke-linecap": "round",
+          "stroke-opacity": on ? 1 : 0.85
+        }));
         return;
       }
-      var back = Z.x < A.x - 40;
-      var liveEdge = nodeState(b, A) !== "todo";
-      var col = liveEdge ? ink("line") : ink("line-dim");
-      var mk = liveEdge ? "url(#mar)" : "url(#mar-dim)";
-      var lx, ly;
+
+      var back = !!back$[e.id];
+      var live = nodeState(b, A) !== "todo";
+      var col = back ? ink("brass") : live ? ink("line") : ink("line-dim");
+      var mk = back ? "url(#mar-back)" : live ? "url(#mar)" : "url(#mar-dim)";
+      var lx, ly, d;
 
       if (back) {
-        // A loop back over the top, so a revision cycle reads as a shape.
-        var mx = (ca.x + cz.x) / 2, my = Math.min(ca.y, cz.y) - 150;
-        var a1 = anchor(A, mx, my), z1 = anchor(Z, mx, my);
-        g.appendChild(svgEl("path", { d: "M" + a1.x + "," + a1.y + " Q" + mx + "," + my + " " + z1.x + "," + z1.y,
-          fill: "none", stroke: col, "stroke-width": on ? 2 : 1.5, "stroke-opacity": on ? 1 : 0.82, "marker-end": mk }));
-        lx = mx; ly = my - 9;
+        // Over the top, clear of both cards, so a revision cycle reads as a shape.
+        var top = Math.min(A.y, Z.y) - 46;
+        var ax = A.x + dims(A).w / 2, zx = Z.x + dims(Z).w / 2;
+        d = "M" + ax + "," + A.y + " V" + top + " H" + zx + " V" + Z.y;
+        lx = (ax + zx) / 2; ly = top - 7;
       } else {
-        g.appendChild(svgEl("path", { d: curvePath(p1.x, p1.y, p2.x, p2.y), fill: "none",
-          stroke: col, "stroke-width": on ? 2 : 1.5, "stroke-opacity": on ? 1 : 0.82, "marker-end": mk }));
-        lx = (p1.x + p2.x) / 2; ly = (p1.y + p2.y) / 2 - 9;
+        d = orth(A, Z);
+        var pa = side(A, Z.x >= A.x + dims(A).w - 8 ? "r" : "b");
+        var pz = side(Z, Z.x >= A.x + dims(A).w - 8 ? "l" : "t");
+        lx = (pa.x + pz.x) / 2; ly = (pa.y + pz.y) / 2 - 8;
       }
-      if (e.label) {
-        g.appendChild(svgEl("rect", { x: lx - 26, y: ly - 11, width: 52, height: 15, fill: ink("page"), opacity: 0.92 }));
-        var t = svgEl("text", { x: lx, y: ly, fill: ink("dim"), "text-anchor": "middle",
-          "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5, "letter-spacing": ".1em" });
-        t.textContent = e.label.toUpperCase();
+
+      g.appendChild(svgEl("path", { d: d, fill: "none", stroke: col,
+        "stroke-width": on ? 2 : 1.6, "stroke-linejoin": "round",
+        "stroke-opacity": on ? 1 : 0.9, "marker-end": mk }));
+
+      var words = back ? (e.label ? e.label + " — goes back" : "goes back") : e.label;
+      if (words) {
+        var w = Math.min(150, 7 + String(words).length * 6.2);
+        g.appendChild(svgEl("rect", { x: lx - w / 2, y: ly - 11, width: w, height: 15, rx: 4,
+          fill: ink("sheet"), opacity: 0.96 }));
+        var t = svgEl("text", { x: lx, y: ly, fill: back ? ink("brass") : ink("dim"),
+          "text-anchor": "middle", "font-size": 11 });
+        t.textContent = words;
         g.appendChild(t);
       }
     });
@@ -2866,69 +2993,183 @@
     var g = svg._gN;
     while (g.firstChild) g.removeChild(g.firstChild);
     b.nodes.forEach(function (n) {
+      var isStep = n.t === "step";
+      var st = isStep ? nodeState(b, n) : "";
+      var late = st === "over", done = st === "done";
+      var isAsk = isStep && n.act === "ask", isFile = isStep && n.act === "file";
+      var dated = isStep && !!n.dueAt;
+      var says = isStep ? stepMeta(b, n) : "";
+
+      /* Measured BEFORE the card is drawn, and stashed on the node, because
+         dims() decides the height from how many lines the name takes and the
+         name gets less room on a card carrying a pill. Reading the state after
+         calling dims() was how the first version drew a two-line name into a
+         one-line card. */
+      var room = late ? 18 : st === "now" ? 16 : 26;
+      n._room = isStep ? room : 26;
+      n._says = says;
+      var d = dims(n);
+
       var outer = svgEl("g", { transform: "translate(" + n.x + "," + n.y + ")", "data-id": n.id });
       var inner = svgEl("g", { "class": "nd" });
       outer.appendChild(inner);
-      var d = dims(n);
 
-      if (n.t === "step") {
-        var st = INK[nodeState(b, n)] || INK.todo;
-        inner.setAttribute("opacity", st.sink);
-        if (nodeState(b, n) === "over") {
-          inner.appendChild(svgEl("path", { "class": "halo", d: stepPath(d.w, d.h),
-            fill: "none", stroke: ink("apricot"), "stroke-width": 6, opacity: 0.16 }));
-        }
-        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), transform: "translate(3,3)", fill: ink("shade"), opacity: 0.5 }));
-        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), fill: ink("surface"), stroke: st.stroke, "stroke-width": st.w }));
-        inner.appendChild(svgEl("rect", { x: 0, y: 0, width: 2.5, height: d.h, fill: st.bar }));
+      if (!isStep) { drawThing(n, d, inner); g.appendChild(outer); return; }
 
-        var a = svgEl("text", { x: 13, y: 18, fill: ink("faint"),
-          "font-family": "ui-monospace, Menlo, monospace", "font-size": 9, "letter-spacing": ".18em" });
-        a.textContent = ACTS[n.act].word.toUpperCase();
-        inner.appendChild(a);
+      var fill = late ? ink("late-tint")
+               : done ? ink("sunken")
+               : (isAsk || isFile) ? ink("sunken")
+               : ink("raised");
+      var edge = late ? ink("apricot-deep")
+               : isFile ? ink("apricot-deep")
+               : isAsk ? ink("rule-mid")
+               : "";
 
-        wrap(n.label, 24).forEach(function (ln, i) {
-          var t = svgEl("text", { x: 13, y: 36 + i * 15, fill: st.text,
-            "font-family": "inherit", "font-size": 13 });
-          t.textContent = ln;
-          inner.appendChild(t);
-        });
+      if (late) {
+        inner.appendChild(svgEl("rect", { "class": "halo", x: -3, y: -3, width: d.w + 6, height: d.h + 6,
+          rx: NR + 3, fill: "none", stroke: ink("apricot"), "stroke-width": 5, opacity: 0.14 }));
+      }
+      inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: NR, fill: fill,
+        stroke: edge || "none", "stroke-width": edge ? 1.4 : 0,
+        "stroke-dasharray": isFile ? "5 4" : null }));
+      if (dated && !done) {
+        // Clipped to the card's own radius, or the bar's square corner pokes out.
+        var cid = "cl" + n.id;
+        var cp = svgEl("clipPath", { id: cid });
+        cp.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: NR }));
+        inner.appendChild(cp);
+        inner.appendChild(svgEl("rect", { x: 0, y: 0, width: 4, height: d.h,
+          fill: ink("sage"), "clip-path": "url(#" + cid + ")" }));
+      }
+      inner.setAttribute("opacity", done ? 0.72 : 1);
 
-        if (n.doneAt) {
-          var ck = svgEl("text", { x: d.w - 13, y: 18, fill: ink("sage-deep"), "text-anchor": "end",
-            "font-family": "ui-monospace, Menlo, monospace", "font-size": 11 });
-          ck.textContent = "✓";
-          inner.appendChild(ck);
-        }
-        var meta = stepMeta(b, n);
-        if (meta) {
-          var m = svgEl("text", { x: 13, y: d.h - 10, fill: nodeState(b, n) === "over" ? ink("apricot") : ink("faint"),
-            "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5 });
-          m.textContent = meta;
+      var pad = dated ? 18 : 15, y = 24;
+      var lines = wrap(n.label, room);
+      lines.forEach(function (ln, i) {
+        var t = svgEl("text", { x: pad, y: y + i * 17,
+          fill: done ? ink("receded") : ink("ink"),
+          "font-family": isAsk ? "var(--display)" : "inherit",
+          "font-weight": isAsk ? 500 : 400,
+          "font-size": isAsk ? 16 : 14.5 });
+        t.textContent = ln;
+        inner.appendChild(t);
+      });
+      y += lines.length * 17;
+
+      // The one filled mark on the sheet, and only ever on a late step.
+      if (late) {
+        var pw = 38;
+        inner.appendChild(svgEl("rect", { x: d.w - pw - 12, y: 11, width: pw, height: 17, rx: 8.5,
+          fill: ink("apricot") }));
+        var lp = svgEl("text", { x: d.w - pw / 2 - 12, y: 23.5, fill: ink("page"),
+          "text-anchor": "middle", "font-size": 11 });
+        lp.textContent = "late";
+        inner.appendChild(lp);
+      } else if (st === "now") {
+        inner.appendChild(svgEl("circle", { cx: d.w - 58, cy: 18, r: 3.4, fill: ink("sage") }));
+        var ih = svgEl("text", { x: d.w - 50, y: 22, fill: ink("sage-lift"), "font-size": 11.5 });
+        ih.textContent = "in hand";
+        inner.appendChild(ih);
+      }
+
+      var gr = gridOf(n);
+      if (gr) { drawGrid(gr, d, inner, y + 4); }
+      else if (says) {
+        wrap(says, 34).slice(0, 2).forEach(function (ln, i) {
+          var m = svgEl("text", { x: pad, y: d.h - 14 + i * 15 - (says.length > 34 ? 15 : 0),
+            fill: late ? ink("apricot-mute") : done ? ink("receded") : ink("faint"),
+            "font-size": 11.5 });
+          m.textContent = ln;
           inner.appendChild(m);
-        }
-      } else {
-        inner.appendChild(svgEl("rect", { x: 3, y: 3, width: d.w, height: d.h, rx: d.h / 2, fill: ink("shade"), opacity: 0.45 }));
-        inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
-          fill: ink("raised"), stroke: ink("brass"), "stroke-opacity": 0.62 }));
-        var tx = svgEl("text", { x: d.w / 2, y: d.h / 2 + 4.5, fill: ink("brass"), "text-anchor": "middle",
-          "font-family": "inherit", "font-size": 11.5 });
-        tx.textContent = clip(n.label, 20);
-        inner.appendChild(tx);
+        });
       }
       g.appendChild(outer);
     });
   }
 
+  /* A thing is a pill with its KIND written inside it, small and faint, then
+     its name — "person  R. Haddad". The kind was carried only by colour before,
+     which meant the board could not be read by anyone who had not been told
+     the code. */
+  function drawThing(n, d, inner) {
+    inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
+      fill: ink("sunken"), stroke: ink("rule"), "stroke-width": 1 }));
+    var kind = String(THINGS[n.kind] || n.kind || "thing").toLowerCase();
+    var kt = svgEl("text", { x: 15, y: d.h / 2 + 4, fill: ink("faint"), "font-size": 10.5 });
+    kt.textContent = kind;
+    inner.appendChild(kt);
+    var nx = 15 + String(kind).length * 6 + 10;
+    var t = svgEl("text", { x: nx, y: d.h / 2 + 4.5, fill: ink("dim"), "font-size": 12.5 });
+    t.textContent = clip(n.label, 22);
+    inner.appendChild(t);
+  }
+
+  /* The thing every one of the five board treatments drew independently: a
+     small matrix INSIDE one step, so "digitise the layers" is one step holding
+     nine cells rather than nine steps. Filled is done, outlined is in hand,
+     empty is still to go — and the count is written underneath, because a grid
+     of squares is a picture and the sentence is the fact. */
+  function drawGrid(gr, d, inner, top) {
+    var x0 = 15 + CLAB, cw = (d.w - 30 - CLAB - (gr.cols.length - 1) * CGAP) / gr.cols.length;
+    gr.cols.forEach(function (c, i) {
+      var t = svgEl("text", { x: x0 + i * (cw + CGAP) + cw / 2, y: top + 9,
+        fill: ink("faint"), "font-size": 10, "text-anchor": "middle" });
+      t.textContent = clip(String(c), 5);
+      inner.appendChild(t);
+    });
+    var done = 0, hand = 0, togo = 0;
+    gr.rows.forEach(function (r, ri) {
+      var ry = top + 17 + ri * (CELL + CGAP);
+      var rl = svgEl("text", { x: 15, y: ry + CELL - 4, fill: ink("dim"), "font-size": 10 });
+      rl.textContent = clip(String(r), 6);
+      inner.appendChild(rl);
+      gr.cols.forEach(function (c, ci) {
+        var v = (gr.cells && gr.cells[ri + ":" + ci]) || "";
+        if (v === "done") done++; else if (v === "hand") hand++; else togo++;
+        inner.appendChild(svgEl("rect", {
+          x: x0 + ci * (cw + CGAP), y: ry, width: cw, height: CELL, rx: 5,
+          fill: v === "done" ? ink("sage-deep") : v === "hand" ? "none" : ink("rule"),
+          stroke: v === "hand" ? ink("sage") : "none", "stroke-width": v === "hand" ? 1.5 : 0
+        }));
+      });
+    });
+    var sum = svgEl("text", { x: 15, y: d.h - 10, fill: ink("faint"), "font-size": 11.5 });
+    sum.textContent = done + " done, " + hand + " in hand, " + togo + " to go";
+    inner.appendChild(sum);
+  }
+
   function stepMeta(b, n) {
+    // A template has no history, so it describes what it WILL do.
     if (b.kind !== "run") {
-      if (n.chaseDays) return "chase " + n.chaseDays + "d";
-      return n.dueAt ? "dated" : "";
+      if (n.act === "send") {
+        return n.chaseDays ? "Starts a wait · remind after " + n.chaseDays + "d"
+                           : "Starts a wait · no reminder set";
+      }
+      if (n.act === "watch") return n.chaseDays ? "A wait · check back after " + n.chaseDays + "d"
+                                                : "A wait with nobody to chase";
+      if (n.act === "ask") return "Two ways out — one goes back";
+      if (n.act === "file") return "Putting away · will block closing";
+      return n.dueAt ? "Fixed by the day, not by you" : "";
     }
-    var st = nodeState(b, n);
-    if (st === "over") return daysWaiting(n) + "d · " + overdueBy(n) + " past chase";
-    if (st === "waiting") return daysWaiting(n) + "d waiting";
-    if (st === "now") return n.dueAt ? niceDate(n.dueAt) : daysWaiting(n) + "d in hand";
+    var st = nodeState(b, n), d = daysWaiting(n);
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(" and ");
+
+    if (st === "done") return n.doneAt ? "Done " + niceDate(n.doneAt) : "Done";
+    if (st === "over") {
+      var past = overdueBy(n);
+      return (who ? "With " + who + " " + numWord(d) + " days. " : numWord(d) + " days. ") +
+        "You meant to chase after " + num(n.chaseDays) + ".";
+    }
+    if (st === "waiting") {
+      if (n.dueAt) return niceDate(n.dueAt) + ". Fixed by the day, not by you.";
+      if (!n.chaseDays) return numWord(d) + " days. Nobody to chase, so it is not late.";
+      return numWord(d) + " days. You will chase after " + num(n.chaseDays) + ".";
+    }
+    if (st === "now") {
+      if (n.dueAt) return niceDate(n.dueAt) + ". Fixed by the day, not by you.";
+      if (n.act === "file") return "Until this is done, nothing closes.";
+      return d ? numWord(d) + " days in hand." : "Yours, from today.";
+    }
     return "";
   }
   function wrap(s, max) {
@@ -3860,13 +4101,21 @@
     var g2 = step("Roads — area 1", "do", { doneAt: back(5), enteredAt: back(14) });
     var g3 = step("New maps uploaded", "watch", { chaseDays: 4, enteredAt: back(9) });
     var g4 = step("Types and metadata, buildings", "do", { enteredAt: back(3) });
+    var gGrid = step("Digitise the layers", "do", { enteredAt: back(16), grid: {
+      rows: ["Anjar", "Qabb", "Terbol"],
+      cols: ["'16", "'30", "'70"],
+      cells: { "0:0": "done", "0:1": "done", "0:2": "hand",
+               "1:0": "done", "1:1": "hand",
+               "2:0": "", "2:1": "", "2:2": "" }
+    } });
     var g5 = step("Friday meeting", "send", { dueAt: addDays(today(), 2), chaseDays: 0, enteredAt: back(1) });
     var g6 = step("File to the project archive", "file", {});
     var gis = mk({ kind: "run", name: "GIS aerials, area 1", kindId: kWork.id, benchId: bGis.id,
-      fromBoardId: "", nodes: [g0, ga, g1, g2, g3, g4, g5, g6], edges: [],
+      fromBoardId: "", nodes: [g0, ga, g1, g2, gGrid, g3, g4, g5, g6], edges: [],
       startedOn: back(20), closedOn: "", archived: false });
     gis.edges = [
-      edge(g1, g4, "flow"), edge(g2, g4, "flow"), edge(g3, g4, "flow"),
+      edge(g1, gGrid, "flow"), edge(g2, gGrid, "flow"),
+      edge(gGrid, g4, "flow"), edge(g3, g4, "flow"),
       edge(g4, g5, "flow"), edge(g5, g6, "flow"),
       edge(g0, g1, "link"), edge(g0, g2, "link"), edge(ga, g4, "link")
     ];
