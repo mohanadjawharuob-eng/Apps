@@ -395,6 +395,23 @@
   function prevOf(b, id) {
     return b.edges.filter(function (e) { return e.k === "flow" && e.b === id; });
   }
+  // Who a send goes to is not a second list to keep in step — it is the people
+  // linked to it. Linking a person to a send is what "this goes to them" means,
+  // so there is one fact and one place to change it.
+  function recipientsOf(b, n) {
+    return edgesOf(b, n.id, "link").map(function (e) {
+      return nodeOf(b, e.a === n.id ? e.b : e.a);
+    }).filter(function (t) { return t && t.t === "thing" && t.kind === "person"; });
+  }
+
+  // A decision's exits are its labelled outgoing lines, and nothing else. They
+  // used to be a list on the node as well, which meant routing read one of them
+  // and the screen read the other — two truths, and only one of them right.
+  function exitsOf(b, n) {
+    return nextOf(b, n.id).filter(function (e) { return e.label; })
+      .map(function (e) { return { label: e.label, goTo: e.b, edgeId: e.id }; });
+  }
+
   function entryNodes(b) {
     return b.nodes.filter(function (n) {
       return n.t === "step" && prevOf(b, n.id).length === 0;
@@ -672,17 +689,24 @@
   function stepRow(b, n) {
     var isRun = b.kind === "run";
     var st = nodeState(b, n);
-    var who = (n.to || []).map(function (id) {
-      var t = nodeOf(b, id); return t ? t.label : "";
-    }).filter(Boolean).join(", ");
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
 
     var meta = [ACTS[n.act].label];
     if (who) meta.push("to " + who);
+    else if (n.act === "send") meta.push("nobody linked yet");
     if (n.chaseDays) meta.push("chase after " + n.chaseDays + "d");
     if (n.dueAt) meta.push(niceDate(n.dueAt));
     if (isRun && n.enteredAt && !n.doneAt) meta.push(daysWaiting(n) + "d");
     if (isRun && n.doneAt) meta.push("done " + niceDate(n.doneAt));
     if (isRun && n.answer) meta.push("chose: " + n.answer);
+
+    var exits = n.act === "ask" ? exitsOf(b, n) : [];
+    if (n.act === "ask") {
+      meta.push(exits.length ? exits.map(function (x) {
+        var t = nodeOf(b, x.goTo);
+        return x.label + " → " + (t ? t.label : "?");
+      }).join(" · ") : "no exits yet");
+    }
 
     var tools = "";
     if (isRun && !b.closedOn) {
@@ -695,6 +719,12 @@
       } else {
         tools += '<button class="btn quiet" data-act="step-reopen" data-id="' + b.id + ":" + n.id + '">Reopen</button>';
       }
+    }
+    if (n.act === "ask") {
+      tools += '<button class="btn quiet" data-act="exit-add" data-id="' + b.id + ":" + n.id + '">Add exit</button>';
+    }
+    if (n.act === "send") {
+      tools += '<button class="btn quiet" data-act="send-to" data-id="' + b.id + ":" + n.id + '">Send to</button>';
     }
     tools += '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>';
     tools += '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button>';
@@ -764,9 +794,7 @@
   function dueRow(d) {
     var b = d.board, n = d.node;
     var bar = d.st === "over" ? "var(--oxide)" : d.st === "waiting" ? "var(--brass)" : "var(--blue-deep)";
-    var who = (n.to || []).map(function (id) {
-      var t = nodeOf(b, id); return t ? t.label : "";
-    }).filter(Boolean).join(" · ");
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(" · ");
 
     var age, tone;
     if (d.st === "over") { age = d.days + "d"; tone = "+" + d.over + " late"; }
@@ -1360,8 +1388,8 @@
     "step-answer": function (id) {
       var s = split(id); if (!s.b) return;
       var n = nodeOf(s.b, s.n); if (!n) return;
-      var answers = (n.answers || []).filter(function (a) { return a.label; });
-      if (!answers.length) { toast("This decision has no exits yet — edit it and add them."); return; }
+      var answers = exitsOf(s.b, n);
+      if (!answers.length) { toast("This decision has no exits yet — add one first."); return; }
       openModal({
         title: n.label, confirmLabel: "That one",
         message: "Whichever you pick is the only exit that opens. This is how the cycle repeats.",
@@ -1396,12 +1424,62 @@
         go(function () {
           s.b.nodes = s.b.nodes.filter(function (x) { return x.id !== n.id; });
           s.b.edges = s.b.edges.filter(function (e) { return e.a !== n.id && e.b !== n.id; });
-          s.b.nodes.forEach(function (x) {
-            if (x.to) x.to = x.to.filter(function (t) { return t !== n.id; });
-            if (x.answers) x.answers.forEach(function (a) { if (a.goTo === n.id) a.goTo = ""; });
-          });
         });
         toast("Removed " + n.label);
+      });
+    },
+
+    // An exit is a labelled line out of the decision. Naming it and choosing
+    // where it goes are the same act, so they are one dialog and they write one
+    // thing — no exit can exist without a line, and no line goes unlabelled.
+    "exit-add": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var targets = s.b.nodes.filter(function (x) { return x.t === "step" && x.id !== n.id; });
+      if (!targets.length) { toast("Add another step first — an exit has to go somewhere."); return; }
+      openModal({
+        title: "Add an exit to " + n.label, confirmLabel: "Add",
+        message: "An exit that points back at an earlier step is how a cycle repeats.",
+        fields: [
+          { key: "label", label: "Call it", type: "text", value: "", span: true, placeholder: "repeat" },
+          { key: "goTo", label: "Goes to", type: "select", span: true,
+            options: targets.map(function (t) { return { value: t.id, label: t.label }; }),
+            value: targets[0].id }
+        ],
+        validate: function (v) {
+          if (!v.label.trim()) return "Give the exit a name — it is what you will be asked.";
+          var dup = exitsOf(s.b, n).some(function (x) { return x.label === v.label.trim(); });
+          return dup ? "That exit already exists." : null;
+        },
+        onConfirm: function (v) {
+          go(function () {
+            s.b.edges.push({ id: uid(), a: n.id, b: v.goTo, k: "flow", label: v.label.trim() });
+          });
+        }
+      });
+    },
+
+    // Linking a person to a send IS addressing it, so this writes the same
+    // link edge the Connect dialog would, from the step that needs it.
+    "send-to": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var have = recipientsOf(s.b, n).map(function (t) { return t.id; });
+      var people = s.b.nodes.filter(function (x) {
+        return x.t === "thing" && x.kind === "person" && have.indexOf(x.id) < 0;
+      });
+      if (!people.length) {
+        toast(have.length ? "Everyone on this board is already on it." : "Add a person to the board first.");
+        return;
+      }
+      openModal({
+        title: "Send " + n.label + " to", confirmLabel: "Add",
+        message: have.length ? "Already goes to " + esc(recipientsOf(s.b, n).map(function (t) { return t.label; }).join(", ")) + "." : "",
+        fields: [{ key: "who", label: "Person", type: "select", span: true,
+          options: people.map(function (t) { return { value: t.id, label: t.label }; }), value: people[0].id }],
+        onConfirm: function (v) {
+          go(function () { s.b.edges.push({ id: uid(), a: n.id, b: v.who, k: "link", label: "" }); });
+        }
       });
     },
 
@@ -1544,25 +1622,19 @@
 
   function nodeDialog(b, n) {
     if (!b) return;
-    var people = b.nodes.filter(function (x) { return x.t === "thing"; });
     openModal({
       title: n ? "Edit step" : "New step",
       confirmLabel: n ? "Save" : "Add",
-      message: n ? "" : "<b>Do</b> is work you perform. <b>Send</b> opens a wait on named people. <b>Watch</b> waits with nobody to chase. <b>Decide</b> branches. <b>File</b> puts it somewhere — and a run will not close while one is undone.",
+      message: "<b>Do</b> is work you perform. <b>Send</b> opens a wait on the people linked to it. <b>Watch</b> waits with nobody to chase. <b>Decide</b> branches along its labelled exits. <b>File</b> puts it somewhere — and a run will not close while one is undone.",
       fields: [
         { key: "label", label: "Step", type: "text", value: n ? n.label : "", span: true, placeholder: "Send draft for review" },
         { key: "act", label: "Act", type: "select", value: n ? n.act : "do",
           options: Object.keys(ACTS).map(function (k) { return { value: k, label: ACTS[k].label }; }) },
         { key: "chaseDays", label: "Chase after (days)", type: "number", min: 0, value: n ? (n.chaseDays || 0) : 0 },
-        { key: "to", label: "To (a thing, for Send)", type: "select", span: true,
-          options: [{ value: "", label: "Nobody" }].concat(people.map(function (p) {
-            return { value: p.id, label: p.label };
-          })), value: n && n.to && n.to.length ? n.to[0] : "" },
         { key: "dueAt", label: "On a date (optional)", type: "text", span: true,
           value: n ? (n.dueAt || "") : "", placeholder: "YYYY-MM-DD", hint: "Leave blank unless it is genuinely dated." },
-        { key: "answers", label: "Decision exits, comma separated", type: "text", span: true,
-          value: n && n.answers ? n.answers.map(function (a) { return a.label; }).join(", ") : "",
-          hint: "Only for Decide. Connect each exit afterwards and label the line to match." }
+        { key: "note", label: "", type: "text", span: true, value: "",
+          hint: "A Send goes to whoever is linked to it; a Decide gets its exits from the step row." }
       ],
       validate: function (v) {
         if (!v.label.trim()) return "Give the step a name.";
@@ -1573,20 +1645,14 @@
         go(function () {
           var t = n;
           if (!t) {
-            t = { id: uid(), t: "step", label: "", act: "do", to: [], chaseDays: 0, dueAt: "",
-                  answers: [], enteredAt: "", doneAt: "", answer: "" };
+            t = { id: uid(), t: "step", label: "", act: "do", chaseDays: 0, dueAt: "",
+                  enteredAt: "", doneAt: "", answer: "" };
             b.nodes.push(t);
           }
           t.label = v.label.trim();
           t.act = v.act;
           t.chaseDays = num(v.chaseDays);
           t.dueAt = v.dueAt.trim();
-          t.to = v.to ? [v.to] : [];
-          t.answers = v.answers.split(",").map(function (s) { return s.trim(); })
-            .filter(Boolean).map(function (lbl) {
-              var was = (n && n.answers || []).filter(function (a) { return a.label === lbl; })[0];
-              return { label: lbl, goTo: was ? was.goTo : "" };
-            });
           if (typeof t.x !== "number") { autoLayout(b); }
         });
       }
@@ -1719,8 +1785,8 @@
     s.benches = [bGis, bDes, bLec];
 
     function step(label, act, o) {
-      return mk(Object.assign({ t: "step", label: label, act: act, to: [], chaseDays: 0,
-        dueAt: "", answers: [], enteredAt: "", doneAt: "", answer: "" }, o || {}));
+      return mk(Object.assign({ t: "step", label: label, act: act, chaseDays: 0,
+        dueAt: "", enteredAt: "", doneAt: "", answer: "" }, o || {}));
     }
     function thing(label, kind) { return mk({ t: "thing", kind: kind, label: label }); }
     function edge(a, b, k, label) { return mk({ a: a.id, b: b.id, k: k, label: label || "" }); }
@@ -1729,15 +1795,13 @@
     var p1 = thing("N. Haddad", "person"), p2 = thing("L. Mroueh", "person");
     var t1 = thing("Reference photo", "photo"), t2 = thing("Nothing headphones", "asset");
     var d1 = step("Design the brochure", "do", { doneAt: back(24), enteredAt: back(30) });
-    var d2 = step("Send draft for review", "send", { to: [p1.id], chaseDays: 5, doneAt: back(12), enteredAt: back(24) });
+    var d2 = step("Send draft for review", "send", { chaseDays: 5, doneAt: back(12), enteredAt: back(24) });
     var d3 = step("Fix their notes", "do", { doneAt: back(7), enteredAt: back(12) });
-    var d4 = step("Send v2 and ask for backup", "send", { to: [p2.id], chaseDays: 5, enteredAt: back(6) });
-    var d5 = step("Repeat the cycle?", "ask", {
-      answers: [{ label: "repeat", goTo: "" }, { label: "stop", goTo: "" }] });
+    var d4 = step("Send v2 and ask for backup", "send", { chaseDays: 5, enteredAt: back(6) });
+    var d5 = step("Repeat the cycle?", "ask", {});
     var d6 = step("File the final version", "file", {});
     var d7 = step("Monitor the printing", "watch", { chaseDays: 3 });
     var d8 = step("Archive the files", "file", {});
-    d5.answers[0].goTo = d3.id; d5.answers[1].goTo = d6.id;
 
     var broch = mk({ kind: "run", name: "Harbour festival brochure", kindId: kWork.id, benchId: bDes.id,
       fromBoardId: "", nodes: [t1, t2, p1, p2, d1, d2, d3, d4, d5, d6, d7, d8],
@@ -1780,7 +1844,7 @@
     var l1 = step("Pull the last lecture", "do", {});
     var l2 = step("Prepare the new content", "do", {});
     var l3 = step("Work on the deck", "do", {});
-    var l4 = step("Get a second opinion", "send", { to: [k2.id], chaseDays: 4 });
+    var l4 = step("Get a second opinion", "send", { chaseDays: 4 });
     var l5 = step("Reserve a day", "do", {});
     var l6 = step("Present", "do", {});
     var l7 = step("Feedback", "watch", { chaseDays: 7 });
@@ -1812,7 +1876,7 @@
     /* --- an application: a run, and not an employer --- */
     var a0 = thing("Supervisor", "person"), a1t = thing("Portfolio PDF", "file");
     var a1 = step("Draft the statement", "do", { doneAt: back(26), enteredAt: back(34) });
-    var a2 = step("Ask for references", "send", { to: [a0.id], chaseDays: 10, enteredAt: back(21) });
+    var a2 = step("Ask for references", "send", { chaseDays: 10, enteredAt: back(21) });
     var a3 = step("Submit the application", "do", {});
     var a4 = step("Decision", "watch", { chaseDays: 30 });
     var a5 = step("File the offer letter", "file", {});
