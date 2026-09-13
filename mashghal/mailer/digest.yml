@@ -1,0 +1,75 @@
+# Mashghal — the only part of this that can reach you when the app is shut.
+#
+# Put this in a PRIVATE repository as .github/workflows/digest.yml and set
+# three secrets: GIST_ID, MAIL_USER, MAIL_PASS (a Gmail app password).
+#
+# It reads digest.json out of your sync gist. That file holds NUMBERS ONLY —
+# how many things are late and by how much — and never a label, a name or a
+# note, so it can leak without telling anyone anything about the work. The
+# sealed book beside it in the same gist is never read here and could not be
+# read anyway.
+
+name: Mashghal digest
+
+on:
+  schedule:
+    - cron: "0 6 * * 1-5"   # 06:00 UTC, weekdays. Adjust to your own morning.
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the digest
+        id: read
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+        run: |
+          set -euo pipefail
+          curl -sS -H "Authorization: Bearer $GH_TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               "https://api.github.com/gists/$GIST_ID" \
+            | python3 -c '
+          import json,sys,os
+          g=json.load(sys.stdin)
+          f=g.get("files",{}).get("digest.json")
+          if not f:
+              print("send=no"); raise SystemExit(0)
+          d=json.loads(f["content"])
+          late=int(d.get("late",0)); worst=int(d.get("worstDaysPast",0))
+          unfiled=int(d.get("unfiled",0)); up=int(d.get("upkeepPast",0))
+          if late+unfiled+up==0:
+              print("send=no"); raise SystemExit(0)
+          bits=[]
+          if late:    bits.append("%d %s late, the worst by %d %s" % (late, "thing is" if late==1 else "things are", worst, "day" if worst==1 else "days"))
+          if unfiled: bits.append("%d %s finished but never filed" % (unfiled, "run is" if unfiled==1 else "runs are"))
+          if up:      bits.append("%d bit%s of upkeep past its interval" % (up, "" if up==1 else "s"))
+          body="Mashghal, as of %s:\n\n  %s\n\nNothing else is in this message, by design — open the app to see what.\n" % (d.get("at","")[:16].replace("T"," "), "\n  ".join(bits))
+          with open(os.environ["GITHUB_OUTPUT"],"a") as o:
+              o.write("send=yes\n")
+              o.write("subject=Mashghal: %s\n" % bits[0])
+              o.write("body<<XEOF\n%s\nXEOF\n" % body)
+          '
+
+      - name: Send it
+        if: steps.read.outputs.send == 'yes'
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          SUBJECT: ${{ steps.read.outputs.subject }}
+          BODY: ${{ steps.read.outputs.body }}
+        run: |
+          python3 - <<'PY'
+          import os, smtplib
+          from email.message import EmailMessage
+          m = EmailMessage()
+          m["From"] = os.environ["MAIL_USER"]
+          m["To"] = os.environ["MAIL_USER"]
+          m["Subject"] = os.environ["SUBJECT"]
+          m.set_content(os.environ["BODY"])
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+              s.login(os.environ["MAIL_USER"], os.environ["MAIL_PASS"])
+              s.send_message(m)
+          print("sent")
+          PY

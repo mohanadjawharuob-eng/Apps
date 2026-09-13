@@ -1,0 +1,3952 @@
+<meta charset="utf-8" />
+<title>Mashghal — Boards, Runs & What They Leave Behind</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#131210" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Mashghal" />
+<link rel="apple-touch-icon" sizes="192x192" href="../icons/mashghal-192.png" />
+<link rel="icon" type="image/png" href="../icons/mashghal-192.png" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<style>
+  /* An unlit drafting room: ink, blueprint, brass, red oxide, verdigris.
+     Committed dark — the brief asked for it, so there is no light palette. */
+  :root {
+    --page: #131210;
+    --sheet: #181612;
+    --surface: #1e1b17;
+    --raised: #27231d;
+    --rule: #372f26;
+    --rule-soft: #2a241d;
+    --rule-mid: #453b30;
+    --ink: #ece4d5;
+    --dim: #a2977f;
+    --faint: #6e6553;
+    --blue: #7fa9ce;
+    --blue-deep: #41607a;
+    --brass: #c9a227;
+    --brass-deep: #6d5a1c;
+    --oxide: #d0604a;
+    --oxide-deep: #6f3226;
+    --verd: #74a086;
+    --gain: #74a086;
+    --loss: #d0604a;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --t: 140ms;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: 0.005em; }
+  button { font: inherit; }
+  [hidden] { display: none !important; }
+
+  /* ---------------- shell ---------------- */
+  .shell { display: flex; min-height: 100vh; }
+  .rail {
+    width: 218px; flex: none; border-right: 1px solid var(--rule);
+    background: var(--surface); padding: 1.1rem 0 1.4rem;
+    display: flex; flex-direction: column;
+  }
+  .brand { display: flex; align-items: baseline; gap: 0.6rem; padding: 0 1rem 1rem; }
+  .brand-mark { font-size: 1.55rem; line-height: 1; color: var(--ink); font-family: var(--serif); }
+  .brand h1 { margin: 0; font-size: 0.78rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brass); font-weight: 600; }
+  #nav { display: flex; flex-direction: column; gap: 1px; padding: 0 0.55rem; }
+  .tab {
+    display: flex; align-items: center; gap: 0.65rem; width: 100%;
+    background: none; border: 0; border-left: 2px solid transparent;
+    padding: 0.5rem 0.7rem; color: var(--dim); cursor: pointer;
+    font-size: 0.92rem; text-align: left; transition: color var(--t), background var(--t), border-color var(--t);
+  }
+  .tab:hover { color: var(--ink); background: var(--raised); }
+  .tab[aria-current="page"] { color: var(--ink); background: var(--raised); border-left-color: var(--brass); }
+  .tab .ico { width: 1.1rem; text-align: center; opacity: 0.85; font-family: var(--mono); }
+  .rail-foot { margin-top: auto; padding: 1.2rem 1rem 0; }
+  .rail-foot p { margin: 0; font-size: 0.72rem; line-height: 1.6; color: var(--faint); font-family: var(--serif); font-style: italic; }
+  .view { flex: 1; min-width: 0; padding: 1.5rem 1.6rem 4rem; max-width: 1200px; }
+
+  @media (max-width: 760px) {
+    .shell { flex-direction: column; }
+    .rail { width: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0.8rem 0 0; }
+    .brand { padding: 0 0.9rem 0.7rem; }
+    #nav { flex-direction: row; overflow-x: auto; padding: 0 0.6rem; gap: 0.15rem; }
+    .tab { flex-direction: column; gap: 0.15rem; border-left: 0; border-bottom: 2px solid transparent; padding: 0.45rem 0.7rem; font-size: 0.76rem; }
+    .tab[aria-current="page"] { border-left-color: transparent; border-bottom-color: var(--brass); }
+    .rail-foot { display: none; }
+    .view { padding: 1.1rem 0.95rem 4rem; }
+  }
+
+  /* ---------------- page furniture ---------------- */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.3rem; flex-wrap: wrap; }
+  .page-head h2 { margin: 0; font-size: 1.4rem; }
+  .page-head p { margin: 0.2rem 0 0; color: var(--dim); font-size: 0.86rem; max-width: 62ch; }
+  .card { background: var(--surface); border: 1px solid var(--rule); padding: 1rem 1.05rem; margin-bottom: 0.85rem; }
+  .card > h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
+  .card-sub { margin: 0 0 0.8rem; color: var(--faint); font-size: 0.8rem; font-family: var(--mono); }
+  .sect { margin: 1.9rem 0 0.7rem; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); }
+  .sect:first-child { margin-top: 0; }
+  .empty { color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.9rem; margin: 0.4rem 0; }
+  .hint { color: var(--faint); font-size: 0.8rem; margin: 0.35rem 0 0; }
+  .row { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule-soft); }
+  .row:last-child { border-bottom: 0; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row b { font-weight: 500; }
+  .row small { display: block; color: var(--faint); font-size: 0.76rem; font-family: var(--mono); margin-top: 0.1rem; }
+  .tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .btn {
+    background: transparent; border: 1px solid var(--rule); color: var(--dim);
+    padding: 0.3rem 0.7rem; cursor: pointer; font-size: 0.82rem;
+    font-family: var(--mono); transition: var(--t);
+  }
+  .btn:hover { color: var(--ink); border-color: var(--brass-deep); background: var(--raised); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { color: var(--page); background: var(--brass); border-color: var(--brass); font-weight: 500; }
+  .btn.primary:hover { background: #d8ae2c; color: var(--page); }
+  .btn.quiet { border-color: transparent; }
+  .btn.danger { color: var(--oxide); border-color: var(--oxide-deep); }
+  .btn:focus-visible, .tab:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.38; cursor: default; }
+  .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono);
+    font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.1rem 0.45rem; border: 1px solid;
+  }
+  .p-blue { color: var(--blue); border-color: var(--blue-deep); }
+  .p-brass { color: var(--brass); border-color: var(--brass-deep); }
+  .p-oxide { color: var(--oxide); border-color: var(--oxide-deep); }
+  .p-verd { color: var(--verd); border-color: #35513f; }
+  .p-grey { color: var(--faint); border-color: var(--rule); }
+
+  .tile { background: var(--surface); border: 1px solid var(--rule); padding: 0.75rem 0.85rem; }
+  .tile .label { display: block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+  .tile-fig { font-family: var(--serif); font-size: 1.5rem; margin-top: 0.15rem; }
+  .tile-foot { font-size: 0.74rem; color: var(--faint); margin-top: 0.1rem; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 1.2rem; }
+
+  .notes { display: flex; flex-direction: column; gap: 0.55rem; }
+  .note { display: flex; gap: 0.6rem; font-size: 0.88rem; color: var(--dim); }
+  .note-mark { font-family: var(--mono); font-size: 0.8rem; flex: none; }
+  .note-mark.warn { color: var(--brass); } .note-mark.bad { color: var(--oxide); }
+  .note-mark.good { color: var(--verd); } .note-mark.info { color: var(--blue); }
+
+  /* ---------------- board list ---------------- */
+  .boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.7rem; }
+  .bcard {
+    background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule);
+    padding: 0.85rem 0.9rem; cursor: pointer; text-align: left; width: 100%;
+    transition: var(--t); color: inherit;
+  }
+  .bcard:hover { background: var(--raised); }
+  .bcard h3 { margin: 0 0 0.1rem; font-size: 1rem; }
+  .bcard .bsub { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .bcard .bstat { margin-top: 0.55rem; font-size: 0.78rem; color: var(--dim); }
+
+  /* ---------------- canvas ---------------- */
+  .cvbox { position: relative; border: 1px solid var(--rule); background: var(--sheet); overflow: hidden; }
+  .cvbox::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .cvbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule-soft); position: relative; z-index: 2; flex-wrap: wrap; }
+  .cvbar .sp { flex: 1; }
+  #cv { display: block; width: 100%; height: 440px; touch-action: none; cursor: grab; }
+  #cv.grabbing { cursor: grabbing; }
+  .tblock {
+    position: absolute; right: 10px; bottom: 10px; z-index: 3; pointer-events: none;
+    border: 1px solid var(--rule); background: rgba(24,22,18,0.92);
+    display: grid; grid-auto-flow: column;
+  }
+  .tblock div { padding: 0.32rem 0.6rem; border-right: 1px solid var(--rule-soft); }
+  .tblock div:last-child { border-right: 0; }
+  .tblock b { display: block; font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+  .tblock span { font-family: var(--serif); font-size: 0.8rem; }
+  @media (max-width: 620px) { .tblock { display: none; } #cv { height: 330px; } }
+
+  g[data-id] .nd { transform-box: fill-box; transform-origin: center; transition: transform var(--t), filter var(--t); cursor: move; }
+  g[data-id]:hover .nd { transform: translateY(-2px) scale(1.02); filter: brightness(1.13); }
+  .halo { animation: breathe 3.4s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 0.1 } 50% { opacity: 0.3 } }
+
+  /* ---------------- dues ---------------- */
+  .due { display: grid; grid-template-columns: 2px 1fr auto; gap: 0 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--rule-soft); }
+  .due:last-child { border-bottom: 0; }
+  .due s { text-decoration: none; display: block; min-height: 2.1rem; }
+  .due .who { font-size: 0.95rem; }
+  .due .sub { font-size: 0.78rem; color: var(--faint); margin-top: 0.12rem; }
+  .due .sub em { font-style: italic; color: var(--dim); font-family: var(--serif); }
+  .due .age { font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; text-align: right; }
+  .due .age b { display: block; font-weight: 400; }
+  .due .acts { grid-column: 2 / -1; display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+  /* ---------------- modal ---------------- */
+  .scrim {
+    position: fixed; inset: 0; background: rgba(8,7,6,0.72); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 60;
+  }
+  .modal { background: var(--surface); border: 1px solid var(--rule); width: 100%; max-width: 430px; max-height: 88vh; overflow: auto; }
+  .modal-head { padding: 1rem 1.1rem 0.6rem; }
+  .modal-head h3 { margin: 0; font-size: 1.1rem; }
+  .modal-head p { margin: 0.4rem 0 0; color: var(--dim); font-size: 0.86rem; line-height: 1.55; }
+  .modal-body { padding: 0.8rem 1.1rem 0.2rem; }
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+  .field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .field.span { grid-column: 1 / -1; }
+  .field label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+  .field input, .field select, .field textarea {
+    background: var(--sheet); border: 1px solid var(--rule); color: var(--ink);
+    padding: 0.45rem 0.55rem; font: inherit; font-size: 0.92rem; width: 100%;
+  }
+  .field textarea { resize: vertical; font-size: 0.88rem; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 1px solid var(--brass); outline-offset: -1px; border-color: var(--brass-deep); }
+  .field .hint { font-size: 0.72rem; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.1rem 1.1rem; }
+
+  /* ---------------- toasts + tip ---------------- */
+  .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.1rem; z-index: 80; display: flex; flex-direction: column; gap: 0.4rem; align-items: center; }
+  .toast {
+    background: var(--raised); border: 1px solid var(--rule); color: var(--ink);
+    padding: 0.5rem 0.8rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.7rem;
+    box-shadow: 0 12px 28px -16px #000; max-width: min(92vw, 460px);
+  }
+  .toast button { background: none; border: 0; color: var(--brass); cursor: pointer; font-size: 0.82rem; text-decoration: underline; padding: 0; }
+  .tip {
+    position: fixed; z-index: 90; pointer-events: none; opacity: 0; transition: opacity var(--t);
+    background: var(--raised); border: 1px solid var(--rule); color: var(--ink);
+    padding: 0.3rem 0.5rem; font-size: 0.78rem; max-width: 260px;
+  }
+  .tip.on { opacity: 1; }
+  .report {
+    background: var(--sheet); border: 1px solid var(--rule); padding: 1.1rem 1.2rem;
+    font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--ink);
+    white-space: pre-wrap; overflow-x: auto; margin: 0 0 0.8rem;
+  }
+  .chart { display: block; max-width: 100%; }
+  .meter { height: 5px; background: var(--rule-soft); overflow: hidden; }
+  .meter-fill { height: 100%; background: var(--blue); }
+  .meter-pace { height: 100%; background: var(--brass); }
+
+  /* ---------------- the switch bar ---------------- */
+  .switchbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; }
+  .sb {
+    display: flex; align-items: center; gap: 0.7rem;
+    background: var(--raised); border-top: 1px solid var(--rule);
+    padding: 0.55rem 1rem calc(0.55rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 26px -20px #000;
+  }
+  .sb-txt { flex: 1; min-width: 0; }
+  .sb-txt b { display: block; font-size: 0.92rem; font-weight: 500; }
+  .sb-txt small { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .sb-dot { width: 7px; height: 7px; flex: none; background: var(--blue); animation: tick 2.6s ease-in-out infinite; }
+  @keyframes tick { 0%, 100% { opacity: 0.35 } 50% { opacity: 1 } }
+  .sb-idle .sb-txt b { color: var(--dim); font-weight: 400; }
+  .sb-warn { border-top-color: var(--oxide); }
+  .sb-warn .sb-txt b { color: var(--oxide); }
+  body { padding-bottom: 4rem; }
+
+  /* ---------------- the week ---------------- */
+  .wk { display: flex; gap: 0.7rem; padding: 0.7rem 0; border-bottom: 1px solid var(--rule-soft); }
+  .wk:last-child { border-bottom: 0; }
+  .wk-dot { width: 6px; flex: none; margin-top: 0.25rem; height: 1.6rem; }
+  .wk-main { flex: 1; min-width: 0; }
+  .wk-top { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.3rem; }
+  .wk-top span { font-family: var(--mono); font-size: 0.82rem; color: var(--dim); }
+  .wk-main small { display: block; font-size: 0.76rem; color: var(--faint); margin-top: 0.3rem; }
+  .dayhead {
+    display: flex; align-items: baseline; gap: 0.6rem; margin: 1rem 0 0.2rem;
+    padding-top: 0.6rem; border-top: 1px solid var(--rule-soft);
+  }
+  .dayhead:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .dayhead b { font-size: 0.86rem; }
+  .dayhead span { flex: 1; font-family: var(--mono); font-size: 0.74rem; color: var(--faint); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand"><span class="brand-mark">&#9707;</span><h1>Mashghal</h1></div>
+    <nav id="nav" aria-label="Sections"></nav>
+    <div class="rail-foot"><p>Stored only on this device. No account, no server, no network.</p></div>
+  </aside>
+  <main class="view" id="view"></main>
+</div>
+
+<div class="switchbar" id="sbar"></div>
+
+<div class="toasts" id="toasts"></div>
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+<div id="overlay"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     Mashghal — work leaves a wake, and the app holds the wake.
+
+     Four nouns and nothing else:
+       a BOARD is a procedure (a template) or a run of one
+       a NODE is a step (do/send/watch/ask/file) or a thing
+       an EDGE is flow (sequence) or link (association, no order)
+       a DUE is a step of a live run that is waiting for you
+
+     Two rules the whole thing rests on:
+       • A run FREEZES its template when it starts. Editing the
+         template never moves a run already under way, and a run's
+         own attachments never leak back into the template.
+       • A run advances on a tap and never on its own. An `ask` is
+         answered by a person, never inferred from elapsed time.
+     ============================================================ */
+
+  var ACTS = {
+    do:    { label: "Do",     word: "do",     tone: "blue"  },
+    send:  { label: "Send",   word: "send",   tone: "brass" },
+    watch: { label: "Watch",  word: "watch",  tone: "brass" },
+    ask:   { label: "Decide", word: "decide", tone: "blue"  },
+    file:  { label: "File",   word: "file",   tone: "verd"  }
+  };
+  var THINGS = {
+    person: "Person", file: "File", photo: "Photo", asset: "Kit", note: "Note"
+  };
+  var CLAIM_KINDS = {
+    budget:   "Hours a week",
+    days:     "Days a week",
+    ondemand: "On demand",
+    floor:    "At least, a week",
+    watch:    "Watched only"
+  };
+
+  var APP = {
+    storeKey: "mashghal.v1",
+    tabs: [
+      { id: "boards",  label: "Boards",   ico: "◱" },
+      { id: "waiting", label: "Waiting",  ico: "◴" },
+      { id: "week",    label: "The week", ico: "▤" },
+      { id: "kit",     label: "Kit",      ico: "◈" },
+      { id: "settings",label: "Settings", ico: "⚙" }
+    ],
+
+    blank: function () {
+      return {
+        version: 1,
+        kinds: [],       // {id,name,colour}
+        claimants: [],   // {id,name,kind,hours,colour,archived}
+        modes: [],       // {id,name,software[],links[],archived}
+        benches: [],     // {id,modeId,claimantId,note,noteAt,archived}
+        boards: [],      // see newBoard()
+        spans: [],       // {id,startedAt,endedAt,benchId,note,source}
+        assets: [],      // {id,name,kind,notes,archived}
+        cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
+        settings: { showDone: true, companion: false,
+                    sync: { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" } },
+        forgotten: {},   // id -> name, so a removed thing still reads in history
+        tombstones: {},  // id -> when it was deleted, so a merge cannot resurrect it
+        devices: {}      // deviceId -> {name, at} so you can see what is still signed in
+      };
+    },
+
+    // One adoption path. load() and the backup restore both come through
+    // here — hand-copying key lists is how Coffer quietly lost grants.
+    hydrate: function (parsed, shape) {
+      var s = shape;
+      ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
+        if (Array.isArray(parsed[k])) s[k] = parsed[k];
+      });
+      ["forgotten", "tombstones", "devices"].forEach(function (k) {
+        if (parsed[k] && typeof parsed[k] === "object") s[k] = parsed[k];
+      });
+      if (parsed.settings) {
+        if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
+        if (typeof parsed.settings.companion === "boolean") s.settings.companion = parsed.settings.companion;
+        if (parsed.settings.sync && typeof parsed.settings.sync === "object") {
+          ["mode", "gistId", "deviceName", "lastPulledAt"].forEach(function (k) {
+            if (typeof parsed.settings.sync[k] === "string") s.settings.sync[k] = parsed.settings.sync[k];
+          });
+          s.settings.sync.borrowed = !!parsed.settings.sync.borrowed;
+        }
+      }
+      return s;
+    },
+
+    renderView: function (v) {
+      if (v === "boards")   return renderBoards();
+      if (v === "waiting")  return renderWaiting();
+      if (v === "week")     return reportOn ? renderReport() : renderWeek();
+      if (v === "kit")      return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
+      return renderSettings();
+    },
+
+    // The switch bar lives outside the view, so render() never touches it.
+    afterRender: function () { mountCanvas(); mountBar(); },
+
+    // The Boards tab always lands on the list. Opening on whichever board you
+    // last looked at means one tab shows a different screen depending on what
+    // you did ten minutes ago, which is how nobody learns where anything is.
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; },
+
+    actions: {}
+  };
+
+  /* ================= vocabulary helpers ================= */
+
+  function byId(list, id) {
+    for (var i = 0; i < list.length; i++) { if (list[i].id === id) return list[i]; }
+    return null;
+  }
+  function nameOf(list, id, what) {
+    var r = byId(list, id);
+    if (r) return r.name;
+    if (state.forgotten[id]) return state.forgotten[id] + " (removed)";
+    return id ? "(removed " + what + ")" : "";
+  }
+  function claimantName(id) { return nameOf(state.claimants, id, "claimant"); }
+  function modeName(id) { return nameOf(state.modes, id, "mode"); }
+  function kindName(id) { return nameOf(state.kinds, id, "kind"); }
+
+  function benchLabel(id) {
+    var b = byId(state.benches, id);
+    if (!b) return id ? "(removed bench)" : "no bench";
+    return modeName(b.modeId) + " · " + claimantName(b.claimantId);
+  }
+  function live(list) { return list.filter(function (r) { return !r.archived; }); }
+
+  function forget(list, id) {
+    var r = byId(list, id);
+    if (r) state.forgotten[id] = r.name;
+  }
+
+  /* ================= boards, nodes, edges ================= */
+
+  function newBoard(name, kindId, benchId) {
+    return {
+      id: uid(), kind: "template", name: name, kindId: kindId || "", benchId: benchId || "",
+      fromBoardId: "", nodes: [], edges: [],
+      startedOn: "", closedOn: "", archived: false
+    };
+  }
+  function boards(kind) {
+    return state.boards.filter(function (b) { return !b.archived && (!kind || b.kind === kind); });
+  }
+  // Which board is open is where you are looking, not something you own, so
+  // it lives here rather than in state and never reaches a backup.
+  var openId = "";
+  function openBoard() { return byId(state.boards, openId); }
+
+  function nodeOf(b, id) { return byId(b.nodes, id); }
+  function edgesOf(b, id, k) {
+    return b.edges.filter(function (e) {
+      return (!k || e.k === k) && (e.a === id || e.b === id);
+    });
+  }
+  function nextOf(b, id) {
+    return b.edges.filter(function (e) { return e.k === "flow" && e.a === id; });
+  }
+  function prevOf(b, id) {
+    return b.edges.filter(function (e) { return e.k === "flow" && e.b === id; });
+  }
+  // Who a send goes to is not a second list to keep in step — it is the people
+  // linked to it. Linking a person to a send is what "this goes to them" means,
+  // so there is one fact and one place to change it.
+  function recipientsOf(b, n) {
+    return edgesOf(b, n.id, "link").map(function (e) {
+      return nodeOf(b, e.a === n.id ? e.b : e.a);
+    }).filter(function (t) { return t && t.t === "thing" && t.kind === "person"; });
+  }
+
+  // A decision's exits are its labelled outgoing lines, and nothing else. They
+  // used to be a list on the node as well, which meant routing read one of them
+  // and the screen read the other — two truths, and only one of them right.
+  function exitsOf(b, n) {
+    return nextOf(b, n.id).filter(function (e) { return e.label; })
+      .map(function (e) { return { label: e.label, goTo: e.b, edgeId: e.id }; });
+  }
+
+  function entryNodes(b) {
+    return b.nodes.filter(function (n) {
+      return n.t === "step" && prevOf(b, n.id).length === 0;
+    });
+  }
+
+  // Where a node stands in a run. Derived from doneAt / enteredAt and the
+  // clock — never stored, so it cannot drift away from the dates.
+  function nodeState(b, n) {
+    if (n.t !== "step") return "thing";
+    if (b.kind !== "run") return "todo";
+    if (n.doneAt) return "done";
+    if (!n.enteredAt) return "todo";
+    if (n.act === "send" || n.act === "watch") {
+      return overdueBy(n) > 0 ? "over" : "waiting";
+    }
+    return "now";
+  }
+  function daysWaiting(n) {
+    if (!n.enteredAt) return 0;
+    return Math.max(0, daysBetween(n.enteredAt, today()));
+  }
+  // Positive means past the chase. A step with no chase interval can wait
+  // for ever without being called late — silence is not always a failure.
+  function overdueBy(n) {
+    if (!n.chaseDays) return 0;
+    return daysWaiting(n) - num(n.chaseDays);
+  }
+  function activeNodes(b) {
+    return b.nodes.filter(function (n) {
+      return n.t === "step" && n.enteredAt && !n.doneAt;
+    });
+  }
+  function runProgress(b) {
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var done = steps.filter(function (n) { return n.doneAt; }).length;
+    return { done: done, total: steps.length };
+  }
+  // The archive lock: a run is not finished while a filing step is undone.
+  // Printed and never archived is exactly the thing that gets forgotten.
+  function unfiled(b) {
+    return b.nodes.filter(function (n) {
+      return n.t === "step" && n.act === "file" && !n.doneAt;
+    });
+  }
+
+  /* ================= running a board ================= */
+
+  function startRun(tpl, title) {
+    var r = JSON.parse(JSON.stringify(tpl));
+    r.id = uid();
+    r.kind = "run";
+    r.fromBoardId = tpl.id;
+    r.name = title;
+    r.startedOn = today();
+    r.closedOn = "";
+    r.nodes.forEach(function (n) {
+      n.enteredAt = ""; n.doneAt = ""; n.answer = "";
+    });
+    entryNodes(r).forEach(function (n) { n.enteredAt = today(); });
+    state.boards.push(r);
+    return r;
+  }
+
+  function enter(b, id) {
+    var n = nodeOf(b, id);
+    if (n && !n.enteredAt) n.enteredAt = today();
+  }
+
+  // Finishing a step opens whatever the flow says comes next. An `ask`
+  // opens only the exit that was chosen, which is how the loop works.
+  function finishStep(b, id, answer) {
+    var n = nodeOf(b, id);
+    if (!n || n.doneAt) return;
+    n.doneAt = today();
+    if (answer) n.answer = answer;
+    var outs = nextOf(b, id);
+    outs.forEach(function (e) {
+      if (n.act === "ask" && answer && e.label !== answer) return;
+      var t = nodeOf(b, e.b);
+      if (!t) return;
+      // Re-entering a step that ran before is a new pass of the cycle.
+      t.doneAt = ""; t.answer = ""; t.enteredAt = today();
+    });
+  }
+
+  function reopenStep(b, id) {
+    var n = nodeOf(b, id);
+    if (!n) return;
+    n.doneAt = ""; n.answer = "";
+    if (!n.enteredAt) n.enteredAt = today();
+  }
+
+  /* ================= dues ================= */
+
+  // Every live step of every open run, worst first. This is the only list
+  // the phone needs, and it is derived — nothing here is typed by hand.
+  function dues() {
+    var out = [];
+    boards("run").forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        var st = nodeState(b, n);
+        out.push({
+          board: b, node: n, st: st,
+          over: overdueBy(n), days: daysWaiting(n),
+          rank: st === "over" ? 0 : st === "waiting" ? 1 : 2
+        });
+      });
+    });
+    out.sort(function (x, y) {
+      if (x.rank !== y.rank) return x.rank - y.rank;
+      if (x.rank === 0) return y.over - x.over;
+      return y.days - x.days;
+    });
+    return out;
+  }
+
+  function stuck() {
+    return boards("run").filter(function (b) {
+      return !b.closedOn && activeNodes(b).length === 0 && unfiled(b).length > 0;
+    });
+  }
+
+  /* ================= pickers ================= */
+
+  function opts(list, labelFn) {
+    return live(list).map(function (r) {
+      return { value: r.id, label: labelFn ? labelFn(r) : r.name };
+    });
+  }
+  function benchOpts() {
+    return [{ value: "", label: "No bench — belongs to no employer" }].concat(
+      opts(state.benches, function (b) { return benchLabel(b.id); }));
+  }
+  function kindOpts() {
+    return [{ value: "", label: "No kind" }].concat(opts(state.kinds));
+  }
+  function nodeOpts(b, exceptId) {
+    return b.nodes.filter(function (n) { return n.id !== exceptId; })
+      .map(function (n) { return { value: n.id, label: (n.t === "step" ? "■ " : "● ") + n.label }; });
+  }
+
+  /* ================= Boards ================= */
+
+  function renderBoards() {
+    var b = openBoard();
+    if (b) return renderBoard(b);
+
+    var runs = boards("run").filter(function (r) { return !r.closedOn; });
+    var closed = boards("run").filter(function (r) { return r.closedOn; });
+    var tpls = boards("template");
+
+    var h = pageHead("Boards", "A procedure is written once. A run is one pass through it.",
+      '<div class="tools">' +
+      '<button class="btn" data-act="board-new">New board</button>' +
+      (tpls.length ? '<button class="btn primary" data-act="run-start">Start a run</button>' : "") +
+      "</div>");
+
+    h += '<div class="sect">Running</div>';
+    h += runs.length ? '<div class="boards">' + runs.map(runCard).join("") + "</div>"
+                     : '<p class="empty">Nothing under way.</p>';
+
+    h += '<div class="sect">Procedures</div>';
+    h += tpls.length ? '<div class="boards">' + tpls.map(tplCard).join("") + "</div>"
+                     : '<p class="empty">No procedures yet. Write one, then run it as many times as you like.</p>';
+
+    if (closed.length) {
+      h += '<div class="sect">Finished</div><div class="boards">' + closed.map(runCard).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function cardTop(b) {
+    var k = byId(state.kinds, b.kindId);
+    return k ? ' style="border-top-color:' + esc(k.colour) + '"' : "";
+  }
+
+  function tplCard(b) {
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; }).length;
+    return '<button class="bcard" data-act="board-open" data-id="' + b.id + '"' + cardTop(b) + ">" +
+      "<h3>" + esc(b.name) + "</h3>" +
+      '<div class="bsub">' + esc(b.benchId ? benchLabel(b.benchId) : "no bench") +
+      (b.kindId ? " · " + esc(kindName(b.kindId)) : "") + "</div>" +
+      '<div class="bstat">' + steps + (steps === 1 ? " step" : " steps") + "</div></button>";
+  }
+
+  function runCard(b) {
+    var p = runProgress(b);
+    var act = activeNodes(b);
+    var late = act.filter(function (n) { return nodeState(b, n) === "over"; }).length;
+    var line;
+    if (b.closedOn) line = "Closed " + niceDate(b.closedOn);
+    else if (late) line = '<span style="color:var(--oxide)">' + late + " late</span> · " + p.done + " of " + p.total + " done";
+    else if (!act.length) line = "Nothing active · " + p.done + " of " + p.total + " done";
+    else line = act.length + " in hand · " + p.done + " of " + p.total + " done";
+    return '<button class="bcard" data-act="board-open" data-id="' + b.id + '"' + cardTop(b) + ">" +
+      "<h3>" + esc(b.name) + "</h3>" +
+      '<div class="bsub">' + esc(b.benchId ? benchLabel(b.benchId) : "no bench") + "</div>" +
+      '<div class="bstat">' + line + "</div></button>";
+  }
+
+  /* ---------------- one board ---------------- */
+
+  function renderBoard(b) {
+    var isRun = b.kind === "run";
+    var p = runProgress(b);
+    var sub = (b.benchId ? benchLabel(b.benchId) : "no bench") +
+      (b.kindId ? " · " + kindName(b.kindId) : "") +
+      (isRun ? " · " + p.done + " of " + p.total + " done" : " · procedure");
+
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="board-back">All boards</button>' +
+      '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
+      '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add thing</button>' +
+      (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
+      (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
+      (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
+      '<button class="btn" data-act="board-edit" data-id="' + b.id + '">Rename</button>' +
+      '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
+      "</div>";
+
+    var h = pageHead(b.name, esc(sub), tools);
+
+    if (isRun && b.closedOn) {
+      h += '<div class="card"><p class="hint" style="margin:0">Closed on ' + niceDate(b.closedOn) +
+        ". Nothing here can move; reopen it if there is more to do. " +
+        '<button class="btn quiet" data-act="run-reopen" data-id="' + b.id + '">Reopen</button></p></div>';
+    }
+
+    if (isRun && !b.closedOn) {
+      var uf = unfiled(b), act = activeNodes(b);
+      if (!act.length && uf.length) {
+        h += '<div class="card" style="border-left:2px solid var(--oxide)">' +
+          "<h3>Not finished</h3><p class=\"hint\" style=\"margin:0.2rem 0 0\">Nothing is in hand, but " +
+          uf.length + (uf.length === 1 ? " filing step is" : " filing steps are") +
+          " still undone — " + esc(uf.map(function (n) { return n.label; }).join(", ")) +
+          ". A run will not close until the filing is done, because filing is the thing that gets forgotten.</p></div>";
+      }
+    }
+
+    h += canvasHtml(b);
+
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var things = b.nodes.filter(function (n) { return n.t === "thing"; });
+
+    h += '<div class="sect">Steps</div>';
+    h += steps.length ? '<div class="card">' + steps.map(function (n) { return stepRow(b, n); }).join("") + "</div>"
+                      : '<p class="empty">No steps yet. Add the first thing you actually do.</p>';
+
+    if (things.length) {
+      h += '<div class="sect">Things</div><div class="card">' +
+        things.map(function (n) { return thingRow(b, n); }).join("") + "</div>";
+    }
+    if (b.edges.length) {
+      h += '<div class="sect">Connections</div><div class="card">' +
+        b.edges.map(function (e) { return edgeRow(b, e); }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function stateTone(st) {
+    return st === "over" ? "p-oxide" : st === "waiting" ? "p-brass" :
+           st === "now" ? "p-blue" : st === "done" ? "p-verd" : "p-grey";
+  }
+  function stateWord(b, n) {
+    var st = nodeState(b, n);
+    if (st === "done") return "done";
+    if (st === "over") return "late";
+    if (st === "waiting") return "waiting";
+    if (st === "now") return "in hand";
+    return "not started";
+  }
+
+  function stepRow(b, n) {
+    var isRun = b.kind === "run";
+    var st = nodeState(b, n);
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
+
+    var meta = [ACTS[n.act].label];
+    if (who) meta.push("to " + who);
+    else if (n.act === "send") meta.push("nobody linked yet");
+    if (n.chaseDays) meta.push("chase after " + n.chaseDays + "d");
+    if (n.dueAt) meta.push(niceDate(n.dueAt));
+    if (isRun && n.enteredAt && !n.doneAt) meta.push(daysWaiting(n) + "d");
+    if (isRun && n.doneAt) meta.push("done " + niceDate(n.doneAt));
+    if (isRun && n.answer) meta.push("chose: " + n.answer);
+
+    var exits = n.act === "ask" ? exitsOf(b, n) : [];
+    if (n.act === "ask") {
+      meta.push(exits.length ? exits.map(function (x) {
+        var t = nodeOf(b, x.goTo);
+        return x.label + " → " + (t ? t.label : "?");
+      }).join(" · ") : "no exits yet");
+    }
+
+    var tools = "";
+    if (isRun && !b.closedOn) {
+      if (!n.doneAt && n.enteredAt) {
+        tools += n.act === "ask"
+          ? '<button class="btn" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer</button>'
+          : '<button class="btn" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Mark done</button>';
+      } else if (!n.enteredAt) {
+        tools += '<button class="btn quiet" data-act="step-enter" data-id="' + b.id + ":" + n.id + '">Start</button>';
+      } else {
+        tools += '<button class="btn quiet" data-act="step-reopen" data-id="' + b.id + ":" + n.id + '">Reopen</button>';
+      }
+    }
+    if (n.act === "ask") {
+      tools += '<button class="btn quiet" data-act="exit-add" data-id="' + b.id + ":" + n.id + '">Add exit</button>';
+    }
+    if (n.act === "send") {
+      tools += '<button class="btn quiet" data-act="send-to" data-id="' + b.id + ":" + n.id + '">Send to</button>';
+    }
+    tools += '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>';
+    tools += '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button>';
+
+    return '<div class="row"><span class="pill ' + stateTone(st) + '">' + (isRun ? stateWord(b, n) : ACTS[n.act].word) + "</span>" +
+      '<span class="grow"><b>' + esc(n.label) + "</b><small>" + esc(meta.join(" · ")) + "</small></span>" +
+      '<span class="tools">' + tools + "</span></div>";
+  }
+
+  function thingRow(b, n) {
+    var links = edgesOf(b, n.id, "link").length;
+    return '<div class="row"><span class="pill p-brass">' + esc(THINGS[n.kind] || n.kind) + "</span>" +
+      '<span class="grow"><b>' + esc(n.label) + "</b><small>" +
+      (links ? links + (links === 1 ? " link" : " links") : "not linked to anything") + "</small></span>" +
+      '<span class="tools"><button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
+      '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></span></div>';
+  }
+
+  function edgeRow(b, e) {
+    var a = nodeOf(b, e.a), z = nodeOf(b, e.b);
+    if (!a || !z) return "";
+    var arrow = e.k === "flow" ? " → " : " ·· ";
+    return '<div class="row"><span class="pill ' + (e.k === "flow" ? "p-blue" : "p-brass") + '">' +
+      (e.k === "flow" ? "then" : "about") + "</span>" +
+      '<span class="grow"><b>' + esc(a.label) + arrow + esc(z.label) + "</b>" +
+      (e.label ? "<small>" + esc(e.label) + "</small>" : "") + "</span>" +
+      '<span class="tools"><button class="btn quiet danger" data-act="edge-del" data-id="' + b.id + ":" + e.id + '">×</button></span></div>';
+  }
+
+  /* ================= Waiting ================= */
+
+  function renderWaiting() {
+    var list = dues();
+    var late = list.filter(function (d) { return d.st === "over"; }).length;
+    var s = stuck();
+
+    var h = pageHead("Waiting", "Everything a live run is sitting on, worst first. Nothing on this page was typed — it is all derived from the boards.");
+
+    h += '<div class="tiles">' +
+      tile("Open", String(list.length), list.length === 1 ? "step in hand" : "steps in hand") +
+      tile("Late", String(late), late ? "past their chase" : "nothing overdue", late ? "loss" : "") +
+      tile("Runs", String(boards("run").filter(function (b) { return !b.closedOn; }).length), "under way") +
+      tile("Upkeep", String(upkeepLate().length), "past its interval", upkeepLate().length ? "loss" : "") +
+      "</div>";
+
+    if (!list.length && !s.length && !live(state.cadences).length) {
+      h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
+      return h;
+    }
+
+    if (list.length) {
+      h += '<div class="sect">In hand</div><div class="card">' + list.map(dueRow).join("") + "</div>";
+    }
+    h += upkeepCard();
+    if (s.length) {
+      h += '<div class="sect">Unfinished</div><div class="card">' + s.map(function (b) {
+        var uf = unfiled(b);
+        return '<div class="due"><s style="background:var(--brass-deep)"></s>' +
+          '<div><div class="who">' + esc(b.name) + "</div>" +
+          '<div class="sub">' + esc(uf.map(function (n) { return n.label; }).join(", ")) +
+          " — <em>never filed</em>, so it will not close</div></div>" +
+          '<div class="age"><b>' + (b.startedOn ? daysBetween(b.startedOn, today()) + "d" : "") + "</b></div>" +
+          '<div class="acts"><button class="btn" data-act="board-open" data-id="' + b.id + '">Open</button></div></div>';
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function dueRow(d) {
+    var b = d.board, n = d.node;
+    var bar = d.st === "over" ? "var(--oxide)" : d.st === "waiting" ? "var(--brass)" : "var(--blue-deep)";
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(" · ");
+
+    var age, tone;
+    if (d.st === "over") { age = d.days + "d"; tone = "+" + d.over + " late"; }
+    else if (d.st === "waiting") {
+      // A dated step says its date. Saying "no chase set" about something due
+      // on Friday answers a question nobody asked.
+      if (n.dueAt) { age = niceDate(n.dueAt); tone = d.days + "d waiting"; }
+      else { age = d.days + "d"; tone = n.chaseDays ? "chase at " + n.chaseDays + "d" : "no chase set"; }
+    }
+    else { age = n.dueAt ? niceDate(n.dueAt) : ACTS[n.act].label; tone = d.days ? d.days + "d in hand" : "today"; }
+
+    var acts = '<button class="btn" data-act="board-open" data-id="' + b.id + '">Open board</button>';
+    acts += n.act === "ask"
+      ? '<button class="btn" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer</button>'
+      : '<button class="btn" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Mark done</button>';
+
+    return '<div class="due"><s style="background:' + bar + '"></s>' +
+      '<div><div class="who">' + esc(who || n.label) + "</div>" +
+      '<div class="sub">' + esc(b.name) + " — <em>" + esc(who ? n.label : ACTS[n.act].label.toLowerCase()) + "</em></div></div>" +
+      '<div class="age"><b style="color:' + bar + '">' + esc(age) + "</b>" + esc(tone) + "</div>" +
+      '<div class="acts">' + acts + "</div></div>";
+  }
+
+  /* ================= Kit ================= */
+
+  function renderKit() {
+    var h = pageHead("Kit", "Everything here is yours to add, rename and remove. None of it is written into the app.");
+
+    h += '<div class="sect">Claimants</div><div class="card">' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="claimant-add">Add claimant</button></div>' +
+      (live(state.claimants).length ? live(state.claimants).map(function (c) {
+        var shape = CLAIM_KINDS[c.kind] || c.kind;
+        return '<div class="row"><span class="pill p-grey" style="color:' + esc(c.colour) + ';border-color:' + esc(c.colour) + '">' +
+          esc(c.kind) + "</span>" +
+          '<span class="grow"><b>' + esc(c.name) + "</b><small>" + esc(shape) +
+          (c.hours ? ": " + c.hours : "") + "</small></span>" +
+          '<span class="tools"><button class="btn quiet" data-act="claimant-edit" data-id="' + c.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="claimant-del" data-id="' + c.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">No claimants yet.</p>') + "</div>";
+
+    h += '<div class="sect">Modes</div><div class="card">' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="mode-add">Add mode</button></div>' +
+      (live(state.modes).length ? live(state.modes).map(function (m) {
+        var sw = modeSoftware(m).length, lk = modeLinks(m).length;
+        return '<div class="row"><span class="grow"><b>' + esc(m.name) + "</b><small>" +
+          esc(sw + (sw === 1 ? " program" : " programs") + " · " + lk + (lk === 1 ? " link" : " links")) +
+          "</small></span>" +
+          '<span class="tools"><button class="btn" data-act="mode-open" data-id="' + m.id + '">Its kit</button>' +
+          '<button class="btn quiet danger" data-act="mode-del" data-id="' + m.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">No modes yet.</p>') + "</div>";
+
+    h += '<div class="sect">Benches</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">A bench is a mode and a claimant together — GIS for one employer is not GIS for another.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="bench-add">Add bench</button></div>' +
+      (live(state.benches).length ? live(state.benches).map(function (bn) {
+        return '<div class="row"><span class="grow"><b>' + esc(benchLabel(bn.id)) + "</b></span>" +
+          '<span class="tools"><button class="btn quiet danger" data-act="bench-del" data-id="' + bn.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">No benches yet.</p>') + "</div>";
+
+    h += kitUpkeepHtml();
+
+    h += '<div class="sect">Board kinds</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">A visa or a scholarship belongs to no employer, so a board carries a kind and only sometimes a bench.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="kind-add">Add kind</button></div>' +
+      (state.kinds.length ? state.kinds.map(function (k) {
+        return '<div class="row"><span class="pill" style="color:' + esc(k.colour) + ';border-color:' + esc(k.colour) + '">' +
+          esc(k.name) + "</span><span class=\"grow\"></span>" +
+          '<span class="tools"><button class="btn quiet" data-act="kind-edit" data-id="' + k.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="kind-del" data-id="' + k.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">No kinds yet.</p>') + "</div>";
+
+    return h;
+  }
+
+  /* ================= Settings ================= */
+
+  function renderSettings() {
+    var runs = boards("run").length, tpls = boards("template").length;
+    var h = pageHead("Settings", "Everything is on this device and nowhere else.");
+
+    h += syncCard();
+
+    h += '<div class="card"><h3>Your book</h3>' +
+      '<p class="card-sub">' + tpls + " procedures · " + runs + " runs · " +
+      live(state.claimants).length + " claimants · " + live(state.benches).length + " benches</p>" +
+      '<div class="tools"><button class="btn" data-act="backup">Export backup</button>' +
+      '<button class="btn" data-act="restore">Restore a backup</button></div>' +
+      '<p class="hint">A backup is a plain JSON file. Restoring replaces everything in the app with what is in the file.</p></div>';
+
+    h += '<div class="card"><h3>Start with an example</h3>' +
+      '<p class="card-sub">A worked book you can take apart</p>' +
+      '<p class="hint" style="margin:0 0 0.6rem">Loads a brochure procedure mid-cycle, a GIS run sitting at four steps at once, a lecture, and a visa template with no employer. It replaces whatever is in the app now.</p>' +
+      '<div class="tools"><button class="btn" data-act="sample">Load the example</button>' +
+      '<button class="btn danger" data-act="wipe">Erase everything</button></div></div>';
+
+    h += '<div class="card"><h3>The launcher</h3>' +
+      '<p class="card-sub">' + (state.settings.companion ? "Launch links are on" : "Off") + "</p>" +
+      '<p class="hint" style="margin:0 0 0.6rem">A browser cannot open ArcGIS Pro. A registry entry and one PowerShell script can — see <code>mashghal/companion/</code>. A link carries an opaque bench id and nothing else; every path it opens comes from a file you exported onto your own machine.</p>' +
+      '<div class="tools"><button class="btn" data-act="companion-toggle">' +
+      (state.settings.companion ? "Turn the links off" : "Turn the links on") + "</button></div></div>";
+
+    h += '<div class="card"><h3>What this app will not do</h3>' +
+      '<div class="notes">' +
+      '<div class="note"><span class="note-mark info">·</span><div>It never moves a run on its own. A decision is answered by you, never guessed from how long something has sat.</div></div>' +
+      '<div class="note"><span class="note-mark info">·</span><div>It cannot send you anything. There is no server and no notifications — what is late is waiting here when you open it.</div></div>' +
+      '<div class="note"><span class="note-mark info">·</span><div>A run freezes its procedure when it starts, so editing the procedure never disturbs work already under way.</div></div>' +
+      "</div></div>";
+    return h;
+  }
+
+
+  /* ================= time, spans, and the week ================= */
+
+  // A span is a stretch of time at one bench. Hours are never stored as a
+  // total anywhere — every figure on the week is summed from these, so no
+  // figure can drift away from the record it came from.
+  var LONG_DAY = 14 * 60;   // minutes past which an open span is not believed
+  var weekOf = "";          // which week is being read; view state, never saved
+
+  function nowStamp() {
+    var d = new Date();
+    return iso(d) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  function stampDay(s) { return String(s).slice(0, 10); }
+  function stampMin(s) {
+    var t = String(s).slice(11);
+    return num(t.slice(0, 2)) * 60 + num(t.slice(3, 5));
+  }
+  function minsBetween(a, b) {
+    return daysBetween(stampDay(a), stampDay(b)) * 1440 + stampMin(b) - stampMin(a);
+  }
+  function fmtMins(m) {
+    m = Math.round(m);
+    if (m <= 0) return "0h";
+    var h = Math.floor(m / 60), r = m % 60;
+    return h ? (r ? h + "h " + r + "m" : h + "h") : r + "m";
+  }
+
+  function openSpan() {
+    for (var i = state.spans.length - 1; i >= 0; i--) {
+      if (!state.spans[i].endedAt) return state.spans[i];
+    }
+    return null;
+  }
+  // An open span that started yesterday, or has run longer than any real day,
+  // is not an amount of time — it is a question. It is never counted and never
+  // closed on your behalf.
+  function runaway() {
+    var sp = openSpan();
+    if (!sp) return null;
+    var m = minsBetween(sp.startedAt, nowStamp());
+    return (m > LONG_DAY || stampDay(sp.startedAt) !== today()) ? sp : null;
+  }
+
+  // Minutes of one span that fall inside a range of days. An open span
+  // contributes nothing: it is not an hour until it has ended.
+  function minsIn(sp, fromDay, toDay) {
+    if (!sp.endedAt) return 0;
+    var lo = fromDay + "T00:00", hi = toDay + "T23:59";
+    if (sp.endedAt < lo || sp.startedAt > hi) return 0;
+    var a = sp.startedAt < lo ? lo : sp.startedAt;
+    var b = sp.endedAt > hi ? hi : sp.endedAt;
+    return Math.max(0, minsBetween(a, b));
+  }
+  function claimantOfSpan(sp) {
+    var bn = byId(state.benches, sp.benchId);
+    return bn ? bn.claimantId : "";
+  }
+  function minsFor(claimantId, fromDay, toDay) {
+    return state.spans.reduce(function (t, sp) {
+      return claimantOfSpan(sp) === claimantId ? t + minsIn(sp, fromDay, toDay) : t;
+    }, 0);
+  }
+  // Days a claimant was touched at all. A claimant owed days is not owed hours,
+  // and counting one in the other's unit is a plausible wrong number.
+  function daysFor(claimantId, fromDay, toDay) {
+    var seen = {};
+    state.spans.forEach(function (sp) {
+      if (claimantOfSpan(sp) !== claimantId) return;
+      for (var i = 0; i < 7; i++) {
+        var d = addDays(fromDay, i);
+        if (d > toDay) break;
+        if (minsIn(sp, d, d) > 0) seen[d] = 1;
+      }
+    });
+    return Object.keys(seen).length;
+  }
+  // Time at no bench at all. It is shown and never distributed — the app does
+  // not know whose it was, and guessing would put hours on an employer's name.
+  function suspenseMins(fromDay, toDay) {
+    return state.spans.reduce(function (t, sp) {
+      return sp.benchId ? t : t + minsIn(sp, fromDay, toDay);
+    }, 0);
+  }
+
+  function owedOf(c) {
+    if (c.kind === "budget") return { unit: "h", owed: num(c.hours) * 60 };
+    if (c.kind === "floor")  return { unit: "h", owed: num(c.hours) * 60, floor: true };
+    if (c.kind === "days")   return { unit: "d", owed: num(c.hours) };
+    return { unit: c.kind === "watch" ? "" : "h", owed: 0 };
+  }
+
+  function standing(fromDay) {
+    var toDay = addDays(fromDay, 6);
+    return live(state.claimants).filter(function (c) { return c.kind !== "watch"; })
+      .map(function (c) {
+        var o = owedOf(c);
+        var got = o.unit === "d" ? daysFor(c.id, fromDay, toDay) : minsFor(c.id, fromDay, toDay);
+        return { c: c, unit: o.unit, owed: o.owed, got: got, floor: !!o.floor,
+                 short: o.owed ? Math.max(0, o.owed - got) : 0 };
+      });
+  }
+
+  // How far behind a claimant has fallen, added up over whole weeks and never
+  // reset. It is a co-occurrence and not a cause: the app never says one
+  // claimant took the hours another lost, because it cannot know that.
+  function behindBy(c) {
+    var o = owedOf(c);
+    if (!o.owed) return null;
+    var first = state.spans.reduce(function (m, sp) {
+      var d = stampDay(sp.startedAt);
+      return (!m || d < m) ? d : m;
+    }, "");
+    if (!first) return null;
+    var w = weekStart(first), thisWeek = weekStart(today()), total = 0, weeks = 0, guard = 0;
+    while (w < thisWeek && guard++ < 400) {
+      var to = addDays(w, 6);
+      var got = o.unit === "d" ? daysFor(c.id, w, to) : minsFor(c.id, w, to);
+      total += Math.max(0, o.owed - got);
+      weeks++;
+      w = addDays(w, 7);
+    }
+    return weeks ? { amount: total, unit: o.unit, weeks: weeks } : null;
+  }
+  function amountWords(n, unit) {
+    return unit === "d" ? (n + (n === 1 ? " day" : " days")) : fmtMins(n);
+  }
+
+  /* ---------------- the switch bar ---------------- */
+
+  function switchBarHtml() {
+    var sp = openSpan(), run = runaway();
+    if (run) {
+      return '<div class="sb sb-warn"><span class="sb-txt"><b>Still at ' +
+        esc(benchLabel(run.benchId) || "no bench") + '</b>' +
+        '<small>since ' + esc(niceDate(stampDay(run.startedAt))) + " " + esc(String(run.startedAt).slice(11)) +
+        " — say when you left, or this is not an amount of time</small></span>" +
+        '<span class="tools"><button class="btn primary" data-act="span-close">Close it</button></span></div>';
+    }
+    if (sp) {
+      var m = minsBetween(sp.startedAt, nowStamp());
+      return '<div class="sb"><span class="sb-dot"></span><span class="sb-txt"><b>' +
+        esc(benchLabel(sp.benchId) || "Not said yet") + "</b>" +
+        "<small>since " + esc(String(sp.startedAt).slice(11)) + " · " + fmtMins(m) +
+        (noteOf(sp.benchId) ? " · left off: " + esc(noteOf(sp.benchId).note) : "") + "</small></span>" +
+        '<span class="tools"><button class="btn" data-act="span-switch">Switch</button>' +
+        '<button class="btn" data-act="span-stop">Stop</button></span></div>';
+    }
+    return '<div class="sb sb-idle"><span class="sb-txt"><b>Not at a bench</b>' +
+      "<small>nothing is being counted</small></span>" +
+      '<span class="tools"><button class="btn" data-act="span-start">Start</button></span></div>';
+  }
+  function mountBar() {
+    var el = document.getElementById("sbar");
+    if (el) el.innerHTML = switchBarHtml();
+  }
+
+  /* ---------------- the week screen ---------------- */
+
+  function currentWeek() { return weekOf || weekStart(today()); }
+
+  function renderWeek() {
+    var from = currentWeek(), to = addDays(from, 6);
+    var isNow = from === weekStart(today());
+    var rows = standing(from);
+    var total = state.spans.reduce(function (t, sp) { return t + minsIn(sp, from, to); }, 0);
+    var susp = suspenseMins(from, to);
+
+    var h = pageHead("The week",
+      esc(dayName(from) + " " + from + " to " + to),
+      '<div class="tools">' +
+      '<button class="btn" data-act="week-prev">‹ earlier</button>' +
+      (isNow ? "" : '<button class="btn" data-act="week-now">this week</button>') +
+      '<button class="btn" data-act="week-next" ' + (isNow ? "disabled" : "") + '>later ›</button>' +
+      '<button class="btn" data-act="report-new">Report</button>' +
+      '<button class="btn" data-act="span-add">Add time</button></div>');
+
+    h += '<div class="tiles">' +
+      tile("Counted", fmtMins(total), "across " + rows.length + " claimants") +
+      tile("Not said", fmtMins(susp), susp ? "waiting to be attributed" : "nothing unattributed", susp ? "loss" : "") +
+      "</div>";
+
+    if (susp) {
+      h += '<div class="card" style="border-left:2px solid var(--oxide)"><h3>Time at no bench</h3>' +
+        '<p class="hint" style="margin:0.2rem 0 0.7rem">' + fmtMins(susp) +
+        " this week is at no bench. It is not counted against anyone and it will not be guessed at — say whose it was.</p>" +
+        state.spans.filter(function (sp) { return !sp.benchId && minsIn(sp, from, to) > 0; })
+          .map(function (sp) { return spanRow(sp, true); }).join("") + "</div>";
+    }
+
+    h += '<div class="sect">Where the week went</div>';
+    if (!rows.length) {
+      h += '<p class="empty">No claimants yet — add one in Kit and the week has something to measure against.</p>';
+    } else {
+      h += '<div class="card">' + rows.map(function (r) {
+        var pct = r.owed ? Math.min(100, Math.round(r.got / r.owed * 100)) : 0;
+        var fig = r.unit === "d" ? r.got + (r.owed ? " of " + r.owed : "") + (r.got === 1 && !r.owed ? " day" : " days")
+                                 : fmtMins(r.got) + (r.owed ? " of " + fmtMins(r.owed) : "");
+        var note;
+        if (!r.owed) note = "on demand — nothing is owed";
+        else if (r.short) note = (r.floor ? "under its floor by " : "short by ") + amountWords(r.short, r.unit);
+        else note = r.floor ? "over its floor" : "met";
+        var beh = behindBy(r.c);
+        return '<div class="wk"><span class="wk-dot" style="background:' + esc(r.c.colour) + '"></span>' +
+          '<div class="wk-main"><div class="wk-top"><b>' + esc(r.c.name) + "</b><span>" + esc(fig) + "</span></div>" +
+          '<div class="meter"><div class="' + (r.short ? "meter-pace" : "meter-fill") +
+          '" style="width:' + pct + '%"></div></div>' +
+          '<small>' + esc(note) +
+          (beh && beh.amount ? " · <span style=\"color:var(--oxide)\">" + esc(amountWords(beh.amount, beh.unit)) +
+            " behind over " + beh.weeks + (beh.weeks === 1 ? " earlier week" : " earlier weeks") + "</span>" : "") +
+          "</small></div></div>";
+      }).join("") + "</div>";
+      h += '<p class="hint">A claimant behind is stated on its own. The app never says one claimant took the hours another lost — it cannot know that, and a plausible wrong reason is worse than none.</p>';
+    }
+
+    h += '<div class="sect">The days</div><div class="card">';
+    for (var i = 0; i < 7; i++) {
+      var day = addDays(from, i);
+      var todays = state.spans.filter(function (sp) { return minsIn(sp, day, day) > 0; })
+        .sort(function (a, b) { return a.startedAt < b.startedAt ? -1 : 1; });
+      var dayMins = todays.reduce(function (t, sp) { return t + minsIn(sp, day, day); }, 0);
+      h += '<div class="dayhead"><b>' + esc(dayName(day, "long")) + "</b><span>" +
+        (dayMins ? fmtMins(dayMins) : "nothing") + "</span>" +
+        '<button class="btn quiet" data-act="span-add" data-id="' + day + '">+</button></div>';
+      h += todays.length ? todays.map(function (sp) { return spanRow(sp, false); }).join("")
+                         : '<p class="empty" style="margin:0 0 0.5rem">—</p>';
+    }
+    h += "</div>";
+    return h;
+  }
+
+  function spanRow(sp, flag) {
+    var open = !sp.endedAt;
+    return '<div class="row"><span class="pill ' + (sp.benchId ? "p-blue" : "p-oxide") + '">' +
+      (open ? "open" : fmtMins(minsBetween(sp.startedAt, sp.endedAt))) + "</span>" +
+      '<span class="grow"><b>' + esc(sp.benchId ? benchLabel(sp.benchId) : "Not said yet") + "</b><small>" +
+      esc(String(sp.startedAt).slice(11) + (open ? " — still open" : " – " + String(sp.endedAt).slice(11)) +
+          (stampDay(sp.startedAt) !== stampDay(sp.endedAt || sp.startedAt) ? " (crosses midnight)" : "") +
+          (sp.note ? " · " + sp.note : "")) + "</small></span>" +
+      '<span class="tools"><button class="btn quiet" data-act="span-edit" data-id="' + sp.id + '">' +
+      (flag ? "Say whose" : "Edit") + "</button>" +
+      '<button class="btn quiet danger" data-act="span-del" data-id="' + sp.id + '">×</button></span></div>';
+  }
+
+  function spanBenchOpts() {
+    return [{ value: "", label: "Not said yet — goes to suspense" }].concat(
+      opts(state.benches, function (b) { return benchLabel(b.id); }));
+  }
+  function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v).trim()); }
+  function hhmm(v) { v = String(v).trim(); return num(v.slice(0, 2)) * 60 + num(v.slice(3, 5)); }
+
+  function spanDialog(sp, day) {
+    var isNew = !sp;
+    openModal({
+      title: isNew ? "Add time" : "Edit time",
+      confirmLabel: isNew ? "Add" : "Save",
+      message: isNew ? "For a stretch you did not tap in for. Nothing here is guessed — if you do not know whose it was, leave the bench unsaid." : "",
+      fields: [
+        { key: "day", label: "Day", type: "text", value: sp ? stampDay(sp.startedAt) : (day || today()),
+          span: true, hint: "YYYY-MM-DD" },
+        { key: "from", label: "From", type: "text", value: sp ? String(sp.startedAt).slice(11) : "09:00" },
+        { key: "to", label: "To", type: "text", value: sp && sp.endedAt ? String(sp.endedAt).slice(11) : "17:00" },
+        { key: "benchId", label: "Bench", type: "select", span: true, options: spanBenchOpts(),
+          value: sp ? sp.benchId : "" },
+        { key: "note", label: "Note", type: "text", span: true, value: sp ? (sp.note || "") : "" }
+      ],
+      validate: function (v) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+        if (!timeOk(v.from) || !timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
+        if (hhmm(v.to) <= hhmm(v.from)) return "It has to end after it started.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = sp;
+          if (!t) { t = { id: uid(), source: "repair" }; state.spans.push(t); }
+          t.startedAt = v.day.trim() + "T" + v.from.trim();
+          t.endedAt = v.day.trim() + "T" + v.to.trim();
+          t.benchId = v.benchId;
+          t.note = v.note.trim();
+        });
+      }
+    });
+  }
+
+  function pickBench(title, onPick) {
+    if (!live(state.benches).length) { toast("Add a bench in Kit first."); return; }
+    openModal({
+      title: title, confirmLabel: "Go",
+      fields: [{ key: "benchId", label: "Bench", type: "select", span: true,
+        options: spanBenchOpts(), value: live(state.benches)[0].id }],
+      onConfirm: function (v) { onPick(v.benchId); }
+    });
+  }
+
+
+  /* ================= the written report ================= */
+
+  // For a meeting, or an email, or a funder. Two rules keep it worth trusting.
+  // It computes NOTHING of its own: every figure comes from the same function
+  // the screen uses, or the report and the app will eventually disagree and
+  // only one of them will be right. And it states its own basis and its own
+  // limits — how many weeks it rests on, what is unattributed, what is still
+  // open — because a report that hides how thin its data is, is worse than no
+  // report at all.
+  var reportOn = null;   // {claimantId, from, to} — view state, never saved
+
+  function wordDate(d) {
+    return parseISO(d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  }
+  function pad(s, n) { s = String(s); return s + new Array(Math.max(1, n - s.length + 1)).join(" "); }
+
+  function weeksBetween(from, to) {
+    var out = [], w = weekStart(from), guard = 0;
+    while (w <= to && guard++ < 400) { out.push(w); w = addDays(w, 7); }
+    return out;
+  }
+
+  function boardsForClaimant(claimantId) {
+    return boards().filter(function (b) {
+      if (!claimantId) return true;
+      var bn = byId(state.benches, b.benchId);
+      return bn && bn.claimantId === claimantId;
+    });
+  }
+
+  function buildReport(o) {
+    var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
+    var from = o.from, to = o.to;
+    var L = [];
+    L.push((c ? c.name : "Every claimant") + " — " + wordDate(from) + " to " + wordDate(to));
+    L.push("");
+
+    /* ---- hours, straight from the same sums the week screen reads ---- */
+    var weeks = weeksBetween(from, to);
+    var owed = c ? owedOf(c) : { unit: "h", owed: 0 };
+    var rows = weeks.map(function (w) {
+      var wTo = addDays(w, 6);
+      var lo = w < from ? from : w, hi = wTo > to ? to : wTo;
+      var got = c
+        ? (owed.unit === "d" ? daysFor(c.id, lo, hi) : minsFor(c.id, lo, hi))
+        : state.spans.reduce(function (t, sp) { return t + minsIn(sp, lo, hi); }, 0);
+      var whole = (w >= from && wTo <= to);
+      // Any entry at all, for anyone, means the week was lived in the app and a
+      // nought for this claimant is a real nought. No entry anywhere means the
+      // week is simply unrecorded, and it is not measured against anything.
+      var lived = state.spans.some(function (sp) { return minsIn(sp, lo, hi) > 0; });
+      return { w: w, lo: lo, hi: hi, got: got, whole: whole, lived: lived };
+    });
+    var withEntries = rows.filter(function (r) { return r.got > 0; });
+    var totalGot = rows.reduce(function (t, r) { return t + r.got; }, 0);
+
+    L.push("HOURS");
+    if (!withEntries.length) {
+      L.push("  Nothing was logged in this period, so every figure below that depends on hours is absent rather than nought. The difference matters, and the app will not print a nought it cannot stand behind.");
+    } else {
+      L.push("  " + amountWords(totalGot, owed.unit) + " across " +
+             withEntries.length + (withEntries.length === 1 ? " week" : " weeks") +
+             " with entries, of " + weeks.length + " in the period.");
+      L.push("");
+      rows.forEach(function (r) {
+        var line = "    " + pad("w/c " + niceDate(r.w), 18) +
+          pad(r.lived ? amountWords(r.got, owed.unit) : "—", 12);
+        if (!r.lived) line += "nothing recorded that week";
+        else if (owed.owed && r.whole) {
+          var d = owed.owed - r.got;
+          line += d > 0 ? "short by " + amountWords(d, owed.unit)
+                        : (d < 0 ? "over by " + amountWords(-d, owed.unit) : "met");
+        } else if (owed.owed) {
+          line += "part week, not measured";
+        }
+        L.push(line.replace(/\s+$/, ""));
+      });
+      if (owed.owed) {
+        var full = rows.filter(function (r) { return r.whole && r.lived; });
+        var behind = full.reduce(function (t, r) { return t + Math.max(0, owed.owed - r.got); }, 0);
+        L.push("");
+        if (!full.length) {
+          L.push("  No whole week in this period has an entry, so nothing here is measured against the " + amountWords(owed.owed, owed.unit) + " a week.");
+        } else {
+          L.push("  Against " + amountWords(owed.owed, owed.unit) + " a week, the " + full.length +
+                 (full.length === 1 ? " whole week" : " whole weeks") + " with entries fall short by " +
+                 amountWords(behind, owed.unit) + " in total. Weeks with nothing recorded are left out of that figure rather than counted as noughts.");
+        }
+      }
+    }
+    L.push("");
+
+    /* ---- what the time went on: the notes, and nothing invented ---- */
+    var notes = [];
+    state.spans.forEach(function (sp) {
+      if (!sp.note) return;
+      if (minsIn(sp, from, to) <= 0) return;
+      if (c && claimantOfSpan(sp) !== c.id) return;
+      if (notes.indexOf(sp.note) < 0) notes.push(sp.note);
+    });
+    L.push("WHAT THE TIME WENT ON");
+    L.push(notes.length ? "  " + notes.join("; ") + "."
+                        : "  No stretch in this period carries a note, so this section is empty rather than guessed at.");
+    L.push("");
+
+    /* ---- the work itself ---- */
+    var bs = boardsForClaimant(c ? c.id : "");
+    var runs = bs.filter(function (b) { return b.kind === "run"; });
+    L.push("THE WORK");
+    if (!runs.length) {
+      L.push("  No runs are filed against " + (c ? "this claimant" : "anything") + ".");
+    } else {
+      runs.forEach(function (b) {
+        var p = runProgress(b);
+        var act = activeNodes(b);
+        var late = act.filter(function (n) { return nodeState(b, n) === "over"; });
+        L.push("  " + b.name);
+        L.push("    " + (b.closedOn ? "closed " + niceDate(b.closedOn) : "open") +
+               " · " + p.done + " of " + p.total + " steps done" +
+               (late.length ? " · " + late.length + " late" : ""));
+        act.forEach(function (n) {
+          var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
+          var st = nodeState(b, n);
+          L.push("      " + pad(n.label, 34) +
+                 (st === "over" ? "late by " + overdueBy(n) + "d"
+                  : st === "waiting" ? "waiting " + daysWaiting(n) + "d"
+                  : "in hand") +
+                 (who ? " — with " + who : ""));
+        });
+        var uf = unfiled(b);
+        if (!b.closedOn && !act.length && uf.length) {
+          L.push("      not filed: " + uf.map(function (n) { return n.label; }).join(", "));
+        }
+      });
+    }
+    L.push("");
+
+    /* ---- what is owed in the other direction ---- */
+    var waits = [];
+    runs.forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        if (n.act !== "send" && n.act !== "watch") return;
+        var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
+        waits.push({ b: b, n: n, who: who });
+      });
+    });
+    function waitLine(x, lead) {
+      return "  " + pad(lead, 26) + x.n.label + " — " + daysWaiting(x.n) + "d" +
+             (overdueBy(x.n) > 0 ? ", " + overdueBy(x.n) + "d past its chase" : "");
+    }
+    var onPeople = waits.filter(function (x) { return x.who; });
+    var onWorld  = waits.filter(function (x) { return !x.who; });
+    L.push("WAITING ON SOMEONE ELSE");
+    if (!onPeople.length) L.push("  Nobody.");
+    else onPeople.forEach(function (x) { L.push(waitLine(x, x.who)); });
+    L.push("");
+    if (onWorld.length) {
+      L.push("WAITING, WITH NOBODY NAMED");
+      onWorld.forEach(function (x) { L.push(waitLine(x, x.b.name)); });
+      L.push("");
+    }
+
+    /* ---- and what all of it rests on ---- */
+    var susp = suspenseMins(from, to);
+    var openNow = openSpan();
+    L.push("WHAT THIS RESTS ON");
+    L.push("  " + withEntries.length + " of " + weeks.length +
+           (weeks.length === 1 ? " week" : " weeks") + " in this period have any entry at all.");
+    if (susp) {
+      L.push("  " + fmtMins(susp) + " in this period is at no bench. It is excluded from every figure above rather than being attributed to anyone.");
+    }
+    if (openNow) {
+      L.push("  One stretch is still open and is counted nowhere until it ends.");
+    }
+    if (rows.some(function (r) { return !r.whole; })) {
+      L.push("  The first and last weeks are partial, so they are summed but not measured against a weekly figure.");
+    }
+    L.push("  Every figure is summed from logged stretches. Nothing is estimated, averaged or filled in.");
+    L.push("");
+    L.push("Written " + wordDate(today()) + " by Mashghal, from this device only.");
+    return L.join("\n");
+  }
+
+  function renderReport() {
+    var o = reportOn;
+    var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
+    var text = buildReport(o);
+    var h = pageHead("Report", esc((c ? c.name : "Every claimant") + " · " + o.from + " to " + o.to),
+      '<div class="tools">' +
+      '<button class="btn" data-act="report-back">Back to the week</button>' +
+      '<button class="btn" data-act="report-copy">Copy</button>' +
+      '<button class="btn" data-act="report-save">Save as text</button>' +
+      '<button class="btn" data-act="report-new">Change the range</button></div>');
+    h += '<pre class="report" id="reportText">' + esc(text) + "</pre>";
+    h += '<p class="hint">Read it before you send it. Every figure here comes from the same function the screens use, so if a number looks wrong the screen will be wrong in the same way — which is the point.</p>';
+    return h;
+  }
+
+  function reportDialog() {
+    var cs = live(state.claimants);
+    openModal({
+      title: "Write a report", confirmLabel: "Write it",
+      message: "For a meeting or an email. It reads the same figures the screens do and states what it does not know.",
+      fields: [
+        { key: "claimantId", label: "About", type: "select", span: true,
+          options: [{ value: "", label: "Everything" }].concat(cs.map(function (c) {
+            return { value: c.id, label: c.name };
+          })), value: reportOn ? reportOn.claimantId : (cs.length ? cs[0].id : "") },
+        { key: "from", label: "From", type: "text", value: reportOn ? reportOn.from : addDays(weekStart(today()), -28), hint: "YYYY-MM-DD" },
+        { key: "to", label: "To", type: "text", value: reportOn ? reportOn.to : today(), hint: "YYYY-MM-DD" }
+      ],
+      validate: function (v) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.from.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(v.to.trim())) {
+          return "Both dates must be YYYY-MM-DD.";
+        }
+        if (v.to.trim() < v.from.trim()) return "The end has to come after the start.";
+        return null;
+      },
+      onConfirm: function (v) {
+        reportOn = { claimantId: v.claimantId, from: v.from.trim(), to: v.to.trim() };
+        view = "week";
+        render();
+      }
+    });
+  }
+
+
+  /* ================= upkeep and the things it protects ================= */
+
+  // A cadence is not a task and has no due date. It runs every so often since
+  // the last time it was done, so falling behind never compounds into a pile of
+  // missed occurrences — there is one of each, and it is however far past.
+  var PLACES = { desk: "At the desk", away: "Away from the desk", out: "Out of the house" };
+  var ASSET_KINDS = { laptop: "Laptop", phone: "Phone", audio: "Audio", other: "Other" };
+  var placeFilter = "";   // view state, never saved
+
+  function cadenceState(cd) {
+    if (!cd.lastDoneOn) return { never: true, over: 0, since: 0, tone: "p-brass", word: "never done" };
+    var since = daysBetween(cd.lastDoneOn, today());
+    var over = since - num(cd.everyDays);
+    if (over > 0) return { over: over, since: since, tone: "p-oxide", word: over + "d past" };
+    if (over > -3) return { over: over, since: since, tone: "p-brass", word: "due in " + (-over) + "d" };
+    return { over: over, since: since, tone: "p-grey", word: (-over) + "d to go" };
+  }
+  function protects(cd) {
+    if (cd.protectsAssetId) return nameOf(state.assets, cd.protectsAssetId, "thing");
+    if (cd.protectsBenchId) return benchLabel(cd.protectsBenchId);
+    return "";
+  }
+  function upkeep() {
+    return live(state.cadences).map(function (cd) {
+      return { cd: cd, st: cadenceState(cd) };
+    }).sort(function (a, b) {
+      var ra = a.st.never ? 1e6 : a.st.over, rb = b.st.never ? 1e6 : b.st.over;
+      return rb - ra;
+    });
+  }
+  function upkeepLate() {
+    return upkeep().filter(function (x) { return x.st.never || x.st.over > 0; });
+  }
+
+  function upkeepCard() {
+    var all = upkeep();
+    if (!all.length) {
+      return '<div class="sect">Upkeep</div><p class="empty">No cadences yet. They live in Kit — a backup, a firmware update, a haircut.</p>';
+    }
+    var shown = placeFilter ? all.filter(function (x) { return x.cd.place === placeFilter; }) : all;
+    var h = '<div class="sect">Upkeep</div>';
+    h += '<div class="tools" style="margin-bottom:0.6rem">' +
+      ['', 'desk', 'away', 'out'].map(function (pl) {
+        return '<button class="btn' + (placeFilter === pl ? " primary" : "") +
+          '" data-act="place-filter" data-id="' + pl + '">' +
+          (pl ? esc(PLACES[pl]) : "Anywhere") + "</button>";
+      }).join("") + "</div>";
+
+    h += '<div class="card">';
+    h += shown.length ? shown.map(function (x) {
+      var p = protects(x.cd);
+      return '<div class="row"><span class="pill ' + x.st.tone + '">' + esc(x.st.word) + "</span>" +
+        '<span class="grow"><b>' + esc(x.cd.label) + "</b><small>" +
+        esc("every " + x.cd.everyDays + "d · " + (PLACES[x.cd.place] || "anywhere") +
+            (x.cd.lastDoneOn ? " · last " + niceDate(x.cd.lastDoneOn) : " · not done yet") +
+            (p ? " · protects " + p : "")) + "</small></span>" +
+        '<span class="tools"><button class="btn" data-act="cadence-done" data-id="' + x.cd.id + '">Done now</button>' +
+        '<button class="btn quiet" data-act="cadence-edit" data-id="' + x.cd.id + '">Edit</button></span></div>';
+    }).join("") : '<p class="empty">Nothing to do ' + esc((PLACES[placeFilter] || "").toLowerCase()) + ".</p>";
+    h += "</div>";
+    return h;
+  }
+
+  function assetOpts() {
+    return [{ value: "", label: "Nothing in particular" }].concat(opts(state.assets));
+  }
+  function cadenceDialog(cd) {
+    openModal({
+      title: cd ? "Edit upkeep" : "New upkeep",
+      confirmLabel: cd ? "Save" : "Add",
+      message: cd ? "" : "Every so often since it was last done, not on a date. Falling behind never piles up — there is one of each, however far past it is.",
+      fields: [
+        { key: "label", label: "What", type: "text", value: cd ? cd.label : "", span: true, placeholder: "Back up the GIS project" },
+        { key: "everyDays", label: "Every (days)", type: "number", min: 1, value: cd ? num(cd.everyDays) : 30 },
+        { key: "place", label: "Where", type: "select", value: cd ? cd.place : "desk",
+          options: Object.keys(PLACES).map(function (k) { return { value: k, label: PLACES[k] }; }) },
+        { key: "lastDoneOn", label: "Last done", type: "text", span: true,
+          value: cd ? (cd.lastDoneOn || "") : "", hint: "YYYY-MM-DD, or blank if never" },
+        { key: "protectsAssetId", label: "Protects a thing", type: "select", span: true,
+          options: assetOpts(), value: cd ? (cd.protectsAssetId || "") : "" },
+        { key: "protectsBenchId", label: "…or protects a bench", type: "select", span: true,
+          options: [{ value: "", label: "No bench" }].concat(opts(state.benches, function (b) { return benchLabel(b.id); })),
+          value: cd ? (cd.protectsBenchId || "") : "" }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (num(v.everyDays) < 1) return "It has to repeat at least every day.";
+        if (v.lastDoneOn.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(v.lastDoneOn.trim())) return "A date must be YYYY-MM-DD, or blank.";
+        if (v.lastDoneOn.trim() > today()) return "It cannot have been done in the future.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = cd;
+          if (!t) { t = { id: uid(), archived: false }; state.cadences.push(t); }
+          t.label = v.label.trim();
+          t.everyDays = num(v.everyDays);
+          t.place = v.place;
+          t.lastDoneOn = v.lastDoneOn.trim();
+          t.protectsAssetId = v.protectsAssetId;
+          t.protectsBenchId = v.protectsAssetId ? "" : v.protectsBenchId;
+        });
+      }
+    });
+  }
+
+  function assetDialog(a) {
+    openModal({
+      title: a ? "Edit thing" : "New thing",
+      confirmLabel: a ? "Save" : "Add",
+      message: a ? "" : "A tool you depend on is something with upkeep, not a given.",
+      fields: [
+        { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true, placeholder: "Lenovo Legion" },
+        { key: "kind", label: "What is it", type: "select", value: a ? a.kind : "other",
+          options: Object.keys(ASSET_KINDS).map(function (k) { return { value: k, label: ASSET_KINDS[k] }; }) },
+        { key: "notes", label: "Notes", type: "text", span: true, value: a ? (a.notes || "") : "" }
+      ],
+      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = a;
+          if (!t) { t = { id: uid(), archived: false }; state.assets.push(t); }
+          t.name = v.name.trim(); t.kind = v.kind; t.notes = v.notes.trim();
+        });
+      }
+    });
+  }
+
+  function kitUpkeepHtml() {
+    var h = '<div class="sect">Things you depend on</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">A laptop, a phone, a pair of headphones. Upkeep can be attached to one.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="asset-add">Add a thing</button></div>' +
+      (live(state.assets).length ? live(state.assets).map(function (a) {
+        return '<div class="row"><span class="pill p-brass">' + esc(ASSET_KINDS[a.kind] || a.kind) + "</span>" +
+          '<span class="grow"><b>' + esc(a.name) + "</b>" + (a.notes ? "<small>" + esc(a.notes) + "</small>" : "") + "</span>" +
+          '<span class="tools"><button class="btn quiet" data-act="asset-edit" data-id="' + a.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="asset-del" data-id="' + a.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">Nothing yet.</p>') + "</div>";
+
+    h += '<div class="sect">Upkeep</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">Every so often since it was last done. It shows up on Waiting, filtered by where you have to be to do it.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="cadence-add">Add upkeep</button></div>' +
+      (live(state.cadences).length ? live(state.cadences).map(function (cd) {
+        var st = cadenceState(cd), p = protects(cd);
+        return '<div class="row"><span class="pill ' + st.tone + '">' + esc(st.word) + "</span>" +
+          '<span class="grow"><b>' + esc(cd.label) + "</b><small>" +
+          esc("every " + cd.everyDays + "d · " + (PLACES[cd.place] || "anywhere") + (p ? " · protects " + p : "")) +
+          "</small></span>" +
+          '<span class="tools"><button class="btn quiet" data-act="cadence-edit" data-id="' + cd.id + '">Edit</button>' +
+          '<button class="btn quiet danger" data-act="cadence-del" data-id="' + cd.id + '">×</button></span></div>';
+      }).join("") : '<p class="empty">Nothing yet.</p>') + "</div>";
+    return h;
+  }
+
+
+  /* ================= sync ================= */
+
+  // The book is encrypted on this device and only then sent. A secret gist is
+  // unlisted, not private — anyone holding the link can read it — so the
+  // encryption is the whole of the privacy and not a belt over braces.
+  //
+  // Nothing here ever reaches `state`: the token and the passphrase live in
+  // their own storage keys, so a backup of the book carries neither.
+  var SYNC_LISTS = ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var TOK_KEY = "mashghal.sync.token";
+  var PASS_KEY = "mashghal.sync.pass";
+  var DEV_KEY = "mashghal.sync.device";
+  var GIST_FILE = "mashghal.json";
+  var DIGEST_FILE = "digest.json";
+  var snap = {};          // id -> the record as last stamped
+  var syncing = false;
+
+  function borrowed() { return !!(state.settings.sync && state.settings.sync.borrowed); }
+  function vault() {
+    try { return borrowed() ? window.sessionStorage : window.localStorage; }
+    catch (e) { return null; }
+  }
+  function secret(k) { try { var v = vault(); return v ? (v.getItem(k) || "") : ""; } catch (e) { return ""; } }
+  function setSecret(k, v) { try { var s = vault(); if (s) s.setItem(k, v); } catch (e) {} }
+  function dropSecrets() {
+    [window.localStorage, window.sessionStorage].forEach(function (s) {
+      try { [TOK_KEY, PASS_KEY].forEach(function (k) { s.removeItem(k); }); } catch (e) {}
+    });
+  }
+  function deviceId() {
+    var id = "";
+    try { id = localStorage.getItem(DEV_KEY) || ""; } catch (e) {}
+    if (!id) { id = uid(); try { localStorage.setItem(DEV_KEY, id); } catch (e) {} }
+    return id;
+  }
+  function syncCfg() {
+    if (!state.settings.sync) {
+      state.settings.sync = { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" };
+    }
+    return state.settings.sync;
+  }
+  function syncOn() { return syncCfg().mode === "gist" && syncCfg().gistId && secret(TOK_KEY) && secret(PASS_KEY); }
+
+  /* ---------------- stamping and merging ---------------- */
+
+  function stampNow() {
+    var d = new Date();
+    return d.toISOString();
+  }
+  function bare(r) {
+    var o = {}, k;
+    for (k in r) { if (k !== "updatedAt") o[k] = r[k]; }
+    return JSON.stringify(o);
+  }
+  // Which records changed since the last pass, so a merge can be per record
+  // rather than per file. Whole-file last-write-wins eventually eats a day of
+  // spans logged on the phone, and it does it silently.
+  function stampRecords() {
+    var now = stampNow(), seen = {};
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (!r || !r.id) return;
+        seen[r.id] = 1;
+        var j = bare(r);
+        if (snap[r.id] !== j) { r.updatedAt = now; snap[r.id] = j; }
+      });
+    });
+    Object.keys(snap).forEach(function (id) {
+      if (!seen[id]) { state.tombstones[id] = now; delete snap[id]; }
+    });
+  }
+  // A record that predates sync has no stamp and would lose every comparison,
+  // so it is given one the first time it is seen rather than being treated as
+  // infinitely old.
+  function ensureStamps() {
+    var now = stampNow(), touched = false;
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (r && r.id && !r.updatedAt) { r.updatedAt = now; touched = true; }
+        if (r && r.id) snap[r.id] = bare(r);
+      });
+    });
+    return touched;
+  }
+
+  function mergeList(mine, theirs, tomb) {
+    var pick = {};
+    mine.concat(theirs).forEach(function (r) {
+      if (!r || !r.id) return;
+      var cur = pick[r.id];
+      if (!cur || (r.updatedAt || "") > (cur.updatedAt || "")) pick[r.id] = r;
+    });
+    return Object.keys(pick).map(function (id) { return pick[id]; })
+      .filter(function (r) { return !(tomb[r.id] && tomb[r.id] > (r.updatedAt || "")); });
+  }
+
+  // What a mailer may see. Numbers only — no label, no name, no note. A file
+  // in an unlisted gist should be able to leak without telling anyone anything
+  // about the work, so it says how much is late and not what.
+  function digestPayload() {
+    var late = dues().filter(function (d) { return d.st === "over"; });
+    var worst = late.reduce(function (m, d) { return Math.max(m, d.over); }, 0);
+    return {
+      v: 1, at: stampNow(),
+      late: late.length, worstDaysPast: worst,
+      waiting: dues().length,
+      unfiled: stuck().length,
+      upkeepPast: upkeepLate().length
+    };
+  }
+
+  function payload() {
+    var o = { v: 1, tombstones: state.tombstones, forgotten: state.forgotten, devices: state.devices };
+    SYNC_LISTS.forEach(function (k) { o[k] = state[k] || []; });
+    return o;
+  }
+  // Merge is symmetrical and loses nothing it can avoid losing: a record that
+  // exists on one side only survives unless a tombstone newer than it says it
+  // was deleted on purpose.
+  function mergeIn(remote) {
+    var tomb = {};
+    [state.tombstones, remote.tombstones || {}].forEach(function (src) {
+      Object.keys(src).forEach(function (id) {
+        if (!tomb[id] || src[id] > tomb[id]) tomb[id] = src[id];
+      });
+    });
+    var counts = { added: 0, updated: 0, removed: 0 };
+    SYNC_LISTS.forEach(function (k) {
+      var before = {};
+      (state[k] || []).forEach(function (r) { before[r.id] = r.updatedAt || ""; });
+      var merged = mergeList(state[k] || [], remote[k] || [], tomb);
+      merged.forEach(function (r) {
+        if (before[r.id] === undefined) counts.added++;
+        else if (before[r.id] !== (r.updatedAt || "")) counts.updated++;
+      });
+      counts.removed += Object.keys(before).length - merged.filter(function (r) { return before[r.id] !== undefined; }).length;
+      state[k] = merged;
+    });
+    state.tombstones = tomb;
+    Object.keys(remote.forgotten || {}).forEach(function (id) {
+      if (!state.forgotten[id]) state.forgotten[id] = remote.forgotten[id];
+    });
+    var rd = remote.devices || {};
+    Object.keys(rd).forEach(function (id) {
+      if (!state.devices[id] || rd[id].at > state.devices[id].at) state.devices[id] = rd[id];
+    });
+    return counts;
+  }
+
+  /* ---------------- the sealing ---------------- */
+
+  function b64(buf) {
+    var a = new Uint8Array(buf), s = "";
+    for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+    return btoa(s);
+  }
+  function unb64(s) {
+    var b = atob(s), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function subtle() {
+    return (window.crypto && window.crypto.subtle) ? window.crypto.subtle : null;
+  }
+  function deriveKey(pass, salt) {
+    var enc = new TextEncoder();
+    return subtle().importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) {
+        return subtle().deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: 250000, hash: "SHA-256" },
+          base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      });
+  }
+  function seal(text, pass) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(pass, salt).then(function (key) {
+      return subtle().encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(text));
+    }).then(function (ct) {
+      return JSON.stringify({ v: 1, kdf: "PBKDF2-SHA256", it: 250000,
+                              salt: b64(salt), iv: b64(iv), ct: b64(ct) }, null, 1);
+    });
+  }
+  function unseal(blob, pass) {
+    var o;
+    try { o = JSON.parse(blob); } catch (e) { return Promise.reject(new Error("That is not a Mashghal file.")); }
+    if (!o || !o.ct || !o.salt || !o.iv) return Promise.reject(new Error("That file is not sealed the way this app seals things."));
+    return deriveKey(pass, unb64(o.salt)).then(function (key) {
+      return subtle().decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.ct));
+    }).then(function (pt) {
+      return JSON.parse(new TextDecoder().decode(pt));
+    }, function () {
+      throw new Error("Wrong passphrase — nothing was changed.");
+    });
+  }
+
+  /* ---------------- the gist ---------------- */
+
+  function ghFetch(url, token, opts) {
+    opts = opts || {};
+    opts.headers = { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" };
+    if (opts.body) opts.headers["Content-Type"] = "application/json";
+    return fetch(url, opts).then(function (res) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("GitHub refused the token. It may have expired, or it may not carry gist access.");
+      }
+      if (res.status === 404) throw new Error("That gist was not found by this token.");
+      if (!res.ok) throw new Error("GitHub answered " + res.status + ".");
+      return res.json();
+    }, function (e) {
+      if (e instanceof TypeError) throw new Error("No answer from GitHub — you may be offline.");
+      throw e;
+    });
+  }
+  function gistRead(id, token) {
+    return ghFetch("https://api.github.com/gists/" + id, token).then(function (g) {
+      var f = g.files && g.files[GIST_FILE];
+      if (!f) throw new Error("That gist has no " + GIST_FILE + " in it.");
+      if (f.truncated && f.raw_url) return fetch(f.raw_url).then(function (r) { return r.text(); });
+      return f.content;
+    });
+  }
+  function gistWrite(id, token, content) {
+    var files = {};
+    files[GIST_FILE] = { content: content };
+    files[DIGEST_FILE] = { content: JSON.stringify(digestPayload(), null, 1) };
+    return ghFetch("https://api.github.com/gists/" + id, token,
+      { method: "PATCH", body: JSON.stringify({ files: files }) });
+  }
+  function gistCreate(token, content) {
+    var files = {}; files[GIST_FILE] = { content: content };
+    return ghFetch("https://api.github.com/gists", token, {
+      method: "POST",
+      body: JSON.stringify({ description: "Mashghal — sealed", "public": false, files: files })
+    });
+  }
+
+  /* ---------------- the act ---------------- */
+
+  function noteDevice() {
+    state.devices[deviceId()] = {
+      name: syncCfg().deviceName || "unnamed device",
+      at: stampNow(),
+      borrowed: borrowed()
+    };
+  }
+
+  // Pull, merge, push — one act, because pushing without having pulled is how
+  // one device quietly overwrites another's day.
+  function syncNow(quiet) {
+    if (syncing) return;
+    if (!syncOn()) { toast("Sync is not set up on this device."); return; }
+    if (!subtle()) { toast("This browser has no Web Crypto, so nothing can be sealed."); return; }
+    syncing = true;
+    var cfg = syncCfg(), tok = secret(TOK_KEY), pass = secret(PASS_KEY);
+    if (!quiet) toast("Syncing…");
+    stampRecords();
+    gistRead(cfg.gistId, tok)
+      .then(function (blob) {
+        if (!String(blob || "").trim()) return null;
+        return unseal(blob, pass);
+      })
+      .then(function (remote) {
+        var counts = remote ? mergeIn(remote) : { added: 0, updated: 0, removed: 0 };
+        noteDevice();
+        stampRecords();
+        cfg.lastPulledAt = stampNow();
+        save();
+        return seal(JSON.stringify(payload()), pass).then(function (sealed) {
+          return gistWrite(cfg.gistId, tok, sealed);
+        }).then(function () { return counts; });
+      })
+      .then(function (counts) {
+        syncing = false;
+        render();
+        var bits = [];
+        if (counts.added) bits.push(counts.added + " new");
+        if (counts.updated) bits.push(counts.updated + " updated");
+        toast(bits.length ? "Synced — " + bits.join(", ") : "Synced — nothing had changed elsewhere");
+      })
+      .catch(function (e) {
+        syncing = false;
+        render();
+        toast(e && e.message ? e.message : "Sync failed, and nothing was changed.");
+      });
+  }
+
+  function syncSetupDialog() {
+    var cfg = syncCfg();
+    openModal({
+      title: "Set up sync", wide: true, confirmLabel: "Save",
+      message: "Your book is sealed on this device with the passphrase and only then sent, so GitHub holds characters it cannot read. " +
+        "A <b>secret</b> gist is unlisted rather than private — anyone with the link can fetch it — which is why the sealing is the whole of the privacy. " +
+        "Use a fine-grained token with gist access and nothing else.",
+      fields: [
+        { key: "token", label: "GitHub token", type: "text", span: true, value: secret(TOK_KEY),
+          placeholder: "github_pat_…", hint: "Stored on this device only, never in a backup." },
+        { key: "pass", label: "Passphrase", type: "text", span: true, value: secret(PASS_KEY),
+          hint: "Lose this and the gist is unreadable. There is no recovery, by design." },
+        { key: "gistId", label: "Gist id", type: "text", span: true, value: cfg.gistId,
+          hint: "Leave blank on the first device and one will be made for you." },
+        { key: "deviceName", label: "Call this device", type: "text", span: true,
+          value: cfg.deviceName, placeholder: "Legion" },
+        { key: "borrowed", label: "Is this your own machine?", type: "select", span: true,
+          options: [{ value: "no", label: "Yes — remember it here" },
+                    { value: "yes", label: "No — forget everything when I close the tab" }],
+          value: cfg.borrowed ? "yes" : "no" }
+      ],
+      validate: function (v) {
+        if (!v.token.trim()) return "A token is needed to reach the gist.";
+        if (v.pass.trim().length < 8) return "Use a passphrase of at least eight characters.";
+        if (!v.deviceName.trim()) return "Name the device, so you can tell from your phone which laptop is still signed in.";
+        return null;
+      },
+      onConfirm: function (v) {
+        cfg.borrowed = v.borrowed === "yes";
+        cfg.deviceName = v.deviceName.trim();
+        cfg.mode = "gist";
+        setSecret(TOK_KEY, v.token.trim());
+        setSecret(PASS_KEY, v.pass.trim());
+        if (cfg.borrowed) armBorrowed();
+        if (v.gistId.trim()) {
+          cfg.gistId = v.gistId.trim();
+          save(); render();
+          syncNow();
+          return;
+        }
+        toast("Making a gist…");
+        seal(JSON.stringify(payload()), v.pass.trim())
+          .then(function (sealed) { return gistCreate(v.token.trim(), sealed); })
+          .then(function (g) {
+            cfg.gistId = g.id;
+            noteDevice(); save(); render();
+            toast("Sync is on. The gist id is " + g.id);
+          })
+          .catch(function (e) {
+            cfg.mode = "none"; save(); render();
+            toast(e && e.message ? e.message : "Could not make the gist.");
+          });
+      }
+    });
+  }
+
+  // On a machine that is not yours, nothing should outlive the tab.
+  function armBorrowed() {
+    if (armBorrowed.done) return;
+    armBorrowed.done = true;
+    window.addEventListener("pagehide", function () {
+      if (!borrowed()) return;
+      try { localStorage.removeItem(APP.storeKey); localStorage.removeItem(DEV_KEY); } catch (e) {}
+      dropSecrets();
+    });
+  }
+
+  function syncCard() {
+    var cfg = syncCfg();
+    var h = '<div class="card"><h3>Sync</h3>';
+    if (cfg.mode !== "gist") {
+      h += '<p class="card-sub">Off — this device keeps its own book</p>' +
+        '<p class="hint" style="margin:0 0 0.7rem">Sealed on this device with a passphrase, then kept in a secret gist, so the phone and any laptop read the same book. It never happens on its own: sync is something you press.</p>' +
+        '<div class="tools"><button class="btn" data-act="sync-setup">Set it up</button></div></div>';
+      return h;
+    }
+    var devs = Object.keys(state.devices || {}).map(function (id) {
+      return { id: id, d: state.devices[id] };
+    }).sort(function (a, b) { return a.d.at < b.d.at ? 1 : -1; });
+
+    h += '<p class="card-sub">' + esc(cfg.deviceName || "unnamed") +
+      (cfg.borrowed ? " · borrowed, cleared when the tab closes" : "") +
+      " · gist " + esc(String(cfg.gistId).slice(0, 10)) + "…</p>";
+    h += '<p class="hint" style="margin:0 0 0.7rem">' +
+      (cfg.lastPulledAt ? "Last synced " + esc(String(cfg.lastPulledAt).slice(0, 16).replace("T", " ")) + "."
+                        : "Not synced from here yet.") +
+      " Syncing pulls, merges record by record, then pushes — pressing it can only add, never quietly replace.</p>";
+    h += '<div class="tools"><button class="btn primary" data-act="sync-now">Sync now</button>' +
+      '<button class="btn" data-act="sync-setup">Change</button>' +
+      '<button class="btn danger" data-act="sync-wipe">Wipe this device</button></div>';
+
+    if (devs.length) {
+      h += '<div class="sect" style="margin-top:1.2rem">Devices on this book</div>';
+      h += devs.map(function (x) {
+        var mine = x.id === deviceId();
+        return '<div class="row"><span class="pill ' + (mine ? "p-blue" : "p-grey") + '">' +
+          (mine ? "this one" : "elsewhere") + "</span>" +
+          '<span class="grow"><b>' + esc(x.d.name) + "</b><small>" +
+          esc("last wrote " + String(x.d.at).slice(0, 16).replace("T", " ") + (x.d.borrowed ? " · borrowed" : "")) +
+          "</small></span>" +
+          (mine ? "" : '<span class="tools"><button class="btn quiet danger" data-act="device-forget" data-id="' +
+            x.id + '">Forget</button></span>') + "</div>";
+      }).join("");
+      h += '<p class="hint">If a laptop you no longer have is still listed, wiping it is not enough on its own — revoke the token at github.com/settings/tokens, because anyone who copied it before the wipe still holds it.</p>';
+    }
+    return h + "</div>";
+  }
+
+
+  /* ================= the kit, and where you left off ================= */
+
+  // What a mode hands you when you arrive: the software, the paths, the
+  // filtered inboxes. And what you left behind: one line per bench, written
+  // when you leave and read back when you return, because the cost of four
+  // identities is not the software — it is the twenty minutes of "where was I".
+  var openMode = "";   // view state, never saved
+
+  function modeSoftware(m) { return m.software || (m.software = []); }
+  function modeLinks(m) { return m.links || (m.links = []); }
+
+  function benchesOfMode(id) {
+    return live(state.benches).filter(function (b) { return b.modeId === id; });
+  }
+  function noteOf(benchId) {
+    var b = byId(state.benches, benchId);
+    return b && b.note ? b : null;
+  }
+
+  function kitModeDetail(m) {
+    var sw = modeSoftware(m), lk = modeLinks(m), bs = benchesOfMode(m.id);
+    var h = pageHead(m.name, "A mode and everything it hands you",
+      '<div class="tools"><button class="btn" data-act="mode-back">All of Kit</button>' +
+      '<button class="btn" data-act="mode-edit" data-id="' + m.id + '">Rename</button>' +
+      '<button class="btn" data-act="sw-add" data-id="' + m.id + '">Add software</button>' +
+      '<button class="btn" data-act="link-add" data-id="' + m.id + '">Add a link</button>' +
+      '<button class="btn" data-act="kit-export" data-id="' + m.id + '">For the launcher</button></div>');
+
+    h += '<div class="sect">Software and files</div><div class="card">';
+    h += sw.length ? sw.map(function (x) {
+      return '<div class="row"><span class="pill p-blue">' + (x.path ? "path" : "no path") + "</span>" +
+        '<span class="grow"><b>' + esc(x.label) + "</b>" +
+        (x.path ? "<small>" + esc(x.path) + "</small>" : "") + "</span>" +
+        '<span class="tools">' +
+        (x.path ? '<button class="btn" data-act="sw-copy" data-id="' + m.id + ":" + x.id + '">Copy path</button>' : "") +
+        '<button class="btn quiet" data-act="sw-edit" data-id="' + m.id + ":" + x.id + '">Edit</button>' +
+        '<button class="btn quiet danger" data-act="sw-del" data-id="' + m.id + ":" + x.id + '">×</button></span></div>';
+    }).join("") : '<p class="empty">Nothing yet. A path here is one you can paste into Win+R.</p>';
+    h += "</div>";
+
+    h += '<div class="sect">Links</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">Anything a URL can reach, including a filtered search. <code>obsidian://search?query=…</code> works on Windows and on Android; webmail takes a search URL. Desktop Outlook does not, so for that one keep the search string here and paste it.</p>';
+    h += lk.length ? lk.map(function (x) {
+      return '<div class="row"><span class="pill p-brass">link</span>' +
+        '<span class="grow"><b>' + esc(x.label) + "</b><small>" + esc(x.url) + "</small></span>" +
+        '<span class="tools"><a class="btn" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open</a>' +
+        '<button class="btn quiet" data-act="link-edit" data-id="' + m.id + ":" + x.id + '">Edit</button>' +
+        '<button class="btn quiet danger" data-act="link-del" data-id="' + m.id + ":" + x.id + '">×</button></span></div>';
+    }).join("") : '<p class="empty">No links yet.</p>';
+    h += "</div>";
+
+    h += '<div class="sect">Where you left off</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">One line per bench, written when you leave and read back when you return.</p>';
+    h += bs.length ? bs.map(function (b) {
+      return '<div class="row"><span class="pill ' + (b.note ? "p-verd" : "p-grey") + '">' +
+        (b.note ? "left a note" : "nothing") + "</span>" +
+        '<span class="grow"><b>' + esc(benchLabel(b.id)) + "</b>" +
+        (b.note ? "<small>" + esc(b.note + " · " + niceDate(stampDay(b.noteAt || ""))) + "</small>" : "") + "</span>" +
+        '<span class="tools">' +
+        (state.settings.companion ? '<a class="btn" href="mashghal://enter/' + esc(b.id) + '">Launch</a>' : "") +
+        '<button class="btn quiet" data-act="note-edit" data-id="' + b.id + '">Edit</button></span></div>';
+    }).join("") : '<p class="empty">This mode has no benches yet.</p>';
+    h += "</div>";
+    return h;
+  }
+
+  function swDialog(m, x) {
+    openModal({
+      title: x ? "Edit software" : "Add software",
+      confirmLabel: x ? "Save" : "Add",
+      message: x ? "" : "A name, and the path you would paste into Win+R to open it.",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: x ? x.label : "", placeholder: "ArcGIS Pro" },
+        { key: "path", label: "Path", type: "text", span: true, value: x ? (x.path || "") : "",
+          hint: "Left blank it is just a reminder that this mode uses it." }
+      ],
+      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = x;
+          if (!t) { t = { id: uid() }; modeSoftware(m).push(t); }
+          t.label = v.label.trim(); t.path = v.path.trim();
+        });
+      }
+    });
+  }
+  function linkDialog(m, x) {
+    openModal({
+      title: x ? "Edit link" : "Add a link",
+      confirmLabel: x ? "Save" : "Add",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: x ? x.label : "", placeholder: "AUB mail, this project" },
+        { key: "url", label: "URL", type: "text", span: true, value: x ? x.url : "",
+          placeholder: "obsidian://search?query=AUB", hint: "Any scheme, not only http." }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (!/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) return "A URL needs a scheme — https:, obsidian:, mailto: and so on.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = x;
+          if (!t) { t = { id: uid() }; modeLinks(m).push(t); }
+          t.label = v.label.trim(); t.url = v.url.trim();
+        });
+      }
+    });
+  }
+  function noteDialog(b) {
+    openModal({
+      title: "Where you left off",
+      message: "One line, for the version of you that comes back to " + esc(benchLabel(b.id)) + ".",
+      confirmLabel: "Save",
+      fields: [{ key: "note", label: "Note", type: "text", span: true, value: b.note || "",
+        placeholder: "still to export the cemetery layer" }],
+      onConfirm: function (v) {
+        go(function () {
+          b.note = v.note.trim();
+          b.noteAt = v.note.trim() ? nowStamp() : "";
+        });
+      }
+    });
+  }
+  // Asked at the moment of leaving, when it is the only moment you still know.
+  function askNote(benchId, after) {
+    var b = byId(state.benches, benchId);
+    if (!b) { if (after) after(); return; }
+    openModal({
+      title: "Where did you leave off?",
+      message: "One line, for when you come back to " + esc(benchLabel(b.id)) + ". Skip it and the old note stays as it was.",
+      confirmLabel: "Save it", cancelLabel: "Skip",
+      fields: [{ key: "note", label: "Note", type: "text", span: true, value: "",
+        placeholder: "still to export the cemetery layer" }],
+      onConfirm: function (v) {
+        if (v.note.trim()) {
+          go(function () { b.note = v.note.trim(); b.noteAt = nowStamp(); });
+        }
+        if (after) after();
+      },
+      onCancel: function () { if (after) after(); }
+    });
+  }
+  function greet(benchId) {
+    var b = noteOf(benchId);
+    if (b) toast("You left off: " + b.note);
+  }
+
+  // What the local launcher reads. The page never sends a path anywhere — it
+  // writes this file for you, and the launcher looks a bench up in it. Nothing
+  // arrives from the web except an id.
+  function kitExport(m) {
+    var out = { v: 1, mode: m.name, benches: {} };
+    benchesOfMode(m.id).forEach(function (b) {
+      out.benches[b.id] = {
+        label: benchLabel(b.id),
+        software: modeSoftware(m).map(function (x) { return { label: x.label, path: x.path || "" }; }),
+        links: modeLinks(m).map(function (x) { return { label: x.label, url: x.url }; })
+      };
+    });
+    download("mashghal-" + m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".json",
+             JSON.stringify(out, null, 2), "application/json");
+  }
+
+  /* ================= the canvas ================= */
+
+  var SW = 186, SH = 78, CUT = 11, TW = 148, TH = 32;
+  var NS = "http://www.w3.org/2000/svg";
+  var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
+
+  function canvasHtml(b) {
+    return '<div class="cvbox">' +
+      '<div class="cvbar">' +
+      '<span class="sp"></span>' +
+      '<button class="btn" data-act="cv-out">−</button>' +
+      '<button class="btn" data-act="cv-in">+</button>' +
+      '<button class="btn" data-act="cv-fit">Fit</button>' +
+      '<button class="btn" data-act="cv-tidy" data-id="' + b.id + '">Tidy</button>' +
+      "</div>" +
+      '<svg id="cv" role="img" aria-label="The board drawn as steps, things and the lines between them"></svg>' +
+      '<div class="tblock"><div><b>Board</b><span>' + esc(b.name) + "</span></div>" +
+      "<div><b>Bench</b><span>" + esc(b.benchId ? benchLabel(b.benchId) : "none") + "</span></div></div>" +
+      "</div>";
+  }
+
+  function svgEl(n, a) {
+    var e = document.createElementNS(NS, n);
+    for (var k in a) { if (a[k] !== null && a[k] !== undefined) e.setAttribute(k, a[k]); }
+    return e;
+  }
+  function dims(n) { return n.t === "step" ? { w: SW, h: SH } : { w: TW, h: TH }; }
+  function centre(n) { var d = dims(n); return { x: n.x + d.w / 2, y: n.y + d.h / 2 }; }
+  function anchor(n, tx, ty) {
+    var c = centre(n), d = dims(n), dx = tx - c.x, dy = ty - c.y;
+    if (!dx && !dy) return c;
+    var s = Math.min(dx ? (d.w / 2 + 5) / Math.abs(dx) : Infinity,
+                     dy ? (d.h / 2 + 5) / Math.abs(dy) : Infinity);
+    return { x: c.x + dx * s, y: c.y + dy * s };
+  }
+
+  // Nobody should ever meet a blank sheet. Steps are ranked by how far they
+  // sit from an entry point and laid out in columns; things are parked above
+  // or below whatever they are linked to.
+  function autoLayout(b) {
+    var depth = {}, steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var queue = entryNodes(b).map(function (n) { return n.id; });
+    queue.forEach(function (id) { depth[id] = 0; });
+    var guard = 0;
+    while (queue.length && guard++ < 500) {
+      var id = queue.shift();
+      nextOf(b, id).forEach(function (e) {
+        // A back edge is a cycle, not a deeper rank — ignore it, or the
+        // loop in a revision cycle drags its own target off to the right.
+        if (depth[e.b] === undefined) { depth[e.b] = depth[id] + 1; queue.push(e.b); }
+      });
+    }
+    steps.forEach(function (n, i) { if (depth[n.id] === undefined) depth[n.id] = i; });
+
+    var cols = {};
+    steps.forEach(function (n) {
+      var d = depth[n.id];
+      cols[d] = cols[d] || [];
+      cols[d].push(n);
+    });
+    // Serpentine: five across, then drop a row and come back the other way.
+    Object.keys(cols).forEach(function (d) {
+      cols[d].forEach(function (n, j) {
+        var col = num(d) % 5, band = Math.floor(num(d) / 5);
+        if (band % 2 === 1) col = 4 - col;
+        n.x = 60 + col * 262;
+        n.y = 300 + band * 230 + j * 110;
+      });
+    });
+    b.nodes.filter(function (n) { return n.t === "thing"; }).forEach(function (n, i) {
+      var link = b.edges.filter(function (e) { return e.k === "link" && (e.a === n.id || e.b === n.id); })[0];
+      var host = link ? nodeOf(b, link.a === n.id ? link.b : link.a) : null;
+      if (host && host.t === "step") {
+        n.x = host.x + 18;
+        n.y = host.y + (i % 2 === 0 ? -140 : SH + 70);
+      } else {
+        n.x = 60 + i * 170; n.y = 120;
+      }
+    });
+  }
+
+  function stepPath(w, h) { return "M0,0 H" + w + " V" + (h - CUT) + " L" + (w - CUT) + "," + h + " H0 Z"; }
+  function curvePath(x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      var k = Math.max(30, Math.abs(dx) * 0.42);
+      return "M" + x1 + "," + y1 + " C" + (x1 + k) + "," + y1 + " " + (x2 - k) + "," + y2 + " " + x2 + "," + y2;
+    }
+    var j = Math.max(26, Math.abs(dy) * 0.45);
+    return "M" + x1 + "," + y1 + " C" + x1 + "," + (y1 + j) + " " + x2 + "," + (y2 - j) + " " + x2 + "," + y2;
+  }
+
+  var NODE_INK = {
+    done:    { bar: "#74a086", stroke: "#332d25", text: "#a2977f", w: 1,   sink: 0.62 },
+    now:     { bar: "#7fa9ce", stroke: "#7fa9ce", text: "#ece4d5", w: 1.6, sink: 1 },
+    waiting: { bar: "#c9a227", stroke: "#6d5a1c", text: "#ece4d5", w: 1.3, sink: 1 },
+    over:    { bar: "#d0604a", stroke: "#d0604a", text: "#ece4d5", w: 1.6, sink: 1 },
+    todo:    { bar: "#443b30", stroke: "#312a22", text: "#6e6553", w: 1,   sink: 0.84 }
+  };
+
+  function drawBoard(b, svg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var defs = svgEl("defs");
+    [["mar", "#7fa9ce"], ["mar-dim", "#4f4536"]].forEach(function (p) {
+      var m = svgEl("marker", { id: p[0], viewBox: "0 0 10 8", refX: 9, refY: 4,
+        markerWidth: 9, markerHeight: 7.5, orient: "auto-start-reverse" });
+      m.appendChild(svgEl("polygon", { points: "0,0 10,4 0,8", fill: p[1] }));
+      defs.appendChild(m);
+    });
+    var pmin = svgEl("pattern", { id: "gmin", width: 40, height: 40, patternUnits: "userSpaceOnUse" });
+    pmin.appendChild(svgEl("path", { d: "M40,0 H0 V40", fill: "none", stroke: "#ece4d5", "stroke-opacity": ".05" }));
+    var pmaj = svgEl("pattern", { id: "gmaj", width: 200, height: 200, patternUnits: "userSpaceOnUse" });
+    pmaj.appendChild(svgEl("rect", { width: 200, height: 200, fill: "url(#gmin)" }));
+    pmaj.appendChild(svgEl("path", { d: "M200,0 H0 V200", fill: "none", stroke: "#ece4d5", "stroke-opacity": ".095" }));
+    defs.appendChild(pmin); defs.appendChild(pmaj);
+    svg.appendChild(defs);
+    svg.appendChild(svgEl("rect", { x: -6000, y: -6000, width: 12000, height: 12000, fill: "url(#gmaj)" }));
+
+    var gE = svgEl("g"), gN = svgEl("g");
+    svg.appendChild(gE); svg.appendChild(gN);
+    svg._gE = gE; svg._gN = gN;
+    drawEdges(b, svg); drawNodes(b, svg);
+  }
+
+  function drawEdges(b, svg) {
+    var g = svg._gE;
+    while (g.firstChild) g.removeChild(g.firstChild);
+    b.edges.forEach(function (e) {
+      var A = nodeOf(b, e.a), Z = nodeOf(b, e.b);
+      if (!A || !Z) return;
+      var ca = centre(A), cz = centre(Z);
+      var on = hov && (hov === e.a || hov === e.b);
+      var p1 = anchor(A, cz.x, cz.y), p2 = anchor(Z, ca.x, ca.y);
+
+      if (e.k === "link") {
+        g.appendChild(svgEl("path", { d: curvePath(p1.x, p1.y, p2.x, p2.y), fill: "none",
+          stroke: "#c9a227", "stroke-width": on ? 1.7 : 1.3, "stroke-dasharray": "3.5 5.5",
+          "stroke-opacity": on ? 0.95 : 0.5, "stroke-linecap": "round" }));
+        return;
+      }
+      var back = Z.x < A.x - 40;
+      var liveEdge = nodeState(b, A) !== "todo";
+      var col = liveEdge ? "#7fa9ce" : "#4f4536";
+      var mk = liveEdge ? "url(#mar)" : "url(#mar-dim)";
+      var lx, ly;
+
+      if (back) {
+        // A loop back over the top, so a revision cycle reads as a shape.
+        var mx = (ca.x + cz.x) / 2, my = Math.min(ca.y, cz.y) - 150;
+        var a1 = anchor(A, mx, my), z1 = anchor(Z, mx, my);
+        g.appendChild(svgEl("path", { d: "M" + a1.x + "," + a1.y + " Q" + mx + "," + my + " " + z1.x + "," + z1.y,
+          fill: "none", stroke: col, "stroke-width": on ? 2 : 1.5, "stroke-opacity": on ? 1 : 0.82, "marker-end": mk }));
+        lx = mx; ly = my - 9;
+      } else {
+        g.appendChild(svgEl("path", { d: curvePath(p1.x, p1.y, p2.x, p2.y), fill: "none",
+          stroke: col, "stroke-width": on ? 2 : 1.5, "stroke-opacity": on ? 1 : 0.82, "marker-end": mk }));
+        lx = (p1.x + p2.x) / 2; ly = (p1.y + p2.y) / 2 - 9;
+      }
+      if (e.label) {
+        g.appendChild(svgEl("rect", { x: lx - 26, y: ly - 11, width: 52, height: 15, fill: "#181612", opacity: 0.92 }));
+        var t = svgEl("text", { x: lx, y: ly, fill: "#a2977f", "text-anchor": "middle",
+          "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5, "letter-spacing": ".1em" });
+        t.textContent = e.label.toUpperCase();
+        g.appendChild(t);
+      }
+    });
+  }
+
+  function drawNodes(b, svg) {
+    var g = svg._gN;
+    while (g.firstChild) g.removeChild(g.firstChild);
+    b.nodes.forEach(function (n) {
+      var outer = svgEl("g", { transform: "translate(" + n.x + "," + n.y + ")", "data-id": n.id });
+      var inner = svgEl("g", { "class": "nd" });
+      outer.appendChild(inner);
+      var d = dims(n);
+
+      if (n.t === "step") {
+        var st = NODE_INK[nodeState(b, n)] || NODE_INK.todo;
+        inner.setAttribute("opacity", st.sink);
+        if (nodeState(b, n) === "over") {
+          inner.appendChild(svgEl("path", { "class": "halo", d: stepPath(d.w, d.h),
+            fill: "none", stroke: "#d0604a", "stroke-width": 6, opacity: 0.16 }));
+        }
+        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), transform: "translate(3,3)", fill: "#0d0b09", opacity: 0.5 }));
+        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), fill: "#27231d", stroke: st.stroke, "stroke-width": st.w }));
+        inner.appendChild(svgEl("rect", { x: 0, y: 0, width: 2.5, height: d.h, fill: st.bar }));
+
+        var a = svgEl("text", { x: 13, y: 18, fill: "#6e6553",
+          "font-family": "ui-monospace, Menlo, monospace", "font-size": 9, "letter-spacing": ".18em" });
+        a.textContent = ACTS[n.act].word.toUpperCase();
+        inner.appendChild(a);
+
+        wrap(n.label, 24).forEach(function (ln, i) {
+          var t = svgEl("text", { x: 13, y: 36 + i * 15, fill: st.text,
+            "font-family": "inherit", "font-size": 13 });
+          t.textContent = ln;
+          inner.appendChild(t);
+        });
+
+        if (n.doneAt) {
+          var ck = svgEl("text", { x: d.w - 13, y: 18, fill: "#74a086", "text-anchor": "end",
+            "font-family": "ui-monospace, Menlo, monospace", "font-size": 11 });
+          ck.textContent = "✓";
+          inner.appendChild(ck);
+        }
+        var meta = stepMeta(b, n);
+        if (meta) {
+          var m = svgEl("text", { x: 13, y: d.h - 10, fill: nodeState(b, n) === "over" ? "#d0604a" : "#6e6553",
+            "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5 });
+          m.textContent = meta;
+          inner.appendChild(m);
+        }
+      } else {
+        inner.appendChild(svgEl("rect", { x: 3, y: 3, width: d.w, height: d.h, rx: d.h / 2, fill: "#0d0b09", opacity: 0.45 }));
+        inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
+          fill: "#181612", stroke: "#c9a227", "stroke-opacity": 0.72 }));
+        var tx = svgEl("text", { x: d.w / 2, y: d.h / 2 + 4.5, fill: "#c9a227", "text-anchor": "middle",
+          "font-family": "inherit", "font-size": 11.5 });
+        tx.textContent = clip(n.label, 20);
+        inner.appendChild(tx);
+      }
+      g.appendChild(outer);
+    });
+  }
+
+  function stepMeta(b, n) {
+    if (b.kind !== "run") {
+      if (n.chaseDays) return "chase " + n.chaseDays + "d";
+      return n.dueAt ? "dated" : "";
+    }
+    var st = nodeState(b, n);
+    if (st === "over") return daysWaiting(n) + "d · " + overdueBy(n) + " past chase";
+    if (st === "waiting") return daysWaiting(n) + "d waiting";
+    if (st === "now") return n.dueAt ? niceDate(n.dueAt) : daysWaiting(n) + "d in hand";
+    return "";
+  }
+  function wrap(s, max) {
+    var words = String(s).split(/\s+/), lines = [], cur = "";
+    words.forEach(function (w) {
+      if (!cur) { cur = w; return; }
+      if ((cur + " " + w).length <= max) cur += " " + w;
+      else { lines.push(cur); cur = w; }
+    });
+    if (cur) lines.push(cur);
+    return lines.slice(0, 2);
+  }
+  function clip(s, max) { return String(s).length > max ? String(s).slice(0, max - 1) + "…" : String(s); }
+
+  function boundsOf(b) {
+    var x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9;
+    b.nodes.forEach(function (n) {
+      var d = dims(n);
+      x1 = Math.min(x1, n.x); y1 = Math.min(y1, n.y);
+      x2 = Math.max(x2, n.x + d.w); y2 = Math.max(y2, n.y + d.h);
+    });
+    if (x1 > x2) { x1 = 0; y1 = 0; x2 = 800; y2 = 400; }
+    return { x1: x1, y1: y1, x2: x2, y2: y2 };
+  }
+  function applyVB() { if (cvSvg) cvSvg.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h); }
+
+  function fitBoard(b) {
+    if (!cvSvg) return;
+    var bd = boundsOf(b), pad = 52, r = cvSvg.getBoundingClientRect();
+    var ar = (r.height && r.width) ? r.height / r.width : 0.6;
+    var cw = (bd.x2 - bd.x1) + pad * 2, ch = (bd.y2 - bd.y1) + pad * 2;
+    var w = cw, h = w * ar;
+    if (h < ch) { h = ch; w = h / ar; }
+    vb = { x: (bd.x1 + bd.x2) / 2 - w / 2, y: (bd.y1 + bd.y2) / 2 - h / 2, w: w, h: h };
+    applyVB();
+  }
+
+  function toSvg(ev) {
+    var r = cvSvg.getBoundingClientRect();
+    return { x: vb.x + (ev.clientX - r.left) / r.width * vb.w,
+             y: vb.y + (ev.clientY - r.top) / r.height * vb.h };
+  }
+  function zoomBy(f, cx, cy) {
+    var nw = vb.w / f, nh = vb.h / f;
+    if (nw < 380 || nw > 6000) return;
+    vb.x = cx - (cx - vb.x) * (nw / vb.w);
+    vb.y = cy - (cy - vb.y) * (nh / vb.h);
+    vb.w = nw; vb.h = nh; applyVB();
+  }
+
+  function mountCanvas() {
+    cvSvg = document.getElementById("cv");
+    if (!cvSvg) return;
+    var b = openBoard();
+    if (!b) { cvSvg = null; return; }
+    if (b.nodes.some(function (n) { return typeof n.x !== "number"; })) { autoLayout(b); save(); }
+    drawBoard(b, cvSvg);
+    fitBoard(b);
+
+    cvSvg.addEventListener("pointerdown", function (ev) {
+      var g = ev.target.closest ? ev.target.closest("g[data-id]") : null;
+      var p = toSvg(ev);
+      if (g) {
+        var n = nodeOf(b, g.getAttribute("data-id"));
+        if (n) { drag = { n: n, dx: p.x - n.x, dy: p.y - n.y, moved: false };
+                 cvSvg.setPointerCapture(ev.pointerId); return; }
+      }
+      pan = { x: p.x, y: p.y };
+      cvSvg.classList.add("grabbing");
+      cvSvg.setPointerCapture(ev.pointerId);
+    });
+
+    cvSvg.addEventListener("pointermove", function (ev) {
+      if (drag) {
+        var p = toSvg(ev);
+        drag.n.x = Math.round(p.x - drag.dx);
+        drag.n.y = Math.round(p.y - drag.dy);
+        drag.moved = true;
+        var g = cvSvg._gN.querySelector('g[data-id="' + drag.n.id + '"]');
+        if (g) g.setAttribute("transform", "translate(" + drag.n.x + "," + drag.n.y + ")");
+        drawEdges(b, cvSvg);
+      } else if (pan) {
+        var q = toSvg(ev);
+        vb.x -= (q.x - pan.x); vb.y -= (q.y - pan.y); applyVB();
+      } else {
+        var t = ev.target.closest ? ev.target.closest("g[data-id]") : null;
+        var id = t ? t.getAttribute("data-id") : null;
+        if (id !== hov) { hov = id; drawEdges(b, cvSvg); }
+      }
+    });
+
+    function endPointer(ev) {
+      if (drag && drag.moved) save();
+      if (drag && !drag.moved) editNode(b, drag.n);
+      drag = null; pan = null;
+      cvSvg.classList.remove("grabbing");
+      if (cvSvg.hasPointerCapture && cvSvg.hasPointerCapture(ev.pointerId)) cvSvg.releasePointerCapture(ev.pointerId);
+    }
+    cvSvg.addEventListener("pointerup", endPointer);
+    cvSvg.addEventListener("pointercancel", endPointer);
+    cvSvg.addEventListener("pointerleave", function () { if (hov) { hov = null; drawEdges(b, cvSvg); } });
+    cvSvg.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var p = toSvg(ev);
+      zoomBy(ev.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y);
+    }, { passive: false });
+  }
+
+  /* ================= actions ================= */
+
+  function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
+  function go(fn) { fn(); stampRecords(); save(); render(); }
+
+  function editNode(b, n) { APP.actions["node-edit"](b.id + ":" + n.id); }
+
+  APP.actions = {
+    /* ---- boards ---- */
+    "board-open": function (id) { openId = id; view = "boards"; render(); },
+    "board-back": function () { openId = ""; render(); },
+
+    "board-new": function () {
+      openModal({
+        title: "New board", confirmLabel: "Create",
+        message: "A board is a procedure you can run again and again. A bench is optional — a visa belongs to no employer.",
+        fields: [
+          { key: "name", label: "Name", type: "text", value: "", span: true, placeholder: "Brochure" },
+          { key: "kindId", label: "Kind", type: "select", options: kindOpts(), value: "" },
+          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: "" }
+        ],
+        validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+        onConfirm: function (v) {
+          go(function () {
+            var b = newBoard(v.name.trim(), v.kindId, v.benchId);
+            state.boards.push(b);
+            openId = b.id;
+          });
+          toast("Board created");
+        }
+      });
+    },
+
+    "board-edit": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      openModal({
+        title: "Rename board", confirmLabel: "Save",
+        fields: [
+          { key: "name", label: "Name", type: "text", value: b.name, span: true },
+          { key: "kindId", label: "Kind", type: "select", options: kindOpts(), value: b.kindId },
+          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: b.benchId }
+        ],
+        validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+        onConfirm: function (v) {
+          go(function () { b.name = v.name.trim(); b.kindId = v.kindId; b.benchId = v.benchId; });
+        }
+      });
+    },
+
+    "board-del": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      var runs = state.boards.filter(function (r) { return r.fromBoardId === b.id && !r.archived; });
+      confirmAction({
+        title: "Delete " + b.name + "?",
+        message: b.kind === "template" && runs.length
+          ? "Its " + runs.length + " run" + (runs.length === 1 ? "" : "s") +
+            " will be left alone — a run froze its own copy when it started, so nothing of theirs is lost."
+          : "This cannot be undone from here, though a backup would still have it."
+      }, function () {
+        go(function () {
+          b.archived = true;
+          state.forgotten[b.id] = b.name;
+          if (openId === b.id) openId = "";
+        });
+        toast("Deleted " + b.name);
+      });
+    },
+
+    /* ---- runs ---- */
+    "run-start": function () {
+      var tpls = boards("template");
+      if (!tpls.length) { toast("Write a procedure first."); return; }
+      openModal({
+        title: "Start a run", confirmLabel: "Start",
+        message: "The run takes its own frozen copy of the procedure. Editing the procedure later will not disturb it.",
+        fields: [
+          { key: "boardId", label: "Procedure", type: "select",
+            options: tpls.map(function (t) { return { value: t.id, label: t.name }; }), value: tpls[0].id },
+          { key: "title", label: "Call this run", type: "text", value: "", span: true, placeholder: "Harbour festival brochure" }
+        ],
+        validate: function (v) { return v.title.trim() ? null : "Give the run a name you will recognise."; },
+        onConfirm: function (v) {
+          var tpl = byId(state.boards, v.boardId);
+          if (!tpl) return;
+          go(function () { openId = startRun(tpl, v.title.trim()).id; });
+          toast("Run started");
+        }
+      });
+    },
+
+    "run-this": function (id) {
+      var tpl = byId(state.boards, id); if (!tpl) return;
+      if (!tpl.nodes.filter(function (n) { return n.t === "step"; }).length) {
+        toast("Add a step before running it."); return;
+      }
+      openModal({
+        title: "Run " + tpl.name, confirmLabel: "Start",
+        fields: [{ key: "title", label: "Call this run", type: "text", value: "", span: true }],
+        validate: function (v) { return v.title.trim() ? null : "Give the run a name."; },
+        onConfirm: function (v) {
+          go(function () { openId = startRun(tpl, v.title.trim()).id; });
+          toast("Run started");
+        }
+      });
+    },
+
+    "run-close": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      var uf = unfiled(b);
+      if (uf.length) {
+        openModal({
+          title: "Not filed yet",
+          message: "This run still has " + uf.length + " filing step" + (uf.length === 1 ? "" : "s") +
+            " undone — <b>" + esc(uf.map(function (n) { return n.label; }).join(", ")) +
+            "</b>. Filing is the thing that gets forgotten, so a run will not close until it is done.",
+          confirmLabel: "Leave it open", cancelLabel: "Close anyway",
+          onConfirm: function () {},
+          onCancel: function () {
+            go(function () { b.closedOn = today(); });
+            toast("Closed " + b.name + " with filing undone");
+          }
+        });
+        return;
+      }
+      go(function () { b.closedOn = today(); });
+      toast("Closed " + b.name, function () { b.closedOn = ""; });
+    },
+
+    "run-reopen": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      go(function () { b.closedOn = ""; });
+      toast("Reopened");
+    },
+
+    /* ---- steps in a run ---- */
+    "step-done": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var before = JSON.stringify(s.b.nodes);
+      go(function () { finishStep(s.b, s.n); });
+      toast("Done: " + n.label, function () { s.b.nodes = JSON.parse(before); });
+    },
+    "step-enter": function (id) {
+      var s = split(id); if (!s.b) return;
+      go(function () { enter(s.b, s.n); });
+    },
+    "step-reopen": function (id) {
+      var s = split(id); if (!s.b) return;
+      go(function () { reopenStep(s.b, s.n); });
+    },
+    "step-answer": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var answers = exitsOf(s.b, n);
+      if (!answers.length) { toast("This decision has no exits yet — add one first."); return; }
+      openModal({
+        title: n.label, confirmLabel: "That one",
+        message: "Whichever you pick is the only exit that opens. This is how the cycle repeats.",
+        fields: [{ key: "answer", label: "Answer", type: "select", span: true,
+          options: answers.map(function (a) {
+            var t = nodeOf(s.b, a.goTo);
+            return { value: a.label, label: a.label + (t ? "  →  " + t.label : "") };
+          }), value: answers[0].label }],
+        onConfirm: function (v) {
+          var before = JSON.stringify(s.b.nodes);
+          go(function () { finishStep(s.b, s.n, v.answer); });
+          toast("Answered: " + v.answer, function () { s.b.nodes = JSON.parse(before); });
+        }
+      });
+    },
+
+    /* ---- nodes ---- */
+    "node-add": function (id) { nodeDialog(byId(state.boards, id), null); },
+    "thing-add": function (id) { thingDialog(byId(state.boards, id), null); },
+    "node-edit": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      if (n.t === "thing") thingDialog(s.b, n); else nodeDialog(s.b, n);
+    },
+    "node-del": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      confirmAction({
+        title: "Remove " + n.label + "?",
+        message: "Every line into and out of it goes too."
+      }, function () {
+        go(function () {
+          s.b.nodes = s.b.nodes.filter(function (x) { return x.id !== n.id; });
+          s.b.edges = s.b.edges.filter(function (e) { return e.a !== n.id && e.b !== n.id; });
+        });
+        toast("Removed " + n.label);
+      });
+    },
+
+    // An exit is a labelled line out of the decision. Naming it and choosing
+    // where it goes are the same act, so they are one dialog and they write one
+    // thing — no exit can exist without a line, and no line goes unlabelled.
+    "exit-add": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var targets = s.b.nodes.filter(function (x) { return x.t === "step" && x.id !== n.id; });
+      if (!targets.length) { toast("Add another step first — an exit has to go somewhere."); return; }
+      openModal({
+        title: "Add an exit to " + n.label, confirmLabel: "Add",
+        message: "An exit that points back at an earlier step is how a cycle repeats.",
+        fields: [
+          { key: "label", label: "Call it", type: "text", value: "", span: true, placeholder: "repeat" },
+          { key: "goTo", label: "Goes to", type: "select", span: true,
+            options: targets.map(function (t) { return { value: t.id, label: t.label }; }),
+            value: targets[0].id }
+        ],
+        validate: function (v) {
+          if (!v.label.trim()) return "Give the exit a name — it is what you will be asked.";
+          var dup = exitsOf(s.b, n).some(function (x) { return x.label === v.label.trim(); });
+          return dup ? "That exit already exists." : null;
+        },
+        onConfirm: function (v) {
+          go(function () {
+            s.b.edges.push({ id: uid(), a: n.id, b: v.goTo, k: "flow", label: v.label.trim() });
+          });
+        }
+      });
+    },
+
+    // Linking a person to a send IS addressing it, so this writes the same
+    // link edge the Connect dialog would, from the step that needs it.
+    "send-to": function (id) {
+      var s = split(id); if (!s.b) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var have = recipientsOf(s.b, n).map(function (t) { return t.id; });
+      var people = s.b.nodes.filter(function (x) {
+        return x.t === "thing" && x.kind === "person" && have.indexOf(x.id) < 0;
+      });
+      if (!people.length) {
+        toast(have.length ? "Everyone on this board is already on it." : "Add a person to the board first.");
+        return;
+      }
+      openModal({
+        title: "Send " + n.label + " to", confirmLabel: "Add",
+        message: have.length ? "Already goes to " + esc(recipientsOf(s.b, n).map(function (t) { return t.label; }).join(", ")) + "." : "",
+        fields: [{ key: "who", label: "Person", type: "select", span: true,
+          options: people.map(function (t) { return { value: t.id, label: t.label }; }), value: people[0].id }],
+        onConfirm: function (v) {
+          go(function () { s.b.edges.push({ id: uid(), a: n.id, b: v.who, k: "link", label: "" }); });
+        }
+      });
+    },
+
+    /* ---- edges ---- */
+    "edge-add": function (id) {
+      var b = byId(state.boards, id); if (!b || b.nodes.length < 2) return;
+      var all = b.nodes;
+      openModal({
+        title: "Connect two things", confirmLabel: "Connect",
+        message: "<b>Then</b> is sequence — one step follows another. <b>About</b> is association and says nothing about order, which is how a photo or a piece of kit hangs off a step without coming before it.",
+        fields: [
+          { key: "a", label: "From", type: "select", options: nodeOpts(b, ""), value: all[0].id },
+          { key: "b", label: "To", type: "select", options: nodeOpts(b, ""), value: all[1].id },
+          { key: "k", label: "Line", type: "select", value: "flow",
+            options: [{ value: "flow", label: "Then — sequence" }, { value: "link", label: "About — association" }] },
+          { key: "label", label: "Label (optional)", type: "text", value: "" }
+        ],
+        validate: function (v) {
+          if (v.a === v.b) return "A line needs two different ends.";
+          var dup = b.edges.some(function (e) { return e.a === v.a && e.b === v.b && e.k === v.k; });
+          return dup ? "Those two are already connected that way." : null;
+        },
+        onConfirm: function (v) {
+          go(function () {
+            b.edges.push({ id: uid(), a: v.a, b: v.b, k: v.k, label: v.label.trim() });
+          });
+        }
+      });
+    },
+    "edge-del": function (id) {
+      var p = String(id).split(":"), b = byId(state.boards, p[0]);
+      if (!b) return;
+      go(function () { b.edges = b.edges.filter(function (e) { return e.id !== p[1]; }); });
+    },
+
+    /* ---- canvas ---- */
+    "cv-in":  function () { zoomBy(1.25, vb.x + vb.w / 2, vb.y + vb.h / 2); },
+    "cv-out": function () { zoomBy(1 / 1.25, vb.x + vb.w / 2, vb.y + vb.h / 2); },
+    "cv-fit": function () { var b = openBoard(); if (b) fitBoard(b); },
+    "cv-tidy": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      go(function () { autoLayout(b); });
+      toast("Tidied");
+    },
+
+    /* ---- the switch ---- */
+    "span-start": function () {
+      pickBench("Where are you starting?", function (benchId) {
+        go(function () {
+          state.spans.push({ id: uid(), startedAt: nowStamp(), endedAt: "",
+                             benchId: benchId, note: "", source: "switch" });
+        });
+        greet(benchId);
+      });
+    },
+    // Switching is one act, not two: the span you were in ends at the moment
+    // the next one starts, so no minute belongs to both and none falls between.
+    "span-switch": function () {
+      var sp = openSpan(), leaving = sp ? sp.benchId : "";
+      pickBench("Switching to", function (benchId) {
+        go(function () {
+          var at = nowStamp();
+          if (sp) sp.endedAt = at;
+          state.spans.push({ id: uid(), startedAt: at, endedAt: "",
+                             benchId: benchId, note: "", source: "switch" });
+        });
+        // Ask about the bench being left, then greet the one being entered.
+        if (leaving && leaving !== benchId) askNote(leaving, function () { greet(benchId); });
+        else greet(benchId);
+      });
+    },
+    "span-stop": function () {
+      var sp = openSpan(); if (!sp) return;
+      var was = sp.endedAt;
+      go(function () { sp.endedAt = nowStamp(); });
+      toast("Stopped after " + fmtMins(minsBetween(sp.startedAt, sp.endedAt)),
+            function () { sp.endedAt = was; });
+      if (sp.benchId) askNote(sp.benchId);
+    },
+    // A runaway is closed by being told when it ended, never by assuming now.
+    "span-close": function () {
+      var sp = runaway(); if (!sp) return;
+      openModal({
+        title: "When did you leave?",
+        message: "This has been open since " + esc(niceDate(stampDay(sp.startedAt))) +
+          ". It is not being counted until it has an end, and the app will not invent one.",
+        confirmLabel: "Close it",
+        fields: [
+          { key: "day", label: "Day", type: "text", value: stampDay(sp.startedAt), span: true, hint: "YYYY-MM-DD" },
+          { key: "to", label: "Time", type: "text", value: "17:00", span: true, hint: "HH:MM" }
+        ],
+        validate: function (v) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+          if (!timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
+          if (v.day.trim() + "T" + v.to.trim() <= sp.startedAt) return "It has to end after it started.";
+          return null;
+        },
+        onConfirm: function (v) {
+          go(function () { sp.endedAt = v.day.trim() + "T" + v.to.trim(); });
+          toast("Closed at " + fmtMins(minsBetween(sp.startedAt, sp.endedAt)));
+        }
+      });
+    },
+
+    /* ---- repairing the week ---- */
+    "span-add":  function (day) { spanDialog(null, day || ""); },
+    "span-edit": function (id) { spanDialog(byId(state.spans, id), ""); },
+    "span-del":  function (id) {
+      var sp = byId(state.spans, id); if (!sp) return;
+      var i = state.spans.indexOf(sp);
+      go(function () { state.spans.splice(i, 1); });
+      toast("Removed that stretch", function () { state.spans.splice(i, 0, sp); });
+    },
+    "week-prev": function () { weekOf = addDays(currentWeek(), -7); render(); },
+    "week-next": function () {
+      var n = addDays(currentWeek(), 7);
+      if (n > weekStart(today())) return;
+      weekOf = n; render();
+    },
+    "week-now":  function () { weekOf = ""; render(); },
+
+    /* ---- upkeep ---- */
+    "place-filter": function (id) { placeFilter = id || ""; render(); },
+    "cadence-add":  function () { cadenceDialog(null); },
+    "cadence-edit": function (id) { cadenceDialog(byId(state.cadences, id)); },
+    "cadence-done": function (id) {
+      var cd = byId(state.cadences, id); if (!cd) return;
+      var was = cd.lastDoneOn;
+      go(function () { cd.lastDoneOn = today(); });
+      toast(cd.label + " — next in " + cd.everyDays + " days", function () { cd.lastDoneOn = was; });
+    },
+    "cadence-del": function (id) {
+      var cd = byId(state.cadences, id); if (!cd) return;
+      confirmAction({ title: "Remove " + cd.label + "?", message: "It stops appearing on Waiting." }, function () {
+        go(function () { state.forgotten[id] = cd.label; cd.archived = true; });
+      });
+    },
+    "asset-add":  function () { assetDialog(null); },
+    "asset-edit": function (id) { assetDialog(byId(state.assets, id)); },
+    "asset-del":  function (id) {
+      var a = byId(state.assets, id); if (!a) return;
+      var uses = live(state.cadences).filter(function (cd) { return cd.protectsAssetId === id; });
+      confirmAction({
+        title: "Remove " + a.name + "?",
+        message: uses.length
+          ? "The " + uses.length + (uses.length === 1 ? " cadence" : " cadences") +
+            " attached to it stay, and stop naming what they protect."
+          : "Nothing is attached to it."
+      }, function () {
+        go(function () { state.forgotten[id] = a.name; a.archived = true; });
+      });
+    },
+
+    /* ---- the report ---- */
+    "report-new":  function () { reportDialog(); },
+    "report-back": function () { reportOn = null; render(); },
+    "report-copy": function () {
+      var el = document.getElementById("reportText");
+      if (!el) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.textContent).then(function () { toast("Copied"); },
+          function () { toast("This browser would not let the page copy it — select it and copy by hand."); });
+      } else {
+        toast("This browser has no clipboard for pages — select it and copy by hand.");
+      }
+    },
+    "report-save": function () {
+      var el = document.getElementById("reportText");
+      if (!el) return;
+      var c = reportOn && reportOn.claimantId ? byId(state.claimants, reportOn.claimantId) : null;
+      var name = (c ? c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "everything");
+      download("mashghal-" + name + "-" + today() + ".txt", el.textContent, "text/plain");
+    },
+
+    /* ---- vocabulary ---- */
+    "claimant-add": function () { claimantDialog(null); },
+    "claimant-edit": function (id) { claimantDialog(byId(state.claimants, id)); },
+    "claimant-del": function (id) {
+      var c = byId(state.claimants, id); if (!c) return;
+      confirmAction({
+        title: "Remove " + c.name + "?",
+        message: "Boards already filed against it keep reading &ldquo;" + esc(c.name) +
+          " (removed)&rdquo; rather than losing their history."
+      }, function () {
+        go(function () { forget(state.claimants, id); c.archived = true; });
+        toast("Removed " + c.name);
+      });
+    },
+    "mode-open": function (id) { openMode = id; render(); },
+    "mode-back": function () { openMode = ""; render(); },
+    "note-edit": function (id) { var b = byId(state.benches, id); if (b) noteDialog(b); },
+    "kit-export": function (id) { var m = byId(state.modes, id); if (m) kitExport(m); },
+    "sw-add":  function (id) { var m = byId(state.modes, id); if (m) swDialog(m, null); },
+    "sw-edit": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (m) swDialog(m, byId(modeSoftware(m), p[1]));
+    },
+    "sw-del": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (!m) return;
+      go(function () { m.software = modeSoftware(m).filter(function (x) { return x.id !== p[1]; }); });
+    },
+    "sw-copy": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      var x = m && byId(modeSoftware(m), p[1]);
+      if (!x || !x.path) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(x.path).then(function () { toast("Copied — Win+R, paste, Enter"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+    "link-add":  function (id) { var m = byId(state.modes, id); if (m) linkDialog(m, null); },
+    "link-edit": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (m) linkDialog(m, byId(modeLinks(m), p[1]));
+    },
+    "link-del": function (id) {
+      var p = String(id).split(":"), m = byId(state.modes, p[0]);
+      if (!m) return;
+      go(function () { m.links = modeLinks(m).filter(function (x) { return x.id !== p[1]; }); });
+    },
+    "mode-add": function () { modeDialog(null); },
+    "mode-edit": function (id) { modeDialog(byId(state.modes, id)); },
+    "mode-del": function (id) {
+      var m = byId(state.modes, id); if (!m) return;
+      confirmAction({ title: "Remove " + m.name + "?", message: "Benches using it keep their history." }, function () {
+        go(function () { forget(state.modes, id); m.archived = true; });
+      });
+    },
+    "bench-add": function () {
+      if (!live(state.modes).length || !live(state.claimants).length) {
+        toast("Add a mode and a claimant first."); return;
+      }
+      openModal({
+        title: "New bench", confirmLabel: "Add",
+        message: "A bench is a mode and a claimant together, because GIS for one employer is different work from GIS for another.",
+        fields: [
+          { key: "modeId", label: "Mode", type: "select", options: opts(state.modes), value: live(state.modes)[0].id },
+          { key: "claimantId", label: "Claimant", type: "select", options: opts(state.claimants), value: live(state.claimants)[0].id }
+        ],
+        validate: function (v) {
+          var dup = live(state.benches).some(function (b) { return b.modeId === v.modeId && b.claimantId === v.claimantId; });
+          return dup ? "That bench already exists." : null;
+        },
+        onConfirm: function (v) {
+          go(function () { state.benches.push({ id: uid(), modeId: v.modeId, claimantId: v.claimantId, archived: false }); });
+        }
+      });
+    },
+    "bench-del": function (id) {
+      var b = byId(state.benches, id); if (!b) return;
+      go(function () { state.forgotten[id] = benchLabel(id); b.archived = true; });
+    },
+    "kind-add": function () { kindDialog(null); },
+    "kind-edit": function (id) { kindDialog(byId(state.kinds, id)); },
+    "kind-del": function (id) {
+      var k = byId(state.kinds, id); if (!k) return;
+      go(function () {
+        state.forgotten[id] = k.name;
+        state.kinds = state.kinds.filter(function (x) { return x.id !== id; });
+      });
+    },
+
+    /* ---- sync ---- */
+    "companion-toggle": function () {
+      go(function () { state.settings.companion = !state.settings.companion; });
+      toast(state.settings.companion
+        ? "Launch links are on. They do nothing until the launcher is installed."
+        : "Launch links are off.");
+    },
+    "sync-setup": function () { syncSetupDialog(); },
+    "sync-now":   function () { syncNow(); },
+    "device-forget": function (id) {
+      go(function () { delete state.devices[id]; });
+    },
+    // Wiping clears this machine and never touches the gist. The book is safe;
+    // this only empties the browser in front of you.
+    "sync-wipe": function () {
+      confirmAction({
+        title: "Wipe this device?",
+        confirmLabel: "Wipe it",
+        message: "Everything in this browser goes: the book, the token and the passphrase. " +
+          "<b>The gist is not touched</b> — your record is safe and any other device still has it. " +
+          "This does not revoke the token, so if you are leaving a machine you do not own, revoke it at github.com/settings/tokens as well."
+      }, function () {
+        dropSecrets();
+        try { localStorage.removeItem(APP.storeKey); localStorage.removeItem(DEV_KEY); } catch (e) {}
+        state = APP.blank(); snap = {};
+        save(); render();
+        toast("This device is empty. The gist still has your book.");
+      });
+    },
+
+    /* ---- settings ---- */
+    "backup": function () {
+      backupDialog("mashghal-backup-" + today() + ".json", JSON.stringify(state, null, 2),
+        boards("template").length + " procedures, " + boards("run").length + " runs");
+    },
+    "restore": function () {
+      restoreDialog(function (p) {
+        if (!p || !p.boards) return null;
+        return (p.boards || []).length + " boards, " + (p.claimants || []).length + " claimants";
+      }, function (parsed) {
+        state = APP.hydrate(parsed, APP.blank());
+        openId = "";
+        save(); render();
+        toast("Restored");
+      });
+    },
+    "sample": function () {
+      confirmAction({
+        title: "Load the example?",
+        message: "Everything in the app now is replaced.", confirmLabel: "Replace it"
+      }, function () {
+        state = sampleData(); openId = "";
+        save(); render();
+        toast("Example loaded");
+      });
+    },
+    "wipe": function () {
+      confirmAction({
+        title: "Erase everything?",
+        message: "Every board, run and claimant on this device. Export a backup first if you might want it."
+      }, function () {
+        state = APP.blank(); save(); render();
+        toast("Erased");
+      });
+    }
+  };
+
+  /* ================= dialogs ================= */
+
+  function nodeDialog(b, n) {
+    if (!b) return;
+    openModal({
+      title: n ? "Edit step" : "New step",
+      confirmLabel: n ? "Save" : "Add",
+      message: "<b>Do</b> is work you perform. <b>Send</b> opens a wait on the people linked to it. <b>Watch</b> waits with nobody to chase. <b>Decide</b> branches along its labelled exits. <b>File</b> puts it somewhere — and a run will not close while one is undone.",
+      fields: [
+        { key: "label", label: "Step", type: "text", value: n ? n.label : "", span: true, placeholder: "Send draft for review" },
+        { key: "act", label: "Act", type: "select", value: n ? n.act : "do",
+          options: Object.keys(ACTS).map(function (k) { return { value: k, label: ACTS[k].label }; }) },
+        { key: "chaseDays", label: "Chase after (days)", type: "number", min: 0, value: n ? (n.chaseDays || 0) : 0 },
+        { key: "dueAt", label: "On a date (optional)", type: "text", span: true,
+          value: n ? (n.dueAt || "") : "", placeholder: "YYYY-MM-DD", hint: "Leave blank unless it is genuinely dated." },
+        { key: "note", label: "", type: "text", span: true, value: "",
+          hint: "A Send goes to whoever is linked to it; a Decide gets its exits from the step row." }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give the step a name.";
+        if (v.dueAt && !/^\d{4}-\d{2}-\d{2}$/.test(v.dueAt.trim())) return "A date must be YYYY-MM-DD, or blank.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = n;
+          if (!t) {
+            t = { id: uid(), t: "step", label: "", act: "do", chaseDays: 0, dueAt: "",
+                  enteredAt: "", doneAt: "", answer: "" };
+            b.nodes.push(t);
+          }
+          t.label = v.label.trim();
+          t.act = v.act;
+          t.chaseDays = num(v.chaseDays);
+          t.dueAt = v.dueAt.trim();
+          if (typeof t.x !== "number") { autoLayout(b); }
+        });
+      }
+    });
+  }
+
+  function thingDialog(b, n) {
+    if (!b) return;
+    openModal({
+      title: n ? "Edit thing" : "New thing",
+      confirmLabel: n ? "Save" : "Add",
+      message: n ? "" : "A person, a file, a photograph, a piece of kit. Link it to a step afterwards — a link says nothing about order.",
+      fields: [
+        { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },
+        { key: "kind", label: "What is it", type: "select", value: n ? n.kind : "person",
+          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) }
+      ],
+      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = n;
+          if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); }
+          t.label = v.label.trim(); t.kind = v.kind;
+          if (typeof t.x !== "number") autoLayout(b);
+        });
+      }
+    });
+  }
+
+  function claimantDialog(c) {
+    openModal({
+      title: c ? "Edit claimant" : "New claimant",
+      confirmLabel: c ? "Save" : "Add",
+      fields: [
+        { key: "name", label: "Name", type: "text", value: c ? c.name : "", span: true, placeholder: "AUB Tripoli 21st Century" },
+        { key: "kind", label: "Shape", type: "select", value: c ? c.kind : "budget",
+          options: Object.keys(CLAIM_KINDS).map(function (k) { return { value: k, label: CLAIM_KINDS[k] }; }) },
+        { key: "hours", label: "How much", type: "text", value: c ? (c.hours || "") : "", placeholder: "20" },
+        { key: "colour", label: "Colour", type: "text", value: c ? c.colour : "#7fa9ce", span: true, hint: "A hex colour — it marks this claimant everywhere." }
+      ],
+      validate: function (v) {
+        if (!v.name.trim()) return "Give it a name.";
+        if (!/^#[0-9a-fA-F]{3,8}$/.test(v.colour.trim())) return "A colour must be a hex value like #7fa9ce.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = c;
+          if (!t) { t = { id: uid(), archived: false }; state.claimants.push(t); }
+          t.name = v.name.trim(); t.kind = v.kind; t.hours = v.hours.trim(); t.colour = v.colour.trim();
+        });
+      }
+    });
+  }
+
+  function modeDialog(m) {
+    openModal({
+      title: m ? "Edit mode" : "New mode",
+      confirmLabel: m ? "Save" : "Add",
+      fields: [{ key: "name", label: "Mode", type: "text", value: m ? m.name : "", span: true, placeholder: "Photogrammetry" }],
+      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = m;
+          if (!t) { t = { id: uid(), archived: false }; state.modes.push(t); }
+          t.name = v.name.trim();
+        });
+      }
+    });
+  }
+
+  function kindDialog(k) {
+    openModal({
+      title: k ? "Edit kind" : "New kind",
+      confirmLabel: k ? "Save" : "Add",
+      message: k ? "" : "A kind groups boards that are not jobs — training, an application, a visa.",
+      fields: [
+        { key: "name", label: "Kind", type: "text", value: k ? k.name : "", span: true, placeholder: "Application" },
+        { key: "colour", label: "Colour", type: "text", value: k ? k.colour : "#c9a227", span: true }
+      ],
+      validate: function (v) {
+        if (!v.name.trim()) return "Give it a name.";
+        if (!/^#[0-9a-fA-F]{3,8}$/.test(v.colour.trim())) return "A colour must be a hex value like #c9a227.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = k;
+          if (!t) { t = { id: uid() }; state.kinds.push(t); }
+          t.name = v.name.trim(); t.colour = v.colour.trim();
+        });
+      }
+    });
+  }
+
+  /* ================= the example ================= */
+
+  // What the sample has to exercise: a send that opens a wait on two named
+  // people, a decision that loops back, a run sitting at four steps at once,
+  // a board with no employer at all, and a run that will not close because
+  // its filing is undone. A feature with no representation here cannot be
+  // shown to anyone.
+  function sampleData() {
+    var s = APP.blank();
+    function mk(o) { o.id = uid(); return o; }
+    function back(n) { return addDays(today(), -n); }
+
+    var kWork  = mk({ name: "Work", colour: "#8a9ac9" });
+    var kTrain = mk({ name: "Trainings and workshops", colour: "#8fae6a" });
+    var kAdmin = mk({ name: "Admin", colour: "#a08fb5" });
+    var kLife  = mk({ name: "Life", colour: "#cf8f5e" });
+    var kAppl  = mk({ name: "Applications", colour: "#c2b15c" });
+    var kPaper = mk({ name: "Research papers", colour: "#5fa3ad" });
+    var kProj  = mk({ name: "Projects", colour: "#bd7a96" });
+    s.kinds = [kWork, kTrain, kAdmin, kLife, kAppl, kPaper, kProj];
+
+    var cAub = mk({ name: "AUB Tripoli 21st C", kind: "budget", hours: "20", colour: "#7fa9ce", archived: false });
+    var cBal = mk({ name: "U. of Balamand", kind: "days", hours: "2", colour: "#c9a227", archived: false });
+    var cHff = mk({ name: "Honor Frost Foundation", kind: "ondemand", hours: "", colour: "#74a086", archived: false });
+    s.claimants = [cAub, cBal, cHff];
+
+    var mGis = mk({ name: "GIS", archived: false, software: [
+      { id: uid(), label: "ArcGIS Pro", path: "C:\\Program Files\\ArcGIS\\Pro\\bin\\ArcGISPro.exe" },
+      { id: uid(), label: "QGIS", path: "C:\\Program Files\\QGIS\\bin\\qgis-bin.exe" },
+      { id: uid(), label: "Area 1 project", path: "D:\\aub21\\area1\\area1.aprx" }
+    ], links: [
+      { id: uid(), label: "Notes on this project", url: "obsidian://search?query=area%201" },
+      { id: uid(), label: "Project mail", url: "https://mail.google.com/mail/u/0/#search/area+1" }
+    ] });
+    var mDes = mk({ name: "Designs", archived: false, software: [
+      { id: uid(), label: "Adobe Express", path: "" },
+      { id: uid(), label: "Brand kit", path: "D:\\balamand\\brand\\kit.indd" }
+    ], links: [
+      { id: uid(), label: "Brochure notes", url: "obsidian://search?query=brochure" }
+    ] });
+    var mLec = mk({ name: "Lectures", archived: false, software: [], links: [] });
+    s.modes = [mGis, mDes, mLec];
+
+    var bGis = mk({ modeId: mGis.id, claimantId: cAub.id, archived: false,
+      note: "still to export the cemetery layer", noteAt: back(3) + "T17:10" });
+    var bDes = mk({ modeId: mDes.id, claimantId: cBal.id, archived: false, note: "", noteAt: "" });
+    var bLec = mk({ modeId: mLec.id, claimantId: cHff.id, archived: false, note: "", noteAt: "" });
+    s.benches = [bGis, bDes, bLec];
+
+    function step(label, act, o) {
+      return mk(Object.assign({ t: "step", label: label, act: act, chaseDays: 0,
+        dueAt: "", enteredAt: "", doneAt: "", answer: "" }, o || {}));
+    }
+    function thing(label, kind) { return mk({ t: "thing", kind: kind, label: label }); }
+    function edge(a, b, k, label) { return mk({ a: a.id, b: b.id, k: k, label: label || "" }); }
+
+    /* --- the brochure, mid-cycle and late --- */
+    var p1 = thing("N. Haddad", "person"), p2 = thing("L. Mroueh", "person");
+    var t1 = thing("Reference photo", "photo"), t2 = thing("Nothing headphones", "asset");
+    var d1 = step("Design the brochure", "do", { doneAt: back(24), enteredAt: back(30) });
+    var d2 = step("Send draft for review", "send", { chaseDays: 5, doneAt: back(12), enteredAt: back(24) });
+    var d3 = step("Fix their notes", "do", { doneAt: back(7), enteredAt: back(12) });
+    var d4 = step("Send v2 and ask for backup", "send", { chaseDays: 5, enteredAt: back(6) });
+    var d5 = step("Repeat the cycle?", "ask", {});
+    var d6 = step("File the final version", "file", {});
+    var d7 = step("Monitor the printing", "watch", { chaseDays: 3 });
+    var d8 = step("Archive the files", "file", {});
+
+    var broch = mk({ kind: "run", name: "Harbour festival brochure", kindId: kWork.id, benchId: bDes.id,
+      fromBoardId: "", nodes: [t1, t2, p1, p2, d1, d2, d3, d4, d5, d6, d7, d8],
+      edges: [], startedOn: back(30), closedOn: "", archived: false });
+    broch.edges = [
+      edge(d1, d2, "flow"), edge(d2, d3, "flow"), edge(d3, d4, "flow"), edge(d4, d5, "flow"),
+      edge(d5, d3, "flow", "repeat"), edge(d5, d6, "flow", "stop"),
+      edge(d6, d7, "flow"), edge(d7, d8, "flow"),
+      edge(d1, t1, "link"), edge(d1, t2, "link"),
+      edge(d2, p1, "link"), edge(d2, p2, "link"), edge(d4, p1, "link"), edge(d4, p2, "link")
+    ];
+
+    /* --- GIS aerials, live at four nodes at once --- */
+    var g0 = thing("Aerials 1916·1930·1970", "file"), ga = thing("ArcGIS Pro", "asset");
+    var g1 = step("Buildings — area 1", "do", { doneAt: back(11), enteredAt: back(20) });
+    var g2 = step("Roads — area 1", "do", { doneAt: back(5), enteredAt: back(14) });
+    var g3 = step("New maps uploaded", "watch", { chaseDays: 4, enteredAt: back(9) });
+    var g4 = step("Types and metadata, buildings", "do", { enteredAt: back(3) });
+    var g5 = step("Friday meeting", "send", { dueAt: addDays(today(), 2), chaseDays: 0, enteredAt: back(1) });
+    var g6 = step("File to the project archive", "file", {});
+    var gis = mk({ kind: "run", name: "GIS aerials, area 1", kindId: kWork.id, benchId: bGis.id,
+      fromBoardId: "", nodes: [g0, ga, g1, g2, g3, g4, g5, g6], edges: [],
+      startedOn: back(20), closedOn: "", archived: false });
+    gis.edges = [
+      edge(g1, g4, "flow"), edge(g2, g4, "flow"), edge(g3, g4, "flow"),
+      edge(g4, g5, "flow"), edge(g5, g6, "flow"),
+      edge(g0, g1, "link"), edge(g0, g2, "link"), edge(ga, g4, "link")
+    ];
+
+    /* --- a run that will not close: printed, never filed --- */
+    var y1 = step("Design it", "do", { doneAt: back(58), enteredAt: back(64) });
+    var y2 = step("Print run", "do", { doneAt: back(41), enteredAt: back(52) });
+    var y3 = step("Archive the files", "file", {});
+    var spring = mk({ kind: "run", name: "Spring brochure", kindId: kWork.id, benchId: bDes.id,
+      fromBoardId: "", nodes: [y1, y2, y3], edges: [], startedOn: back(64), closedOn: "", archived: false });
+    spring.edges = [edge(y1, y2, "flow"), edge(y2, y3, "flow")];
+
+    /* --- the lecture, as a procedure --- */
+    var k2 = thing("Supervisor", "person");
+    var l1 = step("Pull the last lecture", "do", {});
+    var l2 = step("Prepare the new content", "do", {});
+    var l3 = step("Work on the deck", "do", {});
+    var l4 = step("Get a second opinion", "send", { chaseDays: 4 });
+    var l5 = step("Reserve a day", "do", {});
+    var l6 = step("Present", "do", {});
+    var l7 = step("Feedback", "watch", { chaseDays: 7 });
+    var l8 = step("File the deck", "file", {});
+    var lect = mk({ kind: "template", name: "Maritime lecture", kindId: kTrain.id, benchId: bLec.id,
+      fromBoardId: "", nodes: [k2, l1, l2, l3, l4, l5, l6, l7, l8], edges: [],
+      startedOn: "", closedOn: "", archived: false });
+    lect.edges = [
+      edge(l1, l2, "flow"), edge(l2, l3, "flow"), edge(l3, l4, "flow"), edge(l4, l5, "flow"),
+      edge(l5, l6, "flow"), edge(l6, l7, "flow"), edge(l7, l8, "flow"), edge(l4, k2, "link")
+    ];
+
+    /* --- a board that belongs to no employer at all --- */
+    var v0 = thing("Passport scan", "file");
+    var v1 = step("Gather the documents", "do", {});
+    var v2 = step("Request the invitation", "send", { chaseDays: 7 });
+    var v3 = step("Book the appointment", "do", {});
+    var v4 = step("Attend", "do", {});
+    var v5 = step("Decision", "watch", { chaseDays: 5 });
+    var v6 = step("Archive the file", "file", {});
+    var visa = mk({ kind: "template", name: "Schengen visa", kindId: kAdmin.id, benchId: "",
+      fromBoardId: "", nodes: [v0, v1, v2, v3, v4, v5, v6], edges: [],
+      startedOn: "", closedOn: "", archived: false });
+    visa.edges = [
+      edge(v1, v2, "flow"), edge(v2, v3, "flow"), edge(v3, v4, "flow"),
+      edge(v4, v5, "flow"), edge(v5, v6, "flow"), edge(v1, v0, "link")
+    ];
+
+    /* --- an application: a run, and not an employer --- */
+    var a0 = thing("Supervisor", "person"), a1t = thing("Portfolio PDF", "file");
+    var a1 = step("Draft the statement", "do", { doneAt: back(26), enteredAt: back(34) });
+    var a2 = step("Ask for references", "send", { chaseDays: 10, enteredAt: back(21) });
+    var a3 = step("Submit the application", "do", {});
+    var a4 = step("Decision", "watch", { chaseDays: 30 });
+    var a5 = step("File the offer letter", "file", {});
+    var soton = mk({ kind: "run", name: "Southampton — Maritime Archaeology",
+      kindId: kAppl.id, benchId: "", fromBoardId: "",
+      nodes: [a0, a1t, a1, a2, a3, a4, a5], edges: [],
+      startedOn: back(34), closedOn: "", archived: false });
+    soton.edges = [
+      edge(a1, a2, "flow"), edge(a2, a3, "flow"), edge(a3, a4, "flow"), edge(a4, a5, "flow"),
+      edge(a2, a0, "link"), edge(a1, a1t, "link")
+    ];
+
+    /* --- things that need looking after --- */
+    var aLap = mk({ name: "Lenovo Legion", kind: "laptop", notes: "no RTX", archived: false });
+    var aPho = mk({ name: "Nothing Phone", kind: "phone", notes: "", archived: false });
+    var aHed = mk({ name: "Nothing headphones", kind: "audio", notes: "", archived: false });
+    var aBud = mk({ name: "CMF earbuds", kind: "audio", notes: "", archived: false });
+    s.assets = [aLap, aPho, aHed, aBud];
+
+    function cadence(label, every, lastAgo, place, o) {
+      s.cadences.push(mk(Object.assign({
+        label: label, everyDays: every, place: place, archived: false,
+        lastDoneOn: lastAgo === null ? "" : back(lastAgo),
+        protectsAssetId: "", protectsBenchId: ""
+      }, o || {})));
+    }
+    // One of each state: past its interval, never done, nearly due, and fine.
+    cadence("Back up the GIS project", 14, 21, "desk", { protectsBenchId: bGis.id });
+    cadence("Headphone firmware", 90, null, "away", { protectsAssetId: aHed.id });
+    cadence("Haircut", 42, 40, "out");
+    cadence("Update the phone", 30, 12, "away", { protectsAssetId: aPho.id });
+    cadence("Clean the laptop fan", 180, 60, "desk", { protectsAssetId: aLap.id });
+
+    /* --- the week, so the standing has something to stand on --- */
+    // Nothing may be dated in the future, so a day that has not happened yet is
+    // simply skipped and the current week fills in as the week goes on.
+    function span(day, from, to, benchId, note) {
+      if (day > today()) return;
+      s.spans.push({ id: uid(), startedAt: day + "T" + from, endedAt: day + "T" + to,
+                     benchId: benchId, note: note || "", source: "repair" });
+    }
+    var wkNow = weekStart(today()), wkLast = addDays(wkNow, -7);
+
+    // Last week, whole: AUB short of its twenty, Balamand's two days met.
+    span(addDays(wkLast, 0), "09:00", "13:00", bGis.id, "area 1 buildings");
+    span(addDays(wkLast, 1), "10:00", "13:30", bGis.id);
+    span(addDays(wkLast, 1), "14:30", "18:00", bDes.id, "brochure layout");
+    span(addDays(wkLast, 2), "09:30", "13:30", bGis.id);
+    span(addDays(wkLast, 2), "15:00", "17:00", bLec.id, "reading");
+    span(addDays(wkLast, 4), "09:00", "15:00", bDes.id, "brochure, second pass");
+    span(addDays(wkLast, 3), "11:00", "14:00", bGis.id);
+
+    // This week, so far.
+    span(addDays(wkNow, 0), "09:00", "12:00", bGis.id, "metadata");
+    span(addDays(wkNow, 1), "09:30", "13:30", bGis.id);
+    span(addDays(wkNow, 2), "10:00", "15:00", bDes.id);
+    span(addDays(wkNow, 3), "09:00", "11:30", bGis.id);
+    span(addDays(wkNow, 4), "16:00", "17:30", "", "");   // at no bench — suspense
+
+    s.boards = [broch, gis, spring, soton, lect, visa];
+    s.boards.forEach(autoLayout);
+    return s;
+  }
+
+  /* ================= first run ================= */
+
+  APP.afterBoot = function () {
+    if (!state.boards.length && !state.claimants.length && !state.modes.length) {
+      state = sampleData();
+      ensureStamps();
+      save();
+      render();
+      return;
+    }
+    if (ensureStamps()) save();
+    if (borrowed()) armBorrowed();
+  };
+
+
+/* ============================================================
+   Shared runtime for all of these apps.
+
+   Two rules learned the hard way, because a published page runs inside
+   a sandboxed frame:
+     • native confirm() silently returns false  -> never use it
+     • <form> submit events never fire          -> never rely on them
+   So: every confirmation is an in-page modal, and every action is an
+   explicit button click with Enter wired up by hand.
+   ============================================================ */
+
+var STORE_KEY = APP.storeKey;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+function pad2(n) { return String(n).padStart(2, "0"); }
+
+function iso(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+function today() { return iso(new Date()); }
+function parseISO(s) { return new Date(s + "T00:00:00"); }
+function addDays(dateStr, n) { var d = parseISO(dateStr); d.setDate(d.getDate() + n); return iso(d); }
+function daysBetween(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
+function daysUntil(s) { return daysBetween(today(), s); }
+
+function dayName(dateStr, style) {
+  return parseISO(dateStr).toLocaleDateString(undefined, { weekday: style || "short" });
+}
+function niceDate(dateStr) {
+  var d = daysUntil(dateStr);
+  if (d === 0) return "today";
+  if (d === 1) return "tomorrow";
+  if (d === -1) return "yesterday";
+  return parseISO(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+// Monday-start week containing dateStr
+function weekStart(dateStr) {
+  var d = parseISO(dateStr);
+  var shift = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - shift);
+  return iso(d);
+}
+
+/* ---------------- storage ---------------- */
+
+function loadState(shape) {
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return shape();
+    var p = JSON.parse(raw);
+    return APP.hydrate(p, shape());
+  } catch (e) { return shape(); }
+}
+function persist(state) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) { toast("Could not save — this browser's storage may be full or blocked."); }
+}
+
+/* ---------------- modal ---------------- */
+
+var overlay, escHandler = null;
+
+function closeModal() {
+  overlay.innerHTML = "";
+  if (escHandler) { document.removeEventListener("keydown", escHandler); escHandler = null; }
+}
+
+// fields: [{key,label,type,value,options,placeholder,step,min,hint,span,rows}]
+function openModal(opts) {
+  closeModal();
+  var fields = opts.fields || [];
+
+  var html = '<div class="scrim" data-scrim="1"><div class="modal"' +
+    (opts.wide ? ' style="max-width:620px"' : "") +
+    ' role="dialog" aria-modal="true" aria-label="' + esc(opts.title) + '">' +
+    '<div class="modal-head"><h3>' + esc(opts.title) + "</h3>" +
+    (opts.message ? "<p>" + opts.message + "</p>" : "") + "</div>";
+
+  if (fields.length) {
+    html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
+      var id = "mf_" + f.key, inner;
+      if (f.type === "select") {
+        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+          var v = typeof o === "string" ? o : o.value;
+          var l = typeof o === "string" ? o : o.label;
+          return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? " selected" : "") + ">" + esc(l) + "</option>";
+        }).join("") + "</select>";
+      } else if (f.type === "textarea") {
+        inner = '<textarea id="' + id + '" rows="' + (f.rows || 4) + '" spellcheck="false" placeholder="' +
+          esc(f.placeholder || "") + '">' + esc(f.value == null ? "" : f.value) + "</textarea>";
+      } else {
+        inner = '<input id="' + id + '" type="' + (f.type || "text") + '" value="' + esc(f.value == null ? "" : f.value) + '"' +
+          (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "") +
+          (f.type === "number" ? ' step="' + (f.step || "0.01") + '"' : "") +
+          (f.min != null ? ' min="' + f.min + '"' : "") + ' autocomplete="off" />';
+      }
+      return '<div class="field' + (f.span ? " wide" : "") + '">' +
+        '<label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
+        (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
+    }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
+  } else if (opts.extraBody) {
+    html += '<div class="modal-body">' + opts.extraBody + "</div>";
+  }
+
+  html += '<div class="modal-foot">' +
+    '<button class="btn quiet" data-mclose="1">' + esc(opts.cancelLabel || "Cancel") + "</button>" +
+    '<button class="btn ' + (opts.danger ? "danger" : "primary") + '" data-mok="1">' +
+    esc(opts.confirmLabel || "Save") + "</button></div></div></div>";
+
+  overlay.innerHTML = html;
+
+  function collect() {
+    var out = {};
+    fields.forEach(function (f) {
+      var el = document.getElementById("mf_" + f.key);
+      out[f.key] = f.type === "number" ? num(el.value) : el.value;
+    });
+    return out;
+  }
+  function accept() {
+    var v = collect();
+    if (opts.validate) {
+      var bad = opts.validate(v);
+      if (bad) { toast(bad); return; }
+    }
+    closeModal();
+    if (opts.onConfirm) opts.onConfirm(v);
+  }
+
+  overlay.querySelector("[data-mok]").addEventListener("click", accept);
+  overlay.querySelector("[data-mclose]").addEventListener("click", function () {
+    closeModal(); if (opts.onCancel) opts.onCancel();
+  });
+  overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
+    if (e.target === e.currentTarget) { closeModal(); if (opts.onCancel) opts.onCancel(); }
+  });
+  overlay.querySelectorAll(".modal input").forEach(function (i) {
+    i.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); accept(); } });
+  });
+  escHandler = function (e) { if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); } };
+  document.addEventListener("keydown", escHandler);
+
+  var first = overlay.querySelector(".modal input, .modal select, .modal textarea");
+  if (first) first.focus(); else overlay.querySelector("[data-mok]").focus();
+  if (opts.afterOpen) opts.afterOpen();
+}
+
+function confirmAction(opts, onYes) {
+  openModal({
+    title: opts.title, message: opts.message,
+    confirmLabel: opts.confirmLabel || "Delete",
+    cancelLabel: opts.cancelLabel || "Keep it",
+    danger: opts.danger !== false,
+    onConfirm: onYes
+  });
+}
+
+/* ---------------- toast + undo ---------------- */
+
+function toast(msg, undo) {
+  var box = document.getElementById("toasts");
+  var el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = "<span>" + esc(msg) + "</span>";
+  function remove() { if (el.parentNode) el.parentNode.removeChild(el); }
+  if (undo) {
+    var b = document.createElement("button");
+    b.textContent = "Undo";
+    b.addEventListener("click", function () { undo(); remove(); save(); render(); });
+    el.appendChild(b);
+  }
+  box.appendChild(el);
+  while (box.children.length > 3) box.removeChild(box.firstChild);
+  setTimeout(remove, undo ? 7000 : 3800);
+}
+
+/* ---------------- download ---------------- */
+
+function download(name, content, mime) {
+  try {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  } catch (e) {
+    toast("This browser blocked the download. Open the saved file directly rather than in a preview frame.");
+  }
+}
+/* A file save can be ignored outright by the browser — inside an embedded
+   frame it fails with no error at all — so never claim success. Always offer
+   the text too: that route cannot silently fail. */
+function backupDialog(name, text, summary) {
+  closeModal();
+  overlay.innerHTML = '<div class="scrim" data-scrim="1"><div class="modal" style="max-width:640px" role="dialog" aria-modal="true" aria-label="Your backup">' +
+    '<div class="modal-head"><h3>Your backup</h3>' +
+    "<p>Two ways to keep this. <b>Save as file</b> puts it in your downloads — but some browsers block that " +
+    "silently, so if nothing turns up there, use <b>Copy</b> and paste it somewhere safe. Either can be " +
+    "restored later.</p></div>" +
+    '<div class="modal-body">' +
+    '<textarea id="bkText" readonly rows="9" spellcheck="false" ' +
+    'style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.76rem;padding:0.6rem;' +
+    'border-radius:8px;border:1px solid var(--rule-mid);background:var(--raised);color:var(--ink);resize:vertical">' +
+    esc(text) + "</textarea>" +
+    '<p class="hint" style="margin-top:0.5rem">' + (text.length / 1024).toFixed(1) + " KB" +
+    (summary ? " · " + esc(summary) : "") + "</p></div>" +
+    '<div class="modal-foot">' +
+    '<button class="btn quiet" data-mclose="1">Done</button>' +
+    '<button class="btn" id="bkFile">Save as file</button>' +
+    '<button class="btn primary" id="bkCopy">Copy</button>' +
+    "</div></div></div>";
+
+  var ta = document.getElementById("bkText");
+  overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
+  overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById("bkFile").addEventListener("click", function () {
+    download(name, text, "application/json");
+    toast("If nothing appears in your downloads, this browser blocked it — use Copy.");
+  });
+  document.getElementById("bkCopy").addEventListener("click", function () {
+    function fallback() {
+      ta.removeAttribute("readonly");
+      ta.focus();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      ta.setAttribute("readonly", "readonly");
+      toast(ok ? "Backup copied — paste it somewhere safe."
+               : "Couldn't copy automatically. The text is selected — copy it by hand.");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast("Backup copied — paste it somewhere safe.");
+      }, fallback);
+    } else { fallback(); }
+  });
+}
+
+// describe(parsed) -> string summary, or null if it isn't one of ours
+function restoreDialog(describe, onJson) {
+  closeModal();
+  overlay.innerHTML = '<div class="scrim" data-scrim="1"><div class="modal" style="max-width:640px" role="dialog" aria-modal="true" aria-label="Restore a backup">' +
+    '<div class="modal-head"><h3>Restore a backup</h3>' +
+    "<p>Paste the backup text below, or pick the .json file if you saved one. Everything currently in this " +
+    "browser will be replaced — you'll get one more chance to confirm.</p></div>" +
+    '<div class="modal-body">' +
+    '<textarea id="rsText" rows="9" spellcheck="false" placeholder=\'{ "version": 1, … }\' ' +
+    'style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.76rem;padding:0.6rem;' +
+    'border-radius:8px;border:1px solid var(--rule-mid);background:var(--surface);color:var(--ink);resize:vertical"></textarea>' +
+    '<div id="rsInfo" class="hint" style="margin-top:0.5rem">Nothing pasted yet.</div></div>' +
+    '<div class="modal-foot">' +
+    '<button class="btn quiet" data-mclose="1">Cancel</button>' +
+    '<label class="btn" style="cursor:pointer">Choose a file' +
+    '<input type="file" id="rsFile" accept="application/json,.json" style="display:none" /></label>' +
+    '<button class="btn primary" id="rsGo">Restore</button>' +
+    "</div></div></div>";
+
+  var ta = document.getElementById("rsText");
+  var info = document.getElementById("rsInfo");
+
+  function peek() {
+    var t = ta.value.trim();
+    if (!t) { info.textContent = "Nothing pasted yet."; info.style.color = ""; return null; }
+    var p;
+    try { p = JSON.parse(t); }
+    catch (e) { info.textContent = "That isn't valid JSON yet — make sure you pasted all of it."; info.style.color = "var(--warn)"; return null; }
+    var sum = describe(p);
+    if (!sum) { info.textContent = "Valid JSON, but it isn't a backup from this app."; info.style.color = "var(--warn)"; return null; }
+    info.textContent = "Looks good — " + sum + ".";
+    info.style.color = "var(--gain)";
+    return p;
+  }
+
+  ta.addEventListener("input", peek);
+  overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
+  overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById("rsFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () { ta.value = r.result; peek(); };
+    r.readAsText(file);
+  });
+  document.getElementById("rsGo").addEventListener("click", function () {
+    var parsed = peek();
+    if (!parsed) { toast("Paste a valid backup first."); return; }
+    closeModal();
+    onJson(parsed);
+  });
+  ta.focus();
+}
+
+function csvEscape(rows) {
+  return rows.map(function (r) {
+    return r.map(function (c) {
+      var s = String(c == null ? "" : c).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? '"' + s + '"' : s;
+    }).join(",");
+  }).join("\n");
+}
+
+/* ---------------- tooltip ---------------- */
+
+var tipEl;
+function showTip(text, x, y) {
+  tipEl.textContent = text;
+  tipEl.style.left = x + "px";
+  tipEl.style.top = y + "px";
+  tipEl.classList.add("on");
+}
+function hideTip() { tipEl.classList.remove("on"); }
+
+function wireHovers(root) {
+  root.querySelectorAll("[data-tip]").forEach(function (el) {
+    el.addEventListener("mousemove", function (e) { showTip(el.getAttribute("data-tip"), e.clientX, e.clientY); });
+    el.addEventListener("mouseleave", hideTip);
+  });
+}
+
+/* ---------------- charts ---------------- */
+
+function areaChart(points, o) {
+  o = o || {};
+  if (!points.length) return "";
+  var W = 100, H = o.height || 40, pad = 2;
+  var vals = points.map(function (p) { return p.value; });
+  var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  if (o.baseZero && lo > 0) lo = 0;
+  if (lo === hi) { lo -= 1; hi += 1; }
+  var span = hi - lo;
+  function px(i) { return pad + (points.length === 1 ? (W - 2 * pad) / 2 : i * (W - 2 * pad) / (points.length - 1)); }
+  function py(v) { return H - pad - ((v - lo) / span) * (H - 2 * pad); }
+
+  var line = points.map(function (p, i) { return (i ? "L" : "M") + px(i).toFixed(2) + " " + py(p.value).toFixed(2); }).join(" ");
+  var area = line + " L" + px(points.length - 1).toFixed(2) + " " + (H - pad) + " L" + px(0).toFixed(2) + " " + (H - pad) + " Z";
+  var gid = "g" + Math.random().toString(36).slice(2, 8);
+  var stroke = o.color || "var(--c1)";
+  var zero = (lo < 0 && hi > 0)
+    ? '<line x1="' + pad + '" y1="' + py(0).toFixed(2) + '" x2="' + (W - pad) + '" y2="' + py(0).toFixed(2) +
+      '" stroke="var(--rule-strong)" stroke-width="0.25" vector-effect="non-scaling-stroke" />' : "";
+  var hits = points.map(function (p, i) {
+    var w = (W - 2 * pad) / points.length;
+    return '<rect data-tip="' + esc(p.tip || p.label) + '" x="' + (px(i) - w / 2).toFixed(2) +
+      '" y="0" width="' + w.toFixed(2) + '" height="' + H + '" fill="transparent" />';
+  }).join("");
+
+  return '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" style="height:' +
+    (o.cssHeight || 100) + 'px" role="img" aria-label="' + esc(o.aria || "trend") + '">' +
+    '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="' + stroke + '" stop-opacity="0.26" />' +
+    '<stop offset="100%" stop-color="' + stroke + '" stop-opacity="0.02" /></linearGradient></defs>' +
+    zero + '<path d="' + area + '" fill="url(#' + gid + ')" />' +
+    '<path d="' + line + '" fill="none" stroke="' + stroke + '" stroke-width="1.1" stroke-linejoin="round" ' +
+    'stroke-linecap="round" vector-effect="non-scaling-stroke" />' +
+    '<circle cx="' + px(points.length - 1).toFixed(2) + '" cy="' + py(points[points.length - 1].value).toFixed(2) +
+    '" r="1.5" fill="' + stroke + '" stroke="var(--surface)" stroke-width="0.6" />' + hits + "</svg>";
+}
+
+function barChart(rows, o) {
+  o = o || {};
+  var H = o.height || 118;
+  var max = Math.max.apply(null, rows.map(function (r) { return r.value; }).concat([o.min || 1]));
+  return '<div style="display:flex;align-items:flex-end;gap:' + (o.gap || "0.4rem") +
+    ';border-bottom:1px solid var(--rule-strong);padding-top:0.3rem">' +
+    rows.map(function (r) {
+      var h = r.value > 0 ? Math.max(Math.round(r.value / max * H), 2) : 0;
+      return '<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;height:' + H + 'px">' +
+        '<div data-tip="' + esc(r.tip || (r.label + ": " + r.value)) + '" style="width:62%;max-width:26px;height:' + h +
+        "px;background:" + (r.color || o.color || "var(--c1)") + ';border-radius:3px 3px 0 0"></div></div>';
+    }).join("") + "</div>" +
+    '<div style="display:flex;gap:' + (o.gap || "0.4rem") + ';margin-top:0.35rem">' +
+    rows.map(function (r) {
+      return '<span style="flex:1;text-align:center;font-size:0.66rem;color:var(--faint)">' + esc(r.label) + "</span>";
+    }).join("") + "</div>";
+}
+
+function meter(pct, color, pacePct) {
+  return '<div class="meter">' +
+    (pacePct != null && pacePct > 0.02 && pacePct < 0.98
+      ? '<div class="meter-pace" style="left:' + (pacePct * 100).toFixed(1) + '%"></div>' : "") +
+    '<div class="meter-fill" style="width:' + (clamp(pct, 0, 1) * 100).toFixed(1) + "%;background:" + color + '"></div></div>';
+}
+
+/* ---------------- shared bits of markup ---------------- */
+
+function pageHead(title, sub, right) {
+  return '<div class="page-head"><div><h2>' + esc(title) + "</h2>" +
+    (sub ? "<p>" + sub + "</p>" : "") + "</div>" + (right || "") + "</div>";
+}
+function notesHtml(notes, emptyMsg) {
+  if (!notes.length) return '<p class="empty">' + esc(emptyMsg) + "</p>";
+  return '<div class="notes">' + notes.map(function (n) {
+    return '<div class="note"><span class="note-mark ' + n.tone + '">' + n.mark + "</span><div>" + n.html + "</div></div>";
+  }).join("") + "</div>";
+}
+function tile(label, fig, foot, cls) {
+  return '<div class="tile"><span class="label">' + esc(label) + '</span><div class="tile-fig' +
+    (cls ? " " + cls : "") + '"' + (cls === "gain" ? ' style="color:var(--gain)"' : cls === "loss" ? ' style="color:var(--loss)"' : "") +
+    ">" + fig + "</div>" + (foot ? '<div class="tile-foot">' + foot + "</div>" : "") + "</div>";
+}
+
+/* ---------------- boot harness ---------------- */
+
+var state, view, viewEl;
+
+function save() { persist(state); }
+
+function renderNav() {
+  document.getElementById("nav").innerHTML = APP.tabs.map(function (t) {
+    return '<button class="tab" data-tab="' + t.id + '"' + (t.id === view ? ' aria-current="page"' : "") + ">" +
+      '<span class="ico">' + t.ico + "</span><span>" + t.label + "</span></button>";
+  }).join("");
+}
+
+function render() {
+  if (APP.beforeRender) APP.beforeRender();
+  renderNav();
+  viewEl.innerHTML = APP.renderView(view);
+  if (APP.afterRender) APP.afterRender();
+  wireHovers(viewEl);
+}
+
+function boot() {
+  overlay = document.getElementById("overlay");
+  tipEl = document.getElementById("tip");
+  viewEl = document.getElementById("view");
+  state = loadState(APP.blank);
+  view = APP.tabs[0].id;
+
+  document.addEventListener("click", function (e) {
+    var tab = e.target.closest("[data-tab]");
+    if (tab) {
+      view = tab.getAttribute("data-tab");
+      hideTip();
+      if (APP.onTabChange) APP.onTabChange(view);
+      render();
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    var act = e.target.closest("[data-act]");
+    if (!act) return;
+    var name = act.getAttribute("data-act");
+    if (APP.actions[name]) { hideTip(); APP.actions[name](act.getAttribute("data-id"), act); }
+  });
+
+  render();
+  if (APP.afterBoot) APP.afterBoot();
+}
+
+
+  boot();
+})();
+</script>
+
+<script>
+  // Registered immediately, not inside window.load. A blocked third-party
+  // host once left readyState at "interactive" for ever, so the worker never
+  // registered and the app installed as a shortcut instead of an app.
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  }
+</script>
