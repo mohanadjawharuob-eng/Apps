@@ -9,6 +9,21 @@
 <link rel="apple-touch-icon" sizes="192x192" href="../icons/mashghal-192.png" />
 <link rel="icon" type="image/png" href="../icons/mashghal-192.png" />
 <link rel="manifest" href="./manifest.webmanifest" />
+<script>
+  /* Runs before the stylesheet, so the theme is decided before the first paint.
+     It has its own copy of the key expression because the main script has not
+     loaded yet — the same reason Coffer's pre-paint reader repeats its own. */
+  (function () {
+    try {
+      var t = localStorage.getItem("mashghal.theme");
+      if (t === "light" || t === "dark") {
+        document.documentElement.setAttribute("data-theme", t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "light" ? "#f4efe4" : "#1b1e24");
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
   /* An unlit drafting room: ink, blueprint, brass, red oxide, verdigris.
      Committed dark — the brief asked for it, so there is no light palette. */
@@ -25,11 +40,24 @@
   /* Evening ink — see mashghal/DESIGN-HANDOFF.md. Apricot is the only alarm,
      and waiting is deliberately uncoloured: a step three days into a five-day
      chase is not a problem, and colouring it amber said that it was. */
+  /* Two themes, one set of roles. The dark is 1c "evening ink" and the light is
+     1b "the quieter one" — the design round's own paper direction, so the light
+     mode is a drawn design rather than the dark one with the lightness flipped.
+     That is also why LATE changes hue between them: apricot carries on ink and
+     disappears on paper, where 1b reaches for a warm red instead. Roles hold,
+     values move.
+
+     Every role is defined on bare :root, so nothing has its only definition
+     inside a media query. Light is then applied twice — once for the system
+     setting, guarded so an explicit dark choice still wins, and once for the
+     explicit light choice, so the toggle wins in both directions. */
   :root {
     --page: #1b1e24;
+    --rail: #171a1f;
     --sheet: #1f242b;
     --surface: #1f242b;
     --raised: #242932;
+    --sunken: #1a1e25;
     --rule: #343943;
     --rule-soft: #2b2f38;
     --rule-mid: #3a3e48;
@@ -44,6 +72,11 @@
     --apricot-lift: #e8b183;
     --apricot-mute: #bb9573;
     --apricot-deep: #58412c;
+    /* A late thing is a tinted panel, not an outlined one — the fill is the
+       alarm. The second tint is for a late thing with nobody named. */
+    --late-tint: #2a2119;
+    --late-tint2: #252026;
+    --late-edge2: #453a38;
     /* the names the app already speaks, aliased onto the new values */
     --blue: #7fb39a;
     --blue-deep: #4d7566;
@@ -56,6 +89,9 @@
     --loss: #e0a06a;
     --line: #6f7683;
     --line-dim: #3a3e48;
+    --grain: 0.05;
+    --shade: #0d1014;
+    --veil: rgba(31,36,43,0.94);
     --display: "Mashghal Display", "Bricolage Grotesque", "Work Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
     --sans: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --serif: "Newsreader", Georgia, "Times New Roman", serif;
@@ -63,6 +99,90 @@
     --r: 12px;
     --t: 140ms;
     color-scheme: dark;
+  }
+
+  /* The system setting, unless an explicit dark choice overrides it. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --page: #f4efe4;
+    --rail: #ece5d7;
+    --sheet: #fbf8f1;
+    --surface: #fbf8f1;
+    --raised: #ece5d7;
+    --sunken: #f6f1e6;
+    --rule: #e0d8c8;
+    --rule-soft: #ece5d7;
+    --rule-mid: #cdc3ae;
+    --ink: #4d463a;
+    --dim: #6d6557;
+    --faint: #8a8172;
+    --receded: #9b9283;
+    --sage: #3f6f5f;
+    --sage-lift: #2f5a4c;
+    --sage-deep: #8fae9f;
+    --apricot: #a8452c;
+    --apricot-lift: #8f3622;
+    --apricot-mute: #b06a4c;
+    --apricot-deep: #e0bcaf;
+    --late-tint: #fbeee8;
+    --late-tint2: #faf4e8;
+    --late-edge2: #e5d4c4;
+    --blue: #3f6f5f;
+    --blue-deep: #8fae9f;
+    --brass: #b06a4c;
+    --brass-deep: #e0bcaf;
+    --oxide: #a8452c;
+    --oxide-deep: #e0bcaf;
+    --verd: #3f6f5f;
+    --gain: #3f6f5f;
+    --loss: #a8452c;
+    --line: #a39a8a;
+    --line-dim: #cdc3ae;
+    --grain: 0.03;
+    --shade: #cdc3ae;
+    --veil: rgba(251,248,241,0.94);
+    color-scheme: light;
+    }
+  }
+  /* The explicit choice, which has to win over a dark system setting too. */
+  :root[data-theme="light"] {
+      --page: #f4efe4;
+    --rail: #ece5d7;
+    --sheet: #fbf8f1;
+    --surface: #fbf8f1;
+    --raised: #ece5d7;
+    --sunken: #f6f1e6;
+    --rule: #e0d8c8;
+    --rule-soft: #ece5d7;
+    --rule-mid: #cdc3ae;
+    --ink: #4d463a;
+    --dim: #6d6557;
+    --faint: #8a8172;
+    --receded: #9b9283;
+    --sage: #3f6f5f;
+    --sage-lift: #2f5a4c;
+    --sage-deep: #8fae9f;
+    --apricot: #a8452c;
+    --apricot-lift: #8f3622;
+    --apricot-mute: #b06a4c;
+    --apricot-deep: #e0bcaf;
+    --late-tint: #fbeee8;
+    --late-tint2: #faf4e8;
+    --late-edge2: #e5d4c4;
+    --blue: #3f6f5f;
+    --blue-deep: #8fae9f;
+    --brass: #b06a4c;
+    --brass-deep: #e0bcaf;
+    --oxide: #a8452c;
+    --oxide-deep: #e0bcaf;
+    --verd: #3f6f5f;
+    --gain: #3f6f5f;
+    --loss: #a8452c;
+    --line: #a39a8a;
+    --line-dim: #cdc3ae;
+    --grain: 0.03;
+    --shade: #cdc3ae;
+    color-scheme: light;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -117,7 +237,10 @@
   .card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 1rem 1.05rem; margin-bottom: 0.85rem; }
   .card > h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
   .card-sub { margin: 0 0 0.8rem; color: var(--faint); font-size: 0.8rem; font-family: var(--mono); }
-  .sect { margin: 1.9rem 0 0.7rem; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); }
+  .sect { margin: 1.9rem 0 0.7rem; font-size: 0.87rem; color: var(--faint); }
+  /* A few places still want the old legend treatment — a column heading over
+     genuinely machine-read data, never a sentence. */
+  .sect.tiny { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; }
   .sect:first-child { margin-top: 0; }
   .empty { color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.9rem; margin: 0.4rem 0; }
   .hint { color: var(--faint); font-size: 0.8rem; margin: 0.35rem 0 0; }
@@ -151,12 +274,12 @@
      overdue — so danger is quiet at rest and only colours under the finger. */
   .btn.danger { color: var(--dim); border-color: var(--rule); }
   .btn.danger:hover, .btn.danger:focus-visible, .btn.danger:active {
-    color: var(--apricot); border-color: var(--apricot-deep); background: rgba(224,160,106,0.07);
+    color: var(--apricot); border-color: var(--apricot-deep); background: var(--late-tint);
   }
   /* Inside a dialog there is one action and nothing to compete with, and the
      confirmation is the moment of consequence — so there it is loud. */
   #overlay .btn.danger {
-    color: var(--apricot-lift); border-color: var(--apricot-deep); background: rgba(224,160,106,0.12);
+    color: var(--apricot-lift); border-color: var(--apricot-deep); background: var(--late-tint);
   }
   .btn:focus-visible, .tab:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
   .btn:disabled { opacity: 0.38; cursor: default; }
@@ -215,7 +338,7 @@
   #cv.grabbing { cursor: grabbing; }
   .tblock {
     position: absolute; right: 10px; bottom: 10px; z-index: 3; pointer-events: none;
-    border: 1px solid var(--rule); background: rgba(31,36,43,0.94); border-radius: 10px;
+    border: 1px solid var(--rule); background: var(--veil); border-radius: 10px;
     display: grid; grid-auto-flow: column; overflow: hidden;
   }
   .tblock div { padding: 0.32rem 0.6rem; border-right: 1px solid var(--rule-soft); }
@@ -228,7 +351,7 @@
   .cvleg {
     position: absolute; left: 10px; bottom: 10px; z-index: 3; pointer-events: none;
     display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.66rem; color: var(--faint);
-    background: rgba(27,30,36,0.88); border: 1px solid var(--rule-soft);
+    background: var(--veil); border: 1px solid var(--rule-soft);
     border-radius: 10px; padding: 0.26rem 0.55rem;
   }
   .cvleg span { display: inline-flex; align-items: center; gap: 0.32rem; }
@@ -239,6 +362,75 @@
   g[data-id]:hover .nd { transform: translateY(-2px) scale(1.02); filter: brightness(1.13); }
   .halo { animation: breathe 3.4s ease-in-out infinite; }
   @keyframes breathe { 0%, 100% { opacity: 0.1 } 50% { opacity: 0.3 } }
+
+  /* ---------------- the finding, and panels that carry prose ----------------
+     Replaces the pills and the tile row. A state is a sentence here, so the
+     panel needs room for one and the figure needs to be big enough to read
+     without looking for it. */
+  .finding { display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap; margin: 0 0 0.25rem; }
+  .finding h1 {
+    margin: 0; font-family: var(--display); font-weight: 500;
+    font-size: clamp(1.5rem, 4.2vw, 1.95rem); letter-spacing: -0.015em; line-height: 1.15;
+  }
+  .finding .stamp { font-size: 0.82rem; color: var(--faint); }
+  .saynote { margin: 0 0 1.3rem; font-size: 0.85rem; color: var(--faint); }
+  .saynote.foot { margin: 1.6rem 0 0; color: var(--receded); }
+
+  .stack { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; }
+  .stack.tight { gap: 0.5rem; }
+
+  .panel {
+    display: flex; align-items: center; gap: 1.4rem;
+    padding: 1.15rem 1.35rem; background: var(--surface);
+    border: 1px solid transparent; border-radius: 16px;
+  }
+  .panel .grow { flex: 1; min-width: 0; }
+  .panel .nm {
+    font-family: var(--display); font-weight: 500; font-size: 1.22rem;
+    letter-spacing: -0.012em; line-height: 1.25;
+  }
+  .panel .nm.sm { font-family: var(--sans); font-weight: 400; font-size: 1rem; letter-spacing: 0; }
+  .panel .says { font-size: 0.84rem; color: var(--faint); margin-top: 0.25rem; line-height: 1.5; }
+  .panel .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  /* The fill is the alarm. Nothing here says "LATE" in ink because it does not
+     need to — and the second tint is a late thing with nobody named, which is
+     a quieter fact than a person who has not replied. */
+  .panel.late { background: var(--late-tint); border-color: var(--apricot-deep); }
+  .panel.late.unnamed { background: var(--late-tint2); border-color: var(--late-edge2); }
+  .panel.late .says { color: var(--apricot-mute); }
+  .panel.dashed { border: 1.5px dashed var(--apricot-deep); }
+  .panel.calm { padding: 0.85rem 1.1rem; border-radius: 14px; gap: 1rem; }
+  .panel.calm.dated { border-left: 4px solid var(--sage); }
+  .panel.calm.late { background: var(--late-tint); border-color: var(--apricot-deep); }
+
+  .bigage { text-align: right; flex: 0 0 auto; }
+  .bigage b {
+    display: block; font-family: var(--display); font-weight: 500;
+    font-size: 1.6rem; line-height: 1; color: var(--apricot-lift); letter-spacing: -0.015em;
+  }
+  .bigage span { display: block; font-size: 0.78rem; color: var(--apricot-mute); margin-top: 0.25rem; }
+  .panel .age { flex: 0 0 auto; font-size: 1rem; color: var(--dim); }
+  .panel .age.ok { color: var(--sage-lift); }
+  .panel .age.bad { color: var(--apricot-lift); }
+
+  /* The one emphatic action in a panel. Filled, because on a late panel an
+     outlined button disappears into the tint. */
+  .btn.loud {
+    color: var(--page); background: var(--apricot); border-color: var(--apricot);
+    font-weight: 500;
+  }
+  .btn.loud:hover { background: var(--apricot-lift); border-color: var(--apricot-lift); color: var(--page); }
+
+  @media (max-width: 700px) {
+    .panel { flex-wrap: wrap; gap: 0.6rem 0.9rem; padding: 0.95rem 1.05rem; }
+    .panel .grow { flex: 1 1 100%; order: 1; }
+    .bigage { order: 2; text-align: left; }
+    .bigage b { font-size: 1.35rem; }
+    .panel .age { order: 2; }
+    .panel .acts { order: 3; flex: 1 1 100%; }
+    .panel .acts .btn { flex: 1; text-align: center; }
+  }
 
   /* ---------------- dues ---------------- */
   .due { display: grid; grid-template-columns: 2px 1fr auto; gap: 0 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--rule-soft); }
@@ -558,10 +750,20 @@
   }
   // Positive means past the chase. A step with no chase interval can wait
   // for ever without being called late — silence is not always a failure.
+  // Measured from the last chase rather than from the start, so chasing buys
+  // another interval: otherwise a step chased this morning still reads eleven
+  // days past, and the one number you would act on is the one that is wrong.
+  // The total wait is a separate figure and does not move.
   function overdueBy(n) {
     if (!n.chaseDays) return 0;
-    return daysWaiting(n) - num(n.chaseDays);
+    return sinceChase(n) - num(n.chaseDays);
   }
+  function sinceChase(n) {
+    var from = n.chasedAt || n.enteredAt;
+    if (!from) return 0;
+    return Math.max(0, daysBetween(stampDay(from), today()));
+  }
+  function chaseCount(n) { return num(n.chases || 0); }
   function activeNodes(b) {
     return b.nodes.filter(function (n) {
       return n.t === "step" && n.enteredAt && !n.doneAt;
@@ -878,68 +1080,143 @@
 
   /* ================= Waiting ================= */
 
+  /* The screen opens on the finding, not on a count. Four tiles reading
+     "OPEN 5 · LATE 3 · RUNS 4 · UPKEEP 2" is an instrument panel: it makes you
+     do the reading. "Two things are late" has already done it. Nothing on this
+     screen is a pill either — a state is a sentence, because "7D PAST" tells
+     you less than "a day past your reminder" in the same space. */
   function renderWaiting() {
     var list = dues();
-    var late = list.filter(function (d) { return d.st === "over"; }).length;
+    var over = list.filter(function (d) { return d.st === "over"; });
+    var calm = list.filter(function (d) { return d.st !== "over"; });
     var s = stuck();
+    var up = upkeepLate();
 
-    var h = pageHead("Waiting", "Everything a live run is sitting on, worst first. Nothing on this page was typed — it is all derived from the boards.");
-
-    h += '<div class="tiles">' +
-      tile("Open", String(list.length), list.length === 1 ? "step in hand" : "steps in hand") +
-      tile("Late", String(late), late ? "past their chase" : "nothing overdue", late ? "loss" : "") +
-      tile("Runs", String(boards("run").filter(function (b) { return !b.closedOn; }).length), "under way") +
-      tile("Upkeep", String(upkeepLate().length), "past its interval", upkeepLate().length ? "loss" : "") +
-      "</div>";
+    var h = '<div class="finding"><h1>' + esc(waitingHeadline(over.length, s.length, up.length)) + "</h1>" +
+      '<span class="stamp">' + esc(nowWords()) + "</span></div>" +
+      '<p class="saynote">Nothing will buzz at you. This is the whole list.</p>';
 
     if (!list.length && !s.length && !live(state.cadences).length) {
       h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
       return h;
     }
 
-    if (list.length) {
-      h += '<div class="sect">In hand</div><div class="card">' + list.map(dueRow).join("") + "</div>";
-    }
-    h += upkeepCard();
+    if (over.length) h += '<div class="stack">' + over.map(lateCard).join("") + "</div>";
+
     if (s.length) {
-      h += '<div class="sect">Unfinished</div><div class="card">' + s.map(function (b) {
-        var uf = unfiled(b);
-        return '<div class="due"><s style="background:var(--brass-deep)"></s>' +
-          '<div><div class="who">' + esc(b.name) + "</div>" +
-          '<div class="sub">' + esc(uf.map(function (n) { return n.label; }).join(", ")) +
-          " — <em>never filed</em>, so it will not close</div></div>" +
-          '<div class="age"><b>' + (b.startedOn ? daysBetween(b.startedOn, today()) + "d" : "") + "</b></div>" +
-          '<div class="acts"><button class="btn" data-act="board-open" data-id="' + b.id + '">Open</button></div></div>';
-      }).join("") + "</div>";
+      h += '<div class="sect">Finished, but not put away</div><div class="stack">' +
+        s.map(function (b) {
+          var uf = unfiled(b);
+          return '<div class="panel dashed"><div class="grow">' +
+            '<div class="nm">' + esc(uf.length === 1 ? uf[0].label : b.name) + "</div>" +
+            '<div class="says">It looks done from the outside. It is not, and the run knows — ' +
+            esc(b.name) + " will not close until " +
+            esc(uf.map(function (n) { return n.label; }).join(" and ")) + ".</div></div>" +
+            '<div class="acts"><button class="btn" data-act="board-open" data-id="' + b.id + '">Open it</button></div></div>';
+        }).join("") + "</div>";
     }
+
+    if (calm.length) {
+      h += '<div class="sect">Waiting, and that is fine</div><div class="stack tight">' +
+        calm.map(calmRow).join("") + "</div>";
+    }
+
+    h += upkeepCard();
+    h += '<p class="saynote foot">Nothing here was typed in by hand. Every line came out of a procedure, or out of a day passing.</p>';
     return h;
   }
 
-  function dueRow(d) {
+  // The headline is the reading, so it has to be true for every shape of list —
+  // including the one where nothing is late but something is unfiled.
+  function waitingHeadline(late, stuckN, upN) {
+    if (late) return late === 1 ? "One thing is late." : cap(numWord(late)) + " things are late.";
+    if (stuckN) return stuckN === 1 ? "One run is finished but not put away."
+                                    : cap(numWord(stuckN)) + " runs are finished but not put away.";
+    if (upN) return upN === 1 ? "One piece of upkeep is past its interval."
+                              : cap(numWord(upN)) + " pieces of upkeep are past their interval.";
+    return "Nothing is late.";
+  }
+  function numWord(n) {
+    var w = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+    return w[n] || String(n);
+  }
+  // The headline opens a sentence, so the word that starts it is capitalised
+  // there rather than in the list — "three things are late." read as a fragment.
+  function cap(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+  function clockNow() {
+    var d = new Date();
+    return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  /* Named nowWords, not stampNow: the sync module already declares stampNow in
+     this same scope, and a later function declaration wins — so the first
+     version of this printed a raw sync timestamp on the screen. The orphan scan
+     cannot catch that, because both names are used. */
+  function nowWords() {
+    var d = new Date();
+    return dayName(iso(d), "long") + " " + d.getDate() + " " +
+      parseISO(today()).toLocaleDateString(undefined, { month: "long" }) + ", " + clockNow();
+  }
+
+  // A late thing is a tinted panel: the fill is the alarm, so no pill is needed
+  // to say so. The figure on the right is the total wait; the line under it is
+  // how far past the chase, which is the part you can act on.
+  function lateCard(d) {
     var b = d.board, n = d.node;
-    var bar = d.st === "over" ? "var(--oxide)" : d.st === "waiting" ? "var(--receded)" : "var(--sage)";
-    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(" · ");
+    var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(" and ");
+    var named = !!who;
+    var days = d.days;
+    var chased = chaseCount(n);
 
-    var age, tone;
-    if (d.st === "over") { age = d.days + "d"; tone = "+" + d.over + " late"; }
-    else if (d.st === "waiting") {
-      // A dated step says its date. Saying "no chase set" about something due
-      // on Friday answers a question nobody asked.
-      if (n.dueAt) { age = niceDate(n.dueAt); tone = d.days + "d waiting"; }
-      else { age = d.days + "d"; tone = n.chaseDays ? "chase at " + n.chaseDays + "d" : "no chase set"; }
-    }
-    else { age = n.dueAt ? niceDate(n.dueAt) : ACTS[n.act].label; tone = d.days ? d.days + "d in hand" : "today"; }
+    var why = named
+      ? (d.over === 1 ? "A day past your reminder" : d.over + " days past your reminder")
+      : (d.over === 1 ? "A day past your own check-back" : d.over + " days past your own check-back");
 
-    var acts = '<button class="btn" data-act="board-open" data-id="' + b.id + '">Open board</button>';
-    acts += n.act === "ask"
-      ? '<button class="btn" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer</button>'
-      : '<button class="btn" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Mark done</button>';
+    var acts = named
+      ? '<button class="btn loud" data-act="step-chased" data-id="' + b.id + ":" + n.id + '">I chased today</button>' +
+        '<button class="btn" data-act="step-done" data-id="' + b.id + ":" + n.id + '">It came back</button>'
+      : '<button class="btn loud" data-act="step-chased" data-id="' + b.id + ":" + n.id + '">I looked today</button>' +
+        '<button class="btn" data-act="step-done" data-id="' + b.id + ":" + n.id + '">It happened</button>';
 
-    return '<div class="due"><s style="background:' + bar + '"></s>' +
-      '<div><div class="who">' + esc(who || n.label) + "</div>" +
-      '<div class="sub">' + esc(b.name) + " — <em>" + esc(who ? n.label : ACTS[n.act].label.toLowerCase()) + "</em></div></div>" +
-      '<div class="age"><b style="color:' + bar + '">' + esc(age) + "</b>" + esc(tone) + "</div>" +
+    return '<div class="panel late' + (named ? "" : " unnamed") + '">' +
+      '<div class="grow"><div class="nm">' +
+      esc(named ? who + " — " + n.label.toLowerCase() : n.label) + "</div>" +
+      '<div class="says">' + esc(b.name + (b.benchId ? " · " + benchLabel(b.benchId) : "")) +
+      (named ? "" : " · nobody named, so this is yours to check") + "</div></div>" +
+      '<div class="bigage"><b>' + days + (days === 1 ? " day" : " days") + "</b>" +
+      '<span>' + esc(why) + (chased ? ", chased " + chased + (chased === 1 ? " time" : " times") : "") + "</span></div>" +
       '<div class="acts">' + acts + "</div></div>";
+  }
+
+  // Not late, so it takes no colour and no pill — one line saying why it is
+  // waiting, which is the only thing that distinguishes these from each other.
+  function calmRow(d) {
+    var b = d.board, n = d.node;
+    var dated = n.dueAt && d.st === "waiting";
+    var says, right;
+
+    if (dated) {
+      var away = daysBetween(today(), n.dueAt);
+      says = esc(b.name);
+      right = esc(niceDate(n.dueAt) + (away > 0 ? ", in " + away + (away === 1 ? " day" : " days") : ""));
+    } else if (d.st === "waiting") {
+      says = n.chaseDays
+        ? "You will chase this after " + n.chaseDays + " days"
+        : "You never set a reminder for this one, so it can wait for ever";
+      right = d.days + "d";
+    } else {
+      says = "In your hands. Waiting on nobody but you";
+      right = d.days ? d.days + "d" : "today";
+    }
+
+    return '<div class="panel calm' + (dated ? " dated" : "") + '">' +
+      '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
+      '<div class="says">' + says + "</div></div>" +
+      '<div class="age' + (dated ? " ok" : "") + '">' + right + "</div>" +
+      '<div class="acts"><button class="btn quiet" data-act="board-open" data-id="' + b.id + '">Board</button>' +
+      (n.act === "ask"
+        ? '<button class="btn quiet" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer</button>'
+        : '<button class="btn quiet" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Done</button>') +
+      "</div></div>";
   }
 
   /* ================= Kit ================= */
@@ -1000,6 +1277,15 @@
     var h = pageHead("Settings", "Everything is on this device and nowhere else.");
 
     h += syncCard();
+
+    h += '<div class="card"><h3>Light or dark</h3>' +
+      '<p class="card-sub">' + esc(THEME_WORD[themeChoice()]) + "</p>" +
+      '<p class="hint" style="margin:0 0 0.6rem">The dark is the evening-ink drawing; the light is the paper one. Both are drawn designs rather than one inverted, so late changes colour between them — apricot carries on ink and vanishes on paper, which takes a warm red instead. This is per device and never travels with your book.</p>' +
+      '<div class="tools">' +
+      ["auto", "light", "dark"].map(function (k) {
+        return '<button class="btn' + (themeChoice() === k ? " primary" : "") +
+          '" data-act="theme" data-id="' + k + '">' + esc(THEME_WORD[k]) + "</button>";
+      }).join("") + "</div></div>";
 
     h += '<div class="card"><h3>Your book</h3>' +
       '<p class="card-sub">' + tpls + " procedures · " + runs + " runs · " +
@@ -1570,6 +1856,18 @@
     if (over > -3) return { over: over, since: since, tone: "p-dim", word: "due in " + (-over) + "d" };
     return { over: over, since: since, tone: "p-grey", word: (-over) + "d to go" };
   }
+  // One sentence, in this order: what it guards, where it is doable, when it
+  // was last done. What it protects comes first because that is the reason to
+  // bother — a stale backup is a threat to the work behind it, not a chore.
+  function upkeepSays(x) {
+    var cd = x.cd, p = protects(cd), bits = [];
+    if (p) bits.push("Keeps " + p + " safe");
+    bits.push((p ? "e" : "E") + "very " + cd.everyDays + " days, " +
+              (PLACES[cd.place] ? String(PLACES[cd.place]).toLowerCase() : "anywhere"));
+    bits.push(cd.lastDoneOn ? "last done " + niceDate(cd.lastDoneOn) : "never done yet");
+    return bits.join(" · ");
+  }
+
   function protects(cd) {
     if (cd.protectsAssetId) return nameOf(state.assets, cd.protectsAssetId, "thing");
     if (cd.protectsBenchId) return benchLabel(cd.protectsBenchId);
@@ -1601,18 +1899,16 @@
           (pl ? esc(PLACES[pl]) : "Anywhere") + "</button>";
       }).join("") + "</div>";
 
-    h += '<div class="card">';
-    h += shown.length ? shown.map(function (x) {
-      var p = protects(x.cd);
-      return '<div class="row"><span class="pill ' + x.st.tone + '">' + esc(x.st.word) + "</span>" +
-        '<span class="grow"><b>' + esc(x.cd.label) + "</b><small>" +
-        esc("every " + x.cd.everyDays + "d · " + (PLACES[x.cd.place] || "anywhere") +
-            (x.cd.lastDoneOn ? " · last " + niceDate(x.cd.lastDoneOn) : " · not done yet") +
-            (p ? " · protects " + p : "")) + "</small></span>" +
-        '<span class="tools"><button class="btn" data-act="cadence-done" data-id="' + x.cd.id + '">Done now</button>' +
-        '<button class="btn quiet" data-act="cadence-edit" data-id="' + x.cd.id + '">Edit</button></span></div>';
-    }).join("") : '<p class="empty">Nothing to do ' + esc((PLACES[placeFilter] || "").toLowerCase()) + ".</p>";
-    h += "</div>";
+    h += shown.length ? '<div class="stack tight">' + shown.map(function (x) {
+      return '<div class="panel calm' + (x.st.over > 0 ? " late" : "") + '">' +
+        '<div class="grow"><div class="nm sm">' + esc(x.cd.label) + "</div>" +
+        '<div class="says">' + esc(upkeepSays(x)) + "</div></div>" +
+        '<div class="age' + (x.st.over > 0 ? " bad" : "") + '">' + esc(x.st.word) + "</div>" +
+        '<div class="acts"><button class="btn' + (x.st.over > 0 ? " loud" : " quiet") +
+        '" data-act="cadence-done" data-id="' + x.cd.id + '">Done now</button>' +
+        '<button class="btn quiet" data-act="cadence-edit" data-id="' + x.cd.id + '">Edit</button></div></div>';
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing to do ' + esc((PLACES[placeFilter] || "").toLowerCase()) + ".</p>";
     return h;
   }
 
@@ -2062,6 +2358,32 @@
     });
   }
 
+  var THEME_KEY = "mashghal.theme";
+  var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
+
+  function themeChoice() {
+    try {
+      var t = localStorage.getItem(THEME_KEY);
+      return (t === "light" || t === "dark") ? t : "auto";
+    } catch (e) { return "auto"; }
+  }
+  function setTheme(k) {
+    try {
+      if (k === "auto") localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, k);
+    } catch (e) {}
+    var el = document.documentElement;
+    if (k === "auto") el.removeAttribute("data-theme");
+    else el.setAttribute("data-theme", k);
+    inkFlush();
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) {
+      // Read it back rather than writing a literal, or the two drift apart.
+      m.setAttribute("content", ink("page") || "#1b1e24");
+    }
+    render();
+  }
+
   function railFoot() {
     var el = document.getElementById("railFoot");
     if (!el) return;
@@ -2372,29 +2694,48 @@
     return "M" + x1 + "," + y1 + " C" + x1 + "," + (y1 + j) + " " + x2 + "," + (y2 - j) + " " + x2 + "," + y2;
   }
 
-  // The same ladder the pills use. Waiting is uncoloured on purpose.
-  var NODE_INK = {
-    done:    { bar: "#4d7566", stroke: "#2b2f38", text: "#61656e", w: 1,   sink: 0.62 },
-    now:     { bar: "#7fb39a", stroke: "#4d7566", text: "#e9e5dd", w: 1.6, sink: 1 },
-    waiting: { bar: "#61656e", stroke: "#3a3e48", text: "#9a958a", w: 1.3, sink: 1 },
-    over:    { bar: "#e0a06a", stroke: "#e0a06a", text: "#e9e5dd", w: 1.6, sink: 1 },
-    todo:    { bar: "#343943", stroke: "#2b2f38", text: "#7d7970", w: 1,   sink: 0.84 }
-  };
+  /* The sheet is drawn in JS, so it cannot inherit a custom property the way
+     the rest of the app does — it reads them instead, once per draw. Hardcoded
+     hexes here are what would leave an ink-dark board drawn on paper the moment
+     a light theme existed, and the palette would then live in two places that
+     could disagree. Cached because getComputedStyle in a node loop is slow;
+     flushed whenever the theme moves. */
+  var _ink = {};
+  function ink(n) {
+    if (_ink[n] === undefined) {
+      _ink[n] = (getComputedStyle(document.documentElement)
+                  .getPropertyValue("--" + n) || "").trim() || "#808080";
+    }
+    return _ink[n];
+  }
+  function inkFlush() { _ink = {}; }
+
+  // The same ladder the rows use. Waiting is uncoloured on purpose.
+  function nodeInk() {
+    return {
+      done:    { bar: ink("sage-deep"), stroke: ink("rule-soft"), text: ink("receded"), w: 1,   sink: 0.62 },
+      now:     { bar: ink("sage"),      stroke: ink("sage-deep"), text: ink("ink"),     w: 1.6, sink: 1 },
+      waiting: { bar: ink("receded"),   stroke: ink("rule-mid"),  text: ink("dim"),     w: 1.3, sink: 1 },
+      over:    { bar: ink("apricot"),   stroke: ink("apricot"),   text: ink("ink"),     w: 1.6, sink: 1 },
+      todo:    { bar: ink("rule"),      stroke: ink("rule-soft"), text: ink("faint"),   w: 1,   sink: 0.84 }
+    };
+  }
 
   function drawBoard(b, svg) {
+    inkFlush();
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     var defs = svgEl("defs");
-    [["mar", "#6f7683"], ["mar-dim", "#3a3e48"]].forEach(function (p) {
+    [["mar", ink("line")], ["mar-dim", ink("line-dim")]].forEach(function (p) {
       var m = svgEl("marker", { id: p[0], viewBox: "0 0 10 8", refX: 9, refY: 4,
         markerWidth: 9, markerHeight: 7.5, orient: "auto-start-reverse" });
       m.appendChild(svgEl("polygon", { points: "0,0 10,4 0,8", fill: p[1] }));
       defs.appendChild(m);
     });
     var pmin = svgEl("pattern", { id: "gmin", width: 40, height: 40, patternUnits: "userSpaceOnUse" });
-    pmin.appendChild(svgEl("path", { d: "M40,0 H0 V40", fill: "none", stroke: "#e9e5dd", "stroke-opacity": ".028" }));
+    pmin.appendChild(svgEl("path", { d: "M40,0 H0 V40", fill: "none", stroke: ink("ink"), "stroke-opacity": ".028" }));
     var pmaj = svgEl("pattern", { id: "gmaj", width: 200, height: 200, patternUnits: "userSpaceOnUse" });
     pmaj.appendChild(svgEl("rect", { width: 200, height: 200, fill: "url(#gmin)" }));
-    pmaj.appendChild(svgEl("path", { d: "M200,0 H0 V200", fill: "none", stroke: "#e9e5dd", "stroke-opacity": ".055" }));
+    pmaj.appendChild(svgEl("path", { d: "M200,0 H0 V200", fill: "none", stroke: ink("ink"), "stroke-opacity": ".055" }));
     defs.appendChild(pmin); defs.appendChild(pmaj);
     svg.appendChild(defs);
     svg.appendChild(svgEl("rect", { x: -6000, y: -6000, width: 12000, height: 12000, fill: "url(#gmaj)" }));
@@ -2417,13 +2758,13 @@
 
       if (e.k === "link") {
         g.appendChild(svgEl("path", { d: curvePath(p1.x, p1.y, p2.x, p2.y), fill: "none",
-          stroke: "#bb9573", "stroke-width": on ? 1.7 : 1.3, "stroke-dasharray": "3.5 5.5",
+          stroke: ink("brass"), "stroke-width": on ? 1.7 : 1.3, "stroke-dasharray": "3.5 5.5",
           "stroke-opacity": on ? 0.95 : 0.5, "stroke-linecap": "round" }));
         return;
       }
       var back = Z.x < A.x - 40;
       var liveEdge = nodeState(b, A) !== "todo";
-      var col = liveEdge ? "#6f7683" : "#3a3e48";
+      var col = liveEdge ? ink("line") : ink("line-dim");
       var mk = liveEdge ? "url(#mar)" : "url(#mar-dim)";
       var lx, ly;
 
@@ -2440,8 +2781,8 @@
         lx = (p1.x + p2.x) / 2; ly = (p1.y + p2.y) / 2 - 9;
       }
       if (e.label) {
-        g.appendChild(svgEl("rect", { x: lx - 26, y: ly - 11, width: 52, height: 15, fill: "#1b1e24", opacity: 0.92 }));
-        var t = svgEl("text", { x: lx, y: ly, fill: "#9a958a", "text-anchor": "middle",
+        g.appendChild(svgEl("rect", { x: lx - 26, y: ly - 11, width: 52, height: 15, fill: ink("page"), opacity: 0.92 }));
+        var t = svgEl("text", { x: lx, y: ly, fill: ink("dim"), "text-anchor": "middle",
           "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5, "letter-spacing": ".1em" });
         t.textContent = e.label.toUpperCase();
         g.appendChild(t);
@@ -2450,6 +2791,7 @@
   }
 
   function drawNodes(b, svg) {
+    var INK = nodeInk();
     var g = svg._gN;
     while (g.firstChild) g.removeChild(g.firstChild);
     b.nodes.forEach(function (n) {
@@ -2459,17 +2801,17 @@
       var d = dims(n);
 
       if (n.t === "step") {
-        var st = NODE_INK[nodeState(b, n)] || NODE_INK.todo;
+        var st = INK[nodeState(b, n)] || INK.todo;
         inner.setAttribute("opacity", st.sink);
         if (nodeState(b, n) === "over") {
           inner.appendChild(svgEl("path", { "class": "halo", d: stepPath(d.w, d.h),
-            fill: "none", stroke: "#e0a06a", "stroke-width": 6, opacity: 0.16 }));
+            fill: "none", stroke: ink("apricot"), "stroke-width": 6, opacity: 0.16 }));
         }
-        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), transform: "translate(3,3)", fill: "#12151a", opacity: 0.5 }));
-        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), fill: "#1f242b", stroke: st.stroke, "stroke-width": st.w }));
+        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), transform: "translate(3,3)", fill: ink("shade"), opacity: 0.5 }));
+        inner.appendChild(svgEl("path", { d: stepPath(d.w, d.h), fill: ink("surface"), stroke: st.stroke, "stroke-width": st.w }));
         inner.appendChild(svgEl("rect", { x: 0, y: 0, width: 2.5, height: d.h, fill: st.bar }));
 
-        var a = svgEl("text", { x: 13, y: 18, fill: "#7d7970",
+        var a = svgEl("text", { x: 13, y: 18, fill: ink("faint"),
           "font-family": "ui-monospace, Menlo, monospace", "font-size": 9, "letter-spacing": ".18em" });
         a.textContent = ACTS[n.act].word.toUpperCase();
         inner.appendChild(a);
@@ -2482,23 +2824,23 @@
         });
 
         if (n.doneAt) {
-          var ck = svgEl("text", { x: d.w - 13, y: 18, fill: "#4d7566", "text-anchor": "end",
+          var ck = svgEl("text", { x: d.w - 13, y: 18, fill: ink("sage-deep"), "text-anchor": "end",
             "font-family": "ui-monospace, Menlo, monospace", "font-size": 11 });
           ck.textContent = "✓";
           inner.appendChild(ck);
         }
         var meta = stepMeta(b, n);
         if (meta) {
-          var m = svgEl("text", { x: 13, y: d.h - 10, fill: nodeState(b, n) === "over" ? "#e0a06a" : "#7d7970",
+          var m = svgEl("text", { x: 13, y: d.h - 10, fill: nodeState(b, n) === "over" ? ink("apricot") : ink("faint"),
             "font-family": "ui-monospace, Menlo, monospace", "font-size": 9.5 });
           m.textContent = meta;
           inner.appendChild(m);
         }
       } else {
-        inner.appendChild(svgEl("rect", { x: 3, y: 3, width: d.w, height: d.h, rx: d.h / 2, fill: "#12151a", opacity: 0.45 }));
+        inner.appendChild(svgEl("rect", { x: 3, y: 3, width: d.w, height: d.h, rx: d.h / 2, fill: ink("shade"), opacity: 0.45 }));
         inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
-          fill: "#242932", stroke: "#bb9573", "stroke-opacity": 0.62 }));
-        var tx = svgEl("text", { x: d.w / 2, y: d.h / 2 + 4.5, fill: "#bb9573", "text-anchor": "middle",
+          fill: ink("raised"), stroke: ink("brass"), "stroke-opacity": 0.62 }));
+        var tx = svgEl("text", { x: d.w / 2, y: d.h / 2 + 4.5, fill: ink("brass"), "text-anchor": "middle",
           "font-family": "inherit", "font-size": 11.5 });
         tx.textContent = clip(n.label, 20);
         inner.appendChild(tx);
@@ -3077,6 +3419,16 @@
       if (!m) return;
       go(function () { m.software = modeSoftware(m).filter(function (x) { return x.id !== p[1]; }); });
     },
+    // Chasing is not finishing. It buys another chase interval and records that
+    // you did it, so the count is visible rather than something you remember.
+    "step-chased": function (id) {
+      var p = String(id).split(":"), b = byId(state.boards, p[0]);
+      var n = b && nodeOf(b, p[1]);
+      if (!n) return;
+      go(function () { n.chasedAt = nowStamp(); n.chases = chaseCount(n) + 1; });
+      toast("Chased. Next nudge in " + (n.chaseDays || "?") + " days.");
+    },
+    "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
       var id = String(syncCfg().gistId || "");
       if (!id) { toast("No gist is set up."); return; }
