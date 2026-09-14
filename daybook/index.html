@@ -277,6 +277,9 @@
   .field.wide { grid-column: span 2; }
   @media (max-width: 620px) { .field.wide { grid-column: span 1; } }
 
+  /* A long option clipped mid-glyph ("belongs tc") rather than trailing off.
+     The whole text is still there once the select is opened. */
+  select { text-overflow: ellipsis; }
   input, select, textarea {
     font: inherit; font-size: 0.875rem; width: 100%;
     padding: 0.48rem 0.6rem; border-radius: 7px;
@@ -381,6 +384,13 @@
   .modal-head h3 { font-size: 1.1rem; }
   .modal-head p { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--dim); line-height: 1.5; }
   .modal-body { padding: 0.5rem 1.25rem 0.3rem; }
+  /* A refused form says so here, beside the button that refused it. It used to
+     go to a toast at the foot of the page, in the same channel as every
+     routine success. */
+  .modal-bad {
+    margin: 0; padding: 0.55rem 1.25rem 0; color: var(--loss);
+    font-size: 0.86rem; line-height: 1.45;
+  }
   .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.25rem 1.15rem; flex-wrap: wrap; }
 
   /* ---- toast ---- */
@@ -1405,7 +1415,8 @@ function openModal(opts) {
     html += '<div class="modal-body">' + opts.extraBody + "</div>";
   }
 
-  html += '<div class="modal-foot">' +
+  html += '<p class="modal-bad" data-mbad="1" role="alert" hidden></p>' +
+    '<div class="modal-foot">' +
     '<button class="btn quiet" data-mclose="1">' + esc(opts.cancelLabel || "Cancel") + "</button>" +
     '<button class="btn ' + (opts.danger ? "danger" : "primary") + '" data-mok="1">' +
     esc(opts.confirmLabel || "Save") + "</button></div></div></div>";
@@ -1420,11 +1431,22 @@ function openModal(opts) {
     });
     return out;
   }
+  /* A refusal belongs in the dialog. It used to go to a toast at the foot of
+     the page — 340px below the button on a tall window, behind the eye that
+     was on the form — and a toast is also where every routine success goes,
+     so the one message that means "nothing happened" looked like all the ones
+     that mean "it worked". role="alert" so it is announced as well as shown. */
+  function say(bad) {
+    var el = overlay.querySelector("[data-mbad]");
+    if (!el) { toast(bad); return; }
+    el.textContent = bad;
+    el.hidden = false;
+  }
   function accept() {
     var v = collect();
     if (opts.validate) {
       var bad = opts.validate(v);
-      if (bad) { toast(bad); return; }
+      if (bad) { say(bad); return; }
     }
     closeModal();
     if (opts.onConfirm) opts.onConfirm(v);
@@ -1440,11 +1462,35 @@ function openModal(opts) {
   overlay.querySelectorAll(".modal input").forEach(function (i) {
     i.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); accept(); } });
   });
-  escHandler = function (e) { if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); } };
+  overlay.querySelectorAll(".modal input, .modal select, .modal textarea").forEach(function (i) {
+    i.addEventListener("input", function () {
+      var el = overlay.querySelector("[data-mbad]");
+      if (el && !el.hidden) el.hidden = true;     // the message outlived the problem
+    });
+  });
+
+  /* Escape and a focus trap. Tab used to walk out of the last button and into
+     the page behind the scrim, where a keyboard reader could reach controls
+     they could neither see nor click. */
+  var trap = function () {
+    return Array.prototype.filter.call(
+      overlay.querySelectorAll("button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])"),
+      function (el) { return !el.disabled && el.offsetParent !== null; });
+  };
+  escHandler = function (e) {
+    if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); return; }
+    if (e.key !== "Tab") return;
+    var f = trap();
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (!overlay.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   document.addEventListener("keydown", escHandler);
 
-  var first = overlay.querySelector(".modal input, .modal select, .modal textarea");
-  if (first) first.focus(); else overlay.querySelector("[data-mok]").focus();
+  var firstField = overlay.querySelector(".modal input, .modal select, .modal textarea");
+  if (firstField) firstField.focus(); else overlay.querySelector("[data-mok]").focus();
   if (opts.afterOpen) opts.afterOpen();
 }
 
