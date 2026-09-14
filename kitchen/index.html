@@ -1991,8 +1991,14 @@ function openModal(opts) {
           (f.type === "number" ? ' step="' + (f.step || "0.01") + '"' : "") +
           (f.min != null ? ' min="' + f.min + '"' : "") + ' autocomplete="off" />';
       }
-      return '<div class="field' + (f.span ? " wide" : "") + '">' +
-        '<label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
+      /* showWhen: {key, is} keeps a field out of the way until the field it
+         depends on has that value. The write-in box beside an "Other" picker
+         was on screen in every one of these dialogs, under the words "only
+         needed if you picked Other above" — a whole extra field, always, to
+         serve the one time in fifty it is used. */
+      return '<div class="field' + (f.span ? " wide" : "") + '"' +
+        (f.showWhen ? ' data-when="' + esc(f.showWhen.key) + '" data-is="' + esc(f.showWhen.is) + '" hidden' : "") +
+        '><label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
         (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
     }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
   } else if (opts.extraBody) {
@@ -2052,6 +2058,21 @@ function openModal(opts) {
       if (el && !el.hidden) el.hidden = true;     // the message outlived the problem
     });
   });
+
+  // Fields that only apply once another answer has been given.
+  function dependants() {
+    overlay.querySelectorAll("[data-when]").forEach(function (wrap) {
+      var on = document.getElementById("mf_" + wrap.getAttribute("data-when"));
+      var want = wrap.getAttribute("data-is");
+      var show = !!on && String(on.value) === want;
+      wrap.hidden = !show;
+      if (!show) { var f = wrap.querySelector("input, select, textarea"); if (f) f.value = ""; }
+    });
+  }
+  overlay.querySelectorAll(".modal select, .modal input").forEach(function (i) {
+    i.addEventListener("change", dependants);
+  });
+  dependants();
 
   /* Escape and a focus trap. Tab used to walk out of the last button and into
      the page behind the scrim, where a keyboard reader could reach controls

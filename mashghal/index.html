@@ -498,6 +498,17 @@
     border: 2px dashed var(--sage); border-radius: var(--r);
   }
   .dropnote.on { display: flex; }
+  /* What a board says before it has anything on it. */
+  .cvempty {
+    position: absolute; inset: auto 0 0 0; top: 50%; transform: translateY(-50%);
+    z-index: 3; pointer-events: none; text-align: center;
+    padding: 0 1.4rem; display: flex; flex-direction: column; gap: 0.4rem; align-items: center;
+  }
+  .cvempty b { font-family: var(--display); font-weight: 500; font-size: 1.05rem; color: var(--dim); }
+  .cvempty span { font-size: 0.86rem; color: var(--faint); max-width: 42ch; line-height: 1.5; }
+  .cvempty span b { font-family: inherit; font-size: inherit; color: var(--ink); font-weight: 600; }
+  /* Dragged something that is not a picture: say so rather than invite it. */
+  .dropnote.no { border-color: var(--apricot); color: var(--apricot-lift); }
 
   /* The connect handle: invisible until you are on the node, so the sheet is
      not covered in dots, but a real target once you are. */
@@ -1066,9 +1077,15 @@
   }
   // The text field that sits under a vocabulary picker in every dialog.
   function otherField(which, key) {
-    return { key: key || "other", label: "If other, what is it called",
+    // Hidden until "Other" is the answer, through the runtime's showWhen —
+    // it used to stand in every one of these dialogs saying it was probably
+    // not needed. `on` is the picker it belongs to; the callers all name
+    // their select the same as the vocabulary they draw from.
+    var on = { acts: "act", things: "kind", places: "place", claimKinds: "kind" }[which] || which;
+    return { key: key || "other", label: "Call it what?",
              type: "text", span: true, value: "",
-             hint: "Only needed if you picked “Other” above. It is added to the list for next time." };
+             showWhen: { key: on, is: OTHER },
+             hint: "Added to the list for next time." };
   }
 
   var CLAIM_KINDS = {
@@ -1480,7 +1497,11 @@
       "who you are waiting on, where you got to, and what still has to be filed. " +
       "You write a procedure once and run it as often as you like \u2014 and the run remembers, " +
       "not you. Two ways to start.</p>" +
+      /* Three routes, not two: suppressing the header tools on an empty book
+         took "New board" away with them, and building one step at a time is a
+         perfectly good way to start. */
       '<div class="tools"><button class="btn primary" data-act="prose-open">Write one in prose</button>' +
+      '<button class="btn" data-act="board-new">Start an empty one</button>' +
       '<button class="btn" data-act="sample">Open the worked example</button></div>' +
       '<p class="saynote" style="margin:0.9rem 0 0">The example is one designer\u2019s week \u2014 a brochure ' +
       "mid-revision, a survey sitting at four steps at once, a visa. It replaces nothing, because there is " +
@@ -1637,7 +1658,12 @@
        another step. */
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="board-back">All boards</button>' +
-      (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
+      /* Not the primary action on a board with nothing to run — it was the
+         loudest button on a new board and all it could do was refuse. */
+      (isRun ? "" : '<button class="btn' + (b.nodes.some(function (n) { return n.t === "step"; }) ? " primary" : "") +
+        '" data-act="run-this" data-id="' + b.id + '"' +
+        (b.nodes.some(function (n) { return n.t === "step"; }) ? "" : " disabled title=\"Add a step first\"") +
+        ">Run it</button>") +
       (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
       '<button class="btn" data-act="board-edit" data-id="' + b.id + '">Rename</button>' +
       '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
@@ -2764,6 +2790,15 @@ function stateWord(b, n) {
     }).join(", ");
   }
 
+  // The bench of the most recent stretch, or none if there has never been one.
+  function lastBench() {
+    var best = null;
+    state.spans.forEach(function (x) {
+      if (x.benchId && byId(state.benches, x.benchId) && (!best || x.startedAt > best.startedAt)) best = x;
+    });
+    return best ? best.benchId : "";
+  }
+
   function spanDialog(sp, day) {
     var isNew = !sp;
     openModal({
@@ -2775,8 +2810,13 @@ function stateWord(b, n) {
           span: true, hint: "YYYY-MM-DD" },
         { key: "from", label: "From", type: "text", value: sp ? String(sp.startedAt).slice(11) : "09:00" },
         { key: "to", label: "To", type: "text", value: sp && sp.endedAt ? String(sp.endedAt).slice(11) : "17:00" },
+        /* Defaulting to "not said" meant pressing Add time and then Add gave
+           you eight hours at no bench, a suspense tile and a card to clear.
+           The bench you were last at is the likely answer and the one you can
+           correct in the same dialog; "not said" is still there, and still
+           what an unknown stretch should be. */
         { key: "benchId", label: "Bench", type: "select", span: true, options: spanBenchOpts(),
-          value: sp ? sp.benchId : "" },
+          value: sp ? sp.benchId : lastBench() },
         { key: "note", label: "Note", type: "text", span: true, value: sp ? (sp.note || "") : "" }
       ],
       validate: function (v) {
@@ -3576,9 +3616,13 @@ function stateWord(b, n) {
         "A <b>secret</b> gist is unlisted rather than private — anyone with the link can fetch it — which is why the sealing is the whole of the privacy. " +
         "Use a fine-grained token with gist access and nothing else.",
       fields: [
-        { key: "token", label: "GitHub token", type: "text", span: true, value: secret(TOK_KEY),
+        /* Both were plain text, so they sat readable on screen on exactly the
+           kind of machine this design was written for — a laptop that is not
+           yours. type=password also stops them being offered to a password
+           manager as ordinary text. */
+        { key: "token", label: "GitHub token", type: "password", span: true, value: secret(TOK_KEY),
           placeholder: "github_pat_…", hint: "Stored on this device only, never in a backup." },
-        { key: "pass", label: "Passphrase", type: "text", span: true, value: secret(PASS_KEY),
+        { key: "pass", label: "Passphrase", type: "password", span: true, value: secret(PASS_KEY),
           hint: "Lose this and the gist is unreadable. There is no recovery, by design." },
         { key: "gistId", label: "Gist id", type: "text", span: true, value: cfg.gistId,
           hint: "Leave blank on the first device and one will be made for you." },
@@ -4039,7 +4083,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v31 · 14 Sep 2026";
+  var BUILD = "v32 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -4401,6 +4445,14 @@ function dims(n) {
       '<div id="selHost">' + selPanel(b) + "</div>" +
       '<svg id="cv" role="img" aria-label="The board drawn as steps, things and the lines between them"></svg>' +
       '<div class="dropnote" id="dropNote">Let go to put the picture here</div>' +
+      /* A new board was an empty grid the height of a laptop screen with
+         nothing saying what to do with it, and the written-out list below it
+         opens closed — so the first thing you ever make said nothing at all. */
+      (b.nodes.length ? "" :
+        '<div class="cvempty"><b>An empty sheet</b>' +
+        "<span>Start with the first thing you actually do \u2014 <b>Add step</b> above. " +
+        "A picture can be dragged straight onto the sheet, and dragging from one step\u2019s " +
+        "handle to another draws the line between them.</span></div>") +
       '<div class="tblock"><div><b>Board</b><span>' + esc(b.name) + "</span></div>" +
       "<div><b>Bench</b><span>" + esc(b.benchId ? benchLabel(b.benchId) : "none") + "</span></div></div>" +
       '<div class="cvleg"><span><i></i>comes after</span>' +
@@ -5298,11 +5350,26 @@ function dims(n) {
       var t = dt.types;
       return t && (Array.prototype.indexOf.call(t, "Files") >= 0);
     }
+    /* Whether the thing being dragged is a picture. dragover carries the TYPE
+       but not the name, which is all this needs — the hint used to say "let go
+       to put the picture here" over a .txt and then refuse it. */
+    function hasImage(ev) {
+      var dt = ev.dataTransfer;
+      if (!dt || !dt.items) return hasFile(ev);
+      return Array.prototype.some.call(dt.items, function (it) {
+        return it.kind === "file" && /^image\//.test(it.type || "");
+      });
+    }
     box.addEventListener("dragover", function (ev) {
       if (!hasFile(ev)) return;
       ev.preventDefault();
-      ev.dataTransfer.dropEffect = "copy";
-      if (note) note.classList.add("on");
+      var pic = hasImage(ev);
+      ev.dataTransfer.dropEffect = pic ? "copy" : "none";
+      if (note) {
+        note.textContent = pic ? "Let go to put the picture here" : "Only a picture can go on the sheet";
+        note.classList.toggle("no", !pic);
+        note.classList.add("on");
+      }
     });
     box.addEventListener("dragleave", function (ev) {
       if (ev.target === box && note) note.classList.remove("on");
@@ -7189,8 +7256,14 @@ function openModal(opts) {
           (f.type === "number" ? ' step="' + (f.step || "0.01") + '"' : "") +
           (f.min != null ? ' min="' + f.min + '"' : "") + ' autocomplete="off" />';
       }
-      return '<div class="field' + (f.span ? " wide" : "") + '">' +
-        '<label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
+      /* showWhen: {key, is} keeps a field out of the way until the field it
+         depends on has that value. The write-in box beside an "Other" picker
+         was on screen in every one of these dialogs, under the words "only
+         needed if you picked Other above" — a whole extra field, always, to
+         serve the one time in fifty it is used. */
+      return '<div class="field' + (f.span ? " wide" : "") + '"' +
+        (f.showWhen ? ' data-when="' + esc(f.showWhen.key) + '" data-is="' + esc(f.showWhen.is) + '" hidden' : "") +
+        '><label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
         (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
     }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
   } else if (opts.extraBody) {
@@ -7250,6 +7323,21 @@ function openModal(opts) {
       if (el && !el.hidden) el.hidden = true;     // the message outlived the problem
     });
   });
+
+  // Fields that only apply once another answer has been given.
+  function dependants() {
+    overlay.querySelectorAll("[data-when]").forEach(function (wrap) {
+      var on = document.getElementById("mf_" + wrap.getAttribute("data-when"));
+      var want = wrap.getAttribute("data-is");
+      var show = !!on && String(on.value) === want;
+      wrap.hidden = !show;
+      if (!show) { var f = wrap.querySelector("input, select, textarea"); if (f) f.value = ""; }
+    });
+  }
+  overlay.querySelectorAll(".modal select, .modal input").forEach(function (i) {
+    i.addEventListener("change", dependants);
+  });
+  dependants();
 
   /* Escape and a focus trap. Tab used to walk out of the last button and into
      the page behind the scrim, where a keyboard reader could reach controls
