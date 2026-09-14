@@ -662,11 +662,57 @@ target off to the right. "Tidy" re-runs it.
   snapshots in IndexedDB, restored through `APP.hydrate` — the single adoption
   point — because hand-copying a key list at a second site is how Coffer lost
   grants. Restoring snapshots first, so it is itself undoable.
-- **Pictures live in IndexedDB and never sync.** One phone photo is larger than
-  the whole written record, and the quota is shared with five sibling apps.
-  Resized to 1400px before storing, refused with a reason if still too large,
-  and deleted with their node. A few megabytes through the sealed-gist door
-  would make sync fail slowly and silently, so the screen says they stay here.
+- **A picture is two copies, and only the small one travels.** The full one
+  (1400px, a couple of hundred KB) lives in IndexedDB on the machine that took
+  it and never syncs — the quota is shared with five sibling apps, and a few
+  megabytes through the sealed-gist door would make sync fail slowly and
+  silently. But "on this device only" made a board built at the desk show a
+  named frame and no frame on the phone, so a **thumbnail** (300px, capped at
+  34KB of characters) is stored on the node as `thumb`, which means it goes
+  wherever the record goes: sync, backup, every device. A picture whose
+  thumbnail will not fit under the cap gets none rather than turning the record
+  into an album. `hasPic(n)` is therefore the test everywhere, never `n.pic` —
+  reading `n.pic` alone is exactly how the other device saw nothing — and
+  `mountPics` falls back through `data-thumb` (the node id, since ids are
+  unique) when the local store has no copy. `url` is the third case: a Google
+  Drive share link for opening the full-size one elsewhere. Drive's own API is
+  not used and will not be — it needs Google's script from a CDN and an OAuth
+  client, and this app fetches nothing and holds no secret.
+- **The board is the screen, and the words fold away under it.** Opening a board
+  shows the sheet; the same facts written out as rows sit behind one
+  `<details class="fold big">` that remembers nothing, so a board always opens
+  closed. `foldOpen` is module-level view state like `openId`. And the two kinds
+  of button are in two places: what you do to the *board* (rename, delete, run,
+  close) in the header, what you *add to the sheet* on the sheet's own bar —
+  eight in one row wrapped to three lines on a phone and read as a wall.
+- **A tap on the sheet selects; it does not open a dialog.** Every accidental
+  tap used to be a modal. `sel` (view state, never saved) drives `selPanel()`,
+  a strip under the toolbar carrying what can be done to that node — mark done,
+  a photo, edit, remove, look. It is repainted by `paintSel()`, never `render()`,
+  or picking a node would re-fit the sheet and throw away wherever you panned
+  to. Floated over the sheet it covered the zoom and Tidy buttons, so it is in
+  the flow. The ring on the picked node is **solid**: dashed is already how a
+  finished step is drawn, and the first ring read as "done".
+- **A picture let go on the sheet lands where you let it go**, and on a step it
+  belongs with that step — asking again would be a second job. `pickPicture(b,
+  host, at, file)` is the one way in for all four routes (the board button, a
+  selected step, a drop, a replacement); `dragover` must `preventDefault` on
+  every event or the browser navigates to the file, which looks exactly like the
+  app crashing.
+- **A card that grows has to push, not overlap.** Positions persist, so the
+  first photograph on a board drew its frame straight through the step beneath
+  it. `settleNode()` moves only what is actually in the way, and only
+  vertically — sideways would change the order the sheet appears to be in — and
+  each pushed card settles in its turn, or a step lands on the kit hanging
+  under it. It refreshes `_pics` first: `dims()` reads what the **last** draw
+  stamped, so a step that just gained its first picture measures 34px shorter
+  than it is about to be drawn, which was exactly the overlap.
+- **The sheet stops zooming out before it stops being readable.** Two floors,
+  because the screens are two problems: on a phone (< 620px) the whole board is
+  hopeless at any size, so it opens at 0.7 on the step that is **late**, then
+  the one in hand, then the way in, and you pan; on a laptop fitting the board
+  IS the point and the floor (0.45) only catches a board so large the fit would
+  be a diagram of nothing.
 - **A back edge is a DFS stack test**, and nothing else works. "Is the target to
   the left" called forward edges loops; comparing flow depth called a **join** a
   loop; plain reachability flagged every edge in a cycle. Only "points at a node

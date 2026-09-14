@@ -411,6 +411,44 @@
     .cvleg span:nth-child(n+3) { display: none; }
   }
 
+  /* What you can do to the node you picked, on the board rather than in a
+     dialog: the board is the place you work, not a picture of the work with
+     the controls somewhere else.
+
+     A strip in the flow, directly under the toolbar — floated over the sheet it
+     covered the zoom and Tidy buttons, and a panel that hides the controls of
+     the thing it belongs to is worse than a sheet that shifts 44px when you
+     pick something. */
+  .selbar {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    padding: 0.4rem 0.45rem 0.4rem 0.7rem; position: relative; z-index: 4;
+    border-bottom: 1px solid var(--rule-soft);
+    background: var(--raised);
+  }
+  .selwho { display: flex; align-items: baseline; gap: 0.45rem; min-width: 0; }
+  .selwho b { font-family: var(--display); font-weight: 500; letter-spacing: -0.01em; font-size: 0.92rem; }
+  .selkind {
+    font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--faint); white-space: nowrap;
+  }
+  .selacts { display: flex; gap: 0.35rem; flex-wrap: wrap; flex: 1; }
+  .selx { margin-left: auto; }
+  @media (max-width: 620px) {
+    .selbar { padding: 0.35rem 0.4rem 0.4rem 0.55rem; }
+    .selacts { width: 100%; flex: none; }
+    .selx { position: absolute; top: 0.3rem; right: 0.35rem; }
+  }
+
+  /* Only while a file is over the sheet. */
+  .dropnote {
+    position: absolute; inset: 0; z-index: 6; display: none;
+    align-items: center; justify-content: center; pointer-events: none;
+    font-family: var(--display); font-weight: 500; font-size: 1rem;
+    color: var(--ink); background: var(--veil);
+    border: 2px dashed var(--sage); border-radius: var(--r);
+  }
+  .dropnote.on { display: flex; }
+
   /* The connect handle: invisible until you are on the node, so the sheet is
      not covered in dots, but a real target once you are. */
   .hnd { opacity: 0; transition: opacity var(--t); cursor: crosshair; }
@@ -468,6 +506,19 @@
   .fold summary::before { content: "▸ "; color: var(--receded); }
   .fold[open] summary::before { content: "▾ "; }
   .fold summary:hover { color: var(--dim); }
+  /* The big one under a board: it is the whole written-out work, so its handle
+     has to read as a section heading rather than as a footnote. */
+  .fold.big { margin: 1.1rem 0 0; border-top: 1px solid var(--rule-soft); }
+  .fold.big summary {
+    font-family: var(--display); font-weight: 500; letter-spacing: -0.01em;
+    font-size: 0.96rem; color: var(--dim); padding: 0.7rem 0;
+  }
+  .fold.big summary:hover { color: var(--ink); }
+  .foldn {
+    font-family: var(--mono); font-size: 0.6rem; color: var(--faint);
+    border: 1px solid var(--rule); border-radius: 999px; padding: 0.05rem 0.36rem;
+    vertical-align: 0.1em;
+  }
 
   .strip { display: flex; gap: 5px; margin-top: 0.45rem; flex-wrap: wrap; }
   .tinypic {
@@ -991,12 +1042,12 @@
     // The switch bar lives outside the view, so render() never touches it.
     beforeRender: function () { if (ensureJobs()) save(); },
 
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
+    afterRender: function () { mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; calMonth = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; calMonth = ""; foldOpen = false; sel = ""; },
 
     actions: {}
   };
@@ -1314,7 +1365,7 @@
     var act = activeNodes(b);
     var late = act.filter(function (n) { return nodeState(b, n) === "over"; }).length;
     var steps = b.nodes.filter(function (n) { return n.t === "step"; });
-    var pics = b.nodes.filter(function (n) { return n.t === "thing" && n.pic; });
+    var pics = b.nodes.filter(function (n) { return n.t === "thing" && hasPic(n); });
 
     var head = b.closedOn ? "Finished " + niceDate(b.closedOn)
              : late ? (late === 1 ? "One thing is late" : cap(numWord(late)) + " things are late")
@@ -1333,7 +1384,7 @@
       '<div class="bstat' + (late ? " bad" : "") + '">' + esc(head) +
       '<span class="bnum">' + p.done + "/" + p.total + "</span></div>" +
       (pics.length ? '<div class="bpics">' + pics.slice(0, 4).map(function (t) {
-        return '<img data-pic="' + esc(t.pic) + '" alt="">';
+        return '<img data-pic="' + esc(t.pic || "") + '" data-thumb="' + esc(t.id) + '" alt="">';
       }).join("") + "</div>" : "") +
       "</button>";
   }
@@ -1370,6 +1421,10 @@
     return '<div class="stand">' + bits.join("") + "</div>";
   }
 
+  // Whether the written-out list under a board is open. View state, never
+  // saved: a board opens on the board, every time.
+  var foldOpen = false;
+
   function renderBoard(b) {
     var isRun = b.kind === "run";
     var p = runProgress(b);
@@ -1381,18 +1436,26 @@
             ? ", from “" + byId(state.boards, b.fromBoardId).name + "”" : "")
         : " · a procedure, not a run");
 
+    /* Eight buttons in one row above the board wrapped to three lines on a
+       phone and read as a wall. They are two different jobs, so they sit in
+       two places: what you do to the BOARD stays in the header, and what you
+       ADD TO THE SHEET goes on the sheet's own bar — which had an empty half
+       beside the zoom controls, and is where you are looking when you want
+       another step. */
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="board-back">All boards</button>' +
-      '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
-      '<button class="btn" data-act="photo-add" data-id="' + b.id + '">Add a photo</button>' +
-      '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add a person or thing</button>' +
-      (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
-      (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
       (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
       (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
       '<button class="btn" data-act="board-edit" data-id="' + b.id + '">Rename</button>' +
       '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
       "</div>";
+
+    var sheetTools =
+      '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
+      '<button class="btn" data-act="photo-add" data-id="' + b.id + '">Add a photo</button>' +
+      '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add a person or thing</button>' +
+      (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
+      (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "");
 
     /* Built inline rather than through pageHead(), which belongs to the shared
        runtime and knows nothing about a status cluster. */
@@ -1416,7 +1479,7 @@
       }
     }
 
-    h += canvasHtml(b);
+    h += canvasHtml(b, sheetTools);
 
     /* One list, not three tables.
 
@@ -1435,21 +1498,29 @@
     var things = b.nodes.filter(function (n) { return n.t === "thing"; });
     var loose = things.filter(function (n) { return !edgesOf(b, n.id, "link").length; });
 
-    h += '<div class="sect">' + (isRun ? "Where the work is" : "The steps, in order") + "</div>";
+    /* Open a board and you see THE BOARD. Everything written out underneath it
+       folds away, because the sheet already says all of it and a list of the
+       same facts below is just the sheet again in words. The fold is there for
+       the two jobs the sheet is bad at — reading a long sentence, and deleting
+       something — and it remembers nothing, so a board always opens closed. */
+    h += '<details class="fold big"' + (foldOpen ? " open" : "") + ' data-fold="1">' +
+      "<summary>" + (isRun ? "The work, written out" : "The steps, written out") +
+      ' <span class="foldn">' + steps.length + "</span></summary>";
+
     h += steps.length ? '<div class="stack tight">' + steps.map(function (n) { return stepRow(b, n); }).join("") + "</div>"
                       : '<p class="empty">No steps yet. Add the first thing you actually do.</p>';
 
     if (loose.length) {
-      h += '<div class="sect">On the board, not attached to anything</div>' +
-        '<p class="saynote" style="margin:-0.3rem 0 0.7rem">Drag from a step\u2019s handle to one of these to say where it belongs.</p>' +
+      h += '<div class="sect">Not attached to anything yet</div>' +
+        '<p class="saynote" style="margin:-0.3rem 0 0.7rem">Drag from a step\u2019s handle on the board to one of these to say where it belongs.</p>' +
         '<div class="stack tight">' + loose.map(function (n) { return thingRow(b, n); }).join("") + "</div>";
     }
 
     if (b.edges.length) {
-      h += '<details class="fold"><summary>All ' + b.edges.length +
-        " connections, if you need to remove one</summary><div class=\"stack tight\">" +
-        b.edges.map(function (e) { return edgeRow(b, e); }).join("") + "</div></details>";
+      h += '<div class="sect">Connections</div><div class="stack tight">' +
+        b.edges.map(function (e) { return edgeRow(b, e); }).join("") + "</div>";
     }
+    h += "</details>";
     return h;
   }
 
@@ -1467,7 +1538,7 @@ function stateWord(b, n) {
   function linkedPics(b, n) {
     return edgesOf(b, n.id, "link").map(function (e) {
       return nodeOf(b, e.a === n.id ? e.b : e.a);
-    }).filter(function (t) { return t && t.pic; });
+    }).filter(function (t) { return t && hasPic(t); });
   }
 
   function stepRow(b, n) {
@@ -1524,7 +1595,7 @@ function stateWord(b, n) {
         // Everything hanging off this step, named on the step itself.
         var hangs = edgesOf(b, n.id, "link").map(function (e) {
           return nodeOf(b, e.a === n.id ? e.b : e.a);
-        }).filter(function (t) { return t && !t.pic; });
+        }).filter(function (t) { return t && !hasPic(t); });
         if (hangs.length) {
           out += '<div class="chips">' + hangs.map(function (t) {
             return '<span class="chip" data-act="node-edit" data-id="' + b.id + ":" + t.id + '">' +
@@ -1534,7 +1605,7 @@ function stateWord(b, n) {
         var pics = linkedPics(b, n);
         if (pics.length) {
           out += '<div class="strip">' + pics.map(function (t) {
-            return '<img class="tinypic" data-pic="' + esc(t.pic) + '" alt="" title="' +
+            return '<img class="tinypic" data-pic="' + esc(t.pic || "") + '" data-thumb="' + esc(t.id) + '" alt="" title="' +
               esc(t.label) + '" data-act="pic-open" data-id="' + b.id + ":" + t.id + '">';
           }).join("") + "</div>";
         }
@@ -1561,15 +1632,15 @@ function stateWord(b, n) {
     if (n.path) says.push(n.path);
     if (n.url) says.push(n.url);
     return '<div class="panel calm">' +
-      (n.pic ? '<img class="thumb" data-pic="' + esc(n.pic) + '" alt="">'
+      (hasPic(n) ? '<img class="thumb" data-pic="' + esc(n.pic || "") + '" data-thumb="' + esc(n.id) + '" alt="">'
              : '<span class="ic" title="' + esc(vocabLabel("things", n.kind)) + '">' +
                thingIcon(n.kind) + "</span>") +
       '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
       '<div class="says">' + esc(says.join(" · ")) + "</div></div>" +
       '<div class="acts">' +
       (n.kind === "photo" ? '<button class="btn quiet" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">' +
-        (n.pic ? "Replace picture" : "Add a picture") + "</button>" : "") +
-      (n.pic ? '<button class="btn quiet" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look</button>' : "") +
+        (hasPic(n) ? "Replace picture" : "Add a picture") + "</button>" : "") +
+      (hasPic(n) ? '<button class="btn quiet" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look</button>' : "") +
       '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
       '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></div></div>';
   }
@@ -3269,6 +3340,73 @@ function stateWord(b, n) {
   var PIC_MAX = 1400;          // longest edge, after which it is resized
   var PIC_BYTES = 900 * 1024;  // refuse anything still larger than this
 
+  /* ---- the one piece of a picture that DOES travel ----
+
+     "The photo is on this device only" is a true sentence and a useless app:
+     a board built at the desk and read on the phone showed a named frame and
+     no frame. So a picture is now two things, deliberately different sizes.
+
+     The full one (PIC_MAX, a couple of hundred KB) stays in IndexedDB on the
+     machine that took it — through the sealed gist it would make every sync
+     slow and then fail, silently, which is the one failure this app is not
+     allowed to have.
+
+     A THUMBNAIL (PIC_THUMB, about the size of a paragraph of text) is stored
+     on the node itself, so it goes wherever the record goes: sync, backup,
+     every device. It is capped hard, and a picture whose thumbnail will not
+     fit under the cap simply does not get one rather than quietly turning the
+     record into an album — a board of ten photographs costs about 150KB, and
+     that is the budget being spent knowingly.
+
+     So: everywhere shows the thumbnail; the device that holds the full one
+     shows that instead. And `url` is there for the third case — the full-size
+     file kept in Google Drive (or anywhere with a link), which is the only way
+     a large picture can be opened on another machine. Drive's own API is not
+     used and will not be: it needs Google's script from a CDN and an OAuth
+     client, and this repo fetches nothing and holds no secret. */
+  var PIC_THUMB = 300;            // longest edge of the travelling copy
+  var THUMB_CHARS = 34 * 1024;    // data-URL characters; over this, no thumbnail
+
+  function picThumb(dataUrl) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onerror = function () { res(""); };
+      img.onload = function () {
+        var scale = Math.min(1, PIC_THUMB / Math.max(img.width, img.height));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.width * scale));
+        c.height = Math.max(1, Math.round(img.height * scale));
+        var x = c.getContext("2d");
+        x.imageSmoothingQuality = "high";
+        x.drawImage(img, 0, 0, c.width, c.height);
+        var out = c.toDataURL("image/jpeg", 0.62);
+        if (out.length > THUMB_CHARS) out = c.toDataURL("image/jpeg", 0.45);
+        res(out.length > THUMB_CHARS ? "" : out);
+      };
+      img.src = dataUrl;
+    });
+  }
+
+  /* A node HAS a picture if either copy is here: the full one on this device,
+     or the travelling thumbnail, which is what a phone sees of a photograph
+     added at the desk. Reading `n.pic` alone is how the other device came to
+     show a named frame and no frame. */
+  function hasPic(n) { return !!(n && (n.pic || n.thumb)); }
+
+  /* Node ids are uids, so the id alone finds it — which is what lets the sheet
+     and the rows both carry `data-thumb` without also carrying which board
+     they are on. */
+  function thumbOf(nodeId) {
+    var found = "";
+    (state.boards || []).some(function (b) {
+      return (b.nodes || []).some(function (n) {
+        if (n.id === nodeId && n.thumb) { found = n.thumb; return true; }
+        return false;
+      });
+    });
+    return found;
+  }
+
   function picOpen() {
     return new Promise(function (res, rej) {
       if (!window.indexedDB) { rej(new Error("This browser has no IndexedDB.")); return; }
@@ -3404,22 +3542,25 @@ function stateWord(b, n) {
   }
   // Rendered after the fact because IndexedDB is asynchronous and renderView
   // is not — the card paints "Looking…" and fills itself in.
-  /* Thumbnails are fetched after the fact, because IndexedDB is asynchronous
-     and renderView is not. A picture that is not on this device simply does not
-     appear — the row still reads correctly without it. */
+  /* Filled in after the fact, because IndexedDB is asynchronous and renderView
+     is not. The full picture if this device has it, the travelling thumbnail if
+     it does not — and only a picture with neither leaves the frame empty. */
   function mountPics() {
     // Both kinds: an <img> in a row, and an SVG <image> on the sheet.
-    var els = document.querySelectorAll("[data-pic]");
+    var els = document.querySelectorAll("[data-pic],[data-thumb]");
     Array.prototype.forEach.call(els, function (el) {
       var key = el.getAttribute("data-pic");
-      if (!key) return;
+      var nid = el.getAttribute("data-thumb");
       var svg = el.tagName.toLowerCase() === "image";
       if (el.getAttribute(svg ? "href" : "src")) return;
-      picGet(key).then(function (src) {
+      var fall = nid ? thumbOf(nid) : "";
+      function put(src) {
         if (!src) { if (!svg) el.remove(); return; }
         if (svg) el.setAttributeNS("http://www.w3.org/1999/xlink", "href", src);
         el.setAttribute(svg ? "href" : "src", src);
-      });
+      }
+      if (!key) { put(fall); return; }
+      picGet(key).then(function (src) { put(src || fall); });
     });
   }
 
@@ -3568,7 +3709,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v27 · 14 Sep 2026";
+  var BUILD = "v28 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -3904,7 +4045,7 @@ function stateWord(b, n) {
     return Math.min(260, 64 + String(n.label || "").length * 7.2);
   }
 function dims(n) {
-    if (n.t !== "step") return n.pic ? { w: PW, h: PH + 20 } : { w: thingW(n), h: TH };
+    if (n.t !== "step") return hasPic(n) ? { w: PW, h: PH + 20 } : { w: thingW(n), h: TH };
     var g = gridOf(n);
     var lines = wrap(n.label || "", n._room || 26).length;   // wrap() caps at two
     var h = lines > 1 ? SH2 : SH1;
@@ -3917,16 +4058,19 @@ function dims(n) {
   var NS = "http://www.w3.org/2000/svg";
   var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
 
-  function canvasHtml(b) {
+  function canvasHtml(b, tools) {
     return '<div class="cvbox">' +
       '<div class="cvbar">' +
+      (tools || "") +
       '<span class="sp"></span>' +
       '<button class="btn" data-act="cv-out">−</button>' +
       '<button class="btn" data-act="cv-in">+</button>' +
       '<button class="btn" data-act="cv-fit">Fit</button>' +
       '<button class="btn" data-act="cv-tidy" data-id="' + b.id + '">Tidy</button>' +
       "</div>" +
+      '<div id="selHost">' + selPanel(b) + "</div>" +
       '<svg id="cv" role="img" aria-label="The board drawn as steps, things and the lines between them"></svg>' +
+      '<div class="dropnote" id="dropNote">Let go to put the picture here</div>' +
       '<div class="tblock"><div><b>Board</b><span>' + esc(b.name) + "</span></div>" +
       "<div><b>Bench</b><span>" + esc(b.benchId ? benchLabel(b.benchId) : "none") + "</span></div></div>" +
       '<div class="cvleg"><span><i></i>comes after</span>' +
@@ -4253,6 +4397,16 @@ function dims(n) {
       var d = dims(n);
 
       var outer = svgEl("g", { transform: "translate(" + n.x + "," + n.y + ")", "data-id": n.id });
+      /* The picked node is ringed rather than recoloured: every hue on this
+         sheet already means a state, and "you are looking at this one" is not
+         a state of the work. */
+      if (sel === n.id) {
+        /* Solid, and only just off the card: a DASHED outline is already what
+           a finished step is drawn with, so the first ring read as "done". */
+        outer.appendChild(svgEl("rect", { x: -6, y: -6, width: d.w + 12, height: d.h + 12,
+          rx: 15, fill: "none", stroke: ink("ink"), "stroke-opacity": ".8",
+          "stroke-width": 1.6 }));
+      }
       var inner = svgEl("g", { "class": "nd" });
       outer.appendChild(inner);
 
@@ -4327,7 +4481,7 @@ function dims(n) {
           inner.appendChild(cp2);
           inner.appendChild(svgEl("image", { x: px, y: py, width: tw, height: th,
             "clip-path": "url(#" + cid2 + ")", preserveAspectRatio: "xMidYMid slice",
-            "data-pic": t.pic }));
+            "data-pic": t.pic || "", "data-thumb": t.id }));
         });
       }
 
@@ -4375,7 +4529,7 @@ function dims(n) {
      photographs, "frame 1962-04" and the actual frame are not the same
      information. */
   function drawThing(n, d, inner) {
-    if (n.pic) {
+    if (hasPic(n)) {
       var cid = "pc" + n.id;
       var cp = svgEl("clipPath", { id: cid });
       cp.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: PH, rx: 10 }));
@@ -4384,7 +4538,7 @@ function dims(n) {
         fill: ink("sunken"), stroke: ink("rule"), "stroke-width": 1 }));
       inner.appendChild(svgEl("image", { x: 0, y: 0, width: d.w, height: PH,
         "clip-path": "url(#" + cid + ")", preserveAspectRatio: "xMidYMid slice",
-        "data-pic": n.pic }));
+        "data-pic": n.pic || "", "data-thumb": n.id }));
       var cap = svgEl("text", { x: d.w / 2, y: d.h - 6, fill: ink("dim"),
         "text-anchor": "middle", "font-size": 11 });
       cap.textContent = clip(n.label, 20);
@@ -4493,7 +4647,80 @@ function dims(n) {
     if (x1 > x2) { x1 = 0; y1 = 0; x2 = 800; y2 = 400; }
     return { x1: x1, y1: y1, x2: x2, y2: y2 };
   }
+  /* Repainting the whole view on a tap would re-mount the sheet and re-fit it,
+     so picking a node would throw away wherever you had panned to. The bar and
+     the nodes are the only two things a selection changes. */
+  function paintSel(b) {
+    var host = document.getElementById("selHost");
+    if (host) host.innerHTML = selPanel(b);
+    if (cvSvg && cvSvg._gN) drawNodes(b, cvSvg);
+  }
+
   function applyVB() { if (cvSvg) cvSvg.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h); }
+
+  /* A card that gains a picture grows from one line to a hundred pixels tall,
+     and positions persist — so the first photograph added to a board drew its
+     frame straight through the step underneath it. Tidy would fix it by moving
+     everything, including whatever was placed by hand, so instead only what is
+     actually in the way moves, and only far enough to be out of it. */
+  function settleNode(b, n, seen) {
+    /* dims() reads `_pics`, which drawNodes stamps on the node — so before the
+       next draw it is the count from the LAST one, and a step that just gained
+       its first picture measures 34px shorter than it is about to be drawn.
+       That is exactly the height the card then sat on top of its neighbour by.
+       Refreshed once, on the way in. */
+    if (!seen) {
+      (b.nodes || []).forEach(function (m) {
+        if (m.t === "step") m._pics = linkedPics(b, m).length;
+      });
+    }
+    seen = seen || {};
+    if (!b || !n || typeof n.x !== "number" || seen[n.id]) return;
+    seen[n.id] = 1;
+    var gap = 18, a = dims(n), moved = [];
+    (b.nodes || []).forEach(function (m) {
+      if (m === n || typeof m.x !== "number" || seen[m.id]) return;
+      var d = dims(m);
+      var ox = Math.min(n.x + a.w, m.x + d.w) - Math.max(n.x, m.x);
+      var oy = Math.min(n.y + a.h, m.y + d.h) - Math.max(n.y, m.y);
+      if (ox <= 0 || oy <= 0) return;
+      // Out of the way vertically: the sheet is read left to right, so moving
+      // a card sideways would change the order it appears to be in.
+      m.y = (m.y + d.h / 2 < n.y + a.h / 2) ? n.y - d.h - gap : n.y + a.h + gap;
+      moved.push(m);
+    });
+    // What was pushed can land on something else — the first version moved a
+    // step down onto the piece of kit hanging under it. Each card that moves
+    // settles in its turn, and `seen` stops two cards pushing each other about
+    // for ever.
+    moved.forEach(function (m) { settleNode(b, m, seen); });
+  }
+
+  /* What the sheet should open ON, when it cannot open on all of it: the step
+     that is late, then the step in hand, then the way in. A board fitted whole
+     into a phone is a picture of a board and not a board — eight cards across
+     370px draws the names at four pixels. */
+  function focusNode(b) {
+    var steps = (b.nodes || []).filter(function (n) { return n.t === "step"; });
+    var late = steps.filter(function (n) { return nodeState(b, n) === "over"; })[0];
+    if (late) return late;
+    var now = steps.filter(function (n) {
+      var st = nodeState(b, n);
+      return st === "now" || st === "waiting";
+    })[0];
+    if (now) return now;
+    return steps[0] || (b.nodes || [])[0] || null;
+  }
+
+  /* Below this the sheet stops being readable, so it stops zooming out and
+     pans to what matters instead. Fit is still there for seeing the shape.
+
+     Two floors, because the two screens are different problems. On a phone the
+     whole board is hopeless at any size, so it opens close in and you pan. On a
+     laptop fitting the board IS the point — a sheet nearly a thousand pixels
+     wide draws eight cards perfectly legibly at 0.6 — so the floor there only
+     catches a board so large that the fit would be a diagram of nothing. */
+  function minScale(w) { return w < 620 ? 0.7 : 0.45; }
 
   function fitBoard(b) {
     if (!cvSvg) return;
@@ -4507,6 +4734,16 @@ function dims(n) {
     // steps sits underneath them and cannot be read.
     var foot = (r.height && ar) ? (58 / r.height) * h : 0;
     if (foot) { h += foot; w = h / ar; }
+    if (r.width && w > r.width / minScale(r.width)) {
+      w = r.width / minScale(r.width); h = w * ar;
+      var f = focusNode(b);
+      if (f) {
+        var c = centre(f);
+        vb = { x: c.x - w / 2, y: c.y - h / 2, w: w, h: h };
+        applyVB();
+        return;
+      }
+    }
     vb = { x: (bd.x1 + bd.x2) / 2 - w / 2,
            y: (bd.y1 + bd.y2) / 2 - h / 2 + foot / 2, w: w, h: h };
     applyVB();
@@ -4526,6 +4763,124 @@ function dims(n) {
   }
 
   var wire = null;   // a connection being drawn, never saved
+  var sel = "";      // the node picked on the sheet, never saved
+
+  /* One way in for every picture: the button on the board, "add a photo" on a
+     selected step, and a file let go on the sheet all end up here. The picture
+     is chosen FIRST because that is the thing you actually have in mind, and
+     the name can be filled in from the filename. `host` is the step it belongs
+     with (the link is made for you, or asking twice is a second job), and `at`
+     is where on the sheet it landed — given one, the node keeps that spot
+     rather than being tidied into the layout, because you put it there. */
+  function pickPicture(b, host, at, file) {
+    if (!b) return;
+    if (!file) {
+      var inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*";
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        if (f) pickPicture(b, host, at, f);
+      });
+      inp.click();
+      return;
+    }
+    toast("Reading it\u2026");
+    picShrink(file).then(function (dataUrl) {
+      var key = uid();
+      return picPut(key, dataUrl).then(function () { return picThumb(dataUrl); }).then(function (small) {
+        var guess = String(file.name || "").replace(/\.[a-z0-9]+$/i, "").replace(/_+/g, " ").replace(/\s+/g, " ").trim();
+        var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+        openModal({
+          title: "What is this a picture of?",
+          message: '<img src="' + dataUrl + '" alt="" style="max-width:100%;max-height:200px;border-radius:12px;display:block;margin:0 0 0.7rem">' +
+            (host ? "It will sit beside <b>" + esc(clip(host.label, 40)) + "</b> and be marked as belonging with it. " : "") +
+            (small
+              ? "The full-size picture stays on this device; a thumbnail travels with sync, so you will see it on your phone."
+              : "Too large for a travelling thumbnail, so this one stays on this device only \u2014 a link is the way to reach it elsewhere."),
+          confirmLabel: "Put it on the board",
+          fields: [
+            { key: "label", label: "Called", type: "text", span: true, value: guess || "",
+              placeholder: "frame 1962-04" },
+            { key: "linkTo", label: "Belongs with", type: "select", span: true,
+              value: host ? host.id : "",
+              options: [{ value: "", label: "Nothing yet \u2014 just put it on the board" }]
+                .concat(steps.map(function (n) { return { value: n.id, label: n.label }; })) },
+            /* The only honest way to open the FULL picture on another machine.
+               Google Drive's own API is not used and will not be: it needs
+               Google's script from a CDN and an OAuth client, and this app
+               fetches nothing and holds no secret. A share link does the job
+               with neither. */
+            { key: "url", label: "Full one kept at", type: "text", span: true, value: "",
+              placeholder: "a Google Drive share link \u2014 optional" }
+          ],
+          validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+          onConfirm: function (v) {
+            go(function () {
+              var t = { id: uid(), t: "thing", kind: "photo", label: v.label.trim(),
+                        path: "", url: String(v.url || "").trim(), pic: key, thumb: small };
+              if (at) { t.x = Math.round(at.x); t.y = Math.round(at.y); }
+              b.nodes.push(t);
+              if (v.linkTo) {
+                b.edges.push({ id: uid(), a: t.id, b: v.linkTo, k: "link", label: "" });
+              }
+              if (at) settleNode(b, t); else autoLayout(b);
+            });
+            toast(v.linkTo ? "On the board, beside that step" : "On the board");
+          },
+          onCancel: function () { picDrop(key); }
+        });
+      });
+    }).catch(function (e) { toast(e && e.message ? e.message : "Could not read that picture."); });
+  }
+
+  /* Tapping a node used to open the edit dialog straight away, which meant
+     every accidental tap was a modal. It selects instead, and the things you
+     can do to it appear over the sheet — edit, a photo, delete, look — so the
+     board is the place you work rather than a picture of the work with the
+     controls somewhere else. */
+  function selPanel(b) {
+    var n = sel && nodeOf(b, sel);
+    if (!n) return "";
+    var isStep = n.t === "step";
+    var what = isStep ? vocabLabel("acts", n.act) : vocabLabel("things", n.kind);
+    var acts = "";
+    if (isStep) {
+      var st = nodeState(b, n);
+      if (b.kind === "run" && !b.closedOn) {
+        if (n.enteredAt && !n.doneAt) {
+          acts += n.act === "ask"
+            ? '<button class="btn loud" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer it</button>'
+            : '<button class="btn loud" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Mark done</button>';
+          if (st === "over") {
+            acts += '<button class="btn" data-act="step-chased" data-id="' + b.id + ":" + n.id + '">I chased today</button>';
+          }
+        } else if (!n.enteredAt) {
+          acts += '<button class="btn" data-act="step-enter" data-id="' + b.id + ":" + n.id + '">Start it</button>';
+        } else {
+          acts += '<button class="btn" data-act="step-reopen" data-id="' + b.id + ":" + n.id + '">Reopen</button>';
+        }
+      }
+      acts += '<button class="btn" data-act="photo-here" data-id="' + b.id + ":" + n.id + '">Add a photo</button>';
+      if (n.act === "send") acts += '<button class="btn" data-act="send-to" data-id="' + b.id + ":" + n.id + '">Waiting on…</button>';
+      if (n.act === "ask") acts += '<button class="btn" data-act="exit-add" data-id="' + b.id + ":" + n.id + '">Add a way out</button>';
+    } else if (hasPic(n)) {
+      acts += '<button class="btn" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look at it</button>';
+      acts += '<button class="btn" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">Replace</button>';
+    } else if (n.kind === "photo") {
+      acts += '<button class="btn loud" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">Add a picture</button>';
+    }
+    if (n.url) {
+      acts += '<a class="btn" href="' + esc(n.url) + '" target="_blank" rel="noopener">Open the link</a>';
+    }
+    acts += '<button class="btn" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>';
+    acts += '<button class="btn danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">Remove</button>';
+
+    return '<div class="selbar">' +
+      '<div class="selwho"><span class="selkind">' + esc(String(what).toLowerCase()) + "</span>" +
+      '<b>' + esc(clip(n.label, 40)) + "</b></div>" +
+      '<div class="selacts">' + acts + "</div>" +
+      '<button class="btn quiet selx" data-act="sel-clear" title="Nothing selected">\u00d7</button></div>';
+  }
 
   function clearWire() {
     if (!cvSvg) return;
@@ -4588,6 +4943,58 @@ function dims(n) {
     });
   }
 
+  /* <details> opens itself, so nothing needs to re-render — the listener only
+     remembers the state, or the fold would snap shut the next time anything on
+     the page changed. Not in `state`: which fold you left open is view state,
+     the same rule as which board is open. */
+  function mountFold() {
+    var d = document.querySelector("details[data-fold]");
+    if (!d) return;
+    d.addEventListener("toggle", function () { foldOpen = d.open; });
+  }
+
+  /* Letting go of a picture on the sheet puts it where you let go of it. The
+     drop position is converted through the same toSvg() the drags use, so a
+     photo dropped on a step lands on that step whatever the zoom. dragover
+     must preventDefault on EVERY event or the browser navigates to the file
+     instead, which looks exactly like the app crashing. */
+  function mountDrop(b) {
+    var box = cvSvg && cvSvg.closest ? cvSvg.closest(".cvbox") : null;
+    var note = document.getElementById("dropNote");
+    if (!box) return;
+    function hasFile(ev) {
+      var dt = ev.dataTransfer;
+      if (!dt) return false;
+      var t = dt.types;
+      return t && (Array.prototype.indexOf.call(t, "Files") >= 0);
+    }
+    box.addEventListener("dragover", function (ev) {
+      if (!hasFile(ev)) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "copy";
+      if (note) note.classList.add("on");
+    });
+    box.addEventListener("dragleave", function (ev) {
+      if (ev.target === box && note) note.classList.remove("on");
+    });
+    box.addEventListener("drop", function (ev) {
+      if (!hasFile(ev)) return;
+      ev.preventDefault();
+      if (note) note.classList.remove("on");
+      var f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+      if (!f) return;
+      if (!/^image\//.test(f.type)) { toast("That is not a picture."); return; }
+      var at = toSvg(ev);
+      /* Dropped ON a step, it belongs with that step — which is what dropping
+         it there plainly means, and the alternative is asking twice. */
+      var el = document.elementFromPoint(ev.clientX, ev.clientY);
+      var g = el && el.closest ? el.closest("g[data-id]") : null;
+      var over = g ? nodeOf(b, g.getAttribute("data-id")) : null;
+      var host = over && over.t === "step" ? over : null;
+      pickPicture(b, host, { x: at.x - PW / 2, y: at.y - PH / 2 }, f);
+    });
+  }
+
   function mountCanvas() {
     cvSvg = document.getElementById("cv");
     if (!cvSvg) return;
@@ -4645,6 +5052,7 @@ function dims(n) {
         drawEdges(b, cvSvg);
       } else if (pan) {
         var q = toSvg(ev);
+        if (Math.abs(q.x - pan.x) > 2 || Math.abs(q.y - pan.y) > 2) pan.moved = true;
         vb.x -= (q.x - pan.x); vb.y -= (q.y - pan.y); applyVB();
       } else {
         var t = ev.target.closest ? ev.target.closest("g[data-id]") : null;
@@ -4662,7 +5070,8 @@ function dims(n) {
         if (to) askConnect(b, from, to);
       }
       if (drag && drag.moved) save();
-      if (drag && !drag.moved) editNode(b, drag.n);
+      if (drag && !drag.moved) { sel = drag.n.id; paintSel(b); }
+      if (pan && !pan.moved && sel) { sel = ""; paintSel(b); }
       drag = null; pan = null;
       cvSvg.classList.remove("grabbing");
       if (cvSvg.hasPointerCapture && cvSvg.hasPointerCapture(ev.pointerId)) cvSvg.releasePointerCapture(ev.pointerId);
@@ -4675,6 +5084,7 @@ function dims(n) {
       var p = toSvg(ev);
       zoomBy(ev.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y);
     }, { passive: false });
+    mountDrop(b);
   }
 
   /* ================= writing a procedure as prose =================
@@ -4951,12 +5361,14 @@ function dims(n) {
   function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
   function go(fn) { fn(); stampRecords(); save(); render(); syncSoon(); bkMaybe(); }
 
-  function editNode(b, n) { APP.actions["node-edit"](b.id + ":" + n.id); }
+  // editNode is gone: a tap on the sheet selects the node now and the edit
+  // dialog is one button on the selection bar — see selPanel().
 
   APP.actions = {
     /* ---- boards ---- */
     "board-open": function (id) { openId = id; view = "boards"; render(); },
-    "board-back": function () { openId = ""; render(); },
+    "board-back": function () { openId = ""; foldOpen = false; render(); },
+    "fold-toggle": function () { foldOpen = !foldOpen; render(); },
 
     "board-new": function () {
       openModal({
@@ -5121,54 +5533,9 @@ function dims(n) {
     "node-add": function (id) { nodeDialog(byId(state.boards, id), null); },
     "thing-add": function (id) { thingDialog(byId(state.boards, id), null); },
     /* Adding a photo used to be three decisions deep: Add thing, change the
-       kind to Photo, then find "Add a picture". It is one button and one file
-       picker now, and the picture is chosen FIRST — that is the thing you
-       actually have in mind, and the name can be filled in from the filename. */
-    "photo-add": function (id) {
-      var b = byId(state.boards, id); if (!b) return;
-      var inp = document.createElement("input");
-      inp.type = "file"; inp.accept = "image/*";
-      inp.addEventListener("change", function () {
-        var f = inp.files && inp.files[0];
-        if (!f) return;
-        toast("Reading it…");
-        picShrink(f).then(function (dataUrl) {
-          var key = uid();
-          return picPut(key, dataUrl).then(function () {
-            var guess = String(f.name || "").replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
-            openModal({
-              title: "What is this a picture of?",
-              message: '<img src="' + dataUrl + '" alt="" style="max-width:100%;max-height:200px;border-radius:12px;display:block;margin:0 0 0.7rem">' +
-                "Kept on this device. Pictures do not travel with sync and are not in a backup file.",
-              confirmLabel: "Put it on the board",
-              fields: [
-                { key: "label", label: "Called", type: "text", span: true, value: guess || "",
-                  placeholder: "frame 1962-04" },
-                { key: "linkTo", label: "Belongs with", type: "select", span: true, value: "",
-                  options: [{ value: "", label: "Nothing yet — just put it on the board" }]
-                    .concat(b.nodes.filter(function (n) { return n.t === "step"; })
-                      .map(function (n) { return { value: n.id, label: n.label }; })) }
-              ],
-              validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
-              onConfirm: function (v) {
-                go(function () {
-                  var t = { id: uid(), t: "thing", kind: "photo", label: v.label.trim(),
-                            path: "", url: "", pic: key };
-                  b.nodes.push(t);
-                  if (v.linkTo) {
-                    b.edges.push({ id: uid(), a: t.id, b: v.linkTo, k: "link", label: "" });
-                  }
-                  autoLayout(b);
-                });
-                toast(v.linkTo ? "On the board, beside that step" : "On the board");
-              },
-              onCancel: function () { picDrop(key); }
-            });
-          });
-        }).catch(function (e) { toast(e && e.message ? e.message : "Could not read that picture."); });
-      });
-      inp.click();
-    },
+       kind to Photo, then find "Add a picture". One button, one picker — see
+       pickPicture, which every route into a picture goes through. */
+    "photo-add": function (id) { pickPicture(byId(state.boards, id), null, null, null); },
     "thing-borrow": function (id) { borrowDialog(byId(state.boards, id)); },
     "node-edit": function (id) {
       var s = split(id); if (!s.b) return;
@@ -5559,10 +5926,13 @@ function dims(n) {
         picShrink(f)
           .then(function (dataUrl) {
             var key = n.pic || uid();
-            return picPut(key, dataUrl).then(function () {
-              go(function () { n.pic = key; });
-              toast("Kept on this device — pictures do not travel with sync");
-            });
+            return picPut(key, dataUrl)
+              .then(function () { return picThumb(dataUrl); })
+              .then(function (small) {
+                go(function () { n.pic = key; n.thumb = small; settleNode(b, n); });
+                toast(small ? "Kept here, and a thumbnail goes to your other devices"
+                            : "Kept on this device — too large for a travelling thumbnail");
+              });
           })
           .catch(function (e) { toast(e && e.message ? e.message : "Could not keep that picture."); });
       });
@@ -5571,16 +5941,20 @@ function dims(n) {
     "pic-open": function (id) {
       var q = String(id).split(":"), b = byId(state.boards, q[0]);
       var n = b && nodeOf(b, q[1]);
-      if (!n || !n.pic) return;
-      picGet(n.pic).then(function (src) {
+      if (!n || !hasPic(n)) return;
+      (n.pic ? picGet(n.pic) : Promise.resolve("")).then(function (full) {
+        var src = full || n.thumb;
         if (!src) { toast("That picture is not on this device."); return; }
+        var says = full
+          ? "The full-size picture, kept on this device. It is not in a backup file and does not travel with sync."
+          : "This is the thumbnail, which is the copy that travels. The full-size picture is on the device it was added from." +
+            (n.url ? " The link on it opens the full one." : " Put a Google Drive link on it if you want to open the full one here.");
         openModal({
           title: n.label || "Picture",
           wide: true,
           // Through `message`, which openModal interpolates unescaped. There is
           // no `html` option — passing one showed nothing whatsoever.
-          message: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block;margin:0 0 0.7rem">' +
-            "Kept on this device only. It is not in a backup file and it does not travel with sync.",
+          message: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block;margin:0 0 0.7rem">' + says,
           confirmLabel: "Close",
           fields: []
         });
@@ -5625,6 +5999,19 @@ function dims(n) {
       });
     },
     "theme": function (id) { setTheme(id); },
+    "sel-clear": function () {
+      sel = "";
+      var b = openBoard();
+      if (cvSvg && b) paintSel(b); else render();
+    },
+    /* A photo added from a step lands beside it and linked to it, which is what
+       "add a photo to this step" has to mean or the link is a second job. */
+    "photo-here": function (id) {
+      var q = String(id).split(":"), b = byId(state.boards, q[0]);
+      var host = b && nodeOf(b, q[1]);
+      if (!b || !host) return;
+      pickPicture(b, host, null, null);
+    },
     "sync-copy-id": function () {
       var id = String(syncCfg().gistId || "");
       if (!id) { toast("No gist is set up."); return; }
@@ -5828,7 +6215,7 @@ function dims(n) {
         var key = (n.kind || "") + "\u0000" + n.label.toLowerCase();
         if (seen[key]) { seen[key].seen++; return; }
         seen[key] = { kind: n.kind, label: n.label, path: n.path || "", url: n.url || "",
-                      pic: n.pic || "", seen: 1, from: bd.name };
+                      pic: n.pic || "", thumb: n.thumb || "", seen: 1, from: bd.name };
         out.push(seen[key]);
       });
     });
@@ -5868,7 +6255,8 @@ function dims(n) {
         if (!pick) return;
         go(function () {
           b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
-                         path: pick.path, url: pick.url, pic: pick.pic });
+                         path: pick.path, url: pick.url, pic: pick.pic,
+                         thumb: pick.thumb || "" });
           autoLayout(b);
         });
         toast("Brought in — link it to a step to say where it belongs");
