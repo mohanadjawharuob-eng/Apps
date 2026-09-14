@@ -544,18 +544,38 @@
   .cal-day.now { border-color: var(--sage-deep); }
   .cal-n { font-size: 0.76rem; color: var(--faint); }
   .cal-day.now .cal-n { color: var(--sage-lift); }
+  /* Two lines, then clipped. One line ellipsised at 22 characters turned every
+     entry into "Chase Ask for referen\u2026" — a calendar you cannot read is a
+     grid of rectangles. */
   .cal-m {
     font-size: 0.7rem; line-height: 1.25; padding: 0.16rem 0.3rem; border-radius: 5px;
     background: var(--raised); color: var(--dim);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   }
   .cal-m.t-late { background: var(--late-tint); color: var(--apricot-lift); }
   .cal-m.t-dated { background: var(--raised); color: var(--sage-lift); }
   .cal-more { font-size: 0.66rem; color: var(--receded); padding-left: 0.3rem; }
+  /* The month as a list, for a screen too narrow for a grid. */
+  .calist { display: none; }
+  .cl-day {
+    display: flex; align-items: baseline; gap: 0.5rem;
+    margin: 1.1rem 0 0.4rem; padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .cl-day:first-child { margin-top: 0; }
+  .cl-day b { font-family: var(--display); font-weight: 500; font-size: 1.1rem; }
+  .cl-day span { font-size: 0.76rem; color: var(--faint); }
+  .cl-day.now b, .cl-day.now span { color: var(--sage-lift); }
+  .cl-row {
+    display: flex; gap: 0.6rem; align-items: center; padding: 0.5rem 0.6rem;
+    border-radius: 10px; background: var(--surface); margin-bottom: 4px;
+    border-left: 2px solid var(--rule);
+  }
+  .cl-row.t-late { border-left-color: var(--apricot); }
+  .cl-row.t-dated { border-left-color: var(--sage-deep); }
   @media (max-width: 700px) {
-    .cal { gap: 2px; }
-    .cal-day, .cal-pad { min-height: 62px; }
-    .cal-m { font-size: 0.6rem; }
+    .cal { display: none; }
+    .calist { display: block; }
   }
 
   /* ---------------- how a run stands, in the header ---------------- */
@@ -757,6 +777,13 @@
   .dayhead:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
   .dayhead b { font-size: 0.86rem; }
   .dayhead span { flex: 1; font-size: 0.78rem; color: var(--faint); }
+  /* A day with nothing on it recedes: it is still there to be filled in, but
+     it is not news, and six of them in a row used to be the page. */
+  .dayhead.bare { margin-top: 0.35rem; padding-top: 0.35rem; }
+  .dayhead.bare b { font-weight: 400; color: var(--dim); }
+  .dayhead.bare .btn { opacity: 0; transition: opacity var(--t); }
+  .dayhead.bare:hover .btn, .dayhead.bare:focus-within .btn { opacity: 1; }
+  @media (hover: none) { .dayhead.bare .btn { opacity: 1; } }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -1701,9 +1728,12 @@ function stateWord(b, n) {
           var uf = unfiled(b);
           return '<div class="panel dashed"><div class="grow">' +
             '<div class="nm">' + esc(uf.length === 1 ? uf[0].label : b.name) + "</div>" +
+            /* Lowercasing the first letter put "while archive the files is
+               undone" on screen — the same defect as Coffer's "pausing cyprus
+               move". A step's name is written as it was written, in quotes. */
             '<div class="says">It looks done from the outside. It is not, and the run knows: it will not close while ' +
-            esc(uf.map(function (n) { return String(n.label).charAt(0).toLowerCase() + String(n.label).slice(1); })
-                  .join(" and ")) + " is undone.</div></div>" +
+            esc(uf.map(function (n) { return "\u201c" + n.label + "\u201d"; }).join(" and ")) +
+            (uf.length === 1 ? " is" : " are") + " undone.</div></div>" +
             '<div class="acts"><button class="btn" data-act="board-open" data-id="' + b.id + '">Open it</button></div></div>';
         }).join("") + "</div>";
     }
@@ -1794,10 +1824,10 @@ function stateWord(b, n) {
       says = n.chaseDays
         ? "You will chase this after " + n.chaseDays + " days"
         : "You never set a reminder for this one, so it can wait for ever";
-      right = d.days + "d";
+      right = "waiting " + d.days + "d";
     } else {
       says = "In your hands. Waiting on nobody but you";
-      right = d.days ? d.days + "d" : "today";
+      right = d.days ? "in hand " + d.days + "d" : "started today";
     }
 
     return '<div class="panel calm' + (dated ? " dated" : "") + '">' +
@@ -1954,9 +1984,11 @@ function stateWord(b, n) {
                                       : "nothing dated this month") + "</span></div>" +
       '<p class="saynote">Everything here came off a board or a cadence. There is nothing to add: a calendar you can type into is a second place for a commitment to live, and then two places disagree.</p>' +
       '<div class="tools" style="margin-bottom:1rem">' +
-      '<button class="btn" data-act="cal-move" data-id="-1">Back</button>' +
-      '<button class="btn" data-act="cal-move" data-id="0">This month</button>' +
-      '<button class="btn" data-act="cal-move" data-id="1">On</button></div>';
+      /* "Back · This month · On" — "On" was nobody's word for next month. The
+         same three the week uses, so one habit covers both screens. */
+      '<button class="btn" data-act="cal-move" data-id="-1">\u2039 earlier</button>' +
+      '<button class="btn" data-act="cal-move" data-id="0">this month</button>' +
+      '<button class="btn" data-act="cal-move" data-id="1">later \u203a</button></div>';
 
     h += '<div class="cal">';
     ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(function (d) {
@@ -1970,11 +2002,37 @@ function stateWord(b, n) {
         marks.slice(0, 3).map(function (m) {
           return '<div class="cal-m t-' + m.tone + '"' +
             (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
-            ' title="' + esc(m.label + " — " + m.where) + '">' + esc(clip(m.label, 22)) + "</div>";
+            ' title="' + esc(m.label + " \u2014 " + m.where) + '">' + esc(clip(m.label, 38)) + "</div>";
         }).join("") +
         (marks.length > 3 ? '<div class="cal-more">+' + (marks.length - 3) + " more</div>" : "") +
         "</div>";
     });
+    h += "</div>";
+
+    /* Seven columns across 390px is 47px a cell, and a month grid on a phone
+       draws every entry as "Chase As…" clipped mid-word. So the same month is
+       also written as a list, in date order, and CSS shows whichever one the
+       screen can carry — rendered both ways rather than measured, because a
+       render that reads the window width is a render that is wrong after a
+       resize. Same reasoning as the sheet on the laptop and the rows on the
+       phone. */
+    h += '<div class="calist">';
+    var listed = days.filter(function (d) { return (by[d] || []).length; });
+    if (!listed.length) {
+      h += '<p class="empty">Nothing is dated this month.</p>';
+    } else {
+      listed.forEach(function (day) {
+        h += '<div class="cl-day' + (day === today() ? " now" : "") + '"><b>' +
+          Number(day.slice(8)) + "</b><span>" + esc(dayName(day)) +
+          (day === today() ? " \u00b7 today" : "") + "</span></div>";
+        (by[day] || []).forEach(function (m) {
+          h += '<div class="cl-row t-' + m.tone + '"' +
+            (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
+            '><div class="grow"><div class="nm sm">' + esc(m.label) + "</div>" +
+            '<div class="says">' + esc(m.where) + "</div></div></div>";
+        });
+      });
+    }
     h += "</div>";
     return h;
   }
@@ -2167,6 +2225,28 @@ function stateWord(b, n) {
       '<button class="btn" data-act="restore">Restore a backup</button></div>' +
       '<p class="hint">A backup is a plain JSON file. Restoring replaces everything in the app with what is in the file.</p></div>';
 
+    /* The question a person actually asks about a photograph — "will I see it
+       on my phone?" — has a real answer with two halves, so it is said in one
+       place rather than only inside the dialog that adds one. */
+    var picN = 0, thN = 0;
+    state.boards.forEach(function (bd) {
+      (bd.nodes || []).forEach(function (n) {
+        if (n.pic) picN++;
+        if (n.thumb) thN++;
+      });
+    });
+    h += '<div class="card"><h3>Pictures</h3>' +
+      '<p class="card-sub">' + (picN || thN
+        ? picN + (picN === 1 ? " full-size picture here" : " full-size pictures here") +
+          " \u00b7 " + thN + (thN === 1 ? " thumbnail that travels" : " thumbnails that travel")
+        : "None on any board yet") + "</p>" +
+      '<p class="hint" style="margin:0">A picture is kept twice. The full one stays on the device it was ' +
+      'added from — a few megabytes through the sync door would make every sync slow and then fail, silently. ' +
+      'A small copy is stored in the record itself, so it travels: a board built at the desk shows its ' +
+      'photographs on the phone. To open a full-size one somewhere else, put a Google Drive link on it ' +
+      '\u2014 Drive is not wired in directly, because that needs Google\u2019s script fetched from elsewhere ' +
+      'and this app fetches nothing.</p></div>';
+
     h += '<div class="card"><h3>Kept by itself</h3>' +
       '<p class="card-sub" id="bkSub">Looking…</p>' +
       '<p class="hint" style="margin:0 0 0.6rem">A snapshot of the whole book, taken when you change something and at most a few times a day, ' + BK_KEEP + ' kept. Sync and a backup are different jobs: sync sends the state you are in now, so a bad delete travels to every device promptly — a backup is the state you were in before it. <b>These live on this device only.</b> A dropped laptop takes them with it, so still export a file somewhere else now and then.</p>' +
@@ -2355,6 +2435,19 @@ function stateWord(b, n) {
 
   function currentWeek() { return weekOf || weekStart(today()); }
 
+  /* "Mon 2026-09-14 to 2026-09-20" is a log line, not a date. The month is
+     written once when both ends share it, which is six weeks in seven. */
+  function weekWords(from, to) {
+    var a = parseISO(from), z = parseISO(to);
+    var d1 = a.toLocaleDateString(undefined, { day: "numeric" });
+    var same = a.getMonth() === z.getMonth();
+    var m1 = a.toLocaleDateString(undefined, { month: "long" });
+    var m2 = z.toLocaleDateString(undefined, { month: "long" });
+    var yr = z.getFullYear() === parseISO(today()).getFullYear() ? "" : " " + z.getFullYear();
+    return (same ? d1 + " \u2013 " + z.getDate() + " " + m2
+                 : d1 + " " + m1 + " \u2013 " + z.getDate() + " " + m2) + yr;
+  }
+
   function renderWeek() {
     var from = currentWeek(), to = addDays(from, 6);
     var isNow = from === weekStart(today());
@@ -2363,7 +2456,7 @@ function stateWord(b, n) {
     var susp = suspenseMins(from, to);
 
     var h = pageHead("The week",
-      esc(dayName(from) + " " + from + " to " + to),
+      esc(weekWords(from, to) + (isNow ? " \u2014 this week" : "")),
       '<div class="tools">' +
       '<button class="btn" data-act="week-prev">‹ earlier</button>' +
       (isNow ? "" : '<button class="btn" data-act="week-now">this week</button>') +
@@ -2415,11 +2508,15 @@ function stateWord(b, n) {
       var todays = state.spans.filter(function (sp) { return minsIn(sp, day, day) > 0; })
         .sort(function (a, b) { return a.startedAt < b.startedAt ? -1 : 1; });
       var dayMins = todays.reduce(function (t, sp) { return t + minsIn(sp, day, day); }, 0);
-      h += '<div class="dayhead"><b>' + esc(dayName(day, "long")) + "</b><span>" +
-        (dayMins ? fmtMins(dayMins) : "nothing") + "</span>" +
-        '<button class="btn quiet" data-act="span-add" data-id="' + day + '">+</button></div>';
-      h += todays.length ? todays.map(function (sp) { return spanRow(sp, false); }).join("")
-                         : '<p class="empty" style="margin:0 0 0.5rem">—</p>';
+      /* An empty day was a heading, then a card, then a dash — 115px of screen
+         to say nothing, six times over, which is most of why this page read as
+         a form. It is one quiet line now, and the button says what it does. */
+      h += '<div class="dayhead' + (dayMins ? "" : " bare") + '"><b>' +
+        esc(dayName(day, "long")) + "</b><span>" +
+        (dayMins ? fmtMins(dayMins) : "nothing logged") + "</span>" +
+        '<button class="btn quiet" data-act="span-add" data-id="' + day +
+        '" title="Add time on this day">Add time</button></div>';
+      if (todays.length) h += todays.map(function (sp) { return spanRow(sp, false); }).join("");
     }
     h += "</div>";
     return h;
@@ -3709,7 +3806,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v28 · 14 Sep 2026";
+  var BUILD = "v29 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
