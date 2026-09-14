@@ -214,7 +214,7 @@
   }
   .tab:hover { color: var(--ink); background: var(--raised); }
   .tab[aria-current="page"] { color: var(--ink); background: var(--raised); border-left-color: var(--brass); }
-  .tab .ico { width: 1.1rem; text-align: center; opacity: 0.85; font-family: var(--mono); }
+  .tab .ico { width: 1.1rem; text-align: center; opacity: 0.9; }
   .rail-foot { margin-top: auto; padding: 1.2rem 1rem 0; }
   .rail-foot p { margin: 0; font-size: 0.72rem; line-height: 1.6; color: var(--faint); font-family: var(--serif); font-style: italic; }
   .view { flex: 1; min-width: 0; padding: 1.5rem 1.6rem 4rem; max-width: 1560px; }
@@ -236,7 +236,7 @@
   .page-head p { margin: 0.2rem 0 0; color: var(--dim); font-size: 0.86rem; max-width: 62ch; }
   .card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 1rem 1.05rem; margin-bottom: 0.85rem; }
   .card > h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
-  .card-sub { margin: 0 0 0.8rem; color: var(--faint); font-size: 0.8rem; font-family: var(--mono); }
+  .card-sub { margin: 0 0 0.8rem; color: var(--faint); font-size: 0.85rem; }
   .sect { margin: 1.9rem 0 0.7rem; font-size: 0.87rem; color: var(--faint); }
   /* A few places still want the old legend treatment — a column heading over
      genuinely machine-read data, never a sentence. */
@@ -248,7 +248,7 @@
   .row:last-child { border-bottom: 0; }
   .row .grow { flex: 1; min-width: 0; }
   .row b { font-weight: 500; }
-  .row small { display: block; color: var(--faint); font-size: 0.76rem; font-family: var(--mono); margin-top: 0.1rem; }
+  .row small { display: block; color: var(--faint); font-size: 0.8rem; margin-top: 0.12rem; }
   .tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
   /* On a phone a pill, a sentence and two buttons on one line left the
      sentence about ten characters wide — an upkeep row with a place and a
@@ -315,16 +315,51 @@
   .note-mark.good { color: var(--verd); } .note-mark.info { color: var(--blue); }
 
   /* ---------------- board list ---------------- */
-  .boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.7rem; }
+  .boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 0.8rem; }
   .bcard {
     background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule);
     border-radius: var(--r); padding: 0.9rem 0.95rem; cursor: pointer; text-align: left; width: 100%;
     transition: var(--t); color: inherit;
   }
   .bcard:hover { background: var(--raised); }
-  .bcard h3 { margin: 0 0 0.1rem; font-size: 1rem; }
-  .bcard .bsub { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
-  .bcard .bstat { margin-top: 0.55rem; font-size: 0.78rem; color: var(--dim); }
+  .bcard h3 {
+    margin: 0 0 0.12rem; font-family: var(--display); font-weight: 500;
+    font-size: 1.12rem; letter-spacing: -0.012em; line-height: 1.25;
+  }
+  .bcard .bsub { font-size: 0.82rem; color: var(--faint); }
+  .bcard.late { background: var(--late-tint); border-color: var(--apricot-deep); }
+  .bcard.late .bsub { color: var(--apricot-mute); }
+
+  /* The run drawn as a track: one mark per step, in order. "3 of 8 done" is a
+     sentence you have to parse; three filled marks out of eight is the same
+     fact at a glance, and it also shows WHERE in the work you are — which the
+     sentence never did. */
+  .track { display: flex; gap: 3px; margin: 0.7rem 0 0.5rem; }
+  .track i {
+    flex: 1 1 0; height: 5px; border-radius: 3px; background: var(--rule);
+    min-width: 4px;
+  }
+  .track i.t-done { background: var(--sage-deep); }
+  .track i.t-now { background: var(--sage); }
+  .track i.t-waiting { background: var(--receded); }
+  .track i.t-over { background: var(--apricot); }
+
+  .bcard .bstat {
+    display: flex; align-items: baseline; gap: 0.5rem;
+    font-size: 0.84rem; color: var(--dim);
+  }
+  .bcard .bstat.bad { color: var(--apricot-lift); }
+  .bcard .bnum {
+    margin-left: auto; font-family: var(--display); font-weight: 500;
+    font-size: 0.95rem; color: var(--faint); letter-spacing: -0.01em;
+  }
+  /* What the run is actually about. On a board of aerial photographs the
+     photographs are the most recognisable thing on the card. */
+  .bpics { display: flex; gap: 4px; margin-top: 0.6rem; }
+  .bpics img {
+    width: 38px; height: 30px; object-fit: cover; border-radius: 5px;
+    background: var(--raised);
+  }
 
   /* ---------------- canvas ---------------- */
   .cvbox { position: relative; border: 1px solid var(--rule); border-radius: var(--r); background: var(--sheet); overflow: hidden; }
@@ -577,7 +612,7 @@
   .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
   .field { display: flex; flex-direction: column; gap: 0.25rem; }
   .field.span { grid-column: 1 / -1; }
-  .field label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+  .field label { font-size: 0.78rem; color: var(--dim); }
   .field input, .field select, .field textarea {
     background: var(--sheet); border: 1px solid var(--rule); color: var(--ink);
     padding: 0.45rem 0.55rem; font: inherit; font-size: 0.92rem; width: 100%;
@@ -621,7 +656,7 @@
   }
   .sb-txt { flex: 1; min-width: 0; }
   .sb-txt b { display: block; font-size: 0.92rem; font-weight: 500; }
-  .sb-txt small { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .sb-txt small { display: block; font-size: 0.78rem; color: var(--faint); }
   .sb-dot { width: 7px; height: 7px; flex: none; background: var(--blue); animation: tick 2.6s ease-in-out infinite; }
   @keyframes tick { 0%, 100% { opacity: 0.35 } 50% { opacity: 1 } }
   .sb-idle .sb-txt b { color: var(--dim); font-weight: 400; }
@@ -635,7 +670,7 @@
   .wk-dot { width: 6px; flex: none; margin-top: 0.25rem; height: 1.6rem; }
   .wk-main { flex: 1; min-width: 0; }
   .wk-top { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.3rem; }
-  .wk-top span { font-family: var(--mono); font-size: 0.82rem; color: var(--dim); }
+  .wk-top span { font-size: 0.84rem; color: var(--dim); }
   .wk-main small { display: block; font-size: 0.76rem; color: var(--faint); margin-top: 0.3rem; }
   .dayhead {
     display: flex; align-items: baseline; gap: 0.6rem; margin: 1rem 0 0.2rem;
@@ -643,7 +678,7 @@
   }
   .dayhead:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
   .dayhead b { font-size: 0.86rem; }
-  .dayhead span { flex: 1; font-family: var(--mono); font-size: 0.74rem; color: var(--faint); }
+  .dayhead span { flex: 1; font-size: 0.78rem; color: var(--faint); }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -1224,27 +1259,64 @@
   }
 
   function tplCard(b) {
-    var steps = b.nodes.filter(function (n) { return n.t === "step"; }).length;
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var runs = boards("run").filter(function (r) { return r.fromBoardId === b.id; }).length;
     return '<button class="bcard" data-act="board-open" data-id="' + b.id + '"' + cardTop(b) + ">" +
       "<h3>" + esc(b.name) + "</h3>" +
-      '<div class="bsub">' + esc(b.benchId ? benchLabel(b.benchId) : "no bench") +
-      (b.kindId ? " · " + esc(kindName(b.kindId)) : "") + "</div>" +
-      '<div class="bstat">' + steps + (steps === 1 ? " step" : " steps") + "</div></button>";
+      '<div class="bsub">' + esc(jobOrBench(b)) + "</div>" +
+      // The same track, all of it waiting: the shape of the procedure itself.
+      '<div class="track">' + steps.map(function (n) {
+        return '<i class="t-todo" title="' + esc(n.label) + '"></i>';
+      }).join("") + "</div>" +
+      '<div class="bstat">' + (runs ? "Run " + runs + (runs === 1 ? " time" : " times") : "Never run yet") +
+      '<span class="bnum">' + steps.length + "</span></div></button>";
   }
 
+  /* A card that SHOWS the run rather than describing it.
+
+     "3 of 8 done" is a sentence you have to parse; a track of eight marks, three
+     filled, is the same fact at a glance — and it also shows WHERE in the work
+     you are, which the sentence never did. Under it go the pictures on the
+     board, because on a run about aerial photographs the photographs are the
+     most recognisable thing about it.
+
+     This is the difference between a list of records and a screen: the same
+     data, arranged so the eye does the reading. */
   function runCard(b) {
     var p = runProgress(b);
     var act = activeNodes(b);
     var late = act.filter(function (n) { return nodeState(b, n) === "over"; }).length;
-    var line;
-    if (b.closedOn) line = "Closed " + niceDate(b.closedOn);
-    else if (late) line = '<span style="color:var(--oxide)">' + late + " late</span> · " + p.done + " of " + p.total + " done";
-    else if (!act.length) line = "Nothing active · " + p.done + " of " + p.total + " done";
-    else line = act.length + " in hand · " + p.done + " of " + p.total + " done";
-    return '<button class="bcard" data-act="board-open" data-id="' + b.id + '"' + cardTop(b) + ">" +
+    var steps = b.nodes.filter(function (n) { return n.t === "step"; });
+    var pics = b.nodes.filter(function (n) { return n.t === "thing" && n.pic; });
+
+    var head = b.closedOn ? "Finished " + niceDate(b.closedOn)
+             : late ? (late === 1 ? "One thing is late" : cap(numWord(late)) + " things are late")
+             : act.length ? (act.length === 1 ? "One step in hand" : cap(numWord(act.length)) + " steps in hand")
+             : "Nothing on the go";
+
+    return '<button class="bcard' + (late ? " late" : "") + '" data-act="board-open" data-id="' +
+      b.id + '"' + cardTop(b) + ">" +
       "<h3>" + esc(b.name) + "</h3>" +
-      '<div class="bsub">' + esc(b.benchId ? benchLabel(b.benchId) : "no bench") + "</div>" +
-      '<div class="bstat">' + line + "</div></button>";
+      '<div class="bsub">' + esc(jobOrBench(b)) + "</div>" +
+      // The track: one mark per step, in order, so you can see the shape of it.
+      '<div class="track">' + steps.map(function (n) {
+        var st = nodeState(b, n);
+        return '<i class="t-' + st + '" title="' + esc(n.label) + '"></i>';
+      }).join("") + "</div>" +
+      '<div class="bstat' + (late ? " bad" : "") + '">' + esc(head) +
+      '<span class="bnum">' + p.done + "/" + p.total + "</span></div>" +
+      (pics.length ? '<div class="bpics">' + pics.slice(0, 4).map(function (t) {
+        return '<img data-pic="' + esc(t.pic) + '" alt="">';
+      }).join("") + "</div>" : "") +
+      "</button>";
+  }
+
+  function jobOrBench(b) {
+    var bits = [];
+    if (b.jobId) bits.push(jobName(b.jobId));
+    else if (b.benchId) bits.push(benchLabel(b.benchId));
+    if (b.kindId) bits.push(kindName(b.kindId));
+    return bits.length ? bits.join(" · ") : "Belongs to no job";
   }
 
   /* ---------------- one board ---------------- */
@@ -1285,7 +1357,8 @@
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="board-back">All boards</button>' +
       '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
-      '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add thing</button>' +
+      '<button class="btn" data-act="photo-add" data-id="' + b.id + '">Add a photo</button>' +
+      '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add a person or thing</button>' +
       (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
       (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
       (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
@@ -1933,6 +2006,11 @@ function stateWord(b, n) {
   function renderSettings() {
     var runs = boards("run").length, tpls = boards("template").length;
     var h = pageHead("Settings", "Everything is on this device and nowhere else.");
+
+    h += '<div class="card"><h3>This build</h3>' +
+      '<p class="card-sub"><b>' + esc(BUILD) + '</b></p>' +
+      '<p class="hint" style="margin:0 0 0.6rem">If the app looks older than you expect, read this line first — it says what is actually running. A phone keeps a copy of the app so it opens without a network, and an old copy can outlive a new release by a launch or two. <b>Get the newest</b> throws that copy away and fetches everything again. Nothing you have recorded is touched: your book lives somewhere else entirely.</p>' +
+      '<div class="tools"><button class="btn primary" data-act="refresh-app">Get the newest</button></div></div>';
 
     h += syncCard();
 
@@ -3415,6 +3493,16 @@ function stateWord(b, n) {
   function jobDues(id) {
     return dues().filter(function (d) { return d.board.jobId === id; });
   }
+
+  /* ================= which build is this =================
+
+     There was no way to tell, from inside the app, which version you were
+     looking at — so "it still shows the old stuff" and "it is deployed" could
+     both be true and neither of us could prove anything. The stamp is printed
+     in Settings and it is the first thing to read when something looks stale.
+
+     Bumped with the service worker, every ship. */
+  var BUILD = "v26 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -4966,6 +5054,55 @@ function dims(n) {
     /* ---- nodes ---- */
     "node-add": function (id) { nodeDialog(byId(state.boards, id), null); },
     "thing-add": function (id) { thingDialog(byId(state.boards, id), null); },
+    /* Adding a photo used to be three decisions deep: Add thing, change the
+       kind to Photo, then find "Add a picture". It is one button and one file
+       picker now, and the picture is chosen FIRST — that is the thing you
+       actually have in mind, and the name can be filled in from the filename. */
+    "photo-add": function (id) {
+      var b = byId(state.boards, id); if (!b) return;
+      var inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "image/*";
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        if (!f) return;
+        toast("Reading it…");
+        picShrink(f).then(function (dataUrl) {
+          var key = uid();
+          return picPut(key, dataUrl).then(function () {
+            var guess = String(f.name || "").replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
+            openModal({
+              title: "What is this a picture of?",
+              message: '<img src="' + dataUrl + '" alt="" style="max-width:100%;max-height:200px;border-radius:12px;display:block;margin:0 0 0.7rem">' +
+                "Kept on this device. Pictures do not travel with sync and are not in a backup file.",
+              confirmLabel: "Put it on the board",
+              fields: [
+                { key: "label", label: "Called", type: "text", span: true, value: guess || "",
+                  placeholder: "frame 1962-04" },
+                { key: "linkTo", label: "Belongs with", type: "select", span: true, value: "",
+                  options: [{ value: "", label: "Nothing yet — just put it on the board" }]
+                    .concat(b.nodes.filter(function (n) { return n.t === "step"; })
+                      .map(function (n) { return { value: n.id, label: n.label }; })) }
+              ],
+              validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+              onConfirm: function (v) {
+                go(function () {
+                  var t = { id: uid(), t: "thing", kind: "photo", label: v.label.trim(),
+                            path: "", url: "", pic: key };
+                  b.nodes.push(t);
+                  if (v.linkTo) {
+                    b.edges.push({ id: uid(), a: t.id, b: v.linkTo, k: "link", label: "" });
+                  }
+                  autoLayout(b);
+                });
+                toast(v.linkTo ? "On the board, beside that step" : "On the board");
+              },
+              onCancel: function () { picDrop(key); }
+            });
+          });
+        }).catch(function (e) { toast(e && e.message ? e.message : "Could not read that picture."); });
+      });
+      inp.click();
+    },
     "thing-borrow": function (id) { borrowDialog(byId(state.boards, id)); },
     "node-edit": function (id) {
       var s = split(id); if (!s.b) return;
@@ -5373,9 +5510,12 @@ function dims(n) {
         if (!src) { toast("That picture is not on this device."); return; }
         openModal({
           title: n.label || "Picture",
-          message: "Kept on this device only. It is not in a backup file and it does not travel with sync.",
+          wide: true,
+          // Through `message`, which openModal interpolates unescaped. There is
+          // no `html` option — passing one showed nothing whatsoever.
+          message: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block;margin:0 0 0.7rem">' +
+            "Kept on this device only. It is not in a backup file and it does not travel with sync.",
           confirmLabel: "Close",
-          html: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block">',
           fields: []
         });
       });
@@ -5383,6 +5523,40 @@ function dims(n) {
     "cal-move": function (by) {
       calMonth = num(by) ? shiftMonth(calOf(), num(by)) : "";
       render();
+    },
+    /* The escape hatch. An installed app is served by its own worker, and a
+       worker written before the network-first fix will keep handing out the
+       page it cached until it is replaced — which can take two launches. This
+       makes it one: drop the registration, delete this app's caches, reload.
+
+       It deliberately does not touch localStorage or IndexedDB: the book, the
+       pictures and the snapshots are not what is stale. */
+    "refresh-app": function () {
+      confirmAction({
+        title: "Throw away the offline copy?",
+        message: "The app will be fetched again from scratch. Everything you have recorded stays exactly as it is — this only clears the copy of the app itself, which is what can be out of date.",
+        confirmLabel: "Get the newest", danger: false
+      }, function () {
+        toast("Fetching the newest…");
+        var jobs = [];
+        if (window.caches && caches.keys) {
+          jobs.push(caches.keys().then(function (keys) {
+            return Promise.all(keys.filter(function (k) {
+              return k.indexOf("pwa-mashghal-") === 0;
+            }).map(function (k) { return caches.delete(k); }));
+          }));
+        }
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+            return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          }));
+        }
+        Promise.all(jobs).catch(function () {}).then(function () {
+          // A query string the old copy was never cached under, so the reload
+          // cannot be answered from a cache that is on its way out.
+          location.replace(location.pathname + "?fresh=" + Date.now());
+        });
+      });
     },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
