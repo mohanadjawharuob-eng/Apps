@@ -749,6 +749,100 @@ color-scheme: light;
   .tabn { margin-left: auto; font-size: 0.76rem; color: var(--apricot); }
   @media (max-width: 880px) { .railwork, .brand-sub { display: none; } }
 
+  /* ---------------- the finder ----------------
+     One box over everything that reaches every named thing in the book. It is
+     not a filter on a list: the app has six sections, boards inside them and
+     steps inside those, so the thing you are looking for is usually three
+     clicks deep and you have to already know which section it is in. Typing
+     its name is the only route that does not require that. */
+  .findbtn {
+    display: flex; align-items: center; gap: 0.5rem; width: calc(100% - 1.1rem);
+    margin: 0 0.55rem 0.7rem; padding: 0.44rem 0.55rem;
+    background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px;
+    color: var(--faint); font: inherit; font-size: 0.83rem; text-align: left; cursor: pointer;
+    transition: color var(--t), border-color var(--t);
+  }
+  .findbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
+  .findbtn .ico { display: flex; }
+  .findbtn .ico svg { width: 15px; height: 15px; }
+  .findbtn kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: var(--receded);
+    border: 1px solid var(--rule); border-radius: 5px; padding: 0.04rem 0.28rem;
+  }
+  .find {
+    position: fixed; inset: 0; z-index: 90; background: rgba(4,8,16,0.68);
+    backdrop-filter: blur(2px); display: flex; align-items: flex-start;
+    justify-content: center; padding: 8vh 1rem 1rem;
+  }
+  .find-box {
+    background: var(--surface); border: 1px solid var(--rule-mid); border-radius: 14px;
+    width: 100%; max-width: 560px; display: flex; flex-direction: column;
+    overflow: hidden; box-shadow: 0 30px 70px -30px #000;
+  }
+  .find-box input {
+    background: none; border: 0; border-bottom: 1px solid var(--rule); color: var(--ink);
+    font: inherit; font-size: 1rem; padding: 0.85rem 1rem; width: 100%;
+  }
+  .find-box input:focus { outline: 0; border-bottom-color: var(--brass); }
+  .find-list { max-height: min(56vh, 420px); overflow-y: auto; padding: 0.35rem; }
+  .find-head {
+    padding: 0.5rem 0.65rem 0.25rem; font-size: 0.7rem; color: var(--faint);
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .find-hit {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%;
+    padding: 0.5rem 0.65rem; background: none; border: 0; border-radius: 9px;
+    color: var(--ink); font: inherit; font-size: 0.88rem; text-align: left; cursor: pointer;
+  }
+  /* The keyboard's position and the mouse's hover are the same highlight, or
+     arrowing down and then moving the mouse leaves two rows looking picked. */
+  .find-hit.on, .find-hit:hover { background: var(--raised); }
+  .find-hit .itile { flex: 0 0 auto; }
+  .find-hit .txt { flex: 1; min-width: 0; }
+  .find-hit b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .find-hit small { display: block; color: var(--faint); font-size: 0.76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .find-hit .st { flex: 0 0 auto; }
+  .find-foot {
+    margin: 0; padding: 0.5rem 0.85rem; border-top: 1px solid var(--rule);
+    font-size: 0.74rem; color: var(--receded);
+  }
+  .find-foot kbd { font-family: var(--mono); color: var(--faint); }
+  .find-none { padding: 1.1rem 0.85rem; margin: 0; color: var(--dim); font-size: 0.86rem; }
+
+  /* The identity channel. An itile is the only place a category colour
+     appears, at low alpha behind the glyph, so eight of them can sit in one
+     list without any of them reading as "this is going well".
+
+     Not `.tile`: that name was already taken, 400 lines above, by the figure
+     tiles on Waiting and the week. Two rules under one class name, the second
+     winning, put a 28px flex box and a centred SVG onto every one of those —
+     which is the kind of thing that looks like the app breaking rather than
+     like a name collision. */
+  .itile {
+    width: 28px; height: 28px; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--tint-of) 18%, transparent);
+    color: var(--tint-of);
+  }
+  .itile svg { width: 15px; height: 15px; display: block; }
+  .itile.sm { width: 22px; height: 22px; border-radius: 6px; }
+  .itile.sm svg { width: 13px; height: 13px; }
+  .t-board { --tint-of: var(--id-workflow); }
+  .t-run   { --tint-of: var(--id-action); }
+  .t-step  { --tint-of: var(--id-action); }
+  .t-thing { --tint-of: var(--id-asset); }
+  .t-job   { --tint-of: var(--id-project); }
+  .t-bench { --tint-of: var(--id-equip); }
+  .t-kit   { --tint-of: var(--id-asset); }
+  .t-up    { --tint-of: var(--id-conn); }
+  .t-go    { --tint-of: var(--id-know); }
+  .t-cmd   { --tint-of: var(--id-output); }
+
+  @media (max-width: 880px) {
+    .findbtn { width: auto; margin: 0 0.8rem 0.7rem; }
+    .find { padding: 4vh 0.6rem 0.6rem; }
+  }
+
   /* ---------------- the finding, and panels that carry prose ----------------
      Replaces the pills and the tile row. A state is a sentence here, so the
      panel needs room for one and the figure needs to be big enough to read
@@ -976,6 +1070,15 @@ color-scheme: light;
         <circle cx="292" cy="424" r="24" fill="var(--apricot)" stroke="none"/>
       </svg></span><h1>Mashghal</h1></div>
     <p class="brand-sub" id="brandSub">This computer only</p>
+    <!-- Above the nav, because it reaches further than any of the sections
+         under it: a step three levels inside a board has no other route to it
+         than typing its name. -->
+    <button class="findbtn" data-act="find-open">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15" fill="none"
+        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle
+        cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span>
+      <span>Find anything</span><kbd>Ctrl K</kbd>
+    </button>
     <nav id="nav" aria-label="Sections"></nav>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
          belongs to the shared runtime and must stay byte-identical. -->
@@ -993,6 +1096,19 @@ color-scheme: light;
 <div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
 <div id="overlay"></div>
+
+<!-- The finder. Its own element rather than #overlay, because the modal
+     machinery owns that one and a dialog opened from a hit has to be able to
+     sit on top of this. -->
+<div class="find" id="find" hidden>
+  <div class="find-box" role="dialog" aria-modal="true" aria-label="Find anything">
+    <input id="findQ" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+           placeholder="Find a board, a step, a person, a thing — or a section"
+           aria-controls="findList" aria-autocomplete="list">
+    <div class="find-list" id="findList" role="listbox" aria-label="Matches"></div>
+    <p class="find-foot"><kbd>↑↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</p>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -1051,7 +1167,12 @@ color-scheme: light;
     kit:    svgIcon('<path d="M3.4 7.2h13.2v8.4a1.4 1.4 0 0 1-1.4 1.4H4.8a1.4 1.4 0 0 1-1.4-1.4z"/><path d="M7.4 7.2V5.4a1.6 1.6 0 0 1 1.6-1.6h2a1.6 1.6 0 0 1 1.6 1.6v1.8"/>'),
     device: svgIcon('<rect x="6" y="2.8" width="8" height="14.4" rx="1.9"/><path d="M8.8 5.2h2.4"/><circle cx="10" cy="14.4" r="0.9" fill="currentColor" stroke="none"/>'),
     note:   svgIcon('<path d="M4.4 3.6h11.2v9l-3.6 3.8H4.4z"/><path d="M15.6 12.6h-3.6v3.8M7 7.4h6M7 10.2h4"/>'),
-    thing:  svgIcon('<circle cx="10" cy="10" r="6.4"/>')
+    thing:  svgIcon('<circle cx="10" cy="10" r="6.4"/>'),
+    // the finder
+    find:   svgIcon('<circle cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/>'),
+    run:    svgIcon('<circle cx="10" cy="10" r="7"/><path d="M8.4 7l4.4 3-4.4 3z"/>'),
+    bench:  svgIcon('<path d="M3 8.2h14v2.2H3zM5 10.4v5.4M15 10.4v5.4M3 8.2l2-4h10l2 4"/>'),
+    cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>')
   };
   function actIcon(act) { return ICONS[act] || ICONS.do; }
   function thingIcon(kind) {
@@ -1270,7 +1391,7 @@ color-scheme: light;
     // The switch bar lives outside the view, so render() never touches it.
     beforeRender: function () { if (ensureJobs()) save(); },
 
-    afterRender: function () { navTrack(); mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
+    afterRender: function () { navTrack(); mountFind(); mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -1569,6 +1690,291 @@ color-scheme: light;
     render();
     navLock = false;
   });
+
+  /* ================= the finder =================
+
+     Ctrl+K, or the box at the top of the rail. It exists because nothing in
+     the app could be reached by its name: six sections, boards inside them,
+     steps inside those, and a person's name only ever written on a step three
+     levels down. To find "Patricia" you had to already know which board she
+     was on. An audit of the running app turned that up as the one missing
+     thing that made every other screen slower than it needed to be.
+
+     Two rules it keeps. It **searches the record, not the screen** — every
+     hit is built from `state` through the same helpers the views use, so a hit
+     can never name something the app would then fail to open. And **nothing
+     here changes anything**: a hit navigates, and the few commands at the
+     bottom hand straight over to `APP.actions`, which is the only place a
+     figure may move. */
+
+  var findRows = [], findAt = 0, findQ = "";
+
+  // A word-start match beats a match buried inside a word, and an exact
+  // prefix beats both — otherwise "pat" put every board with "update" in its
+  // name above the person called Patricia.
+  function findScore(text, q) {
+    if (!text) return 0;
+    var t = String(text).toLowerCase();
+    var i = t.indexOf(q);
+    if (i < 0) return 0;
+    if (i === 0) return 3;
+    return /[\s·—\-\/(]/.test(t.charAt(i - 1)) ? 2 : 1;
+  }
+
+  function findTile(cls, ico) {
+    return '<span class="itile sm ' + cls + '">' + ico + "</span>";
+  }
+
+  /* Every searchable thing in the book, as one flat list. Built fresh on each
+     keystroke rather than cached: the book is a few hundred records, and a
+     cache here is a cache that can disagree with the record. */
+  function findAll() {
+    var out = [];
+
+    APP.tabs.forEach(function (t) {
+      out.push({ g: "Sections", key: t.label, tile: findTile("t-go", t.ico),
+                 title: t.label, sub: "section", k: 7,
+                 run: function () { findTab(t.id); } });
+    });
+    out.push({ g: "Sections", key: "Kit vocabulary acts kinds places", tile: findTile("t-go", ICONS.kit),
+               title: "Kit", sub: "section · modes, software and the app's own words", k: 7,
+               run: function () { findTab("vocab"); } });
+    out.push({ g: "Sections", key: "Write a procedure prose", tile: findTile("t-go", ICONS.note),
+               title: "Write a procedure", sub: "page · type it out in words", k: 7,
+               run: function () { findTab("write"); } });
+
+    boards().forEach(function (b) {
+      var run = b.kind === "run";
+      var d = run ? dues().filter(function (x) { return x.board.id === b.id; }) : [];
+      var lateN = d.filter(function (x) { return x.st === "over"; }).length;
+      out.push({
+        g: run ? "Runs" : "Procedures",
+        key: b.name + " " + (b.kindId ? kindName(b.kindId) : "") + " " + (b.benchId ? benchLabel(b.benchId) : ""),
+        tile: findTile(run ? "t-run" : "t-board", run ? ICONS.run : ICONS.boards),
+        title: b.name,
+        sub: (run ? (b.closedOn ? "closed run" : "run") : "procedure") +
+             (b.benchId ? " · " + benchLabel(b.benchId) : "") +
+             (b.kindId ? " · " + kindName(b.kindId) : ""),
+        st: lateN ? '<span class="st late"><i></i>' + lateN + " late</span>" : "",
+        k: run ? (lateN ? 0 : 1) : 3,
+        run: function () { findBoard(b.id, ""); }
+      });
+
+      (b.nodes || []).forEach(function (n) {
+        if (!n.label) return;
+        var step = n.t === "step";
+        out.push({
+          g: step ? "Steps" : "People and things",
+          key: n.label,
+          tile: findTile(step ? "t-step" : "t-thing",
+                         step ? actIcon(n.act) : thingIcon(n.kind)),
+          title: n.label,
+          sub: (step ? vocabLabel("acts", n.act) : vocabLabel("things", n.kind)) + " · " + b.name,
+          st: step && run ? '<span class="st ' + findTone(nodeState(b, n)) + '"><i></i>' +
+              stateWord(b, n) + "</span>" : "",
+          k: step ? (run && nodeState(b, n) === "over" ? 0 : 2) : 4,
+          run: function () { findBoard(b.id, n.id); }
+        });
+      });
+    });
+
+    live(state.jobs).forEach(function (j) {
+      out.push({ g: "Jobs", key: j.name, tile: findTile("t-job", ICONS.jobs),
+                 title: j.name, sub: "job", k: 5,
+                 run: function () { findTab("jobs"); openJob = j.id; render(); } });
+    });
+    live(state.benches).forEach(function (bn) {
+      out.push({ g: "Benches", key: benchLabel(bn.id), tile: findTile("t-bench", ICONS.bench),
+                 title: benchLabel(bn.id), sub: "bench · a mode and who it is for", k: 6,
+                 run: function () { findTab("week"); } });
+    });
+    live(state.assets).forEach(function (a) {
+      out.push({ g: "Things you depend on", key: a.name + " " + (a.notes || ""),
+                 tile: findTile("t-kit", ICONS.device),
+                 title: a.name, sub: (ASSET_KINDS[a.kind] || a.kind) + (a.notes ? " · " + a.notes : ""), k: 6,
+                 run: function () { findTab("vocab"); } });
+    });
+    live(state.cadences).forEach(function (cd) {
+      var st = cadenceState(cd);
+      out.push({ g: "Upkeep", key: cd.label, tile: findTile("t-up", ICONS.waiting),
+                 title: cd.label,
+                 sub: "every " + cd.everyDays + "d · " + placeLabel(cd.place),
+                 st: st.word === "due" || st.word === "overdue"
+                     ? '<span class="st watch"><i></i>' + esc(st.word) + "</span>" : "",
+                 k: 6, run: function () { findTab("waiting"); } });
+    });
+
+    findCmds().forEach(function (c) { out.push(c); });
+    return out;
+  }
+
+  // Four states, and the pill classes are the same four the rows use, so a
+  // hit and the row it opens read identically.
+  function findTone(st) {
+    return st === "over" ? "late" : st === "now" ? "hand" : st === "waiting" ? "watch" : "idle";
+  }
+
+  function findCmds() {
+    var cs = [
+      { name: "New board", act: "board-new", sub: "write a procedure from a blank sheet" },
+      { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a board" },
+      { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
+      { name: "Back up now", act: "bk-now", sub: "a snapshot on this device" },
+      { name: "Switch bench", act: "span-switch", sub: "end the stretch you are in and start another" }
+    ];
+    if (syncOn()) cs.push({ name: "Sync now", act: "sync-now", sub: "pull, merge, push" });
+    return cs.map(function (c) {
+      return { g: "Do", key: c.name, tile: findTile("t-cmd", ICONS.cmd),
+               title: c.name, sub: c.sub, k: 8,
+               run: function () {
+                 findClose();
+                 if (APP.actions[c.act]) APP.actions[c.act]();
+               } };
+    });
+  }
+
+  function findTab(v) {
+    if (APP.onTabChange) APP.onTabChange(v);
+    view = v;
+    render();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+  function findBoard(id, nodeId) {
+    if (APP.onTabChange) APP.onTabChange("boards");
+    view = "boards"; openId = id; sel = nodeId || "";
+    render();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  /* With nothing typed the box is not empty: it opens on the three things the
+     app exists to stop you forgetting — who is late, which runs are unfinished,
+     and where you were. A blank palette makes you think of a search term
+     before it will tell you anything. */
+  function findDefault() {
+    var out = [];
+    dues().filter(function (d) { return d.st === "over"; }).slice(0, 4).forEach(function (d) {
+      out.push({ g: "Late", tile: findTile("t-step", actIcon(d.node.act)),
+                 title: d.node.label, sub: d.board.name + " · " + vocabLabel("acts", d.node.act),
+                 st: '<span class="st late"><i></i>' + d.over + "d over</span>",
+                 run: function () { findBoard(d.board.id, d.node.id); } });
+    });
+    boards("run").filter(function (b) { return !b.closedOn; }).slice(0, 5).forEach(function (b) {
+      out.push({ g: "Open runs", tile: findTile("t-run", ICONS.run),
+                 title: b.name, sub: b.benchId ? benchLabel(b.benchId) : "no bench",
+                 run: function () { findBoard(b.id, ""); } });
+    });
+    APP.tabs.forEach(function (t) {
+      out.push({ g: "Sections", tile: findTile("t-go", t.ico), title: t.label, sub: "section",
+                 run: function () { findTab(t.id); } });
+    });
+    return out;
+  }
+
+  function findPaint() {
+    var el = document.getElementById("findList");
+    if (!el) return;
+    var q = findQ.trim().toLowerCase();
+
+    if (!q) findRows = findDefault();
+    else {
+      findRows = findAll().map(function (r) {
+        return { r: r, s: findScore(r.key, q) };
+      }).filter(function (x) { return x.s > 0; }).sort(function (a, b) {
+        if (a.s !== b.s) return b.s - a.s;
+        if (a.r.k !== b.r.k) return a.r.k - b.r.k;
+        return a.r.title.length - b.r.title.length;
+      }).slice(0, 40).map(function (x) { return x.r; });
+    }
+
+    if (findAt >= findRows.length) findAt = 0;
+
+    if (!findRows.length) {
+      el.innerHTML = '<p class="find-none">Nothing in the book matches that. ' +
+        "It searches boards, steps, people, things, jobs, benches and upkeep by name.</p>";
+      return;
+    }
+    var last = "";
+    el.innerHTML = findRows.map(function (r, i) {
+      var h = "";
+      if (r.g && r.g !== last) { h += '<div class="find-head">' + esc(r.g) + "</div>"; last = r.g; }
+      return h + '<button class="find-hit' + (i === findAt ? " on" : "") +
+        '" data-fi="' + i + '" role="option" aria-selected="' + (i === findAt) + '">' +
+        r.tile + '<span class="txt"><b>' + esc(r.title) + "</b>" +
+        (r.sub ? "<small>" + esc(r.sub) + "</small>" : "") + "</span>" +
+        (r.st || "") + "</button>";
+    }).join("");
+
+    var on = el.querySelector(".find-hit.on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest" });
+  }
+
+  function findOpen() {
+    var box = document.getElementById("find");
+    if (!box) return;
+    findQ = ""; findAt = 0;
+    box.hidden = false;
+    var input = document.getElementById("findQ");
+    if (input) { input.value = ""; input.focus(); }
+    findPaint();
+  }
+  function findClose() {
+    var box = document.getElementById("find");
+    if (box) box.hidden = true;
+    findRows = []; findQ = "";
+  }
+  function findIsOpen() {
+    var box = document.getElementById("find");
+    return !!(box && !box.hidden);
+  }
+  function findTake() {
+    var r = findRows[findAt];
+    if (!r) return;
+    // A command closes the box itself, because it opens a dialog on top of it
+    // and the box would otherwise sit behind the scrim.
+    findClose();
+    r.run();
+  }
+
+  function mountFind() {
+    var box = document.getElementById("find"), input = document.getElementById("findQ");
+    if (!box || !input || box._wired) return;
+    box._wired = true;
+
+    input.addEventListener("input", function () { findQ = input.value; findAt = 0; findPaint(); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); findAt = Math.min(findAt + 1, findRows.length - 1); findPaint(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); findAt = Math.max(findAt - 1, 0); findPaint(); }
+      else if (e.key === "Enter") { e.preventDefault(); findTake(); }
+      else if (e.key === "Escape") { e.preventDefault(); findClose(); }
+    });
+    // A click anywhere off the box closes it, the way the scrim does.
+    box.addEventListener("mousedown", function (e) {
+      if (!e.target.closest(".find-box")) findClose();
+    });
+    box.addEventListener("click", function (e) {
+      var hit = e.target.closest("[data-fi]");
+      if (!hit) return;
+      findAt = +hit.getAttribute("data-fi");
+      findTake();
+    });
+
+    /* Ctrl+K anywhere, and a bare "/" when you are not typing into something.
+       Guarded on the modal being closed: a dialog has its own Escape and its
+       own focus trap, and opening the finder over one would leave two things
+       claiming the keyboard. */
+    document.addEventListener("keydown", function (e) {
+      var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "");
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (overlay && overlay.firstChild) return;
+        findIsOpen() ? findClose() : findOpen();
+        return;
+      }
+      if (e.key === "/" && !typing && !findIsOpen() && !(overlay && overlay.firstChild)) {
+        e.preventDefault(); findOpen();
+      }
+    });
+  }
 
   /* ================= Boards ================= */
 
@@ -4172,7 +4578,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v33 · 14 Sep 2026";
+  var BUILD = "v34 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -5176,6 +5582,12 @@ function dims(n) {
      into a phone is a picture of a board and not a board — eight cards across
      370px draws the names at four pixels. */
   function focusNode(b) {
+    /* A node you have just picked is what you are looking at, so the fit
+       centres on that rather than on whatever is late. The finder rests on
+       this: a hit on one step of a forty-node board has to land on the step,
+       and it arrives by setting `sel` and nothing else. */
+    var picked = sel ? nodeOf(b, sel) : null;
+    if (picked) return picked;
     var steps = (b.nodes || []).filter(function (n) { return n.t === "step"; });
     var late = steps.filter(function (n) { return nodeState(b, n) === "over"; })[0];
     if (late) return late;
@@ -5947,6 +6359,9 @@ function dims(n) {
     /* ---- boards ---- */
     "board-open": function (id) { openId = id; view = "boards"; render(); },
     "board-back": function () { openId = ""; foldOpen = false; render(); },
+
+    /* ---- the finder ---- */
+    "find-open": function () { findOpen(); },
 
     "board-new": function () {
       openModal({

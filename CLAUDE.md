@@ -610,6 +610,35 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 
 ## Mashghal's shape
 
+**The finder is above the six tabs, because it reaches further than any of
+them.** Ctrl+K, `/` when you are not typing, or the box at the top of the rail.
+Nothing in the app could be reached by its name before it: six sections, boards
+inside them, steps inside those, and a person's name written only on a step
+three levels down — so finding the one you sent the brochure to meant already
+knowing which board she was on. Four rules:
+
+- **It searches the record, not the screen.** Every hit is built from `state`
+  through the same helpers the views use (`boards`, `dues`, `benchLabel`,
+  `nodeState`), so a hit can never name something the app would then fail to
+  open, and a rebuilt screen cannot leave it searching a list that no longer
+  exists.
+- **It changes nothing.** A hit navigates; the handful of commands at the foot
+  hand straight over to `APP.actions`, which is the only place a figure may
+  move. A command closes the box first, or its dialog opens behind the scrim.
+- **It opens on the work, never on a blank list.** With nothing typed it shows
+  what is late, then the open runs, then the sections — the three forgettings
+  again. A palette that says nothing until you think of a search term is a
+  palette nobody opens twice.
+- **A word-start match beats one buried inside a word**, and an exact prefix
+  beats both, or typing `pat` puts every board with "update" in its name above
+  the person called Patricia. Ties break on the kind (`k`), late things first.
+
+It must be reachable with no keyboard: the rail hides `.railwork` and
+`.brand-sub` under 880px but **not** `.findbtn`, because a phone has no Ctrl+K.
+`focusNode()` prefers the picked node for the same reason — a hit on one step of
+a forty-node board arrives by setting `sel` and nothing else, and the sheet has
+to centre on it.
+
 **Six tabs: Boards · Waiting · The week · Calendar · Jobs · Settings**, and a
 switch bar
 pinned to the bottom of every screen showing where you are, since when, and the
@@ -830,6 +859,29 @@ i=s.index("APP.actions = {");j=s.index(chr(10)+"  };",i)
 d=set(re.findall(r"^    \"([a-z0-9-]+)\":",s[i:j],re.M))
 u=set(re.findall(r"data-act=\"([a-z0-9-]+)\"",s))
 print("no handler:",sorted(u-d) or "none");print("unclickable:",sorted(d-u) or "none")'
+```
+
+**And one for CSS, because a class name can be taken already.** A new
+identity-tile class called `.tile` landed 400 lines below the figure tiles on
+Waiting and the week, which are also `.tile` — so the second rule won and put a
+28px flex box with a centred SVG onto every one of them. It looks like the app
+breaking, not like a name collision, and no assertion would have caught it. Any
+bare single-class rule declared twice outside a media query is the bug (a media
+query re-declaring one is the normal way to override it):
+
+```
+python3 -c 'import re,collections;s=open("mashghal/index.html").read()
+c=s[s.index("<style>"):s.index("</style>")];keep=[];m=0;b=0
+for ln in c.split(chr(10)):
+  if m:
+    b+=ln.count("{")-ln.count("}")
+    if b<=0: m=0
+    continue
+  if ln.strip().startswith("@media"):
+    b=ln.count("{")-ln.count("}");m=1 if b>0 else 0;continue
+  keep.append(ln)
+sel=re.findall(r"^\s*(\.[A-Za-z][\w-]*)\s*\{",chr(10).join(keep),re.M)
+print([k for k,v in collections.Counter(sel).items() if v>1] or "no collisions")'
 ```
 
 ## Mashghal's look
