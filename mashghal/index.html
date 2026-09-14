@@ -405,6 +405,31 @@
 
   .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; background: var(--raised); }
 
+  /* ---------------- the calendar ---------------- */
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .cal-dow { font-size: 0.72rem; color: var(--faint); padding: 0 0 0.2rem 0.3rem; }
+  .cal-pad { min-height: 88px; }
+  .cal-day {
+    min-height: 88px; background: var(--surface); border: 1px solid transparent;
+    border-radius: 10px; padding: 0.35rem 0.4rem; display: flex; flex-direction: column; gap: 2px;
+  }
+  .cal-day.now { border-color: var(--sage-deep); }
+  .cal-n { font-size: 0.76rem; color: var(--faint); }
+  .cal-day.now .cal-n { color: var(--sage-lift); }
+  .cal-m {
+    font-size: 0.7rem; line-height: 1.25; padding: 0.16rem 0.3rem; border-radius: 5px;
+    background: var(--raised); color: var(--dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cal-m.t-late { background: var(--late-tint); color: var(--apricot-lift); }
+  .cal-m.t-dated { background: var(--raised); color: var(--sage-lift); }
+  .cal-more { font-size: 0.66rem; color: var(--receded); padding-left: 0.3rem; }
+  @media (max-width: 700px) {
+    .cal { gap: 2px; }
+    .cal-day, .cal-pad { min-height: 62px; }
+    .cal-m { font-size: 0.6rem; }
+  }
+
   /* ---------------- how a run stands, in the header ---------------- */
   .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin-top: 0.55rem; }
   .stand .sp { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.84rem; color: var(--ink); }
@@ -673,6 +698,7 @@
       { id: "boards",  label: "Boards",   ico: "◱" },
       { id: "waiting", label: "Waiting",  ico: "◴" },
       { id: "week",    label: "The week", ico: "▤" },
+      { id: "cal",     label: "Calendar", ico: "▦" },
       { id: "jobs",    label: "Jobs",     ico: "◈" },
       { id: "settings",label: "Settings", ico: "⚙" }
     ],
@@ -735,6 +761,7 @@
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
+      if (v === "cal")      return renderCal();
       if (v === "jobs")     return openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" }) : renderJobs();
       if (v === "vocab")    return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
       return renderSettings();
@@ -748,7 +775,7 @@
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; calMonth = ""; },
 
     actions: {}
   };
@@ -1427,6 +1454,104 @@
         });
       }
     });
+  }
+
+  /* ================= the calendar =================
+
+     A month of what is already dated, and nothing typed into it. It computes
+     nothing of its own — the same rule the report lives by — so every mark on
+     it comes from the function the rest of the app reads: a dated step from the
+     board that holds it, a chase that has come due from overdueBy(), a cadence
+     from cadenceState(). If a figure here ever disagrees with Waiting, one of
+     them is wrong and it will not be silent about which.
+
+     There is nothing to add here on purpose. A calendar you can type into is a
+     second place for a commitment to live, and then two places disagree. */
+  var calMonth = "";   // view state, never saved
+
+  function calOf() { return calMonth || String(today()).slice(0, 7); }
+  function monthDays(ym) {
+    var first = parseISO(ym + "-01");
+    var out = [], d = new Date(first);
+    while (iso(d).slice(0, 7) === ym) { out.push(iso(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  }
+  function shiftMonth(ym, by) {
+    var d = parseISO(ym + "-01");
+    d.setMonth(d.getMonth() + by);
+    return iso(d).slice(0, 7);
+  }
+  function monthName(ym) {
+    return parseISO(ym + "-01").toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+
+  // Everything already dated, keyed by day. Derived, never stored.
+  function calMarks(ym) {
+    var by = {};
+    function put(day, mark) { if (!day) return; (by[day] = by[day] || []).push(mark); }
+
+    boards("run").forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        if (n.dueAt) put(n.dueAt, { tone: "dated", label: n.label, where: b.name, id: b.id });
+        // The day a chase falls due, which is a date you can plan around even
+        // though nobody wrote it down.
+        if (n.chaseDays && n.enteredAt) {
+          var due = addDays(stampDay(n.chasedAt || n.enteredAt), num(n.chaseDays));
+          if (due.slice(0, 7) === ym) {
+            var over = overdueBy(n) > 0;
+            put(due, { tone: over ? "late" : "chase",
+                       label: (over ? "Chase " : "Chase due · ") + n.label, where: b.name, id: b.id });
+          }
+        }
+      });
+    });
+
+    live(state.cadences).forEach(function (cd) {
+      if (!cd.lastDoneOn || !cd.everyDays) return;
+      var due = addDays(cd.lastDoneOn, num(cd.everyDays));
+      if (due.slice(0, 7) !== ym) return;
+      put(due, { tone: due < today() ? "late" : "upkeep", label: cd.label,
+                 where: PLACES[cd.place] || "anywhere", id: "" });
+    });
+
+    return by;
+  }
+
+  function renderCal() {
+    var ym = calOf(), days = monthDays(ym), by = calMarks(ym);
+    var first = parseISO(ym + "-01").getDay();          // 0 = Sunday
+    var lead = (first + 6) % 7;                          // weeks start Monday
+    var count = Object.keys(by).reduce(function (n, k) { return n + by[k].length; }, 0);
+
+    var h = '<div class="finding"><h1>' + esc(monthName(ym)) + "</h1>" +
+      '<span class="stamp">' + (count ? count + (count === 1 ? " thing is dated" : " things are dated")
+                                      : "nothing dated this month") + "</span></div>" +
+      '<p class="saynote">Everything here came off a board or a cadence. There is nothing to add: a calendar you can type into is a second place for a commitment to live, and then two places disagree.</p>' +
+      '<div class="tools" style="margin-bottom:1rem">' +
+      '<button class="btn" data-act="cal-move" data-id="-1">Back</button>' +
+      '<button class="btn" data-act="cal-move" data-id="0">This month</button>' +
+      '<button class="btn" data-act="cal-move" data-id="1">On</button></div>';
+
+    h += '<div class="cal">';
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(function (d) {
+      h += '<div class="cal-dow">' + d + "</div>";
+    });
+    for (var i = 0; i < lead; i++) h += '<div class="cal-pad"></div>';
+    days.forEach(function (day) {
+      var marks = by[day] || [];
+      h += '<div class="cal-day' + (day === today() ? " now" : "") + (marks.length ? " has" : "") + '">' +
+        '<div class="cal-n">' + Number(day.slice(8)) + "</div>" +
+        marks.slice(0, 3).map(function (m) {
+          return '<div class="cal-m t-' + m.tone + '"' +
+            (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
+            ' title="' + esc(m.label + " — " + m.where) + '">' + esc(clip(m.label, 22)) + "</div>";
+        }).join("") +
+        (marks.length > 3 ? '<div class="cal-more">+' + (marks.length - 3) + " more</div>" : "") +
+        "</div>";
+    });
+    h += "</div>";
+    return h;
   }
 
   function renderJobs() {
@@ -4974,6 +5099,10 @@ function dims(n) {
           fields: []
         });
       });
+    },
+    "cal-move": function (by) {
+      calMonth = num(by) ? shiftMonth(calOf(), num(by)) : "";
+      render();
     },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
