@@ -403,6 +403,8 @@
   .made { font-size: 0.72rem; color: var(--brass); }
   @media (max-width: 900px) { .writegrid { grid-template-columns: minmax(0, 1fr); } }
 
+  .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; background: var(--raised); }
+
   /* ---------------- how a run stands, in the header ---------------- */
   .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin-top: 0.55rem; }
   .stand .sp { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.84rem; color: var(--ink); }
@@ -654,7 +656,8 @@
     file:  { label: "File",   word: "file",   tone: "verd"  }
   };
   var THINGS = {
-    person: "Person", file: "File", photo: "Photo", asset: "Kit", note: "Note"
+    person: "Person", file: "File", photo: "Photo", asset: "Kit",
+    device: "Device", note: "Note"
   };
   var CLAIM_KINDS = {
     budget:   "Hours a week",
@@ -740,7 +743,7 @@
     // The switch bar lives outside the view, so render() never touches it.
     beforeRender: function () { if (ensureJobs()) save(); },
 
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); },
+    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -1188,11 +1191,20 @@
 
   function thingRow(b, n) {
     var links = edgesOf(b, n.id, "link").length;
-    return '<div class="row"><span class="pill p-brass">' + esc(THINGS[n.kind] || n.kind) + "</span>" +
-      '<span class="grow"><b>' + esc(n.label) + "</b><small>" +
-      (links ? links + (links === 1 ? " link" : " links") : "not linked to anything") + "</small></span>" +
-      '<span class="tools"><button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
-      '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></span></div>';
+    var says = [String(THINGS[n.kind] || n.kind).toLowerCase()];
+    says.push(links ? links + (links === 1 ? " link" : " links") : "not linked to anything");
+    if (n.path) says.push(n.path);
+    if (n.url) says.push(n.url);
+    return '<div class="panel calm">' +
+      (n.pic ? '<img class="thumb" data-pic="' + esc(n.pic) + '" alt="">' : "") +
+      '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
+      '<div class="says">' + esc(says.join(" · ")) + "</div></div>" +
+      '<div class="acts">' +
+      (n.kind === "photo" ? '<button class="btn quiet" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">' +
+        (n.pic ? "Replace picture" : "Add a picture") + "</button>" : "") +
+      (n.pic ? '<button class="btn quiet" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look</button>' : "") +
+      '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
+      '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></div></div>';
   }
 
   function edgeRow(b, e) {
@@ -2754,6 +2766,97 @@
 
      It is still not an off-device copy, and the screen says so. A dropped
      laptop takes these with it. */
+  /* ================= what a thing actually holds =================
+
+     A photo node was a label and nothing else — the app said "frame 1962-04"
+     and held no frame. Pictures live in IndexedDB, the same reasoning as
+     Coffer's receipts: one phone photo is larger than the entire written record,
+     and localStorage is scoped to the site, which five sibling apps share — one
+     holiday's worth of pictures would stop every one of them being able to save.
+
+     They are deliberately NOT synced. The gist holds a sealed text record; a
+     few megabytes of photographs through the same door would make every sync
+     slow and eventually fail, and the failure would be silent. The screen says
+     so rather than letting it be discovered. */
+  var PIC_DB = "mashghal-pics", PIC_STORE = "pics";
+  var PIC_MAX = 1400;          // longest edge, after which it is resized
+  var PIC_BYTES = 900 * 1024;  // refuse anything still larger than this
+
+  function picOpen() {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) { rej(new Error("This browser has no IndexedDB.")); return; }
+      var r = indexedDB.open(PIC_DB, 1);
+      r.onupgradeneeded = function () {
+        if (!r.result.objectStoreNames.contains(PIC_STORE)) r.result.createObjectStore(PIC_STORE);
+      };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error || new Error("could not open")); };
+    });
+  }
+  function picPut(id, dataUrl) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(PIC_STORE, "readwrite");
+        tx.objectStore(PIC_STORE).put(dataUrl, id);
+        tx.oncomplete = function () { res(id); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  function picGet(id) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res) {
+        var tx = db.transaction(PIC_STORE, "readonly");
+        var q = tx.objectStore(PIC_STORE).get(id);
+        q.onsuccess = function () { res(q.result || ""); };
+        q.onerror = function () { res(""); };
+      });
+    }).catch(function () { return ""; });
+  }
+  function picDrop(id) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res) {
+        var tx = db.transaction(PIC_STORE, "readwrite");
+        tx.objectStore(PIC_STORE).delete(id);
+        tx.oncomplete = function () { res(); };
+        tx.onerror = function () { res(); };
+      });
+    }).catch(function () {});
+  }
+
+  /* Resized before it is stored. A modern phone photo is four or five
+     megabytes; at 1400px it is a couple of hundred KB and still far more than
+     enough to recognise a frame or read a label. */
+  function picShrink(file) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onerror = function () { rej(new Error("Could not read that file.")); };
+      fr.onload = function () {
+        var img = new Image();
+        img.onerror = function () { rej(new Error("That does not look like a picture.")); };
+        img.onload = function () {
+          var w = img.width, h = img.height, scale = Math.min(1, PIC_MAX / Math.max(w, h));
+          var c = document.createElement("canvas");
+          c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+          var x = c.getContext("2d");
+          x.imageSmoothingQuality = "high";
+          x.drawImage(img, 0, 0, c.width, c.height);
+          var out = c.toDataURL("image/jpeg", 0.82);
+          if (out.length > PIC_BYTES * 1.37) {
+            out = c.toDataURL("image/jpeg", 0.6);
+          }
+          if (out.length > PIC_BYTES * 1.37) {
+            rej(new Error("Still too large after resizing. Try a smaller picture."));
+            return;
+          }
+          res(out);
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
   var BK_DB = "mashghal-backups", BK_STORE = "snaps", BK_KEEP = 10;
   var BK_MIN_GAP = 6 * 60 * 60 * 1000;   // at most four a day
   var bkLast = 0;
@@ -2814,6 +2917,18 @@
   }
   // Rendered after the fact because IndexedDB is asynchronous and renderView
   // is not — the card paints "Looking…" and fills itself in.
+  /* Thumbnails are fetched after the fact, because IndexedDB is asynchronous
+     and renderView is not. A picture that is not on this device simply does not
+     appear — the row still reads correctly without it. */
+  function mountPics() {
+    var imgs = document.querySelectorAll("img[data-pic]");
+    Array.prototype.forEach.call(imgs, function (el) {
+      var key = el.getAttribute("data-pic");
+      if (!key || el.getAttribute("src")) return;
+      picGet(key).then(function (src) { if (src) el.setAttribute("src", src); else el.remove(); });
+    });
+  }
+
   function mountBackups() {
     var list = document.getElementById("bkList");
     if (!list) return;
@@ -4457,8 +4572,12 @@ function dims(n) {
       var n = nodeOf(s.b, s.n); if (!n) return;
       confirmAction({
         title: "Remove " + n.label + "?",
-        message: "Every line into and out of it goes too."
+        message: "Every line into and out of it goes too." +
+          (n.pic ? " The picture kept on this device goes with it." : "")
       }, function () {
+        // Its picture goes too, or IndexedDB fills with pictures nothing points
+        // at — the same discipline as deleting a record taking its money.
+        if (n.pic) picDrop(n.pic);
         go(function () {
           s.b.nodes = s.b.nodes.filter(function (x) { return x.id !== n.id; });
           s.b.edges = s.b.edges.filter(function (e) { return e.a !== n.id && e.b !== n.id; });
@@ -4817,6 +4936,45 @@ function dims(n) {
       var q = String(id).split(":"), j = jobOf(q[0]); if (!j) return;
       go(function () { j.links = (j.links || []).filter(function (x) { return x.id !== q[1]; }); });
     },
+    /* ---- pictures ---- */
+    "pic-add": function (id) {
+      var q = String(id).split(":"), b = byId(state.boards, q[0]);
+      var n = b && nodeOf(b, q[1]);
+      if (!n) return;
+      var inp = document.createElement("input");
+      inp.type = "file";
+      inp.accept = "image/*";
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        if (!f) return;
+        toast("Reading it…");
+        picShrink(f)
+          .then(function (dataUrl) {
+            var key = n.pic || uid();
+            return picPut(key, dataUrl).then(function () {
+              go(function () { n.pic = key; });
+              toast("Kept on this device — pictures do not travel with sync");
+            });
+          })
+          .catch(function (e) { toast(e && e.message ? e.message : "Could not keep that picture."); });
+      });
+      inp.click();
+    },
+    "pic-open": function (id) {
+      var q = String(id).split(":"), b = byId(state.boards, q[0]);
+      var n = b && nodeOf(b, q[1]);
+      if (!n || !n.pic) return;
+      picGet(n.pic).then(function (src) {
+        if (!src) { toast("That picture is not on this device."); return; }
+        openModal({
+          title: n.label || "Picture",
+          message: "Kept on this device only. It is not in a backup file and it does not travel with sync.",
+          confirmLabel: "Close",
+          html: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block">',
+          fields: []
+        });
+      });
+    },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
       var id = String(syncCfg().gistId || "");
@@ -5013,14 +5171,25 @@ function dims(n) {
       fields: [
         { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },
         { key: "kind", label: "What is it", type: "select", value: n ? n.kind : "person",
-          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) }
+          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) },
+        { key: "path", label: "Where it is", type: "text", span: true, value: n ? (n.path || "") : "",
+          hint: "A path for a file or a device, a room for a piece of kit. Left blank it is just named." },
+        { key: "url", label: "A link to it", type: "text", span: true, value: n ? (n.url || "") : "",
+          hint: "Any scheme — https:, obsidian:, mailto:" }
       ],
-      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (v.url.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) {
+          return "A link needs a scheme — https:, obsidian:, mailto: and so on.";
+        }
+        return null;
+      },
       onConfirm: function (v) {
         go(function () {
           var t = n;
           if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); }
           t.label = v.label.trim(); t.kind = v.kind;
+          t.path = v.path.trim(); t.url = v.url.trim();
           if (typeof t.x !== "number") autoLayout(b);
         });
       }
