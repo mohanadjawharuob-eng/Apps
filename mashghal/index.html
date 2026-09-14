@@ -1146,6 +1146,7 @@
       '<button class="btn" data-act="board-back">All boards</button>' +
       '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
       '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add thing</button>' +
+      (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
       (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
       (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
       (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
@@ -4733,6 +4734,7 @@ function dims(n) {
     /* ---- nodes ---- */
     "node-add": function (id) { nodeDialog(byId(state.boards, id), null); },
     "thing-add": function (id) { thingDialog(byId(state.boards, id), null); },
+    "thing-borrow": function (id) { borrowDialog(byId(state.boards, id)); },
     "node-edit": function (id) {
       var s = split(id); if (!s.b) return;
       var n = nodeOf(s.b, s.n); if (!n) return;
@@ -5333,6 +5335,70 @@ function dims(n) {
           t.dueAt = v.dueAt.trim();
           if (typeof t.x !== "number") { autoLayout(b); }
         });
+      }
+    });
+  }
+
+  /* Every thing on every board, collapsed by name and kind. The same person
+     turns up on five boards and the same headphones on three, and typing them
+     out again each time is how a name ends up spelled three ways.
+
+     A COPY is taken, deliberately, not a reference. A run freezes its procedure
+     the moment it starts, and a thing reaching back into a shared table would
+     be a hole in that freeze: renaming a person next year would silently
+     rewrite a board you closed last year. What is borrowed is the typing. */
+  function allThings() {
+    var seen = {}, out = [];
+    state.boards.forEach(function (bd) {
+      (bd.nodes || []).forEach(function (n) {
+        if (n.t !== "thing" || !n.label) return;
+        var key = (n.kind || "") + "\u0000" + n.label.toLowerCase();
+        if (seen[key]) { seen[key].seen++; return; }
+        seen[key] = { kind: n.kind, label: n.label, path: n.path || "", url: n.url || "",
+                      pic: n.pic || "", seen: 1, from: bd.name };
+        out.push(seen[key]);
+      });
+    });
+    return out.sort(function (a, z) { return z.seen - a.seen; });
+  }
+
+  function borrowDialog(b) {
+    if (!b) return;
+    var here = {};
+    (b.nodes || []).forEach(function (n) {
+      if (n.t === "thing") here[(n.kind || "") + "\u0000" + String(n.label).toLowerCase()] = 1;
+    });
+    var pool = allThings().filter(function (t) {
+      return !here[(t.kind || "") + "\u0000" + t.label.toLowerCase()];
+    });
+    if (!pool.length) {
+      toast("Nothing on another board that is not already here.");
+      return;
+    }
+    openModal({
+      title: "Bring one in from another board",
+      message: "A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
+      confirmLabel: "Bring it in",
+      fields: [
+        // The value is the position in the list, not a composed key: a NUL
+        // separator does not survive a round trip through an option value, so
+        // the lookup found nothing and confirming quietly did nothing at all.
+        { key: "pick", label: "Which", type: "select", span: true, value: "0",
+          options: pool.map(function (t, i) {
+            return { value: String(i),
+                     label: t.label + " — " + String(THINGS[t.kind] || t.kind).toLowerCase() +
+                       (t.seen > 1 ? ", on " + t.seen + " boards" : ", on " + t.from) };
+          }) }
+      ],
+      onConfirm: function (v) {
+        var pick = pool[num(v.pick)];
+        if (!pick) return;
+        go(function () {
+          b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
+                         path: pick.path, url: pick.url, pic: pick.pic });
+          autoLayout(b);
+        });
+        toast("Brought in — link it to a step to say where it belongs");
       }
     });
   }
