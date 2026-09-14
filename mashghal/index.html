@@ -62,8 +62,16 @@
     --rule-soft: #2b2f38;
     --rule-mid: #3a3e48;
     --ink: #e9e5dd;
-    --dim: #9a958a;
-    --faint: #7d7970;
+    /* Three rungs that each clear AA on every ground they sit on, and a
+       fourth that deliberately does not. An audit measured the rail's job
+       headings at 2.45:1 and the section headings at 3.35 — those are labels
+       telling you which employer a board belongs to, not decoration. Lifting
+       faint on its own collapsed it into dim, so both moved and the gap is
+       kept. --receded stays below on purpose: it is the bottom of the state
+       ladder, where a finished step sinks, and the design carries that state
+       as a WORD beside the colour rather than by hue alone. */
+    --dim: #b9b4a9;
+    --faint: #949087;
     --receded: #61656e;
     --sage: #7fb39a;
     --sage-lift: #93c4ac;
@@ -114,8 +122,8 @@
     --rule-soft: #ece5d7;
     --rule-mid: #cdc3ae;
     --ink: #4d463a;
-    --dim: #6d6557;
-    --faint: #8a8172;
+    --dim: #51493b;
+    --faint: #6e6556;
     --receded: #9b9283;
     --sage: #3f6f5f;
     --sage-lift: #2f5a4c;
@@ -129,7 +137,7 @@
     --late-edge2: #e5d4c4;
     --blue: #3f6f5f;
     --blue-deep: #8fae9f;
-    --brass: #b06a4c;
+    --brass: #995335;   /* darkened for AA: the wordmark is 12.5px at 600 */
     --brass-deep: #e0bcaf;
     --oxide: #a8452c;
     --oxide-deep: #e0bcaf;
@@ -156,8 +164,8 @@
     --rule-soft: #ece5d7;
     --rule-mid: #cdc3ae;
     --ink: #4d463a;
-    --dim: #6d6557;
-    --faint: #8a8172;
+    --dim: #51493b;
+    --faint: #6e6556;
     --receded: #9b9283;
     --sage: #3f6f5f;
     --sage-lift: #2f5a4c;
@@ -171,7 +179,7 @@
     --late-edge2: #e5d4c4;
     --blue: #3f6f5f;
     --blue-deep: #8fae9f;
-    --brass: #b06a4c;
+    --brass: #995335;   /* darkened for AA: the wordmark is 12.5px at 600 */
     --brass-deep: #e0bcaf;
     --oxide: #a8452c;
     --oxide-deep: #e0bcaf;
@@ -377,6 +385,30 @@
   }
   .cvbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule-soft); position: relative; z-index: 2; flex-wrap: wrap; }
   .cvbar .sp { flex: 1; }
+  /* On a laptop the wrapper is not there at all — display:contents leaves the
+     bar laid out exactly as it was. On a phone the nine buttons wrapped to
+     four rows and stood taller than a third of the sheet, so the adding
+     becomes one strip you push sideways while zoom, Fit and Tidy stay put:
+     you reach for those constantly and for the adding occasionally.
+
+     A scrolling strip rather than a dropdown, because a <details> hides its
+     own content through a UA pseudo-element that CSS cannot reliably reopen
+     per breakpoint — and a control that exists on one screen size and not
+     another is worse than one that scrolls. */
+  .cvadd { display: contents; }
+  @media (max-width: 620px) {
+    .cvbar { flex-wrap: nowrap; }
+    .cvadd {
+      display: flex; gap: 0.4rem; min-width: 0; flex: 1 1 auto;
+      overflow-x: auto; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity;
+      /* a hint that there is more to the right, fading at the edge */
+      mask-image: linear-gradient(to right, #000 calc(100% - 1.6rem), transparent);
+    }
+    .cvadd::-webkit-scrollbar { display: none; }
+    .cvadd .btn { flex: 0 0 auto; scroll-snap-align: start; }
+    .cvbar .sp { display: none; }
+  }
   #cv {
     display: block; width: 100%; touch-action: none; cursor: grab;
     /* Follows the window rather than sitting at one height: 440px is most of a
@@ -399,7 +431,13 @@
   .tblock div:last-child { border-right: 0; }
   .tblock b { display: block; font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
   .tblock span { font-family: var(--display); font-weight: 500; font-size: 0.8rem; }
-  @media (max-width: 620px) { .tblock { display: none; } #cv { height: clamp(260px, 46vh, 420px); } }
+  /* 46vh left the bottom 40px of the sheet under the switch bar, with a node
+     sitting beneath it — the bar is fixed and 61px tall, so the sheet has to
+     stop above it rather than measure against the whole viewport. */
+  @media (max-width: 620px) {
+    .tblock { display: none; }
+    #cv { height: clamp(240px, calc(46vh - 40px), 400px); }
+  }
   /* The distinction the whole model rests on, written down where the sheet can
      be read rather than left to whoever remembers it. */
   .cvleg {
@@ -604,7 +642,10 @@
   .brand-sub { margin: 0 0 0.9rem; padding: 0 1rem; font-size: 0.76rem; color: var(--faint); line-height: 1.4; }
   .railwork { padding: 1.1rem 0.55rem 0; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; min-height: 0; }
   .rwgroup { display: flex; flex-direction: column; gap: 0.1rem; }
-  .rwhead { padding: 0 0.6rem 0.3rem; font-size: 0.72rem; color: var(--receded); }
+  /* A label, so it takes --faint. It was on --receded, which is the state
+     ladder's bottom, and measured 2.45:1 — the worst text in the app, on the
+     line that says which employer the boards under it belong to. */
+  .rwhead { padding: 0 0.6rem 0.3rem; font-size: 0.72rem; color: var(--faint); }
   .rwrow {
     display: flex; align-items: center; gap: 0.55rem; width: 100%;
     padding: 0.42rem 0.6rem; background: none; border: 0; border-radius: 10px;
@@ -1115,7 +1156,7 @@
     // The switch bar lives outside the view, so render() never touches it.
     beforeRender: function () { if (ensureJobs()) save(); },
 
-    afterRender: function () { mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
+    afterRender: function () { navTrack(); mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -1373,6 +1414,48 @@
       .map(function (n) { return { value: n.id, label: (n.t === "step" ? "■ " : "● ") + n.label }; });
   }
 
+  /* ================= going back =================
+
+     The URL never changed, so the app had no history: installed on a phone,
+     the back gesture — the primary way anyone navigates Android — quit the
+     app instead of going up a level from an open board.
+
+     The four things that are navigation get an entry: which tab, which board,
+     which job, which mode's kit. Which week you are looking at and which month
+     the calendar shows do not — those are controls inside a screen, and giving
+     them entries would mean twenty-six presses of Back to leave the week after
+     paging through a year.
+
+     Tracked in afterRender rather than pushed from each action, because there
+     are a dozen ways to open a board and only one place that has certainly
+     finished changing the view. Nothing goes in the URL itself: these are
+     module-level view state, and putting them in the address bar would make a
+     shared link carry someone else's board id. */
+  var navAt = null, navLock = false;
+
+  function navSnap() {
+    return { view: view, openId: openId, openJob: openJob, openMode: openMode };
+  }
+  function navTrack() {
+    var at = navSnap(), key = JSON.stringify(at);
+    if (navLock) { navAt = key; return; }
+    try {
+      if (navAt === null) history.replaceState({ mash: at }, "");
+      else if (key !== navAt) history.pushState({ mash: at }, "");
+    } catch (e) {}          // a sandbox with no history is not a reason to fail
+    navAt = key;
+  }
+  window.addEventListener("popstate", function (ev) {
+    var at = ev.state && ev.state.mash;
+    if (!at) return;
+    navLock = true;
+    view = at.view || "boards";
+    openId = at.openId || ""; openJob = at.openJob || ""; openMode = at.openMode || "";
+    foldOpen = false; sel = "";
+    render();
+    navLock = false;
+  });
+
   /* ================= Boards ================= */
 
   // Nothing has been written down yet — the same test the first run used.
@@ -1550,12 +1633,17 @@
       '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
       "</div>";
 
-    var sheetTools =
+    /* One handle rather than five buttons: on a phone the five plus the four
+       zoom controls wrapped to four rows and stood taller than a third of the
+       sheet. Adding something is occasional; zoom and Tidy are constant, so
+       only the adding folds away. */
+    var sheetTools = '<div class="cvadd">' +
       '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
       '<button class="btn" data-act="photo-add" data-id="' + b.id + '">Add a photo</button>' +
       '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add a person or thing</button>' +
       (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
-      (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "");
+      (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
+      "</div>";
 
     /* Built inline rather than through pageHead(), which belongs to the shared
        runtime and knows nothing about a status cluster. */
