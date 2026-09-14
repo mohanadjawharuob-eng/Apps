@@ -403,6 +403,33 @@
   .made { font-size: 0.72rem; color: var(--brass); }
   @media (max-width: 900px) { .writegrid { grid-template-columns: minmax(0, 1fr); } }
 
+  .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; background: var(--raised); }
+
+  /* ---------------- the calendar ---------------- */
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .cal-dow { font-size: 0.72rem; color: var(--faint); padding: 0 0 0.2rem 0.3rem; }
+  .cal-pad { min-height: 88px; }
+  .cal-day {
+    min-height: 88px; background: var(--surface); border: 1px solid transparent;
+    border-radius: 10px; padding: 0.35rem 0.4rem; display: flex; flex-direction: column; gap: 2px;
+  }
+  .cal-day.now { border-color: var(--sage-deep); }
+  .cal-n { font-size: 0.76rem; color: var(--faint); }
+  .cal-day.now .cal-n { color: var(--sage-lift); }
+  .cal-m {
+    font-size: 0.7rem; line-height: 1.25; padding: 0.16rem 0.3rem; border-radius: 5px;
+    background: var(--raised); color: var(--dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cal-m.t-late { background: var(--late-tint); color: var(--apricot-lift); }
+  .cal-m.t-dated { background: var(--raised); color: var(--sage-lift); }
+  .cal-more { font-size: 0.66rem; color: var(--receded); padding-left: 0.3rem; }
+  @media (max-width: 700px) {
+    .cal { gap: 2px; }
+    .cal-day, .cal-pad { min-height: 62px; }
+    .cal-m { font-size: 0.6rem; }
+  }
+
   /* ---------------- how a run stands, in the header ---------------- */
   .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin-top: 0.55rem; }
   .stand .sp { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.84rem; color: var(--ink); }
@@ -653,8 +680,28 @@
     ask:   { label: "Decide", word: "decide", tone: "blue"  },
     file:  { label: "File",   word: "file",   tone: "verd"  }
   };
+  /* What a connection can mean, beyond "then". The graph could always express
+     all of these — a labelled flow edge is a branch, an edge to an earlier step
+     is a loop — but you had to know that, which made it invisible. Naming them
+     is the whole change: the model underneath is unchanged.
+
+     `wait` is the one that carries real meaning for a run: a step with several
+     ways in can either start when the FIRST of them arrives or wait for all of
+     them. The GIS run needs both — metadata can start once any area is
+     digitised, but filing waits for every one. */
+  var EDGE_KINDS = {
+    then:   { word: "then",         says: "comes after" },
+    yes:    { word: "if yes",       says: "when the answer is yes" },
+    no:     { word: "if no",        says: "when the answer is no" },
+    again:  { word: "go round",     says: "back for another pass" },
+    stop:   { word: "stop here",    says: "the way out of the loop" },
+    all:    { word: "and the rest", says: "waits for every way in" },
+    any:    { word: "whichever",    says: "starts on the first way in" }
+  };
+
   var THINGS = {
-    person: "Person", file: "File", photo: "Photo", asset: "Kit", note: "Note"
+    person: "Person", file: "File", photo: "Photo", asset: "Kit",
+    device: "Device", note: "Note"
   };
   var CLAIM_KINDS = {
     budget:   "Hours a week",
@@ -670,13 +717,22 @@
       { id: "boards",  label: "Boards",   ico: "◱" },
       { id: "waiting", label: "Waiting",  ico: "◴" },
       { id: "week",    label: "The week", ico: "▤" },
-      { id: "kit",     label: "Kit",      ico: "◈" },
+      { id: "cal",     label: "Calendar", ico: "▦" },
+      { id: "jobs",    label: "Jobs",     ico: "◈" },
       { id: "settings",label: "Settings", ico: "⚙" }
     ],
 
     blank: function () {
       return {
         version: 1,
+        /* A job is the top of the hierarchy and holds everything about one
+           engagement: which claimants it bills to, which modes of work it
+           involves, the benches those make, and its boards. It exists because
+           "claimant", "mode" and "bench" are the app's words for parts of a
+           thing a person calls one job — so the parts stay, and a job is the
+           bag you actually open. The kit folds in here too, rather than being
+           a tab of its own that has to be decoded. */
+        jobs: [],        // {id,name,colour,note,noteAt,software[],links[],archived}
         kinds: [],       // {id,name,colour}
         claimants: [],   // {id,name,kind,hours,colour,archived}
         modes: [],       // {id,name,software[],links[],archived}
@@ -697,7 +753,7 @@
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
+      ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       ["forgotten", "tombstones", "devices"].forEach(function (k) {
@@ -724,17 +780,21 @@
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
-      if (v === "kit")      return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
+      if (v === "cal")      return renderCal();
+      if (v === "jobs")     return openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" }) : renderJobs();
+      if (v === "vocab")    return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
       return renderSettings();
     },
 
     // The switch bar lives outside the view, so render() never touches it.
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); },
+    beforeRender: function () { if (ensureJobs()) save(); },
+
+    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; calMonth = ""; },
 
     actions: {}
   };
@@ -904,8 +964,29 @@
       if (n.act === "ask" && answer && e.label !== answer) return;
       var t = nodeOf(b, e.b);
       if (!t) return;
+      /* A step whose ways in are marked "and the rest" does not start until
+         every one of them is done. Without this the label would be a lie: the
+         board would say a step waits for all of its inputs and the run would
+         start it on the first. The GIS example needs both readings — metadata
+         can begin once any area is digitised, filing waits for every one. */
+      if (!readyToEnter(b, t)) return;
       // Re-entering a step that ran before is a new pass of the cycle.
       t.doneAt = ""; t.answer = ""; t.enteredAt = today();
+    });
+  }
+
+  /* Whether a step may start yet. "Whichever comes first" is the default and
+     the old behaviour; "and the rest" holds the step until every way in has
+     been done. An unfinished predecessor that is itself unreachable would
+     deadlock the run, so only ways in that have actually been entered count —
+     a branch never taken cannot hold the work up for ever. */
+  function readyToEnter(b, t) {
+    var ins = b.edges.filter(function (e) { return e.k === "flow" && e.b === t.id; });
+    var all = ins.filter(function (e) { return e.join === "all"; });
+    if (!all.length) return true;
+    return !all.some(function (e) {
+      var from = nodeOf(b, e.a);
+      return from && from.enteredAt && !from.doneAt;
     });
   }
 
@@ -1065,6 +1146,7 @@
       '<button class="btn" data-act="board-back">All boards</button>' +
       '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
       '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add thing</button>' +
+      (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
       (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
       (isRun ? "" : '<button class="btn primary" data-act="run-this" data-id="' + b.id + '">Run it</button>') +
       (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
@@ -1177,11 +1259,20 @@
 
   function thingRow(b, n) {
     var links = edgesOf(b, n.id, "link").length;
-    return '<div class="row"><span class="pill p-brass">' + esc(THINGS[n.kind] || n.kind) + "</span>" +
-      '<span class="grow"><b>' + esc(n.label) + "</b><small>" +
-      (links ? links + (links === 1 ? " link" : " links") : "not linked to anything") + "</small></span>" +
-      '<span class="tools"><button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
-      '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></span></div>';
+    var says = [String(THINGS[n.kind] || n.kind).toLowerCase()];
+    says.push(links ? links + (links === 1 ? " link" : " links") : "not linked to anything");
+    if (n.path) says.push(n.path);
+    if (n.url) says.push(n.url);
+    return '<div class="panel calm">' +
+      (n.pic ? '<img class="thumb" data-pic="' + esc(n.pic) + '" alt="">' : "") +
+      '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
+      '<div class="says">' + esc(says.join(" · ")) + "</div></div>" +
+      '<div class="acts">' +
+      (n.kind === "photo" ? '<button class="btn quiet" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">' +
+        (n.pic ? "Replace picture" : "Add a picture") + "</button>" : "") +
+      (n.pic ? '<button class="btn quiet" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look</button>' : "") +
+      '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>' +
+      '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button></div></div>';
   }
 
   function edgeRow(b, e) {
@@ -1337,6 +1428,282 @@
   }
 
   /* ================= Kit ================= */
+
+  /* The list of jobs, and then one job with everything about it on one page.
+     There is no Kit tab any more: the software, the links and the note about
+     where you left off are sections of the job that hands them to you, which is
+     where you would look for them. */
+  function jobDialog(j) {
+    openModal({
+      title: j ? "Rename the job" : "New job",
+      message: j ? "" : "A job is one engagement — an employer, a scholarship, a visa, a thesis. It holds the benches you sit at for it and the boards you run for it.",
+      confirmLabel: j ? "Save" : "Create",
+      fields: [
+        { key: "name", label: "Called", type: "text", span: true, value: j ? j.name : "",
+          placeholder: "AUB Tripoli 21st Century" },
+        { key: "note", label: "Where you left off", type: "text", span: true, value: j ? (j.note || "") : "",
+          hint: "One line, for the version of you that comes back to it." }
+      ],
+      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = j;
+          if (!t) { t = { id: uid(), software: [], links: [], archived: false }; state.jobs.push(t); }
+          t.name = v.name.trim();
+          if ((v.note || "").trim() !== (t.note || "")) { t.note = v.note.trim(); t.noteAt = nowStamp(); }
+        });
+      }
+    });
+  }
+  function jobSwDialog(j) {
+    if (!j) return;
+    openModal({
+      title: "Add software", confirmLabel: "Add",
+      message: "A name, and the path you would paste into Win+R to open it.",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: "", placeholder: "ArcGIS Pro" },
+        { key: "path", label: "Path", type: "text", span: true, value: "",
+          hint: "Left blank it is just a reminder that this job uses it." }
+      ],
+      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          j.software = j.software || [];
+          j.software.push({ id: uid(), label: v.label.trim(), path: v.path.trim() });
+        });
+      }
+    });
+  }
+  function jobLinkDialog(j) {
+    if (!j) return;
+    openModal({
+      title: "Add a link", confirmLabel: "Add",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: "", placeholder: "AUB mail, this project" },
+        { key: "url", label: "URL", type: "text", span: true, value: "",
+          placeholder: "obsidian://search?query=AUB", hint: "Any scheme, not only http." }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (!/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) return "A URL needs a scheme — https:, obsidian:, mailto: and so on.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          j.links = j.links || [];
+          j.links.push({ id: uid(), label: v.label.trim(), url: v.url.trim() });
+        });
+      }
+    });
+  }
+
+  /* ================= the calendar =================
+
+     A month of what is already dated, and nothing typed into it. It computes
+     nothing of its own — the same rule the report lives by — so every mark on
+     it comes from the function the rest of the app reads: a dated step from the
+     board that holds it, a chase that has come due from overdueBy(), a cadence
+     from cadenceState(). If a figure here ever disagrees with Waiting, one of
+     them is wrong and it will not be silent about which.
+
+     There is nothing to add here on purpose. A calendar you can type into is a
+     second place for a commitment to live, and then two places disagree. */
+  var calMonth = "";   // view state, never saved
+
+  function calOf() { return calMonth || String(today()).slice(0, 7); }
+  function monthDays(ym) {
+    var first = parseISO(ym + "-01");
+    var out = [], d = new Date(first);
+    while (iso(d).slice(0, 7) === ym) { out.push(iso(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  }
+  function shiftMonth(ym, by) {
+    var d = parseISO(ym + "-01");
+    d.setMonth(d.getMonth() + by);
+    return iso(d).slice(0, 7);
+  }
+  function monthName(ym) {
+    return parseISO(ym + "-01").toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+
+  // Everything already dated, keyed by day. Derived, never stored.
+  function calMarks(ym) {
+    var by = {};
+    function put(day, mark) { if (!day) return; (by[day] = by[day] || []).push(mark); }
+
+    boards("run").forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        if (n.dueAt) put(n.dueAt, { tone: "dated", label: n.label, where: b.name, id: b.id });
+        // The day a chase falls due, which is a date you can plan around even
+        // though nobody wrote it down.
+        if (n.chaseDays && n.enteredAt) {
+          var due = addDays(stampDay(n.chasedAt || n.enteredAt), num(n.chaseDays));
+          if (due.slice(0, 7) === ym) {
+            var over = overdueBy(n) > 0;
+            put(due, { tone: over ? "late" : "chase",
+                       label: (over ? "Chase " : "Chase due · ") + n.label, where: b.name, id: b.id });
+          }
+        }
+      });
+    });
+
+    live(state.cadences).forEach(function (cd) {
+      if (!cd.lastDoneOn || !cd.everyDays) return;
+      var due = addDays(cd.lastDoneOn, num(cd.everyDays));
+      if (due.slice(0, 7) !== ym) return;
+      put(due, { tone: due < today() ? "late" : "upkeep", label: cd.label,
+                 where: PLACES[cd.place] || "anywhere", id: "" });
+    });
+
+    return by;
+  }
+
+  function renderCal() {
+    var ym = calOf(), days = monthDays(ym), by = calMarks(ym);
+    var first = parseISO(ym + "-01").getDay();          // 0 = Sunday
+    var lead = (first + 6) % 7;                          // weeks start Monday
+    var count = Object.keys(by).reduce(function (n, k) { return n + by[k].length; }, 0);
+
+    var h = '<div class="finding"><h1>' + esc(monthName(ym)) + "</h1>" +
+      '<span class="stamp">' + (count ? count + (count === 1 ? " thing is dated" : " things are dated")
+                                      : "nothing dated this month") + "</span></div>" +
+      '<p class="saynote">Everything here came off a board or a cadence. There is nothing to add: a calendar you can type into is a second place for a commitment to live, and then two places disagree.</p>' +
+      '<div class="tools" style="margin-bottom:1rem">' +
+      '<button class="btn" data-act="cal-move" data-id="-1">Back</button>' +
+      '<button class="btn" data-act="cal-move" data-id="0">This month</button>' +
+      '<button class="btn" data-act="cal-move" data-id="1">On</button></div>';
+
+    h += '<div class="cal">';
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(function (d) {
+      h += '<div class="cal-dow">' + d + "</div>";
+    });
+    for (var i = 0; i < lead; i++) h += '<div class="cal-pad"></div>';
+    days.forEach(function (day) {
+      var marks = by[day] || [];
+      h += '<div class="cal-day' + (day === today() ? " now" : "") + (marks.length ? " has" : "") + '">' +
+        '<div class="cal-n">' + Number(day.slice(8)) + "</div>" +
+        marks.slice(0, 3).map(function (m) {
+          return '<div class="cal-m t-' + m.tone + '"' +
+            (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
+            ' title="' + esc(m.label + " — " + m.where) + '">' + esc(clip(m.label, 22)) + "</div>";
+        }).join("") +
+        (marks.length > 3 ? '<div class="cal-more">+' + (marks.length - 3) + " more</div>" : "") +
+        "</div>";
+    });
+    h += "</div>";
+    return h;
+  }
+
+  function renderJobs() {
+    var js = jobs();
+    var h = '<div class="finding"><h1>' +
+      (js.length ? (js.length === 1 ? "One job." : cap(numWord(js.length)) + " jobs.") : "No jobs yet.") +
+      "</h1></div>" +
+      '<p class="saynote">A job is a bag: the benches you sit at for it, the boards you run for it, and what it hands you when you arrive.</p>' +
+      '<div class="tools" style="margin-bottom:1.2rem"><button class="btn primary" data-act="job-add">New job</button>' +
+      '<button class="btn" data-act="tab-vocab">Claimants, modes and benches</button></div>';
+
+    if (!js.length) {
+      return h + '<p class="empty">Nothing yet. A job is AUB Tripoli 21st Century, or a visa, or a thesis — anything that has its own work and its own things.</p>';
+    }
+
+    h += '<div class="stack">' + js.map(function (j) {
+      var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
+      var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
+      return '<div class="panel' + (late ? " late" : "") + '" data-act="job-open" data-id="' + j.id + '" style="cursor:pointer">' +
+        '<div class="grow"><div class="nm">' + esc(j.name) + "</div>" +
+        '<div class="says">' + esc(jobSays(j, bs.length, d.length)) + "</div></div>" +
+        (late ? '<div class="bigage"><b>' + late + "</b><span>" +
+          (late === 1 ? "late" : "late") + "</span></div>" : "") + "</div>";
+    }).join("") + "</div>";
+    return h;
+  }
+
+  function jobSays(j, runs, waiting) {
+    var bits = [];
+    var bn = jobBenches(j.id).length;
+    bits.push(bn ? bn + (bn === 1 ? " bench" : " benches") : "no bench yet");
+    bits.push(runs ? runs + (runs === 1 ? " run under way" : " runs under way") : "nothing running");
+    if (waiting) bits.push(waiting + " waiting on you");
+    if (j.note) bits.push("you left off: " + j.note);
+    return bits.join(" · ");
+  }
+
+  function renderJob(j) {
+    var d = jobDues(j.id);
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var runs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
+    var tpls = jobBoards(j.id).filter(function (b) { return b.kind === "template"; });
+
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="job-back">All jobs</button>' +
+      '<button class="btn" data-act="job-edit" data-id="' + j.id + '">Rename</button>' +
+      '<button class="btn" data-act="job-sw-add" data-id="' + j.id + '">Add software</button>' +
+      '<button class="btn" data-act="job-link-add" data-id="' + j.id + '">Add a link</button>' +
+      '<button class="btn danger" data-act="job-del" data-id="' + j.id + '">Delete</button></div>';
+
+    var h = '<div class="page-head"><div><h2>' + esc(j.name) + "</h2>" +
+      "<p>" + esc(jobSays(j, runs.length, d.length)) + "</p>" +
+      '<div class="stand">' +
+      (late ? '<span class="sp"><i class="d-late"></i>' + cap(numWord(late)) + " late</span>" : "") +
+      (d.length - late ? '<span class="sp"><i class="d-hand"></i>' + cap(numWord(d.length - late)) + " in hand</span>" : "") +
+      (!d.length ? '<span class="sp muted">Nothing waiting</span>' : "") +
+      "</div></div>" + tools + "</div>";
+
+    // Where you sit for this job — one tap each.
+    var bs = jobBenches(j.id);
+    h += '<div class="sect">Where you sit for it</div>';
+    h += bs.length ? '<div class="tools">' + bs.map(function (bn) {
+      var here = openSpan() && openSpan().benchId === bn.id;
+      return '<button class="btn' + (here ? " primary" : "") + '" data-act="bench-go" data-id="' + bn.id + '">' +
+        esc(benchLabel(bn.id)) + (here ? " · here now" : "") + "</button>";
+    }).join("") + "</div>"
+      : '<p class="empty">No bench yet. A bench is a claimant and a craft together — add one under “Claimants, modes and benches”.</p>';
+
+    if (j.note) {
+      h += '<div class="sect">Where you left off</div>' +
+        '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(j.note) + "</div>" +
+        '<div class="says">' + esc(j.noteAt ? "Written " + agoWords(j.noteAt) : "") + "</div></div></div>";
+    }
+
+    h += '<div class="sect">Running</div>';
+    h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
+      var bd = dues().filter(function (x) { return x.board.id === b.id; });
+      var bl = bd.filter(function (x) { return x.st === "over"; }).length;
+      return '<div class="panel calm' + (bl ? " late" : "") + '" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+        '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+        '<div class="says">' + (bl ? bl + " late · " : "") + bd.length + " waiting · " +
+        runProgress(b).done + " of " + runProgress(b).total + " done</div></div></div>";
+    }).join("") + "</div>" : '<p class="empty">Nothing running for this job.</p>';
+
+    if (tpls.length) {
+      h += '<div class="sect">Procedures for it</div><div class="stack tight">' + tpls.map(function (b) {
+        return '<div class="panel calm" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps</div></div></div>";
+      }).join("") + "</div>";
+    }
+
+    h += '<div class="sect">What it hands you</div>';
+    var sw = j.software || [], lk = j.links || [];
+    h += (sw.length || lk.length) ? '<div class="stack tight">' +
+      sw.map(function (x) {
+        return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
+          '<div class="says">' + esc(x.path || "no path — just a reminder that this job uses it") + "</div></div>" +
+          '<div class="acts">' + (x.path ? '<button class="btn quiet" data-act="job-sw-copy" data-id="' +
+          j.id + ":" + x.id + '">Copy path</button>' : "") +
+          '<button class="btn quiet danger" data-act="job-sw-del" data-id="' + j.id + ":" + x.id + '">×</button></div></div>';
+      }).join("") +
+      lk.map(function (x) {
+        return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
+          '<div class="says">' + esc(x.url) + "</div></div>" +
+          '<div class="acts"><a class="btn quiet" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open</a>' +
+          '<button class="btn quiet danger" data-act="job-link-del" data-id="' + j.id + ":" + x.id + '">×</button></div></div>';
+      }).join("") + "</div>"
+      : '<p class="empty">Nothing yet. A path you would paste into Win+R, or a link to the filtered inbox for this job.</p>';
+    return h;
+  }
 
   function renderKit() {
     var h = pageHead("Kit", "Everything here is yours to add, rename and remove. None of it is written into the app.");
@@ -2135,7 +2502,7 @@
   //
   // Nothing here ever reaches `state`: the token and the passphrase live in
   // their own storage keys, so a backup of the book carries neither.
-  var SYNC_LISTS = ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var SYNC_LISTS = ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
   var TOK_KEY = "mashghal.sync.token";
   var PASS_KEY = "mashghal.sync.pass";
   var DEV_KEY = "mashghal.sync.device";
@@ -2565,6 +2932,97 @@
 
      It is still not an off-device copy, and the screen says so. A dropped
      laptop takes these with it. */
+  /* ================= what a thing actually holds =================
+
+     A photo node was a label and nothing else — the app said "frame 1962-04"
+     and held no frame. Pictures live in IndexedDB, the same reasoning as
+     Coffer's receipts: one phone photo is larger than the entire written record,
+     and localStorage is scoped to the site, which five sibling apps share — one
+     holiday's worth of pictures would stop every one of them being able to save.
+
+     They are deliberately NOT synced. The gist holds a sealed text record; a
+     few megabytes of photographs through the same door would make every sync
+     slow and eventually fail, and the failure would be silent. The screen says
+     so rather than letting it be discovered. */
+  var PIC_DB = "mashghal-pics", PIC_STORE = "pics";
+  var PIC_MAX = 1400;          // longest edge, after which it is resized
+  var PIC_BYTES = 900 * 1024;  // refuse anything still larger than this
+
+  function picOpen() {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) { rej(new Error("This browser has no IndexedDB.")); return; }
+      var r = indexedDB.open(PIC_DB, 1);
+      r.onupgradeneeded = function () {
+        if (!r.result.objectStoreNames.contains(PIC_STORE)) r.result.createObjectStore(PIC_STORE);
+      };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error || new Error("could not open")); };
+    });
+  }
+  function picPut(id, dataUrl) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(PIC_STORE, "readwrite");
+        tx.objectStore(PIC_STORE).put(dataUrl, id);
+        tx.oncomplete = function () { res(id); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  function picGet(id) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res) {
+        var tx = db.transaction(PIC_STORE, "readonly");
+        var q = tx.objectStore(PIC_STORE).get(id);
+        q.onsuccess = function () { res(q.result || ""); };
+        q.onerror = function () { res(""); };
+      });
+    }).catch(function () { return ""; });
+  }
+  function picDrop(id) {
+    return picOpen().then(function (db) {
+      return new Promise(function (res) {
+        var tx = db.transaction(PIC_STORE, "readwrite");
+        tx.objectStore(PIC_STORE).delete(id);
+        tx.oncomplete = function () { res(); };
+        tx.onerror = function () { res(); };
+      });
+    }).catch(function () {});
+  }
+
+  /* Resized before it is stored. A modern phone photo is four or five
+     megabytes; at 1400px it is a couple of hundred KB and still far more than
+     enough to recognise a frame or read a label. */
+  function picShrink(file) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onerror = function () { rej(new Error("Could not read that file.")); };
+      fr.onload = function () {
+        var img = new Image();
+        img.onerror = function () { rej(new Error("That does not look like a picture.")); };
+        img.onload = function () {
+          var w = img.width, h = img.height, scale = Math.min(1, PIC_MAX / Math.max(w, h));
+          var c = document.createElement("canvas");
+          c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+          var x = c.getContext("2d");
+          x.imageSmoothingQuality = "high";
+          x.drawImage(img, 0, 0, c.width, c.height);
+          var out = c.toDataURL("image/jpeg", 0.82);
+          if (out.length > PIC_BYTES * 1.37) {
+            out = c.toDataURL("image/jpeg", 0.6);
+          }
+          if (out.length > PIC_BYTES * 1.37) {
+            rej(new Error("Still too large after resizing. Try a smaller picture."));
+            return;
+          }
+          res(out);
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
   var BK_DB = "mashghal-backups", BK_STORE = "snaps", BK_KEEP = 10;
   var BK_MIN_GAP = 6 * 60 * 60 * 1000;   // at most four a day
   var bkLast = 0;
@@ -2625,6 +3083,18 @@
   }
   // Rendered after the fact because IndexedDB is asynchronous and renderView
   // is not — the card paints "Looking…" and fills itself in.
+  /* Thumbnails are fetched after the fact, because IndexedDB is asynchronous
+     and renderView is not. A picture that is not on this device simply does not
+     appear — the row still reads correctly without it. */
+  function mountPics() {
+    var imgs = document.querySelectorAll("img[data-pic]");
+    Array.prototype.forEach.call(imgs, function (el) {
+      var key = el.getAttribute("data-pic");
+      if (!key || el.getAttribute("src")) return;
+      picGet(key).then(function (src) { if (src) el.setAttribute("src", src); else el.remove(); });
+    });
+  }
+
   function mountBackups() {
     var list = document.getElementById("bkList");
     if (!list) return;
@@ -2680,6 +3150,88 @@
       });
   }
 
+  /* ================= jobs =================
+
+     A job is the bag: one engagement, holding the benches you sit at for it,
+     the boards you run for it, and the kit it hands you. "Claimant", "mode"
+     and "bench" are the app's words for parts of a thing a person calls one
+     job — so the parts stay, because the hours still have to be owed to
+     somebody and the work still has a craft, but the job is what you open.
+
+     Migration derives one job per claimant, because that is what a claimant
+     already was in practice. Nothing is deleted and nothing is renamed: a
+     bench and a board gain a jobId and keep everything else, so a book written
+     before jobs existed opens with its work already filed. */
+  var openJob = "";   // view state, never saved
+
+  function jobs() { return live(state.jobs); }
+  function jobOf(id) { return byId(state.jobs, id); }
+  function jobName(id) {
+    var j = jobOf(id);
+    return j ? j.name : (state.forgotten[id] ? state.forgotten[id] + " (removed)" : "No job");
+  }
+
+  function ensureJobs() {
+    if (!Array.isArray(state.jobs)) state.jobs = [];
+    var touched = false;
+    // Cheap exit for the overwhelmingly common case: already filed.
+    if (state.jobs.length &&
+        !live(state.benches).some(function (b) { return !b.jobId; }) &&
+        !state.boards.some(function (b) { return !b.jobId && b.benchId; })) return false;
+    // One job per claimant, the first time a book meets this.
+    if (!state.jobs.length && live(state.claimants).length) {
+      live(state.claimants).forEach(function (c) {
+        state.jobs.push({ id: uid(), name: c.name, colour: c.colour || "",
+                          claimantId: c.id, note: "", noteAt: "",
+                          software: [], links: [], archived: false });
+      });
+      touched = true;
+    }
+    var byClaimant = {};
+    state.jobs.forEach(function (j) { if (j.claimantId) byClaimant[j.claimantId] = j.id; });
+
+    // A bench belongs to the job of its claimant; a board to the job of its bench.
+    live(state.benches).forEach(function (bn) {
+      if (!bn.jobId && byClaimant[bn.claimantId]) { bn.jobId = byClaimant[bn.claimantId]; touched = true; }
+    });
+    state.boards.forEach(function (b) {
+      if (b.jobId) return;
+      var bn = b.benchId && byId(state.benches, b.benchId);
+      if (bn && bn.jobId) { b.jobId = bn.jobId; touched = true; }
+    });
+    // The kit was hung off a mode. It belongs to the job you are doing, since
+    // that is what actually hands it to you.
+    state.jobs.forEach(function (j) {
+      if (j.software && j.software.length) return;
+      var modes = jobModes(j.id);
+      var sw = [], lk = [];
+      modes.forEach(function (m) {
+        (m.software || []).forEach(function (x) { sw.push(x); });
+        (m.links || []).forEach(function (x) { lk.push(x); });
+      });
+      if (sw.length || lk.length) { j.software = sw; j.links = lk; touched = true; }
+    });
+    return touched;
+  }
+
+  function jobBenches(id) {
+    return live(state.benches).filter(function (bn) { return bn.jobId === id; });
+  }
+  function jobModes(id) {
+    var seen = {}, out = [];
+    jobBenches(id).forEach(function (bn) {
+      var m = byId(state.modes, bn.modeId);
+      if (m && !seen[m.id]) { seen[m.id] = 1; out.push(m); }
+    });
+    return out;
+  }
+  function jobBoards(id) {
+    return state.boards.filter(function (b) { return b.jobId === id && !b.archived; });
+  }
+  function jobDues(id) {
+    return dues().filter(function (d) { return d.board.jobId === id; });
+  }
+
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
 
@@ -2722,7 +3274,7 @@
     var tpls = boards("template");
     var groups = {}, order = [];
     live.forEach(function (b) {
-      var key = b.benchId ? benchLabel(b.benchId) : "No employer";
+      var key = b.jobId ? jobName(b.jobId) : b.benchId ? benchLabel(b.benchId) : "No job";
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(b);
     });
@@ -3321,7 +3873,9 @@ function dims(n) {
         "stroke-width": on ? 2 : 1.6, "stroke-linejoin": "round",
         "stroke-opacity": on ? 1 : 0.9, "marker-end": mk }));
 
-      var words = back ? (e.label ? e.label + " — goes back" : "goes back") : e.label;
+      var words = back ? (e.label ? e.label + " — goes back" : "goes back")
+                : e.join === "all" ? (e.label ? e.label + " · and the rest" : "and the rest")
+                : e.label;
       if (words) {
         var w = Math.min(150, 7 + String(words).length * 6.2);
         g.appendChild(svgEl("rect", { x: lx - w / 2, y: ly - 11, width: w, height: 15, rx: 4,
@@ -3626,20 +4180,24 @@ function dims(n) {
       message: "Sequence and association are different things and the board draws them differently. One is the order the work happens in; the other is a reference that has no order at all.",
       confirmLabel: "Connect",
       fields: [
-        { key: "k", label: "It means", type: "select", span: true, value: "flow", options: [
-          { value: "flow", label: "“" + clip(to.label, 24) + "” comes after “" + clip(from.label, 24) + "”" },
-          { value: "link", label: "They belong together, in no order" }
-        ] },
-        { key: "label", label: "Way out", type: "text", span: true, value: "",
-          hint: "Only for a question — the word on this way out, like “again” or “stop”. Leave it blank otherwise." }
+        { key: "k", label: "It means", type: "select", span: true, value: "then", options:
+          Object.keys(EDGE_KINDS).map(function (k) {
+            return { value: k, label: "“" + clip(to.label, 20) + "” " + EDGE_KINDS[k].says };
+          }).concat([{ value: "link", label: "They belong together, in no order" }]) },
+        { key: "label", label: "Or your own words", type: "text", span: true, value: "",
+          hint: "What this way out is called on the board. Left blank it takes the name above." }
       ],
       onConfirm: function (v) {
+        var isLink = v.k === "link";
+        var kind = EDGE_KINDS[v.k];
         go(function () {
           b.edges.push({ id: uid(), a: from.id, b: to.id,
-                         k: v.k === "link" ? "link" : "flow",
-                         label: v.k === "link" ? "" : v.label.trim() });
+                         k: isLink ? "link" : "flow",
+                         join: v.k === "all" ? "all" : v.k === "any" ? "any" : "",
+                         label: isLink ? "" :
+                           (v.label.trim() || (v.k === "then" ? "" : kind ? kind.word : "")) });
         });
-        toast(v.k === "link" ? "Linked" : "Connected");
+        toast(isLink ? "Linked" : "Connected — " + (kind ? kind.says : "comes after"));
       }
     });
   }
@@ -4176,6 +4734,7 @@ function dims(n) {
     /* ---- nodes ---- */
     "node-add": function (id) { nodeDialog(byId(state.boards, id), null); },
     "thing-add": function (id) { thingDialog(byId(state.boards, id), null); },
+    "thing-borrow": function (id) { borrowDialog(byId(state.boards, id)); },
     "node-edit": function (id) {
       var s = split(id); if (!s.b) return;
       var n = nodeOf(s.b, s.n); if (!n) return;
@@ -4186,8 +4745,12 @@ function dims(n) {
       var n = nodeOf(s.b, s.n); if (!n) return;
       confirmAction({
         title: "Remove " + n.label + "?",
-        message: "Every line into and out of it goes too."
+        message: "Every line into and out of it goes too." +
+          (n.pic ? " The picture kept on this device goes with it." : "")
       }, function () {
+        // Its picture goes too, or IndexedDB fills with pictures nothing points
+        // at — the same discipline as deleting a record taking its money.
+        if (n.pic) picDrop(n.pic);
         go(function () {
           s.b.nodes = s.b.nodes.filter(function (x) { return x.id !== n.id; });
           s.b.edges = s.b.edges.filter(function (e) { return e.a !== n.id && e.b !== n.id; });
@@ -4503,6 +5066,92 @@ function dims(n) {
           .catch(function (e) { toast(e && e.message ? e.message : "Could not put it back."); });
       });
     },
+    /* ---- jobs ---- */
+    "job-open": function (id) { openJob = id; view = "jobs"; render(); },
+    "job-back": function () { openJob = ""; render(); },
+    "tab-vocab": function () { view = "vocab"; openMode = ""; render(); },
+    "job-add": function () { jobDialog(null); },
+    "job-edit": function (id) { jobDialog(jobOf(id)); },
+    "job-del": function (id) {
+      var j = jobOf(id); if (!j) return;
+      var bn = jobBenches(id).length, bd = jobBoards(id).length;
+      confirmAction({
+        title: "Remove " + j.name + "?",
+        message: "Its " + bn + " bench" + (bn === 1 ? "" : "es") + " and " + bd + " board" +
+          (bd === 1 ? "" : "s") + " stay exactly as they are — they simply stop being filed under a job. " +
+          "Nothing recorded is deleted, and the name is kept so old entries still read “" +
+          j.name + " (removed)”."
+      }, function () {
+        go(function () {
+          state.forgotten[j.id] = j.name;
+          state.jobs = state.jobs.filter(function (x) { return x.id !== j.id; });
+          openJob = "";
+        });
+        toast("Removed — nothing else was touched");
+      });
+    },
+    "job-sw-add": function (id) { jobSwDialog(jobOf(id)); },
+    "job-sw-del": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]); if (!j) return;
+      go(function () { j.software = (j.software || []).filter(function (x) { return x.id !== q[1]; }); });
+    },
+    "job-sw-copy": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]);
+      var x = j && (j.software || []).filter(function (y) { return y.id === q[1]; })[0];
+      if (!x || !x.path) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(x.path).then(function () { toast("Copied — Win+R, paste, Enter"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+    "job-link-add": function (id) { jobLinkDialog(jobOf(id)); },
+    "job-link-del": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]); if (!j) return;
+      go(function () { j.links = (j.links || []).filter(function (x) { return x.id !== q[1]; }); });
+    },
+    /* ---- pictures ---- */
+    "pic-add": function (id) {
+      var q = String(id).split(":"), b = byId(state.boards, q[0]);
+      var n = b && nodeOf(b, q[1]);
+      if (!n) return;
+      var inp = document.createElement("input");
+      inp.type = "file";
+      inp.accept = "image/*";
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        if (!f) return;
+        toast("Reading it…");
+        picShrink(f)
+          .then(function (dataUrl) {
+            var key = n.pic || uid();
+            return picPut(key, dataUrl).then(function () {
+              go(function () { n.pic = key; });
+              toast("Kept on this device — pictures do not travel with sync");
+            });
+          })
+          .catch(function (e) { toast(e && e.message ? e.message : "Could not keep that picture."); });
+      });
+      inp.click();
+    },
+    "pic-open": function (id) {
+      var q = String(id).split(":"), b = byId(state.boards, q[0]);
+      var n = b && nodeOf(b, q[1]);
+      if (!n || !n.pic) return;
+      picGet(n.pic).then(function (src) {
+        if (!src) { toast("That picture is not on this device."); return; }
+        openModal({
+          title: n.label || "Picture",
+          message: "Kept on this device only. It is not in a backup file and it does not travel with sync.",
+          confirmLabel: "Close",
+          html: '<img src="' + src + '" alt="" style="max-width:100%;border-radius:12px;display:block">',
+          fields: []
+        });
+      });
+    },
+    "cal-move": function (by) {
+      calMonth = num(by) ? shiftMonth(calOf(), num(by)) : "";
+      render();
+    },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
       var id = String(syncCfg().gistId || "");
@@ -4690,6 +5339,70 @@ function dims(n) {
     });
   }
 
+  /* Every thing on every board, collapsed by name and kind. The same person
+     turns up on five boards and the same headphones on three, and typing them
+     out again each time is how a name ends up spelled three ways.
+
+     A COPY is taken, deliberately, not a reference. A run freezes its procedure
+     the moment it starts, and a thing reaching back into a shared table would
+     be a hole in that freeze: renaming a person next year would silently
+     rewrite a board you closed last year. What is borrowed is the typing. */
+  function allThings() {
+    var seen = {}, out = [];
+    state.boards.forEach(function (bd) {
+      (bd.nodes || []).forEach(function (n) {
+        if (n.t !== "thing" || !n.label) return;
+        var key = (n.kind || "") + "\u0000" + n.label.toLowerCase();
+        if (seen[key]) { seen[key].seen++; return; }
+        seen[key] = { kind: n.kind, label: n.label, path: n.path || "", url: n.url || "",
+                      pic: n.pic || "", seen: 1, from: bd.name };
+        out.push(seen[key]);
+      });
+    });
+    return out.sort(function (a, z) { return z.seen - a.seen; });
+  }
+
+  function borrowDialog(b) {
+    if (!b) return;
+    var here = {};
+    (b.nodes || []).forEach(function (n) {
+      if (n.t === "thing") here[(n.kind || "") + "\u0000" + String(n.label).toLowerCase()] = 1;
+    });
+    var pool = allThings().filter(function (t) {
+      return !here[(t.kind || "") + "\u0000" + t.label.toLowerCase()];
+    });
+    if (!pool.length) {
+      toast("Nothing on another board that is not already here.");
+      return;
+    }
+    openModal({
+      title: "Bring one in from another board",
+      message: "A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
+      confirmLabel: "Bring it in",
+      fields: [
+        // The value is the position in the list, not a composed key: a NUL
+        // separator does not survive a round trip through an option value, so
+        // the lookup found nothing and confirming quietly did nothing at all.
+        { key: "pick", label: "Which", type: "select", span: true, value: "0",
+          options: pool.map(function (t, i) {
+            return { value: String(i),
+                     label: t.label + " — " + String(THINGS[t.kind] || t.kind).toLowerCase() +
+                       (t.seen > 1 ? ", on " + t.seen + " boards" : ", on " + t.from) };
+          }) }
+      ],
+      onConfirm: function (v) {
+        var pick = pool[num(v.pick)];
+        if (!pick) return;
+        go(function () {
+          b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
+                         path: pick.path, url: pick.url, pic: pick.pic });
+          autoLayout(b);
+        });
+        toast("Brought in — link it to a step to say where it belongs");
+      }
+    });
+  }
+
   function thingDialog(b, n) {
     if (!b) return;
     openModal({
@@ -4699,14 +5412,25 @@ function dims(n) {
       fields: [
         { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },
         { key: "kind", label: "What is it", type: "select", value: n ? n.kind : "person",
-          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) }
+          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) },
+        { key: "path", label: "Where it is", type: "text", span: true, value: n ? (n.path || "") : "",
+          hint: "A path for a file or a device, a room for a piece of kit. Left blank it is just named." },
+        { key: "url", label: "A link to it", type: "text", span: true, value: n ? (n.url || "") : "",
+          hint: "Any scheme — https:, obsidian:, mailto:" }
       ],
-      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (v.url.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) {
+          return "A link needs a scheme — https:, obsidian:, mailto: and so on.";
+        }
+        return null;
+      },
       onConfirm: function (v) {
         go(function () {
           var t = n;
           if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); }
           t.label = v.label.trim(); t.kind = v.kind;
+          t.path = v.path.trim(); t.url = v.url.trim();
           if (typeof t.x !== "number") autoLayout(b);
         });
       }
@@ -5004,6 +5728,7 @@ function dims(n) {
       wireAutoSync();
       return;
     }
+    if (ensureJobs()) save();
     if (ensureStamps()) save();
     if (borrowed()) armBorrowed();
     // Opening the app is itself a reason to pull: the other device has been

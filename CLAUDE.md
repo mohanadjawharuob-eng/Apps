@@ -610,7 +610,8 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 
 ## Mashghal's shape
 
-**Five tabs: Boards · Waiting · The week · Kit · Settings**, and a switch bar
+**Six tabs: Boards · Waiting · The week · Calendar · Jobs · Settings**, and a
+switch bar
 pinned to the bottom of every screen showing where you are, since when, and the
 note you left. Boards lists procedures and runs; opening one shows the canvas
 over an editable list. Waiting is the only screen the phone really needs — dues
@@ -631,6 +632,52 @@ professionally. It pans, zooms and drags, positions persist on the node, and
 `autoLayout()` seeds them in a serpentine so nobody ever meets a blank sheet —
 its BFS ignores back edges, or the loop in a revision cycle drags its own
 target off to the right. "Tidy" re-runs it.
+
+## Mashghal, as it ended up
+
+- **A job is the bag.** `state.jobs` is the top of the hierarchy: one engagement
+  holding the benches you sit at for it, the boards you run for it, and the kit
+  it hands you. Claimant, mode and bench survive underneath, because the hours
+  still have to be owed to somebody and the work still has a craft — but the job
+  is what you open, and the kit is a section of it rather than a tab to decode.
+  `ensureJobs()` derives one job per claimant and runs **before every render**,
+  not at boot: state is replaced by the sample, a restored backup, a restored
+  file (which lives in the shared runtime and cannot call into the app) and a
+  sync merge, and chasing each one would eventually miss one. It exits at once
+  when everything is filed.
+- **A procedure can be written as prose.** `parseProse()` reads arrows,
+  indentation, `(remind me after 5 days)` and a trailing question mark into
+  steps, acts, people and branches. It **never guesses at a shape** — a line
+  nobody pointed anywhere comes back unplaced and named — but it **does** take
+  the writer at their word: a way out naming a step not yet written makes it.
+  It writes nothing; `boardFromProse()` does, and only on a tap.
+- **Sync runs itself**, on three triggers (a change debounced 4s, a 90s
+  heartbeat, returning to the tab or the network). The merge is untouched: every
+  pass is still pull-merge-push. Watch for the trap that cost a real board —
+  replacing state wholesale, as the sample and a wipe do, **takes
+  `settings.sync` with it and switches sync off silently**. Sync config is how a
+  device reaches the book, not part of it, so it is preserved across both.
+- **Backups are not sync.** Sync propagates the state you are in now, so a bad
+  delete travels everywhere; a backup preserves the state before it. Ten
+  snapshots in IndexedDB, restored through `APP.hydrate` — the single adoption
+  point — because hand-copying a key list at a second site is how Coffer lost
+  grants. Restoring snapshots first, so it is itself undoable.
+- **Pictures live in IndexedDB and never sync.** One phone photo is larger than
+  the whole written record, and the quota is shared with five sibling apps.
+  Resized to 1400px before storing, refused with a reason if still too large,
+  and deleted with their node. A few megabytes through the sealed-gist door
+  would make sync fail slowly and silently, so the screen says they stay here.
+- **A back edge is a DFS stack test**, and nothing else works. "Is the target to
+  the left" called forward edges loops; comparing flow depth called a **join** a
+  loop; plain reachability flagged every edge in a cycle. Only "points at a node
+  still on the stack" marks exactly the edge that closes it.
+- **`join: "all"` holds a step until every marked way in is done.** Otherwise the
+  board says a step waits for all its inputs while the run starts it on the
+  first — a label that lies. Only ways in that were actually entered can hold
+  it, or a branch never taken deadlocks the run for ever.
+- **A thing borrowed from another board is a copy.** A run freezes its procedure
+  at the start; a thing reaching into a shared table would be a hole in that
+  freeze, and renaming a person would rewrite a closed board.
 
 ## Mashghal's look
 
