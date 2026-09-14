@@ -404,6 +404,21 @@
   @media (max-width: 900px) { .writegrid { grid-template-columns: minmax(0, 1fr); } }
 
   .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; background: var(--raised); }
+  /* A drawn icon in a row: it takes the colour of the row, so there is no
+     second version for the light theme and none for a late panel either. */
+  .ic { flex: 0 0 auto; display: inline-flex; color: var(--faint); }
+  .strip { display: flex; gap: 5px; margin-top: 0.45rem; flex-wrap: wrap; }
+  .tinypic {
+    width: 46px; height: 34px; object-fit: cover; border-radius: 6px;
+    background: var(--raised); cursor: pointer; transition: transform var(--t);
+  }
+  .tinypic:hover { transform: scale(1.06); }
+  .panel.late .ic { color: var(--apricot-mute); }
+  .ic-send, .ic-watch { color: var(--dim); }
+  .ic-file { color: var(--apricot-mute); }
+  .ic-ask { color: var(--sage); }
+  .tab .ico { display: inline-flex; align-items: center; justify-content: center; }
+  .tab .ico svg { display: block; }
 
   /* ---------------- the calendar ---------------- */
   .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -673,6 +688,49 @@
          answered by a person, never inferred from elapsed time.
      ============================================================ */
 
+  /* ================= drawn icons =================
+
+     The tabs were single unicode glyphs — ◱ ◴ ▤ ◈ — which are whatever the
+     font on the machine decides they are, sit on the wrong baseline, and mean
+     nothing. Acts and things had none at all, so the only way to tell a send
+     from a watch in a list was to read the word.
+
+     One set, drawn: a 20-unit box, currentColor, 1.6 stroke, round caps, so an
+     icon takes the colour of whatever it sits in and needs no second version
+     for the light theme. */
+  function svgIcon(d, extra) {
+    return '<svg viewBox="0 0 20 20" width="18" height="18" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' + d + (extra || "") + "</svg>";
+  }
+  var ICONS = {
+    // tabs
+    boards:  svgIcon('<rect x="2.5" y="4" width="6" height="5" rx="1.5"/><rect x="11.5" y="11" width="6" height="5" rx="1.5"/><path d="M8.5 6.5h3a2 2 0 0 1 2 2v2.5"/>'),
+    waiting: svgIcon('<circle cx="10" cy="10" r="7"/><path d="M10 6v4.2l2.8 1.7"/>'),
+    week:    svgIcon('<path d="M3 5h14M3 10h9M3 15h11"/>'),
+    cal:     svgIcon('<rect x="3" y="4.5" width="14" height="12.5" rx="2"/><path d="M3 8.5h14M7 2.8v3.2M13 2.8v3.2"/><circle cx="7.4" cy="12.3" r="1" fill="currentColor" stroke="none"/>'),
+    jobs:    svgIcon('<rect x="2.5" y="6.5" width="15" height="10" rx="2"/><path d="M7.5 6.5V5a1.8 1.8 0 0 1 1.8-1.8h1.4A1.8 1.8 0 0 1 12.5 5v1.5M2.5 11h15"/>'),
+    settings: svgIcon('<path d="M4 6h12M4 10h12M4 14h12"/><circle cx="7.5" cy="6" r="1.9" fill="var(--surface)"/><circle cx="12.5" cy="10" r="1.9" fill="var(--surface)"/><circle cx="8.5" cy="14" r="1.9" fill="var(--surface)"/>'),
+    // acts
+    do:    svgIcon('<circle cx="10" cy="10" r="6.6"/><path d="M7.2 10.2l2 2 3.6-4"/>'),
+    send:  svgIcon('<path d="M17 3.5L9 11"/><path d="M17 3.5l-5 13.5-2.8-5.7L3.5 8.5z"/>'),
+    watch: svgIcon('<path d="M2.2 10S5.4 4.8 10 4.8 17.8 10 17.8 10 14.6 15.2 10 15.2 2.2 10 2.2 10z"/><circle cx="10" cy="10" r="2.2"/>'),
+    ask:   svgIcon('<path d="M10 3.2v5.3M10 8.5L5 13.4M10 8.5l5 4.9"/><circle cx="10" cy="3.2" r="1.5"/><circle cx="4.6" cy="14.6" r="1.7"/><circle cx="15.4" cy="14.6" r="1.7"/>'),
+    file:  svgIcon('<path d="M3 11.5V5.4A1.9 1.9 0 0 1 4.9 3.5h3.4l1.6 2h5.2A1.9 1.9 0 0 1 17 7.4v4.1"/><path d="M3 11.5h3.6l1.2 2h4.4l1.2-2H17v3.2a1.9 1.9 0 0 1-1.9 1.9H4.9A1.9 1.9 0 0 1 3 14.7z"/>'),
+    // things
+    person: svgIcon('<circle cx="10" cy="7" r="3.2"/><path d="M4.4 16.4a5.9 5.9 0 0 1 11.2 0"/>'),
+    doc:    svgIcon('<path d="M5 3.2h6l4 4v9.6H5z"/><path d="M11 3.2v4h4"/>'),
+    photo:  svgIcon('<rect x="2.8" y="4.4" width="14.4" height="11.2" rx="2"/><circle cx="7.4" cy="8.4" r="1.5"/><path d="M3.2 13.6l3.8-3.4 3 2.6 2.6-2.4 4.2 3.8"/>'),
+    kit:    svgIcon('<path d="M3.4 7.2h13.2v8.4a1.4 1.4 0 0 1-1.4 1.4H4.8a1.4 1.4 0 0 1-1.4-1.4z"/><path d="M7.4 7.2V5.4a1.6 1.6 0 0 1 1.6-1.6h2a1.6 1.6 0 0 1 1.6 1.6v1.8"/>'),
+    device: svgIcon('<rect x="6" y="2.8" width="8" height="14.4" rx="1.9"/><path d="M8.8 5.2h2.4"/><circle cx="10" cy="14.4" r="0.9" fill="currentColor" stroke="none"/>'),
+    note:   svgIcon('<path d="M4.4 3.6h11.2v9l-3.6 3.8H4.4z"/><path d="M15.6 12.6h-3.6v3.8M7 7.4h6M7 10.2h4"/>'),
+    thing:  svgIcon('<circle cx="10" cy="10" r="6.4"/>')
+  };
+  function actIcon(act) { return ICONS[act] || ICONS.do; }
+  function thingIcon(kind) {
+    return ICONS[kind === "file" ? "doc" : kind === "asset" ? "kit" : kind] || ICONS.thing;
+  }
+
   var ACTS = {
     do:    { label: "Do",     word: "do",     tone: "blue"  },
     send:  { label: "Send",   word: "send",   tone: "brass" },
@@ -703,6 +761,85 @@
     person: "Person", file: "File", photo: "Photo", asset: "Kit",
     device: "Device", note: "Note"
   };
+  /* ================= a list you can add to from the dialog =================
+
+     Every fixed list in this app was a wall: five acts, six kinds of thing,
+     three places. The moment your work needed a sixth act or a fourth place,
+     the app said no and there was nowhere to say otherwise.
+
+     So each of them is now a FLOOR rather than a ceiling. The built-ins below
+     are what a book starts with; `state.vocab` holds what you added, it syncs
+     and backs up like everything else, and every dropdown built from one ends
+     with "Other — write it in". Choosing that reveals a box, and what you type
+     is added to the list for good, so the next dialog offers it.
+
+     The rule is systemic on purpose: a picker that cannot be extended is a
+     picker that will eventually be wrong, and adding the escape hatch to one
+     dialog at a time is how half of them end up without it. */
+  var VOCABS = {
+    acts:       { of: function () { return ACTS; },        word: "act",
+                  make: function (label) { return { label: label, word: label.toLowerCase(), tone: "blue" }; } },
+    things:     { of: function () { return THINGS; },      word: "kind of thing",
+                  make: function (label) { return label; } },
+    places:     { of: function () { return PLACES; },      word: "place",
+                  make: function (label) { return label; } },
+    claimKinds: { of: function () { return CLAIM_KINDS; }, word: "shape",
+                  make: function (label) { return label; } },
+    edgeKinds:  { of: function () { return EDGE_KINDS; },  word: "kind of connection",
+                  make: function (label) { return { word: label.toLowerCase(), says: label.toLowerCase() }; } }
+  };
+  var OTHER = "__other";
+
+  function vocabAdded(which) {
+    if (!state.vocab) state.vocab = {};
+    if (!state.vocab[which]) state.vocab[which] = {};
+    return state.vocab[which];
+  }
+  // Built-ins first, in their own order, then whatever you have added.
+  function vocabAll(which) {
+    var base = VOCABS[which].of(), out = {}, k;
+    for (k in base) out[k] = base[k];
+    var mine = (state.vocab && state.vocab[which]) || {};
+    for (k in mine) out[k] = mine[k];
+    return out;
+  }
+  function vocabLabel(which, key) {
+    var v = vocabAll(which)[key];
+    if (!v) return key || "";
+    return typeof v === "string" ? v : (v.label || v.word || key);
+  }
+  // The options a picker shows, with the way out at the bottom.
+  function vocabOpts(which) {
+    var all = vocabAll(which);
+    return Object.keys(all).map(function (k) {
+      return { value: k, label: vocabLabel(which, k) };
+    }).concat([{ value: OTHER, label: "Other — write it in" }]);
+  }
+  /* Resolves what the dialog came back with. If "Other" was chosen and
+     something was typed, it is added to the list and its new key returned; if
+     "Other" was chosen and nothing was typed, the fallback is used rather than
+     writing an entry with no name. Must be called inside go(), because it
+     writes to state. */
+  function vocabTake(which, pick, typed, fallback) {
+    if (pick !== OTHER) return pick;
+    var label = String(typed || "").trim();
+    if (!label) return fallback || Object.keys(vocabAll(which))[0];
+    var all = vocabAll(which), k;
+    for (k in all) {
+      if (String(vocabLabel(which, k)).toLowerCase() === label.toLowerCase()) return k;
+    }
+    var key = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || uid();
+    if (all[key]) key = key + "-" + uid().slice(0, 4);
+    vocabAdded(which)[key] = VOCABS[which].make(label);
+    return key;
+  }
+  // The text field that sits under a vocabulary picker in every dialog.
+  function otherField(which, key) {
+    return { key: key || "other", label: "If other, what is it called",
+             type: "text", span: true, value: "",
+             hint: "Only needed if you picked “Other” above. It is added to the list for next time." };
+  }
+
   var CLAIM_KINDS = {
     budget:   "Hours a week",
     days:     "Days a week",
@@ -714,17 +851,20 @@
   var APP = {
     storeKey: "mashghal.v1",
     tabs: [
-      { id: "boards",  label: "Boards",   ico: "◱" },
-      { id: "waiting", label: "Waiting",  ico: "◴" },
-      { id: "week",    label: "The week", ico: "▤" },
-      { id: "cal",     label: "Calendar", ico: "▦" },
-      { id: "jobs",    label: "Jobs",     ico: "◈" },
-      { id: "settings",label: "Settings", ico: "⚙" }
+      { id: "boards",  label: "Boards",   ico: ICONS.boards },
+      { id: "waiting", label: "Waiting",  ico: ICONS.waiting },
+      { id: "week",    label: "The week", ico: ICONS.week },
+      { id: "cal",     label: "Calendar", ico: ICONS.cal },
+      { id: "jobs",    label: "Jobs",     ico: ICONS.jobs },
+      { id: "settings",label: "Settings", ico: ICONS.settings }
     ],
 
     blank: function () {
       return {
         version: 1,
+        // What you have added to the app's own lists — acts, kinds of thing,
+        // places. Syncs and backs up like everything else.
+        vocab: {},
         /* A job is the top of the hierarchy and holds everything about one
            engagement: which claimants it bills to, which modes of work it
            involves, the benches those make, and its boards. It exists because
@@ -756,7 +896,7 @@
       ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
-      ["forgotten", "tombstones", "devices"].forEach(function (k) {
+      ["forgotten", "tombstones", "devices", "vocab"].forEach(function (k) {
         if (parsed[k] && typeof parsed[k] === "object") s[k] = parsed[k];
       });
       if (parsed.settings) {
@@ -1196,17 +1336,21 @@
     return h;
   }
 
-  function stateTone(st) {
-    return st === "over" ? "p-oxide" : st === "waiting" ? "p-dim" :
-           st === "now" ? "p-sage" : st === "done" ? "p-done" : "p-grey";
-  }
-  function stateWord(b, n) {
+  // stateTone is gone: it mapped a state onto a pill class, and there are no
+  // pills left. A state is a word beside a drawn icon now — see stepRow().
+function stateWord(b, n) {
     var st = nodeState(b, n);
     if (st === "done") return "done";
     if (st === "over") return "late";
     if (st === "waiting") return "waiting";
     if (st === "now") return "in hand";
     return "not started";
+  }
+
+  function linkedPics(b, n) {
+    return edgesOf(b, n.id, "link").map(function (e) {
+      return nodeOf(b, e.a === n.id ? e.b : e.a);
+    }).filter(function (t) { return t && t.pic; });
   }
 
   function stepRow(b, n) {
@@ -1252,19 +1396,35 @@
     tools += '<button class="btn quiet" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>';
     tools += '<button class="btn quiet danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">×</button>';
 
-    return '<div class="row"><span class="pill ' + stateTone(st) + '">' + (isRun ? stateWord(b, n) : ACTS[n.act].word) + "</span>" +
-      '<span class="grow"><b>' + esc(n.label) + "</b><small>" + esc(meta.join(" · ")) + "</small></span>" +
-      '<span class="tools">' + tools + "</span></div>";
+    var late = st === "over";
+    return '<div class="panel calm' + (late ? " late" : "") + '">' +
+      '<span class="ic ic-' + esc(n.act) + '" title="' + esc(vocabLabel("acts", n.act)) + '">' +
+      actIcon(n.act) + "</span>" +
+      '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
+      '<div class="says">' + esc(meta.join(" · ")) + "</div>" +
+      (function () {
+        var pics = linkedPics(b, n);
+        if (!pics.length) return "";
+        return '<div class="strip">' + pics.map(function (t) {
+          return '<img class="tinypic" data-pic="' + esc(t.pic) + '" alt="" title="' +
+            esc(t.label) + '" data-act="pic-open" data-id="' + b.id + ":" + t.id + '">';
+        }).join("") + "</div>";
+      })() + "</div>" +
+      (isRun ? '<div class="age' + (late ? " bad" : st === "now" ? " ok" : "") + '">' +
+        esc(stateWord(b, n)) + "</div>" : "") +
+      '<div class="acts">' + tools + "</div></div>";
   }
 
   function thingRow(b, n) {
     var links = edgesOf(b, n.id, "link").length;
-    var says = [String(THINGS[n.kind] || n.kind).toLowerCase()];
+    var says = [String(vocabLabel("things", n.kind)).toLowerCase()];
     says.push(links ? links + (links === 1 ? " link" : " links") : "not linked to anything");
     if (n.path) says.push(n.path);
     if (n.url) says.push(n.url);
     return '<div class="panel calm">' +
-      (n.pic ? '<img class="thumb" data-pic="' + esc(n.pic) + '" alt="">' : "") +
+      (n.pic ? '<img class="thumb" data-pic="' + esc(n.pic) + '" alt="">'
+             : '<span class="ic" title="' + esc(vocabLabel("things", n.kind)) + '">' +
+               thingIcon(n.kind) + "</span>") +
       '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
       '<div class="says">' + esc(says.join(" · ")) + "</div></div>" +
       '<div class="acts">' +
@@ -1278,12 +1438,26 @@
   function edgeRow(b, e) {
     var a = nodeOf(b, e.a), z = nodeOf(b, e.b);
     if (!a || !z) return "";
-    var arrow = e.k === "flow" ? " → " : " ·· ";
-    return '<div class="row"><span class="pill ' + (e.k === "flow" ? "p-blue" : "p-brass") + '">' +
-      (e.k === "flow" ? "then" : "about") + "</span>" +
-      '<span class="grow"><b>' + esc(a.label) + arrow + esc(z.label) + "</b>" +
-      (e.label ? "<small>" + esc(e.label) + "</small>" : "") + "</span>" +
-      '<span class="tools"><button class="btn quiet danger" data-act="edge-del" data-id="' + b.id + ":" + e.id + '">×</button></span></div>';
+    var flow = e.k === "flow";
+    var arrow = flow ? " → " : " ·· ";
+    // The line itself rather than a word for it: solid with a head for
+    // sequence, dotted without one for association — the same two marks the
+    // sheet uses, so the list and the board read the same way.
+    var mark = flow
+      ? '<svg viewBox="0 0 24 10" width="24" height="10" aria-hidden="true">' +
+        '<path d="M1 5h17" stroke="currentColor" stroke-width="1.6"/>' +
+        '<path d="M17 1.6L21.5 5 17 8.4z" fill="currentColor"/></svg>'
+      : '<svg viewBox="0 0 24 10" width="24" height="10" aria-hidden="true">' +
+        '<path d="M1 5h22" stroke="currentColor" stroke-width="1.6" ' +
+        'stroke-dasharray="1 4" stroke-linecap="round"/></svg>';
+    var says = flow
+      ? (e.join === "all" ? "waits for every way in" : e.label ? "a way out: " + e.label : "comes after")
+      : "belongs with, in no order";
+    return '<div class="panel calm">' +
+      '<span class="ic"' + (flow ? "" : ' style="color:var(--brass)"') + ">" + mark + "</span>" +
+      '<div class="grow"><div class="nm sm">' + esc(a.label) + arrow + esc(z.label) + "</div>" +
+      '<div class="says">' + esc(says) + "</div></div>" +
+      '<div class="acts"><button class="btn quiet danger" data-act="edge-del" data-id="' + b.id + ":" + e.id + '">×</button></div></div>';
   }
 
   /* ================= Waiting ================= */
@@ -1553,7 +1727,7 @@
       var due = addDays(cd.lastDoneOn, num(cd.everyDays));
       if (due.slice(0, 7) !== ym) return;
       put(due, { tone: due < today() ? "late" : "upkeep", label: cd.label,
-                 where: PLACES[cd.place] || "anywhere", id: "" });
+                 where: placeLabel(cd.place), id: "" });
     });
 
     return by;
@@ -1711,7 +1885,7 @@
     h += '<div class="sect">Claimants</div><div class="card">' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="claimant-add">Add claimant</button></div>' +
       (live(state.claimants).length ? live(state.claimants).map(function (c) {
-        var shape = CLAIM_KINDS[c.kind] || c.kind;
+        var shape = vocabLabel("claimKinds", c.kind);
         return '<div class="row"><span class="pill p-grey" style="color:' + esc(c.colour) + ';border-color:' + esc(c.colour) + '">' +
           esc(c.kind) + "</span>" +
           '<span class="grow"><b>' + esc(c.name) + "</b><small>" + esc(shape) +
@@ -2335,6 +2509,8 @@
   // the last time it was done, so falling behind never compounds into a pile of
   // missed occurrences — there is one of each, and it is however far past.
   var PLACES = { desk: "At the desk", away: "Away from the desk", out: "Out of the house" };
+  // Reads an added place as readily as a built-in one.
+  function placeLabel(k) { return k ? vocabLabel("places", k) : "Anywhere"; }
   var ASSET_KINDS = { laptop: "Laptop", phone: "Phone", audio: "Audio", other: "Other" };
   var placeFilter = "";   // view state, never saved
 
@@ -2353,7 +2529,7 @@
     var cd = x.cd, p = protects(cd), bits = [];
     if (p) bits.push("Keeps " + p + " safe");
     bits.push((p ? "e" : "E") + "very " + cd.everyDays + " days, " +
-              (PLACES[cd.place] ? String(PLACES[cd.place]).toLowerCase() : "anywhere"));
+              String(placeLabel(cd.place)).toLowerCase());
     bits.push(cd.lastDoneOn ? "last done " + niceDate(cd.lastDoneOn) : "never done yet");
     return bits.join(" · ");
   }
@@ -2383,10 +2559,10 @@
     var shown = placeFilter ? all.filter(function (x) { return x.cd.place === placeFilter; }) : all;
     var h = '<div class="sect">Upkeep</div>';
     h += '<div class="tools" style="margin-bottom:0.6rem">' +
-      ['', 'desk', 'away', 'out'].map(function (pl) {
+      [""].concat(Object.keys(vocabAll("places"))).map(function (pl) {
         return '<button class="btn' + (placeFilter === pl ? " primary" : "") +
           '" data-act="place-filter" data-id="' + pl + '">' +
-          (pl ? esc(PLACES[pl]) : "Anywhere") + "</button>";
+          esc(pl ? placeLabel(pl) : "Anywhere") + "</button>";
       }).join("") + "</div>";
 
     h += shown.length ? '<div class="stack tight">' + shown.map(function (x) {
@@ -2398,7 +2574,7 @@
         '" data-act="cadence-done" data-id="' + x.cd.id + '">Done now</button>' +
         '<button class="btn quiet" data-act="cadence-edit" data-id="' + x.cd.id + '">Edit</button></div></div>';
     }).join("") + "</div>"
-      : '<p class="empty">Nothing to do ' + esc((PLACES[placeFilter] || "").toLowerCase()) + ".</p>";
+      : '<p class="empty">Nothing to do ' + esc(placeFilter ? String(placeLabel(placeFilter)).toLowerCase() : "") + ".</p>";
     return h;
   }
 
@@ -2414,7 +2590,8 @@
         { key: "label", label: "What", type: "text", value: cd ? cd.label : "", span: true, placeholder: "Back up the GIS project" },
         { key: "everyDays", label: "Every (days)", type: "number", min: 1, value: cd ? num(cd.everyDays) : 30 },
         { key: "place", label: "Where", type: "select", value: cd ? cd.place : "desk",
-          options: Object.keys(PLACES).map(function (k) { return { value: k, label: PLACES[k] }; }) },
+          options: vocabOpts("places") },
+        otherField("places", "placeOther"),
         { key: "lastDoneOn", label: "Last done", type: "text", span: true,
           value: cd ? (cd.lastDoneOn || "") : "", hint: "YYYY-MM-DD, or blank if never" },
         { key: "protectsAssetId", label: "Protects a thing", type: "select", span: true,
@@ -2436,7 +2613,7 @@
           if (!t) { t = { id: uid(), archived: false }; state.cadences.push(t); }
           t.label = v.label.trim();
           t.everyDays = num(v.everyDays);
-          t.place = v.place;
+          t.place = vocabTake("places", v.place, v.placeOther, "desk");
           t.lastDoneOn = v.lastDoneOn.trim();
           t.protectsAssetId = v.protectsAssetId;
           t.protectsBenchId = v.protectsAssetId ? "" : v.protectsBenchId;
@@ -2485,7 +2662,7 @@
         var st = cadenceState(cd), p = protects(cd);
         return '<div class="row"><span class="pill ' + st.tone + '">' + esc(st.word) + "</span>" +
           '<span class="grow"><b>' + esc(cd.label) + "</b><small>" +
-          esc("every " + cd.everyDays + "d · " + (PLACES[cd.place] || "anywhere") + (p ? " · protects " + p : "")) +
+          esc("every " + cd.everyDays + "d · " + placeLabel(cd.place) + (p ? " · protects " + p : "")) +
           "</small></span>" +
           '<span class="tools"><button class="btn quiet" data-act="cadence-edit" data-id="' + cd.id + '">Edit</button>' +
           '<button class="btn quiet danger" data-act="cadence-del" data-id="' + cd.id + '">×</button></span></div>';
@@ -3087,11 +3264,18 @@
      and renderView is not. A picture that is not on this device simply does not
      appear — the row still reads correctly without it. */
   function mountPics() {
-    var imgs = document.querySelectorAll("img[data-pic]");
-    Array.prototype.forEach.call(imgs, function (el) {
+    // Both kinds: an <img> in a row, and an SVG <image> on the sheet.
+    var els = document.querySelectorAll("[data-pic]");
+    Array.prototype.forEach.call(els, function (el) {
       var key = el.getAttribute("data-pic");
-      if (!key || el.getAttribute("src")) return;
-      picGet(key).then(function (src) { if (src) el.setAttribute("src", src); else el.remove(); });
+      if (!key) return;
+      var svg = el.tagName.toLowerCase() === "image";
+      if (el.getAttribute(svg ? "href" : "src")) return;
+      picGet(key).then(function (src) {
+        if (!src) { if (!svg) el.remove(); return; }
+        if (svg) el.setAttributeNS("http://www.w3.org/1999/xlink", "href", src);
+        el.setAttribute(svg ? "href" : "src", src);
+      });
     });
   }
 
@@ -3566,14 +3750,16 @@
     return Math.min(260, 64 + String(n.label || "").length * 7.2);
   }
 function dims(n) {
-    if (n.t !== "step") return { w: thingW(n), h: TH };
+    if (n.t !== "step") return n.pic ? { w: PW, h: PH + 20 } : { w: thingW(n), h: TH };
     var g = gridOf(n);
     var lines = wrap(n.label || "", n._room || 26).length;   // wrap() caps at two
     var h = lines > 1 ? SH2 : SH1;
     if (g) h = 34 + lines * 17 + gridH(g);
     else if (n._says) h = Math.max(h, SH2);
+    if (n._pics) h += 34;
     return { w: SW, h: h };
   }
+  var PW = 132, PH = 96;   // a thumbnail on the sheet
   var NS = "http://www.w3.org/2000/svg";
   var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
 
@@ -3890,6 +4076,7 @@ function dims(n) {
 
   function drawNodes(b, svg) {
     var INK = nodeInk();
+    setTimeout(mountPics, 0);   // the sheet was just rebuilt; refill its frames
     var g = svg._gN;
     while (g.firstChild) g.removeChild(g.firstChild);
     b.nodes.forEach(function (n) {
@@ -3908,6 +4095,7 @@ function dims(n) {
       var room = late ? 18 : st === "now" ? 16 : 26;
       n._room = isStep ? room : 26;
       n._says = says;
+      n._pics = isStep ? linkedPics(b, n).length : 0;
       var d = dims(n);
 
       var outer = svgEl("g", { transform: "translate(" + n.x + "," + n.y + ")", "data-id": n.id });
@@ -3972,11 +4160,31 @@ function dims(n) {
         inner.appendChild(ih);
       }
 
+      var pics = linkedPics(b, n);
+      if (pics.length) {
+        // A row of small frames along the bottom of the card, so the sheet
+        // shows what the step is actually about rather than that a link exists.
+        var tw = 34, th = 26, gap = 4;
+        pics.slice(0, 4).forEach(function (t, i) {
+          var px = pad + i * (tw + gap), py = d.h - th - 8;
+          var cid2 = "sp" + n.id + i;
+          var cp2 = svgEl("clipPath", { id: cid2 });
+          cp2.appendChild(svgEl("rect", { x: px, y: py, width: tw, height: th, rx: 5 }));
+          inner.appendChild(cp2);
+          inner.appendChild(svgEl("image", { x: px, y: py, width: tw, height: th,
+            "clip-path": "url(#" + cid2 + ")", preserveAspectRatio: "xMidYMid slice",
+            "data-pic": t.pic }));
+        });
+      }
+
       var gr = gridOf(n);
       if (gr) { drawGrid(gr, d, inner, y + 4); }
       else if (says) {
         wrap(says, 34).slice(0, 2).forEach(function (ln, i) {
-          var m = svgEl("text", { x: pad, y: d.h - 14 + i * 15 - (says.length > 34 ? 15 : 0),
+          // Lifted clear of the picture strip, which the card grew to hold —
+          // otherwise the prose is drawn straight through the thumbnails.
+          var m = svgEl("text", { x: pad,
+            y: d.h - 14 + i * 15 - (says.length > 34 ? 15 : 0) - (pics.length ? 34 : 0),
             fill: late ? ink("apricot-mute") : done ? ink("receded") : ink("faint"),
             "font-size": 11.5 });
           m.textContent = ln;
@@ -4004,10 +4212,34 @@ function dims(n) {
      its name — "person  R. Haddad". The kind was carried only by colour before,
      which meant the board could not be read by anyone who had not been told
      the code. */
+  /* A thing holding a picture is drawn AS the picture, with its name on a strip
+     underneath. The <image> is filled in afterwards by mountPics(), because
+     IndexedDB is asynchronous and the sheet is not — a picture not on this
+     device leaves the frame empty and the name still reads.
+
+     This is most of the point of pictures being here: on a sheet about aerial
+     photographs, "frame 1962-04" and the actual frame are not the same
+     information. */
   function drawThing(n, d, inner) {
+    if (n.pic) {
+      var cid = "pc" + n.id;
+      var cp = svgEl("clipPath", { id: cid });
+      cp.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: PH, rx: 10 }));
+      inner.appendChild(cp);
+      inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: 11,
+        fill: ink("sunken"), stroke: ink("rule"), "stroke-width": 1 }));
+      inner.appendChild(svgEl("image", { x: 0, y: 0, width: d.w, height: PH,
+        "clip-path": "url(#" + cid + ")", preserveAspectRatio: "xMidYMid slice",
+        "data-pic": n.pic }));
+      var cap = svgEl("text", { x: d.w / 2, y: d.h - 6, fill: ink("dim"),
+        "text-anchor": "middle", "font-size": 11 });
+      cap.textContent = clip(n.label, 20);
+      inner.appendChild(cap);
+      return;
+    }
     inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
       fill: ink("sunken"), stroke: ink("rule"), "stroke-width": 1 }));
-    var kind = String(THINGS[n.kind] || n.kind || "thing").toLowerCase();
+    var kind = String(vocabLabel("things", n.kind) || "thing").toLowerCase();
     var kt = svgEl("text", { x: 15, y: d.h / 2 + 4, fill: ink("faint"), "font-size": 10.5 });
     kt.textContent = kind;
     inner.appendChild(kt);
@@ -5309,7 +5541,8 @@ function dims(n) {
       fields: [
         { key: "label", label: "Step", type: "text", value: n ? n.label : "", span: true, placeholder: "Send draft for review" },
         { key: "act", label: "Act", type: "select", value: n ? n.act : "do",
-          options: Object.keys(ACTS).map(function (k) { return { value: k, label: ACTS[k].label }; }) },
+          options: vocabOpts("acts") },
+        otherField("acts", "actOther"),
         { key: "chaseDays", label: "Chase after (days)", type: "number", min: 0, value: n ? (n.chaseDays || 0) : 0 },
         { key: "dueAt", label: "On a date (optional)", type: "text", span: true,
           value: n ? (n.dueAt || "") : "", placeholder: "YYYY-MM-DD", hint: "Leave blank unless it is genuinely dated." },
@@ -5330,7 +5563,7 @@ function dims(n) {
             b.nodes.push(t);
           }
           t.label = v.label.trim();
-          t.act = v.act;
+          t.act = vocabTake("acts", v.act, v.actOther, "do");
           t.chaseDays = num(v.chaseDays);
           t.dueAt = v.dueAt.trim();
           if (typeof t.x !== "number") { autoLayout(b); }
@@ -5386,7 +5619,7 @@ function dims(n) {
         { key: "pick", label: "Which", type: "select", span: true, value: "0",
           options: pool.map(function (t, i) {
             return { value: String(i),
-                     label: t.label + " — " + String(THINGS[t.kind] || t.kind).toLowerCase() +
+                     label: t.label + " — " + String(vocabLabel("things", t.kind)).toLowerCase() +
                        (t.seen > 1 ? ", on " + t.seen + " boards" : ", on " + t.from) };
           }) }
       ],
@@ -5412,7 +5645,8 @@ function dims(n) {
       fields: [
         { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },
         { key: "kind", label: "What is it", type: "select", value: n ? n.kind : "person",
-          options: Object.keys(THINGS).map(function (k) { return { value: k, label: THINGS[k] }; }) },
+          options: vocabOpts("things") },
+        otherField("things", "kindOther"),
         { key: "path", label: "Where it is", type: "text", span: true, value: n ? (n.path || "") : "",
           hint: "A path for a file or a device, a room for a piece of kit. Left blank it is just named." },
         { key: "url", label: "A link to it", type: "text", span: true, value: n ? (n.url || "") : "",
@@ -5429,7 +5663,8 @@ function dims(n) {
         go(function () {
           var t = n;
           if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); }
-          t.label = v.label.trim(); t.kind = v.kind;
+          t.label = v.label.trim();
+          t.kind = vocabTake("things", v.kind, v.kindOther, "person");
           t.path = v.path.trim(); t.url = v.url.trim();
           if (typeof t.x !== "number") autoLayout(b);
         });
@@ -5444,7 +5679,8 @@ function dims(n) {
       fields: [
         { key: "name", label: "Name", type: "text", value: c ? c.name : "", span: true, placeholder: "AUB Tripoli 21st Century" },
         { key: "kind", label: "Shape", type: "select", value: c ? c.kind : "budget",
-          options: Object.keys(CLAIM_KINDS).map(function (k) { return { value: k, label: CLAIM_KINDS[k] }; }) },
+          options: vocabOpts("claimKinds") },
+        otherField("claimKinds", "kindOther"),
         { key: "hours", label: "How much", type: "text", value: c ? (c.hours || "") : "", placeholder: "20" },
         { key: "colour", label: "Colour", type: "text", value: c ? c.colour : "#6f96b8", span: true, hint: "A hex colour — it marks this claimant everywhere." }
       ],
@@ -5457,7 +5693,9 @@ function dims(n) {
         go(function () {
           var t = c;
           if (!t) { t = { id: uid(), archived: false }; state.claimants.push(t); }
-          t.name = v.name.trim(); t.kind = v.kind; t.hours = v.hours.trim(); t.colour = v.colour.trim();
+          t.name = v.name.trim();
+          t.kind = vocabTake("claimKinds", v.kind, v.kindOther, "budget");
+          t.hours = v.hours.trim(); t.colour = v.colour.trim();
         });
       }
     });
