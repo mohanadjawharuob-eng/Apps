@@ -376,6 +376,13 @@
     .cvleg span:nth-child(n+3) { display: none; }
   }
 
+  /* The connect handle: invisible until you are on the node, so the sheet is
+     not covered in dots, but a real target once you are. */
+  .hnd { opacity: 0; transition: opacity var(--t); cursor: crosshair; }
+  g[data-id]:hover .hnd { opacity: 1; }
+  .hnd:hover circle:last-child { stroke: var(--sage); }
+  #wireline { pointer-events: none; }
+
   g[data-id] .nd { transform-box: fill-box; transform-origin: center; transition: transform var(--t), filter var(--t); cursor: move; }
   g[data-id]:hover .nd { transform: translateY(-2px) scale(1.02); filter: brightness(1.13); }
   .halo { animation: breathe 3.4s ease-in-out infinite; }
@@ -3353,7 +3360,7 @@ function dims(n) {
       var inner = svgEl("g", { "class": "nd" });
       outer.appendChild(inner);
 
-      if (!isStep) { drawThing(n, d, inner); g.appendChild(outer); return; }
+      if (!isStep) { drawThing(n, d, inner); addHandle(outer, d); g.appendChild(outer); return; }
 
       var fill = late ? ink("late-tint")
                : done ? ink("sunken")
@@ -3422,8 +3429,21 @@ function dims(n) {
           inner.appendChild(m);
         });
       }
+      addHandle(outer, d);
       g.appendChild(outer);
     });
+  }
+
+  /* The handle you drag to connect. It sits outside the card on the right and
+     only shows on hover, so the sheet is not covered in dots — but it is a real
+     target, not a hairline, because this is the gesture the whole model rests
+     on and it has to be hittable with a trackpad. */
+  function addHandle(outer, d) {
+    var h = svgEl("g", { "class": "hnd", "data-handle": "1" });
+    h.appendChild(svgEl("circle", { cx: d.w + 11, cy: d.h / 2, r: 12, fill: "transparent" }));
+    h.appendChild(svgEl("circle", { cx: d.w + 11, cy: d.h / 2, r: 5.5,
+      fill: ink("sheet"), stroke: ink("line"), "stroke-width": 1.5 }));
+    outer.appendChild(h);
   }
 
   /* A thing is a pill with its KIND written inside it, small and faint, then
@@ -3565,6 +3585,65 @@ function dims(n) {
     vb.w = nw; vb.h = nh; applyVB();
   }
 
+  var wire = null;   // a connection being drawn, never saved
+
+  function clearWire() {
+    if (!cvSvg) return;
+    var old = cvSvg.querySelector("#wireline");
+    if (old) old.remove();
+  }
+  function drawWire(b) {
+    clearWire();
+    var d = dims(wire.from);
+    var g = svgEl("g", { id: "wireline" });
+    g.appendChild(svgEl("path", {
+      d: "M" + (wire.from.x + d.w) + "," + (wire.from.y + d.h / 2) +
+         " L" + wire.x + "," + wire.y,
+      fill: "none", stroke: ink(wire.over ? "sage" : "line"),
+      "stroke-width": 1.8, "stroke-dasharray": wire.over ? "" : "4 4",
+      "stroke-linecap": "round"
+    }));
+    g.appendChild(svgEl("circle", { cx: wire.x, cy: wire.y, r: 4,
+      fill: ink(wire.over ? "sage" : "line") }));
+    cvSvg.appendChild(g);
+  }
+
+  /* Dropping on a node asks WHAT the connection is, because sequence and
+     association are different edges and the app must never decide which.
+     A step onto a step offers both; anything involving a thing can only be an
+     association, so it does not ask a question with one answer. */
+  function askConnect(b, from, to) {
+    var canFlow = from.t === "step" && to.t === "step";
+    if (!canFlow) {
+      go(function () {
+        b.edges.push({ id: uid(), a: from.id, b: to.id, k: "link", label: "" });
+      });
+      toast("Linked — belongs with, in no order");
+      return;
+    }
+    openModal({
+      title: "What is this connection?",
+      message: "Sequence and association are different things and the board draws them differently. One is the order the work happens in; the other is a reference that has no order at all.",
+      confirmLabel: "Connect",
+      fields: [
+        { key: "k", label: "It means", type: "select", span: true, value: "flow", options: [
+          { value: "flow", label: "“" + clip(to.label, 24) + "” comes after “" + clip(from.label, 24) + "”" },
+          { value: "link", label: "They belong together, in no order" }
+        ] },
+        { key: "label", label: "Way out", type: "text", span: true, value: "",
+          hint: "Only for a question — the word on this way out, like “again” or “stop”. Leave it blank otherwise." }
+      ],
+      onConfirm: function (v) {
+        go(function () {
+          b.edges.push({ id: uid(), a: from.id, b: to.id,
+                         k: v.k === "link" ? "link" : "flow",
+                         label: v.k === "link" ? "" : v.label.trim() });
+        });
+        toast(v.k === "link" ? "Linked" : "Connected");
+      }
+    });
+  }
+
   function mountCanvas() {
     cvSvg = document.getElementById("cv");
     if (!cvSvg) return;
@@ -3576,7 +3655,17 @@ function dims(n) {
 
     cvSvg.addEventListener("pointerdown", function (ev) {
       var g = ev.target.closest ? ev.target.closest("g[data-id]") : null;
+      var onHandle = ev.target.closest ? ev.target.closest("[data-handle]") : null;
       var p = toSvg(ev);
+      if (g && onHandle) {
+        // Drawing a connection, not moving the node.
+        var from = nodeOf(b, g.getAttribute("data-id"));
+        if (from) {
+          wire = { from: from, x: p.x, y: p.y };
+          cvSvg.setPointerCapture(ev.pointerId);
+          return;
+        }
+      }
       if (g) {
         var n = nodeOf(b, g.getAttribute("data-id"));
         if (n) { drag = { n: n, dx: p.x - n.x, dy: p.y - n.y, moved: false };
@@ -3588,6 +3677,20 @@ function dims(n) {
     });
 
     cvSvg.addEventListener("pointermove", function (ev) {
+      if (wire) {
+        var w = toSvg(ev);
+        wire.x = w.x; wire.y = w.y;
+        /* Pointer capture is on, so every event targets the svg itself and
+           ev.target can never be the node under the cursor. Ask the document
+           what is actually there. (#wireline is pointer-events:none, or the
+           line being dragged would shadow its own target.) */
+        var el = document.elementFromPoint(ev.clientX, ev.clientY);
+        var t = el && el.closest ? el.closest("g[data-id]") : null;
+        wire.over = t ? t.getAttribute("data-id") : null;
+        if (wire.over === wire.from.id) wire.over = null;
+        drawWire(b);
+        return;
+      }
       if (drag) {
         var p = toSvg(ev);
         drag.n.x = Math.round(p.x - drag.dx);
@@ -3607,6 +3710,13 @@ function dims(n) {
     });
 
     function endPointer(ev) {
+      if (wire) {
+        var to = wire.over ? nodeOf(b, wire.over) : null;
+        var from = wire.from;
+        wire = null;
+        clearWire();
+        if (to) askConnect(b, from, to);
+      }
       if (drag && drag.moved) save();
       if (drag && !drag.moved) editNode(b, drag.n);
       drag = null; pan = null;
