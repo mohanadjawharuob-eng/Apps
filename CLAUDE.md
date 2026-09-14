@@ -834,19 +834,35 @@ print("no handler:",sorted(u-d) or "none");print("unclickable:",sorted(d-u) or "
 
 ## Mashghal's look
 
-**Evening ink**, from `mashghal/DESIGN-HANDOFF.md` — chosen out of three
-directions a design round came back with, and committed dark because the brief
-asked for it, so there is no light palette and every colour is painted
-explicitly. It replaced the first build's drafting room, which was one cold
-hue with state carried by hairlines and uppercase mono labels, and read as an
-instrument panel. Four rules hold it:
+**Deep navy**, and it is the third palette this app has had — which is the
+point of writing the reasons down. The first build's drafting room was one cold
+hue with state on hairlines and uppercase mono labels, and read as an instrument
+panel. **Evening ink** replaced it (`mashghal/DESIGN-HANDOFF.md`) and was
+committed dark with no light palette at all. The navy system replaced *that*
+when the app grew from four nouns into a workspace with sections: eight
+categories need eight identity colours, which evening ink's two-hue rule had no
+room for. It is **dark-first with a real light theme** — the bare `:root` block
+carries the dark values, `@media (prefers-color-scheme: light)
+{ :root:not([data-theme="dark"]) }` and `:root[data-theme="light"]` carry the
+light ones, so the toggle wins in both directions and nothing is left to
+inherit. Every one of the 43 token names evening ink defined is still defined,
+aliased onto the new values, because ~7,700 lines of CSS read them.
 
-- **Two hues, and each says one thing.** **Sage** is in hand and healthy.
-  **Apricot** is late, and late is the only alarm — there is no red in the
-  palette at all. Everything else is neutral.
+Four rules hold it, and the first is the one the new palette put under strain:
+
+- **Colour runs in two channels and they never mix.** **Identity** (which
+  section, which job, which kind) lives only in an **icon tile** — a low-alpha
+  tint of an `--id-*` token behind a muted glyph. **State** (how is this going)
+  lives only in a **pill carrying a word** and in a row's **left edge**, at full
+  chroma. Eight identity hues and four state hues on one screen is unreadable
+  any other way: with the channels separated, a green tile never claims a thing
+  is healthy and a rose edge never claims it belongs to a category. Sage is in
+  hand and healthy, amber is drift and staleness, rose is late. **Late is still
+  the only alarm** — evening ink's apricot is now a rose, so the "no red at all"
+  rule is superseded, but nothing else took a warm hue with it.
 - **Waiting carries no colour.** A step waiting three days against a five-day
   chase is not a problem, and the first build coloured it amber as though it
-  were. The ladder, in the order it has to be legible: **late** apricot ·
+  were. The ladder, in the order it has to be legible: **late** rose ·
   **in hand** sage · **waiting** dim grey · **not started** faint · **done**
   receded, and it sinks. `stateTone()` and `NODE_INK` are the same ladder, one
   for the rows and one for the canvas, and a change belongs in both. The state
@@ -854,13 +870,17 @@ instrument panel. Four rules hold it:
   who cannot separate the hues.
 - **Nothing emphatic borrows a state hue.** A primary button is neither late
   nor healthy, so it takes contrast — ink on the page colour. A `danger`
-  button is quiet at rest (a row of apricot `×` buttons competed with the one
+  button is quiet at rest (a row of rose `×` buttons competed with the one
   step that was actually overdue) and colours only under the finger; inside
   `#overlay` it is loud, because there is one action there and it is the moment
   of consequence.
-- **A claimant's or a kind's colour is identity, not state**, so it comes from
-  its own muted family and never from sage or apricot. Those two are read as
-  "how is this going" everywhere else.
+- **A claimant's, a kind's or a section's colour is identity, not state**, so it
+  comes from the `--id-*` family and never from sage, amber or rose. Those three
+  are read as "how is this going" everywhere else — and the mistake is easy to
+  make by recolouring rather than rebuilding: swapping apricot for rose turned
+  the whole late panel rose-on-rose (prose, figure and button together) and made
+  the top of Waiting one continuous alarm. A late row is a **neutral card with a
+  coloured edge and a pill**, never a coloured card.
 
 A line on the sheet is a path and not a state, so it carries no hue either:
 sequence is neutral, dead sequence dimmer, and a loop back is legible by the
