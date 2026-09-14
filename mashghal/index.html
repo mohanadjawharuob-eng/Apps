@@ -680,6 +680,25 @@
     ask:   { label: "Decide", word: "decide", tone: "blue"  },
     file:  { label: "File",   word: "file",   tone: "verd"  }
   };
+  /* What a connection can mean, beyond "then". The graph could always express
+     all of these — a labelled flow edge is a branch, an edge to an earlier step
+     is a loop — but you had to know that, which made it invisible. Naming them
+     is the whole change: the model underneath is unchanged.
+
+     `wait` is the one that carries real meaning for a run: a step with several
+     ways in can either start when the FIRST of them arrives or wait for all of
+     them. The GIS run needs both — metadata can start once any area is
+     digitised, but filing waits for every one. */
+  var EDGE_KINDS = {
+    then:   { word: "then",         says: "comes after" },
+    yes:    { word: "if yes",       says: "when the answer is yes" },
+    no:     { word: "if no",        says: "when the answer is no" },
+    again:  { word: "go round",     says: "back for another pass" },
+    stop:   { word: "stop here",    says: "the way out of the loop" },
+    all:    { word: "and the rest", says: "waits for every way in" },
+    any:    { word: "whichever",    says: "starts on the first way in" }
+  };
+
   var THINGS = {
     person: "Person", file: "File", photo: "Photo", asset: "Kit",
     device: "Device", note: "Note"
@@ -945,8 +964,29 @@
       if (n.act === "ask" && answer && e.label !== answer) return;
       var t = nodeOf(b, e.b);
       if (!t) return;
+      /* A step whose ways in are marked "and the rest" does not start until
+         every one of them is done. Without this the label would be a lie: the
+         board would say a step waits for all of its inputs and the run would
+         start it on the first. The GIS example needs both readings — metadata
+         can begin once any area is digitised, filing waits for every one. */
+      if (!readyToEnter(b, t)) return;
       // Re-entering a step that ran before is a new pass of the cycle.
       t.doneAt = ""; t.answer = ""; t.enteredAt = today();
+    });
+  }
+
+  /* Whether a step may start yet. "Whichever comes first" is the default and
+     the old behaviour; "and the rest" holds the step until every way in has
+     been done. An unfinished predecessor that is itself unreachable would
+     deadlock the run, so only ways in that have actually been entered count —
+     a branch never taken cannot hold the work up for ever. */
+  function readyToEnter(b, t) {
+    var ins = b.edges.filter(function (e) { return e.k === "flow" && e.b === t.id; });
+    var all = ins.filter(function (e) { return e.join === "all"; });
+    if (!all.length) return true;
+    return !all.some(function (e) {
+      var from = nodeOf(b, e.a);
+      return from && from.enteredAt && !from.doneAt;
     });
   }
 
@@ -3832,7 +3872,9 @@ function dims(n) {
         "stroke-width": on ? 2 : 1.6, "stroke-linejoin": "round",
         "stroke-opacity": on ? 1 : 0.9, "marker-end": mk }));
 
-      var words = back ? (e.label ? e.label + " — goes back" : "goes back") : e.label;
+      var words = back ? (e.label ? e.label + " — goes back" : "goes back")
+                : e.join === "all" ? (e.label ? e.label + " · and the rest" : "and the rest")
+                : e.label;
       if (words) {
         var w = Math.min(150, 7 + String(words).length * 6.2);
         g.appendChild(svgEl("rect", { x: lx - w / 2, y: ly - 11, width: w, height: 15, rx: 4,
@@ -4137,20 +4179,24 @@ function dims(n) {
       message: "Sequence and association are different things and the board draws them differently. One is the order the work happens in; the other is a reference that has no order at all.",
       confirmLabel: "Connect",
       fields: [
-        { key: "k", label: "It means", type: "select", span: true, value: "flow", options: [
-          { value: "flow", label: "“" + clip(to.label, 24) + "” comes after “" + clip(from.label, 24) + "”" },
-          { value: "link", label: "They belong together, in no order" }
-        ] },
-        { key: "label", label: "Way out", type: "text", span: true, value: "",
-          hint: "Only for a question — the word on this way out, like “again” or “stop”. Leave it blank otherwise." }
+        { key: "k", label: "It means", type: "select", span: true, value: "then", options:
+          Object.keys(EDGE_KINDS).map(function (k) {
+            return { value: k, label: "“" + clip(to.label, 20) + "” " + EDGE_KINDS[k].says };
+          }).concat([{ value: "link", label: "They belong together, in no order" }]) },
+        { key: "label", label: "Or your own words", type: "text", span: true, value: "",
+          hint: "What this way out is called on the board. Left blank it takes the name above." }
       ],
       onConfirm: function (v) {
+        var isLink = v.k === "link";
+        var kind = EDGE_KINDS[v.k];
         go(function () {
           b.edges.push({ id: uid(), a: from.id, b: to.id,
-                         k: v.k === "link" ? "link" : "flow",
-                         label: v.k === "link" ? "" : v.label.trim() });
+                         k: isLink ? "link" : "flow",
+                         join: v.k === "all" ? "all" : v.k === "any" ? "any" : "",
+                         label: isLink ? "" :
+                           (v.label.trim() || (v.k === "then" ? "" : kind ? kind.word : "")) });
         });
-        toast(v.k === "link" ? "Linked" : "Connected");
+        toast(isLink ? "Linked" : "Connected — " + (kind ? kind.says : "comes after"));
       }
     });
   }
