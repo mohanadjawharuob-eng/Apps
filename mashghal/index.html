@@ -442,6 +442,33 @@
   /* A drawn icon in a row: it takes the colour of the row, so there is no
      second version for the light theme and none for a late panel either. */
   .ic { flex: 0 0 auto; display: inline-flex; color: var(--faint); }
+  /* Chips: what hangs off a step, and where it goes. Named on the step itself,
+     so the board stops being three tables you have to join. */
+  .chips { display: flex; gap: 5px; margin-top: 0.45rem; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.32rem;
+    padding: 0.18rem 0.5rem; background: var(--sunken); border: 1px solid var(--rule);
+    border-radius: 999px; font-size: 0.76rem; color: var(--dim); cursor: pointer;
+    transition: var(--t);
+  }
+  .chip:hover { color: var(--ink); border-color: var(--rule-mid); }
+  .chip .ci { display: inline-flex; }
+  .chip .ci svg { width: 13px; height: 13px; }
+  .chip.way { cursor: default; border-style: dashed; color: var(--faint); }
+  .chip.way:hover { color: var(--faint); border-color: var(--rule); }
+
+  /* Deleting a connection has to be possible somewhere, but it is not
+     something to read — so it folds away. */
+  .fold { margin: 1.6rem 0 0; }
+  .fold summary {
+    cursor: pointer; font-size: 0.84rem; color: var(--faint);
+    padding: 0.4rem 0; list-style: none;
+  }
+  .fold summary::-webkit-details-marker { display: none; }
+  .fold summary::before { content: "▸ "; color: var(--receded); }
+  .fold[open] summary::before { content: "▾ "; }
+  .fold summary:hover { color: var(--dim); }
+
   .strip { display: flex; gap: 5px; margin-top: 0.45rem; flex-wrap: wrap; }
   .tinypic {
     width: 46px; height: 34px; object-fit: cover; border-radius: 6px;
@@ -1391,20 +1418,37 @@
 
     h += canvasHtml(b);
 
+    /* One list, not three tables.
+
+       Steps, Things and Connections as separate lists meant the board could
+       only be read by cross-referencing: this step waits on somebody, and the
+       somebody is in another table, and the fact that they are connected is in
+       a third. So a step carries its own people, its own pictures and its own
+       ways out, in the row — and the only things listed separately are the ones
+       genuinely not attached to anything yet, which is a real state worth
+       seeing rather than a table to join.
+
+       The full list of connections survives behind a fold, because deleting one
+       has to be possible somewhere and the sheet is for drawing them, not for
+       tidying up. */
     var steps = b.nodes.filter(function (n) { return n.t === "step"; });
     var things = b.nodes.filter(function (n) { return n.t === "thing"; });
+    var loose = things.filter(function (n) { return !edgesOf(b, n.id, "link").length; });
 
-    h += '<div class="sect">Steps</div>';
-    h += steps.length ? '<div class="card">' + steps.map(function (n) { return stepRow(b, n); }).join("") + "</div>"
+    h += '<div class="sect">' + (isRun ? "Where the work is" : "The steps, in order") + "</div>";
+    h += steps.length ? '<div class="stack tight">' + steps.map(function (n) { return stepRow(b, n); }).join("") + "</div>"
                       : '<p class="empty">No steps yet. Add the first thing you actually do.</p>';
 
-    if (things.length) {
-      h += '<div class="sect">Things</div><div class="card">' +
-        things.map(function (n) { return thingRow(b, n); }).join("") + "</div>";
+    if (loose.length) {
+      h += '<div class="sect">On the board, not attached to anything</div>' +
+        '<p class="saynote" style="margin:-0.3rem 0 0.7rem">Drag from a step\u2019s handle to one of these to say where it belongs.</p>' +
+        '<div class="stack tight">' + loose.map(function (n) { return thingRow(b, n); }).join("") + "</div>";
     }
+
     if (b.edges.length) {
-      h += '<div class="sect">Connections</div><div class="card">' +
-        b.edges.map(function (e) { return edgeRow(b, e); }).join("") + "</div>";
+      h += '<details class="fold"><summary>All ' + b.edges.length +
+        " connections, if you need to remove one</summary><div class=\"stack tight\">" +
+        b.edges.map(function (e) { return edgeRow(b, e); }).join("") + "</div></details>";
     }
     return h;
   }
@@ -1476,12 +1520,34 @@ function stateWord(b, n) {
       '<div class="grow"><div class="nm sm">' + esc(n.label) + "</div>" +
       '<div class="says">' + esc(meta.join(" · ")) + "</div>" +
       (function () {
+        var out = "";
+        // Everything hanging off this step, named on the step itself.
+        var hangs = edgesOf(b, n.id, "link").map(function (e) {
+          return nodeOf(b, e.a === n.id ? e.b : e.a);
+        }).filter(function (t) { return t && !t.pic; });
+        if (hangs.length) {
+          out += '<div class="chips">' + hangs.map(function (t) {
+            return '<span class="chip" data-act="node-edit" data-id="' + b.id + ":" + t.id + '">' +
+              '<span class="ci">' + thingIcon(t.kind) + "</span>" + esc(clip(t.label, 22)) + "</span>";
+          }).join("") + "</div>";
+        }
         var pics = linkedPics(b, n);
-        if (!pics.length) return "";
-        return '<div class="strip">' + pics.map(function (t) {
-          return '<img class="tinypic" data-pic="' + esc(t.pic) + '" alt="" title="' +
-            esc(t.label) + '" data-act="pic-open" data-id="' + b.id + ":" + t.id + '">';
-        }).join("") + "</div>";
+        if (pics.length) {
+          out += '<div class="strip">' + pics.map(function (t) {
+            return '<img class="tinypic" data-pic="' + esc(t.pic) + '" alt="" title="' +
+              esc(t.label) + '" data-act="pic-open" data-id="' + b.id + ":" + t.id + '">';
+          }).join("") + "</div>";
+        }
+        // And where it goes, so the order is readable without the sheet.
+        var nexts = nextOf(b, n.id);
+        if (nexts.length > 1 || (nexts.length === 1 && nexts[0].label)) {
+          out += '<div class="chips">' + nexts.map(function (e) {
+            var t = nodeOf(b, e.b);
+            return '<span class="chip way">' + (e.label ? esc(e.label) + " → " : "then → ") +
+              esc(clip(t ? t.label : "?", 20)) + "</span>";
+          }).join("") + "</div>";
+        }
+        return out;
       })() + "</div>" +
       (isRun ? '<div class="age' + (late ? " bad" : st === "now" ? " ok" : "") + '">' +
         esc(stateWord(b, n)) + "</div>" : "") +
@@ -3502,7 +3568,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v26 · 14 Sep 2026";
+  var BUILD = "v27 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
