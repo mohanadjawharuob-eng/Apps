@@ -367,6 +367,21 @@
   .halo { animation: breathe 3.4s ease-in-out infinite; }
   @keyframes breathe { 0%, 100% { opacity: 0.1 } 50% { opacity: 0.3 } }
 
+  /* ---------------- writing a procedure in prose ---------------- */
+  .writegrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.6rem; align-items: start; }
+  .writebox { display: flex; flex-direction: column; gap: 0.7rem; }
+  #proseIn {
+    width: 100%; min-height: 340px; resize: vertical;
+    background: var(--sheet); color: var(--ink); border: 1px solid var(--rule);
+    border-radius: var(--r); padding: 1rem 1.1rem;
+    font-family: var(--sans); font-size: 0.95rem; line-height: 2;
+  }
+  #proseIn:focus { outline: none; border-color: var(--rule-mid); }
+  #proseIn::placeholder { color: var(--receded); }
+  .readback { min-width: 0; }
+  .made { font-size: 0.72rem; color: var(--brass); }
+  @media (max-width: 900px) { .writegrid { grid-template-columns: minmax(0, 1fr); } }
+
   /* ---------------- how a run stands, in the header ---------------- */
   .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin-top: 0.55rem; }
   .stand .sp { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.84rem; color: var(--ink); }
@@ -681,6 +696,10 @@
     },
 
     renderView: function (v) {
+      // "write" is a page, not a tab — reached from the rail and from Boards,
+      // and cleared the moment a tab is pressed, so a tab always lands on its
+      // own list rather than on whatever you were doing ten minutes ago.
+      if (v === "write")    return renderWrite();
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
@@ -689,7 +708,7 @@
     },
 
     // The switch bar lives outside the view, so render() never touches it.
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); },
+    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -939,6 +958,7 @@
     var h = pageHead("Boards", "A procedure is written once. A run is one pass through it.",
       '<div class="tools">' +
       '<button class="btn" data-act="board-new">New board</button>' +
+      '<button class="btn" data-act="prose-open">Write one in prose</button>' +
       (tpls.length ? '<button class="btn primary" data-act="run-start">Start a run</button>' : "") +
       "</div>");
 
@@ -2579,7 +2599,7 @@
         }).join("") + "</div>";
     }
 
-    h += '<button class="rwnew" data-act="board-new">Write a new procedure</button>';
+    h += '<button class="rwnew" data-act="prose-open">Write a new procedure</button>';
     el.innerHTML = h;
 
     // The count the design puts on the nav item itself, so "something is late"
@@ -2940,15 +2960,43 @@ function dims(n) {
         y += dims(n).h + 34;     // the next step in this column clears this one
       });
     });
+    /* Things are parked near what they hang off, above and below in turn, and
+       then nudged until they are clear of everything already placed. Two people
+       linked to the same send used to be dropped in the same spot, and a person
+       could land squarely on a step — which is what "send a draft to N. Aoun,
+       S. Frem" produced the first time a procedure was written in prose. */
+    var placed = b.nodes.filter(function (n) { return n.t === "step"; })
+      .map(function (n) { var d = dims(n); return { x: n.x, y: n.y, w: d.w, h: d.h }; });
+
+    function clashes(box) {
+      return placed.some(function (o) {
+        return Math.min(box.x + box.w, o.x + o.w) - Math.max(box.x, o.x) > 6 &&
+               Math.min(box.y + box.h, o.y + o.h) - Math.max(box.y, o.y) > 6;
+      });
+    }
+
     b.nodes.filter(function (n) { return n.t === "thing"; }).forEach(function (n, i) {
       var link = b.edges.filter(function (e) { return e.k === "link" && (e.a === n.id || e.b === n.id); })[0];
       var host = link ? nodeOf(b, link.a === n.id ? link.b : link.a) : null;
+      var d = dims(n);
+      var box;
       if (host && host.t === "step") {
-        n.x = host.x + 18;
-        n.y = host.y + (i % 2 === 0 ? -(TH + 78) : dims(host).h + 62);
+        var above = i % 2 === 0;
+        var step = 0;
+        do {
+          box = { x: host.x + 18 + step * 26,
+                  y: above ? host.y - (TH + 74) - step * (TH + 22)
+                           : host.y + dims(host).h + 58 + step * (TH + 22),
+                  w: d.w, h: d.h };
+          step++;
+        } while (clashes(box) && step < 8);
       } else {
-        n.x = 60 + i * 170; n.y = 120;
+        box = { x: 60 + i * 190, y: 110, w: d.w, h: d.h };
+        var g = 0;
+        while (clashes(box) && g < 8) { box.y -= TH + 22; g++; }
       }
+      n.x = box.x; n.y = box.y;
+      placed.push(box);
     });
   }
 
@@ -3426,6 +3474,275 @@ function dims(n) {
     }, { passive: false });
   }
 
+  /* ================= writing a procedure as prose =================
+
+     The most useful thing in the whole design round, and the thing that makes
+     the graph model bearable: you type the procedure the way you already write
+     it, and the app reads it back. Nobody drags nine boxes and eighteen arrows
+     to describe something they can say in nine lines.
+
+         design it
+         → send a draft to N. Aoun, S. Frem (remind me after 5 days)
+         → fix their notes
+         → go round again, or stop?
+             again → fix their notes
+             stop  → file the final version
+         → watch the printing
+         → archive
+
+     Two rules hold it honest.
+
+     It NEVER guesses. A line it cannot place comes back as unplaced, named, and
+     left for you — "keep the press quote near watch the printing" is either a
+     step or a thing hanging off one, and only the writer knows which. Guessing
+     would quietly put a wrong shape in the record, which is the failure this
+     whole app is built to avoid.
+
+     And nothing exists until it is accepted. parseProse() returns a reading;
+     it writes nothing. The screen shows what it understood, and a tap is what
+     commits it — the same discipline as the adviser proposing and never acting.
+  */
+
+  var ARROW = /^\s*(?:→|->|=>|>|·|\*|-|—|\d+[.)])\s+/;
+
+  // "(remind me after 5 days)", "(chase after 5d)", "(after 5 days)"
+  var RE_CHASE = /\((?:remind(?:\s+me)?|chase|check\s*back|nudge)?\s*(?:after\s*)?(\d+)\s*(?:d|days?)\)/i;
+  // "on Friday", "by 18 September", "at 3:45" — a date the writer states.
+  var RE_DATED = /\b(?:on|by|due)\s+([A-Z][a-z]+day|\d{1,2}\s+[A-Z][a-z]+|\d{4}-\d{2}-\d{2})\b/;
+
+  var VERBS = [
+    { act: "send",  re: /^(?:send|email|mail|share|submit|post|give)\b/i },
+    { act: "watch", re: /^(?:watch|monitor|wait|await|follow\s+up|track|chase)\b/i },
+    { act: "file",  re: /^(?:file|archive|put\s+away|store|upload|deposit|save)\b/i },
+    { act: "ask",   re: /\?\s*$/ }
+  ];
+
+  function actOf(text) {
+    for (var i = 0; i < VERBS.length; i++) if (VERBS[i].re.test(text)) return VERBS[i].act;
+    return "do";
+  }
+
+  // "send a draft to N. Aoun, S. Frem" -> ["N. Aoun", "S. Frem"]
+  function peopleIn(text) {
+    var m = /\bto\s+(.+?)(?:\s*\(|$)/i.exec(text);
+    if (!m) return [];
+    return m[1].split(/\s*(?:,|\band\b|&)\s*/)
+      .map(function (x) { return x.trim().replace(/[.;:]+$/, ""); })
+      .filter(function (x) {
+        // A name, not the rest of the sentence: short, and starting upper case.
+        return x && x.length <= 34 && /^[A-Z\u0600-\u06FF]/.test(x) && x.split(/\s+/).length <= 4;
+      });
+  }
+
+  function parseProse(text) {
+    var raw = String(text || "").split(/\n/);
+    var steps = [], exits = [], unplaced = [], people = {};
+
+    raw.forEach(function (line, idx) {
+      var t = line.replace(/\s+$/, "");
+      if (!t.trim()) return;
+      var indented = /^\s{2,}|^\t/.test(line);
+      var body = t.replace(ARROW, "").trim();
+      if (!body) return;
+
+      // An indented "again → fix their notes" is an EXIT of the question above
+      // it, not a step of its own. This is how a branch gets written by hand.
+      var ex = /^(.+?)\s*(?:→|->|=>)\s*(.+)$/.exec(body);
+      if (indented && ex) {
+        exits.push({ label: ex[1].trim(), target: ex[2].trim(), line: idx });
+        return;
+      }
+      // A line with no arrow, not indented, and not the first — the writer was
+      // saying something about the work rather than naming a step. Do not
+      // guess which: hand it back.
+      if (!ARROW.test(t) && steps.length && !indented) {
+        unplaced.push({ text: body, line: idx,
+          why: "a step of its own, or a thing hanging off one? It won't guess." });
+        return;
+      }
+
+      var chase = RE_CHASE.exec(body);
+      var dated = RE_DATED.exec(body);
+      var clean = body.replace(RE_CHASE, "").trim().replace(/\s{2,}/g, " ");
+      var act = actOf(clean);
+      var to = act === "send" ? peopleIn(clean) : [];
+      to.forEach(function (n) { people[n] = 1; });
+
+      steps.push({
+        label: cap(clean.replace(/\s*[.;]$/, "")),
+        act: act,
+        chaseDays: chase ? num(chase[1]) : (act === "send" || act === "watch" ? 0 : 0),
+        dueWords: dated ? dated[1] : "",
+        to: to,
+        line: idx
+      });
+    });
+
+    /* Each way out names where it goes. Matching an existing step is a jump or
+       a loop; naming one that has not been written yet MAKES it, because the
+       writer named it — in the worked example "file the final version" appears
+       only as the stop branch and is plainly a step. That is not the parser
+       guessing: it is taking the writer at their word. What it still refuses to
+       do is decide the SHAPE of a line nobody pointed anywhere. */
+    exits.forEach(function (x) {
+      var want = x.target.toLowerCase();
+      var hit = -1;
+      steps.forEach(function (st, i) {
+        var lab = st.label.toLowerCase();
+        if (hit < 0 && (lab === want || lab.indexOf(want) === 0 || want.indexOf(lab) === 0)) hit = i;
+      });
+      if (hit < 0) {
+        var made = { label: cap(x.target), act: actOf(x.target), chaseDays: 0,
+                     dueWords: "", to: [], line: x.line, made: true };
+        steps.push(made);
+        hit = steps.length - 1;
+      }
+      x.toIndex = hit;
+    });
+
+    return { steps: steps, exits: exits, unplaced: unplaced, people: Object.keys(people) };
+  }
+
+  // Turn an accepted reading into a real board. Separate from the parse on
+  // purpose: the parse is allowed to run on every keystroke, this is not.
+  function boardFromProse(name, benchId, kindId, read) {
+    var nodes = [], edges = [], byIdx = {};
+    read.steps.forEach(function (st, i) {
+      var n = { id: uid(), t: "step", act: st.act, label: st.label,
+                chaseDays: st.chaseDays || "", dueAt: "", enteredAt: "", doneAt: "", answer: "" };
+      byIdx[i] = n; nodes.push(n);
+    });
+    // Sequence: each step follows the one above, except where an exit already
+    // says otherwise — a question's ways out replace its straight-through.
+    var branched = {};
+    read.exits.forEach(function (x) {
+      var from = -1;
+      read.steps.forEach(function (st, i) { if (st.line < x.line) from = i; });
+      if (from < 0) return;
+      branched[from] = 1;
+      edges.push({ id: uid(), a: byIdx[from].id, b: byIdx[x.toIndex].id, k: "flow", label: x.label });
+    });
+    read.steps.forEach(function (st, i) {
+      if (i + 1 >= read.steps.length || branched[i]) return;
+      edges.push({ id: uid(), a: byIdx[i].id, b: byIdx[i + 1].id, k: "flow", label: "" });
+    });
+    // People named in a send become things, linked to the step that names them.
+    read.steps.forEach(function (st, i) {
+      st.to.forEach(function (who) {
+        var t = { id: uid(), t: "thing", kind: "person", label: who };
+        nodes.push(t);
+        edges.push({ id: uid(), a: t.id, b: byIdx[i].id, k: "link", label: "" });
+      });
+    });
+    return { id: uid(), kind: "template", name: name, benchId: benchId || "", kindId: kindId || "",
+             fromBoardId: "", nodes: nodes, edges: edges, startedOn: "", closedOn: "", archived: false };
+  }
+
+  /* The writing screen. Prose on the left, what it understood on the right,
+     and nothing written until it is accepted. */
+  var proseText = "";   // view state, never saved
+
+  var PROSE_SEED = [
+    "design it",
+    "→ send a draft to N. Aoun, S. Frem (remind me after 5 days)",
+    "→ fix their notes",
+    "→ send v2, ask for a backup",
+    "→ go round again, or stop?",
+    "    again → fix their notes",
+    "    stop → file the final version",
+    "→ watch the printing",
+    "→ archive"
+  ].join("\n");
+
+  function renderWrite() {
+    var read = parseProse(proseText);
+    var h = '<div class="finding"><h1>Write a procedure</h1></div>' +
+      '<p class="saynote">Type it the way you already write it. An arrow for what comes next, an indented line for a way out of a question, and brackets for when to be reminded.</p>';
+
+    h += '<div class="writegrid">';
+    h += '<div class="writebox"><textarea id="proseIn" spellcheck="false" placeholder="' +
+      esc(PROSE_SEED) + '">' + esc(proseText) + "</textarea>" +
+      '<div class="tools"><button class="btn" data-act="prose-seed">Use the worked example</button>' +
+      '<button class="btn" data-act="prose-clear">Clear</button></div></div>';
+
+    h += '<div class="readback">';
+    if (!read.steps.length) {
+      h += '<p class="empty">Nothing read yet. Every line becomes a step; nothing is written down until you accept it.</p>';
+    } else {
+      h += '<div class="sect" style="margin-top:0">Read back — ' +
+        read.steps.length + (read.steps.length === 1 ? " step" : " steps") + "</div>";
+      h += '<div class="stack tight">' + read.steps.map(function (st, i) {
+        var out = read.exits.filter(function (x) {
+          var from = -1;
+          read.steps.forEach(function (s2, j) { if (s2.line < x.line) from = j; });
+          return from === i;
+        });
+        return '<div class="panel calm"><div class="grow">' +
+          '<div class="nm sm">' + esc(st.label) + (st.made ? ' <span class="made">made from a way out</span>' : "") + "</div>" +
+          '<div class="says">' + esc(proseSays(st, read)) + "</div>" +
+          (out.length ? '<div class="says">' + out.map(function (x) {
+            return "<b>" + esc(x.label) + "</b> → " + esc(read.steps[x.toIndex].label) +
+              (x.toIndex <= i ? " <em>(goes back)</em>" : "");
+          }).join("<br>") + "</div>" : "") +
+          "</div></div>";
+      }).join("") + "</div>";
+
+      if (read.people.length) {
+        h += '<div class="sect">People it names</div><p class="saynote" style="margin:0">' +
+          esc(read.people.join(" · ")) + " — each becomes a thing hanging off the step that names them.</p>";
+      }
+    }
+
+    if (read.unplaced.length) {
+      h += '<div class="sect">' + (read.unplaced.length === 1 ? "One line it could not place" :
+        cap(numWord(read.unplaced.length)) + " lines it could not place") + "</div>" +
+        '<div class="stack tight">' + read.unplaced.map(function (u) {
+          return '<div class="panel dashed"><div class="grow">' +
+            '<div class="nm sm">“' + esc(u.text) + '”</div>' +
+            '<div class="says">' + esc(u.why) + " Left for you.</div></div></div>";
+        }).join("") + "</div>";
+    }
+
+    h += '<div class="tools" style="margin-top:1.2rem">' +
+      '<button class="btn primary" data-act="prose-accept"' + (read.steps.length ? "" : " disabled") + '>' +
+      (read.steps.length ? "Accept — " + read.steps.length + " steps" : "Nothing to accept") + "</button>" +
+      '<span class="saynote" style="margin:0;align-self:center">Nothing exists until you accept it.</span></div>';
+    h += "</div></div>";
+    return h;
+  }
+
+  /* Re-reads as you type, but debounced and never while the cursor is in the
+     box — re-rendering a textarea under someone's hands loses the caret, which
+     is the single most annoying thing a live preview can do. The reading is
+     refreshed on a pause and on blur. */
+  var proseTimer = null;
+  function mountProse() {
+    var ta = document.getElementById("proseIn");
+    if (!ta) return;
+    ta.addEventListener("input", function () {
+      proseText = ta.value;
+      if (proseTimer) clearTimeout(proseTimer);
+      proseTimer = setTimeout(function () {
+        proseTimer = null;
+        var at = ta.selectionStart;
+        render();
+        var again = document.getElementById("proseIn");
+        if (again) { again.focus(); try { again.setSelectionRange(at, at); } catch (e) {} }
+      }, 500);
+    });
+    ta.addEventListener("blur", function () { proseText = ta.value; });
+  }
+
+  function proseSays(st, read) {
+    var bits = [ACTS[st.act].label];
+    if (st.act === "send" && st.to.length) bits.push("to " + st.to.join(" and "));
+    if (st.chaseDays) bits.push("remind after " + st.chaseDays + " days");
+    else if (st.act === "send" || st.act === "watch") bits.push("no reminder set");
+    if (st.act === "file") bits.push("will block closing");
+    if (st.dueWords) bits.push("dated: " + st.dueWords);
+    return bits.join(" · ");
+  }
+
   /* ================= actions ================= */
 
   function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
@@ -3881,6 +4198,35 @@ function dims(n) {
       if (!n) return;
       go(function () { n.chasedAt = nowStamp(); n.chases = chaseCount(n) + 1; });
       toast("Chased. Next nudge in " + (n.chaseDays || "?") + " days.");
+    },
+    /* Writing a procedure in prose. The parse runs on every keystroke because
+       it writes nothing; only accept does. */
+    "prose-open": function () { proseText = proseText || ""; view = "write"; openId = ""; render(); },
+    "prose-seed": function () { proseText = PROSE_SEED; render(); },
+    "prose-clear": function () { proseText = ""; render(); },
+    "prose-accept": function () {
+      var read = parseProse(proseText);
+      if (!read.steps.length) { toast("Nothing to accept yet."); return; }
+      openModal({
+        title: "Name the procedure",
+        message: "It will be written down as " + read.steps.length + " steps" +
+          (read.exits.length ? " with " + read.exits.length + " way" + (read.exits.length === 1 ? "" : "s") + " out" : "") +
+          (read.unplaced.length ? ". The " + (read.unplaced.length === 1 ? "line" : "lines") +
+            " it could not place will not be included." : "."),
+        confirmLabel: "Write it down",
+        fields: [
+          { key: "name", label: "Called", type: "text", span: true, value: "", placeholder: "Print a brochure" },
+          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: "" },
+          { key: "kindId", label: "Kind", type: "select", options: kindOpts(), value: "" }
+        ],
+        validate: function (v) { return v.name.trim() ? null : "Give it a name you will recognise."; },
+        onConfirm: function (v) {
+          var b = boardFromProse(v.name.trim(), v.benchId, v.kindId, read);
+          go(function () { state.boards.push(b); autoLayout(b); openId = b.id; view = "boards"; });
+          proseText = "";
+          toast("Written down — " + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps");
+        }
+      });
     },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
