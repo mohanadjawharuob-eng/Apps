@@ -670,13 +670,21 @@
       { id: "boards",  label: "Boards",   ico: "◱" },
       { id: "waiting", label: "Waiting",  ico: "◴" },
       { id: "week",    label: "The week", ico: "▤" },
-      { id: "kit",     label: "Kit",      ico: "◈" },
+      { id: "jobs",    label: "Jobs",     ico: "◈" },
       { id: "settings",label: "Settings", ico: "⚙" }
     ],
 
     blank: function () {
       return {
         version: 1,
+        /* A job is the top of the hierarchy and holds everything about one
+           engagement: which claimants it bills to, which modes of work it
+           involves, the benches those make, and its boards. It exists because
+           "claimant", "mode" and "bench" are the app's words for parts of a
+           thing a person calls one job — so the parts stay, and a job is the
+           bag you actually open. The kit folds in here too, rather than being
+           a tab of its own that has to be decoded. */
+        jobs: [],        // {id,name,colour,note,noteAt,software[],links[],archived}
         kinds: [],       // {id,name,colour}
         claimants: [],   // {id,name,kind,hours,colour,archived}
         modes: [],       // {id,name,software[],links[],archived}
@@ -697,7 +705,7 @@
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
+      ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       ["forgotten", "tombstones", "devices"].forEach(function (k) {
@@ -724,17 +732,20 @@
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
-      if (v === "kit")      return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
+      if (v === "jobs")     return openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" }) : renderJobs();
+      if (v === "vocab")    return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
       return renderSettings();
     },
 
     // The switch bar lives outside the view, so render() never touches it.
+    beforeRender: function () { if (ensureJobs()) save(); },
+
     afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; },
 
     actions: {}
   };
@@ -1337,6 +1348,184 @@
   }
 
   /* ================= Kit ================= */
+
+  /* The list of jobs, and then one job with everything about it on one page.
+     There is no Kit tab any more: the software, the links and the note about
+     where you left off are sections of the job that hands them to you, which is
+     where you would look for them. */
+  function jobDialog(j) {
+    openModal({
+      title: j ? "Rename the job" : "New job",
+      message: j ? "" : "A job is one engagement — an employer, a scholarship, a visa, a thesis. It holds the benches you sit at for it and the boards you run for it.",
+      confirmLabel: j ? "Save" : "Create",
+      fields: [
+        { key: "name", label: "Called", type: "text", span: true, value: j ? j.name : "",
+          placeholder: "AUB Tripoli 21st Century" },
+        { key: "note", label: "Where you left off", type: "text", span: true, value: j ? (j.note || "") : "",
+          hint: "One line, for the version of you that comes back to it." }
+      ],
+      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          var t = j;
+          if (!t) { t = { id: uid(), software: [], links: [], archived: false }; state.jobs.push(t); }
+          t.name = v.name.trim();
+          if ((v.note || "").trim() !== (t.note || "")) { t.note = v.note.trim(); t.noteAt = nowStamp(); }
+        });
+      }
+    });
+  }
+  function jobSwDialog(j) {
+    if (!j) return;
+    openModal({
+      title: "Add software", confirmLabel: "Add",
+      message: "A name, and the path you would paste into Win+R to open it.",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: "", placeholder: "ArcGIS Pro" },
+        { key: "path", label: "Path", type: "text", span: true, value: "",
+          hint: "Left blank it is just a reminder that this job uses it." }
+      ],
+      validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
+      onConfirm: function (v) {
+        go(function () {
+          j.software = j.software || [];
+          j.software.push({ id: uid(), label: v.label.trim(), path: v.path.trim() });
+        });
+      }
+    });
+  }
+  function jobLinkDialog(j) {
+    if (!j) return;
+    openModal({
+      title: "Add a link", confirmLabel: "Add",
+      fields: [
+        { key: "label", label: "Name", type: "text", span: true, value: "", placeholder: "AUB mail, this project" },
+        { key: "url", label: "URL", type: "text", span: true, value: "",
+          placeholder: "obsidian://search?query=AUB", hint: "Any scheme, not only http." }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Give it a name.";
+        if (!/^[a-z][a-z0-9+.-]*:/i.test(v.url.trim())) return "A URL needs a scheme — https:, obsidian:, mailto: and so on.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          j.links = j.links || [];
+          j.links.push({ id: uid(), label: v.label.trim(), url: v.url.trim() });
+        });
+      }
+    });
+  }
+
+  function renderJobs() {
+    var js = jobs();
+    var h = '<div class="finding"><h1>' +
+      (js.length ? (js.length === 1 ? "One job." : cap(numWord(js.length)) + " jobs.") : "No jobs yet.") +
+      "</h1></div>" +
+      '<p class="saynote">A job is a bag: the benches you sit at for it, the boards you run for it, and what it hands you when you arrive.</p>' +
+      '<div class="tools" style="margin-bottom:1.2rem"><button class="btn primary" data-act="job-add">New job</button>' +
+      '<button class="btn" data-act="tab-vocab">Claimants, modes and benches</button></div>';
+
+    if (!js.length) {
+      return h + '<p class="empty">Nothing yet. A job is AUB Tripoli 21st Century, or a visa, or a thesis — anything that has its own work and its own things.</p>';
+    }
+
+    h += '<div class="stack">' + js.map(function (j) {
+      var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
+      var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
+      return '<div class="panel' + (late ? " late" : "") + '" data-act="job-open" data-id="' + j.id + '" style="cursor:pointer">' +
+        '<div class="grow"><div class="nm">' + esc(j.name) + "</div>" +
+        '<div class="says">' + esc(jobSays(j, bs.length, d.length)) + "</div></div>" +
+        (late ? '<div class="bigage"><b>' + late + "</b><span>" +
+          (late === 1 ? "late" : "late") + "</span></div>" : "") + "</div>";
+    }).join("") + "</div>";
+    return h;
+  }
+
+  function jobSays(j, runs, waiting) {
+    var bits = [];
+    var bn = jobBenches(j.id).length;
+    bits.push(bn ? bn + (bn === 1 ? " bench" : " benches") : "no bench yet");
+    bits.push(runs ? runs + (runs === 1 ? " run under way" : " runs under way") : "nothing running");
+    if (waiting) bits.push(waiting + " waiting on you");
+    if (j.note) bits.push("you left off: " + j.note);
+    return bits.join(" · ");
+  }
+
+  function renderJob(j) {
+    var d = jobDues(j.id);
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var runs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
+    var tpls = jobBoards(j.id).filter(function (b) { return b.kind === "template"; });
+
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="job-back">All jobs</button>' +
+      '<button class="btn" data-act="job-edit" data-id="' + j.id + '">Rename</button>' +
+      '<button class="btn" data-act="job-sw-add" data-id="' + j.id + '">Add software</button>' +
+      '<button class="btn" data-act="job-link-add" data-id="' + j.id + '">Add a link</button>' +
+      '<button class="btn danger" data-act="job-del" data-id="' + j.id + '">Delete</button></div>';
+
+    var h = '<div class="page-head"><div><h2>' + esc(j.name) + "</h2>" +
+      "<p>" + esc(jobSays(j, runs.length, d.length)) + "</p>" +
+      '<div class="stand">' +
+      (late ? '<span class="sp"><i class="d-late"></i>' + cap(numWord(late)) + " late</span>" : "") +
+      (d.length - late ? '<span class="sp"><i class="d-hand"></i>' + cap(numWord(d.length - late)) + " in hand</span>" : "") +
+      (!d.length ? '<span class="sp muted">Nothing waiting</span>' : "") +
+      "</div></div>" + tools + "</div>";
+
+    // Where you sit for this job — one tap each.
+    var bs = jobBenches(j.id);
+    h += '<div class="sect">Where you sit for it</div>';
+    h += bs.length ? '<div class="tools">' + bs.map(function (bn) {
+      var here = openSpan() && openSpan().benchId === bn.id;
+      return '<button class="btn' + (here ? " primary" : "") + '" data-act="bench-go" data-id="' + bn.id + '">' +
+        esc(benchLabel(bn.id)) + (here ? " · here now" : "") + "</button>";
+    }).join("") + "</div>"
+      : '<p class="empty">No bench yet. A bench is a claimant and a craft together — add one under “Claimants, modes and benches”.</p>';
+
+    if (j.note) {
+      h += '<div class="sect">Where you left off</div>' +
+        '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(j.note) + "</div>" +
+        '<div class="says">' + esc(j.noteAt ? "Written " + agoWords(j.noteAt) : "") + "</div></div></div>";
+    }
+
+    h += '<div class="sect">Running</div>';
+    h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
+      var bd = dues().filter(function (x) { return x.board.id === b.id; });
+      var bl = bd.filter(function (x) { return x.st === "over"; }).length;
+      return '<div class="panel calm' + (bl ? " late" : "") + '" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+        '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+        '<div class="says">' + (bl ? bl + " late · " : "") + bd.length + " waiting · " +
+        runProgress(b).done + " of " + runProgress(b).total + " done</div></div></div>";
+    }).join("") + "</div>" : '<p class="empty">Nothing running for this job.</p>';
+
+    if (tpls.length) {
+      h += '<div class="sect">Procedures for it</div><div class="stack tight">' + tpls.map(function (b) {
+        return '<div class="panel calm" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps</div></div></div>";
+      }).join("") + "</div>";
+    }
+
+    h += '<div class="sect">What it hands you</div>';
+    var sw = j.software || [], lk = j.links || [];
+    h += (sw.length || lk.length) ? '<div class="stack tight">' +
+      sw.map(function (x) {
+        return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
+          '<div class="says">' + esc(x.path || "no path — just a reminder that this job uses it") + "</div></div>" +
+          '<div class="acts">' + (x.path ? '<button class="btn quiet" data-act="job-sw-copy" data-id="' +
+          j.id + ":" + x.id + '">Copy path</button>' : "") +
+          '<button class="btn quiet danger" data-act="job-sw-del" data-id="' + j.id + ":" + x.id + '">×</button></div></div>';
+      }).join("") +
+      lk.map(function (x) {
+        return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
+          '<div class="says">' + esc(x.url) + "</div></div>" +
+          '<div class="acts"><a class="btn quiet" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open</a>' +
+          '<button class="btn quiet danger" data-act="job-link-del" data-id="' + j.id + ":" + x.id + '">×</button></div></div>';
+      }).join("") + "</div>"
+      : '<p class="empty">Nothing yet. A path you would paste into Win+R, or a link to the filtered inbox for this job.</p>';
+    return h;
+  }
 
   function renderKit() {
     var h = pageHead("Kit", "Everything here is yours to add, rename and remove. None of it is written into the app.");
@@ -2135,7 +2324,7 @@
   //
   // Nothing here ever reaches `state`: the token and the passphrase live in
   // their own storage keys, so a backup of the book carries neither.
-  var SYNC_LISTS = ["kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var SYNC_LISTS = ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
   var TOK_KEY = "mashghal.sync.token";
   var PASS_KEY = "mashghal.sync.pass";
   var DEV_KEY = "mashghal.sync.device";
@@ -2680,6 +2869,88 @@
       });
   }
 
+  /* ================= jobs =================
+
+     A job is the bag: one engagement, holding the benches you sit at for it,
+     the boards you run for it, and the kit it hands you. "Claimant", "mode"
+     and "bench" are the app's words for parts of a thing a person calls one
+     job — so the parts stay, because the hours still have to be owed to
+     somebody and the work still has a craft, but the job is what you open.
+
+     Migration derives one job per claimant, because that is what a claimant
+     already was in practice. Nothing is deleted and nothing is renamed: a
+     bench and a board gain a jobId and keep everything else, so a book written
+     before jobs existed opens with its work already filed. */
+  var openJob = "";   // view state, never saved
+
+  function jobs() { return live(state.jobs); }
+  function jobOf(id) { return byId(state.jobs, id); }
+  function jobName(id) {
+    var j = jobOf(id);
+    return j ? j.name : (state.forgotten[id] ? state.forgotten[id] + " (removed)" : "No job");
+  }
+
+  function ensureJobs() {
+    if (!Array.isArray(state.jobs)) state.jobs = [];
+    var touched = false;
+    // Cheap exit for the overwhelmingly common case: already filed.
+    if (state.jobs.length &&
+        !live(state.benches).some(function (b) { return !b.jobId; }) &&
+        !state.boards.some(function (b) { return !b.jobId && b.benchId; })) return false;
+    // One job per claimant, the first time a book meets this.
+    if (!state.jobs.length && live(state.claimants).length) {
+      live(state.claimants).forEach(function (c) {
+        state.jobs.push({ id: uid(), name: c.name, colour: c.colour || "",
+                          claimantId: c.id, note: "", noteAt: "",
+                          software: [], links: [], archived: false });
+      });
+      touched = true;
+    }
+    var byClaimant = {};
+    state.jobs.forEach(function (j) { if (j.claimantId) byClaimant[j.claimantId] = j.id; });
+
+    // A bench belongs to the job of its claimant; a board to the job of its bench.
+    live(state.benches).forEach(function (bn) {
+      if (!bn.jobId && byClaimant[bn.claimantId]) { bn.jobId = byClaimant[bn.claimantId]; touched = true; }
+    });
+    state.boards.forEach(function (b) {
+      if (b.jobId) return;
+      var bn = b.benchId && byId(state.benches, b.benchId);
+      if (bn && bn.jobId) { b.jobId = bn.jobId; touched = true; }
+    });
+    // The kit was hung off a mode. It belongs to the job you are doing, since
+    // that is what actually hands it to you.
+    state.jobs.forEach(function (j) {
+      if (j.software && j.software.length) return;
+      var modes = jobModes(j.id);
+      var sw = [], lk = [];
+      modes.forEach(function (m) {
+        (m.software || []).forEach(function (x) { sw.push(x); });
+        (m.links || []).forEach(function (x) { lk.push(x); });
+      });
+      if (sw.length || lk.length) { j.software = sw; j.links = lk; touched = true; }
+    });
+    return touched;
+  }
+
+  function jobBenches(id) {
+    return live(state.benches).filter(function (bn) { return bn.jobId === id; });
+  }
+  function jobModes(id) {
+    var seen = {}, out = [];
+    jobBenches(id).forEach(function (bn) {
+      var m = byId(state.modes, bn.modeId);
+      if (m && !seen[m.id]) { seen[m.id] = 1; out.push(m); }
+    });
+    return out;
+  }
+  function jobBoards(id) {
+    return state.boards.filter(function (b) { return b.jobId === id && !b.archived; });
+  }
+  function jobDues(id) {
+    return dues().filter(function (d) { return d.board.jobId === id; });
+  }
+
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
 
@@ -2722,7 +2993,7 @@
     var tpls = boards("template");
     var groups = {}, order = [];
     live.forEach(function (b) {
-      var key = b.benchId ? benchLabel(b.benchId) : "No employer";
+      var key = b.jobId ? jobName(b.jobId) : b.benchId ? benchLabel(b.benchId) : "No job";
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(b);
     });
@@ -4503,6 +4774,49 @@ function dims(n) {
           .catch(function (e) { toast(e && e.message ? e.message : "Could not put it back."); });
       });
     },
+    /* ---- jobs ---- */
+    "job-open": function (id) { openJob = id; view = "jobs"; render(); },
+    "job-back": function () { openJob = ""; render(); },
+    "tab-vocab": function () { view = "vocab"; openMode = ""; render(); },
+    "job-add": function () { jobDialog(null); },
+    "job-edit": function (id) { jobDialog(jobOf(id)); },
+    "job-del": function (id) {
+      var j = jobOf(id); if (!j) return;
+      var bn = jobBenches(id).length, bd = jobBoards(id).length;
+      confirmAction({
+        title: "Remove " + j.name + "?",
+        message: "Its " + bn + " bench" + (bn === 1 ? "" : "es") + " and " + bd + " board" +
+          (bd === 1 ? "" : "s") + " stay exactly as they are — they simply stop being filed under a job. " +
+          "Nothing recorded is deleted, and the name is kept so old entries still read “" +
+          j.name + " (removed)”."
+      }, function () {
+        go(function () {
+          state.forgotten[j.id] = j.name;
+          state.jobs = state.jobs.filter(function (x) { return x.id !== j.id; });
+          openJob = "";
+        });
+        toast("Removed — nothing else was touched");
+      });
+    },
+    "job-sw-add": function (id) { jobSwDialog(jobOf(id)); },
+    "job-sw-del": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]); if (!j) return;
+      go(function () { j.software = (j.software || []).filter(function (x) { return x.id !== q[1]; }); });
+    },
+    "job-sw-copy": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]);
+      var x = j && (j.software || []).filter(function (y) { return y.id === q[1]; })[0];
+      if (!x || !x.path) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(x.path).then(function () { toast("Copied — Win+R, paste, Enter"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+    "job-link-add": function (id) { jobLinkDialog(jobOf(id)); },
+    "job-link-del": function (id) {
+      var q = String(id).split(":"), j = jobOf(q[0]); if (!j) return;
+      go(function () { j.links = (j.links || []).filter(function (x) { return x.id !== q[1]; }); });
+    },
     "theme": function (id) { setTheme(id); },
     "sync-copy-id": function () {
       var id = String(syncCfg().gistId || "");
@@ -5004,6 +5318,7 @@ function dims(n) {
       wireAutoSync();
       return;
     }
+    if (ensureJobs()) save();
     if (ensureStamps()) save();
     if (borrowed()) armBorrowed();
     // Opening the app is itself a reason to pull: the other device has been
