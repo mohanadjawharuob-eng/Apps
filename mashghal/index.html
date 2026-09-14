@@ -708,7 +708,7 @@
     },
 
     // The switch bar lives outside the view, so render() never touches it.
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); },
+    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -1389,6 +1389,12 @@
       '<div class="tools"><button class="btn" data-act="backup">Export backup</button>' +
       '<button class="btn" data-act="restore">Restore a backup</button></div>' +
       '<p class="hint">A backup is a plain JSON file. Restoring replaces everything in the app with what is in the file.</p></div>';
+
+    h += '<div class="card"><h3>Kept by itself</h3>' +
+      '<p class="card-sub" id="bkSub">Looking…</p>' +
+      '<p class="hint" style="margin:0 0 0.6rem">A snapshot of the whole book, taken when you change something and at most a few times a day, ' + BK_KEEP + ' kept. Sync and a backup are different jobs: sync sends the state you are in now, so a bad delete travels to every device promptly — a backup is the state you were in before it. <b>These live on this device only.</b> A dropped laptop takes them with it, so still export a file somewhere else now and then.</p>' +
+      '<div id="bkList"></div>' +
+      '<div class="tools" style="margin-top:0.6rem"><button class="btn" data-act="bk-now">Take one now</button></div></div>';
 
     h += '<div class="card"><h3>Start with an example</h3>' +
       '<p class="card-sub">A worked book you can take apart</p>' +
@@ -2522,6 +2528,135 @@
       try { localStorage.removeItem(APP.storeKey); localStorage.removeItem(DEV_KEY); } catch (e) {}
       dropSecrets();
     });
+  }
+
+  /* ================= backups that happen without being asked =================
+
+     Sync and a backup are different jobs and one does not cover the other.
+     Sync propagates the CURRENT state — so a mistake propagates too, promptly
+     and to every device. A backup preserves an EARLIER one, which is the only
+     thing that helps after a bad delete or a sample loaded over a real book.
+
+     Kept in IndexedDB rather than localStorage, because a rolling set of whole
+     books would crowd out the book itself and browsers scope that quota to the
+     site, which five sibling apps share. Ten are kept: roughly a fortnight at
+     one a day, and small — a large book is a few hundred KB of text.
+
+     It is still not an off-device copy, and the screen says so. A dropped
+     laptop takes these with it. */
+  var BK_DB = "mashghal-backups", BK_STORE = "snaps", BK_KEEP = 10;
+  var BK_MIN_GAP = 6 * 60 * 60 * 1000;   // at most four a day
+  var bkLast = 0;
+
+  function bkOpen() {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) { rej(new Error("no IndexedDB")); return; }
+      var r = indexedDB.open(BK_DB, 1);
+      r.onupgradeneeded = function () {
+        if (!r.result.objectStoreNames.contains(BK_STORE)) {
+          r.result.createObjectStore(BK_STORE, { keyPath: "at" });
+        }
+      };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error || new Error("could not open")); };
+    });
+  }
+  function bkTx(mode, fn) {
+    return bkOpen().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(BK_STORE, mode);
+        var out = fn(tx.objectStore(BK_STORE));
+        tx.oncomplete = function () { res(out && out.result !== undefined ? out.result : out); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  function bkList() {
+    return bkTx("readonly", function (st) { return st.getAll(); })
+      .then(function (rows) {
+        return (rows || []).sort(function (a, z) { return a.at < z.at ? 1 : -1; });
+      })
+      .catch(function () { return []; });
+  }
+
+  /* Taken on a change, but rate-limited: a snapshot per keystroke is not a
+     history, it is noise that pushes the useful one out of the window. */
+  function bkMaybe() {
+    var now = Date.now();
+    if (now - bkLast < BK_MIN_GAP) return;
+    bkLast = now;
+    bkSnap("automatic");
+  }
+  function bkSnap(why) {
+    var body;
+    try { body = JSON.stringify(payload()); } catch (e) { return Promise.resolve(); }
+    var row = { at: stampNow(), why: why || "automatic", bytes: body.length, body: body };
+    return bkTx("readwrite", function (st) { st.put(row); })
+      .then(bkList)
+      .then(function (rows) {
+        var extra = rows.slice(BK_KEEP);
+        if (!extra.length) return;
+        return bkTx("readwrite", function (st) {
+          extra.forEach(function (r) { st.delete(r.at); });
+        });
+      })
+      .catch(function () {});
+  }
+  // Rendered after the fact because IndexedDB is asynchronous and renderView
+  // is not — the card paints "Looking…" and fills itself in.
+  function mountBackups() {
+    var list = document.getElementById("bkList");
+    if (!list) return;
+    bkList().then(function (rows) {
+      var sub = document.getElementById("bkSub");
+      if (sub) {
+        sub.textContent = rows.length
+          ? rows.length + (rows.length === 1 ? " snapshot, newest " : " snapshots, newest ") +
+            agoWords(rows[0].at)
+          : "None yet — one is taken the next time you change something";
+      }
+      if (!rows.length) { list.innerHTML = ""; return; }
+      list.innerHTML = '<div class="stack tight">' + rows.map(function (r) {
+        return '<div class="panel calm"><div class="grow">' +
+          '<div class="nm sm">' + esc(whenWords(r.at)) + "</div>" +
+          '<div class="says">' + esc(r.why === "automatic" ? "Taken by itself" : "Taken by hand") +
+          " · " + Math.max(1, Math.round(r.bytes / 1024)) + " KB</div></div>" +
+          '<div class="acts"><button class="btn quiet" data-act="bk-restore" data-id="' +
+          esc(r.at) + '">Put this back</button></div></div>';
+      }).join("") + "</div>";
+    });
+  }
+
+  function whenWords(stamp) {
+    var d = new Date(stamp);
+    if (isNaN(d.getTime())) return String(stamp);
+    return dayName(iso(d), "long") + " " + d.getDate() + ", " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  function agoWords(stamp) {
+    var mins = Math.round((Date.now() - new Date(stamp).getTime()) / 60000);
+    if (mins < 1) return "a moment ago";
+    if (mins < 60) return mins + " minutes ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+    var days = Math.round(hrs / 24);
+    return days + (days === 1 ? " day ago" : " days ago");
+  }
+
+  function bkRestore(at) {
+    return bkTx("readonly", function (st) { return st.get(at); })
+      .then(function (row) {
+        if (!row) throw new Error("That snapshot is gone.");
+        var parsed = JSON.parse(row.body);
+        // Through APP.hydrate, which is this app's single adoption point —
+        // hand-copying a key list here is exactly how Coffer lost grants once.
+        var keepSync = syncCfg();
+        state = APP.hydrate(parsed, APP.blank());
+        state.settings.sync = keepSync;
+        snap = {};
+        ensureStamps();
+        save(); render();
+        return row;
+      });
   }
 
   var THEME_KEY = "mashghal.theme";
@@ -3746,7 +3881,7 @@ function dims(n) {
   /* ================= actions ================= */
 
   function split(id) { var p = String(id).split(":"); return { b: byId(state.boards, p[0]), n: p[1] }; }
-  function go(fn) { fn(); stampRecords(); save(); render(); syncSoon(); }
+  function go(fn) { fn(); stampRecords(); save(); render(); syncSoon(); bkMaybe(); }
 
   function editNode(b, n) { APP.actions["node-edit"](b.id + ":" + n.id); }
 
@@ -4226,6 +4361,22 @@ function dims(n) {
           proseText = "";
           toast("Written down — " + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps");
         }
+      });
+    },
+    "bk-now": function () {
+      bkSnap("by hand").then(function () { toast("Snapshot taken"); render(); });
+    },
+    "bk-restore": function (at) {
+      confirmAction({
+        title: "Put this snapshot back?",
+        message: "Everything in the app now is replaced by the book as it was at " +
+          whenWords(at) + ". How this device reaches a synced book is kept. " +
+          "A snapshot is taken of where you are first, so this is undoable.",
+        confirmLabel: "Put it back"
+      }, function () {
+        bkSnap("by hand").then(function () { return bkRestore(at); })
+          .then(function () { toast("Put back — " + whenWords(at)); })
+          .catch(function (e) { toast(e && e.message ? e.message : "Could not put it back."); });
       });
     },
     "theme": function (id) { setTheme(id); },
