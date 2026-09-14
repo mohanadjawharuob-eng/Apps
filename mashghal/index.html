@@ -198,11 +198,11 @@
   /* ---------------- shell ---------------- */
   .shell { display: flex; min-height: 100vh; }
   .rail {
-    width: 218px; flex: none; border-right: 1px solid var(--rule);
-    background: var(--surface); padding: 1.1rem 0 1.4rem;
-    display: flex; flex-direction: column;
+    width: 264px; flex: none; border-right: 1px solid var(--rule);
+    background: var(--rail); padding: 1.1rem 0 1.4rem;
+    display: flex; flex-direction: column; overflow: hidden;
   }
-  .brand { display: flex; align-items: baseline; gap: 0.6rem; padding: 0 1rem 1rem; }
+  .brand { display: flex; align-items: baseline; gap: 0.6rem; padding: 0 1rem 0.15rem; }
   .brand-mark { font-size: 1.55rem; line-height: 1; color: var(--ink); font-family: var(--display); }
   .brand h1 { margin: 0; font-size: 0.78rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brass); font-weight: 600; }
   #nav { display: flex; flex-direction: column; gap: 1px; padding: 0 0.55rem; }
@@ -366,6 +366,45 @@
   g[data-id]:hover .nd { transform: translateY(-2px) scale(1.02); filter: brightness(1.13); }
   .halo { animation: breathe 3.4s ease-in-out infinite; }
   @keyframes breathe { 0%, 100% { opacity: 0.1 } 50% { opacity: 0.3 } }
+
+  /* ---------------- how a run stands, in the header ---------------- */
+  .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin-top: 0.55rem; }
+  .stand .sp { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.84rem; color: var(--ink); }
+  .stand .sp.muted { color: var(--faint); }
+  .stand i { width: 7px; height: 7px; border-radius: 99px; }
+  .stand i.d-late { background: var(--apricot); }
+  .stand i.d-hand { background: var(--sage); }
+
+  /* ---------------- the work, in the rail ---------------- */
+  .brand-sub { margin: 0 0 0.9rem; padding: 0 1rem; font-size: 0.76rem; color: var(--faint); line-height: 1.4; }
+  .railwork { padding: 1.1rem 0.55rem 0; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; min-height: 0; }
+  .rwgroup { display: flex; flex-direction: column; gap: 0.1rem; }
+  .rwhead { padding: 0 0.6rem 0.3rem; font-size: 0.72rem; color: var(--receded); }
+  .rwrow {
+    display: flex; align-items: center; gap: 0.55rem; width: 100%;
+    padding: 0.42rem 0.6rem; background: none; border: 0; border-radius: 10px;
+    color: var(--ink); font: inherit; font-size: 0.85rem; text-align: left; cursor: pointer;
+    transition: background var(--t), color var(--t);
+  }
+  .rwrow:hover { background: var(--raised); }
+  .rwrow.on { background: var(--raised); }
+  .rwrow.quiet { color: var(--dim); }
+  .rwdot { width: 7px; height: 7px; border-radius: 99px; flex: 0 0 auto; }
+  .rwdot.late { background: var(--apricot); }
+  .rwdot.live { background: var(--sage); }
+  .rwdot.idle { background: none; border: 1px solid var(--rule-mid); }
+  .rwname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rwn { font-size: 0.76rem; color: var(--faint); }
+  .rwn.bad { color: var(--apricot); }
+  .rwnew {
+    margin: 0.2rem 0.6rem 0; padding: 0.5rem 0; background: none; border: 0;
+    color: var(--dim); font: inherit; font-size: 0.83rem; text-align: left; cursor: pointer;
+  }
+  .rwnew:hover { color: var(--ink); }
+  /* The count rides the nav item, so "something is late" is visible from every
+     screen rather than only from the one that says so. */
+  .tabn { margin-left: auto; font-size: 0.76rem; color: var(--apricot); }
+  @media (max-width: 880px) { .railwork, .brand-sub { display: none; } }
 
   /* ---------------- the finding, and panels that carry prose ----------------
      Replaces the pills and the tile row. A state is a sentence here, so the
@@ -534,7 +573,11 @@
 <div class="shell">
   <aside class="rail">
     <div class="brand"><span class="brand-mark">&#9707;</span><h1>Mashghal</h1></div>
+    <p class="brand-sub" id="brandSub">This computer only</p>
     <nav id="nav" aria-label="Sections"></nav>
+    <!-- Filled by railList() in afterRender rather than by renderNav(), which
+         belongs to the shared runtime and must stay byte-identical. -->
+    <div id="railWork" class="railwork"></div>
     <div class="rail-foot"><p id="railFoot">No account and no server.</p></div>
   </aside>
   <main class="view" id="view"></main>
@@ -646,7 +689,7 @@
     },
 
     // The switch bar lives outside the view, so render() never touches it.
-    afterRender: function () { mountCanvas(); mountBar(); railFoot(); },
+    afterRender: function () { mountCanvas(); mountBar(); railFoot(); railWork(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
@@ -944,12 +987,38 @@
 
   /* ---------------- one board ---------------- */
 
+  /* How the run stands, as dot-and-word pairs rather than a count buried in the
+     provenance line. The last pair is the archive lock: a run that has printed
+     but never been filed LOOKS finished, and this is the only place that says
+     out loud that it is not. */
+  function boardStand(b, p) {
+    if (b.kind !== "run") return "";
+    var d = dues().filter(function (x) { return x.board.id === b.id; });
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var hand = d.length - late;
+    var uf = unfiled(b).length;
+    var bits = [];
+    if (late) bits.push('<span class="sp"><i class="d-late"></i>' +
+      (late === 1 ? "One late" : cap(numWord(late)) + " late") + "</span>");
+    if (hand) bits.push('<span class="sp"><i class="d-hand"></i>' +
+      (hand === 1 ? "One in hand" : cap(numWord(hand)) + " in hand") + "</span>");
+    if (!d.length) bits.push('<span class="sp muted">Nothing active</span>');
+    bits.push('<span class="sp muted">' + p.done + " of " + p.total + " done</span>");
+    if (uf) bits.push('<span class="sp muted">can’t be closed yet</span>');
+    else if (b.closedOn) bits.push('<span class="sp muted">closed ' + esc(niceDate(b.closedOn)) + "</span>");
+    return '<div class="stand">' + bits.join("") + "</div>";
+  }
+
   function renderBoard(b) {
     var isRun = b.kind === "run";
     var p = runProgress(b);
-    var sub = (b.benchId ? benchLabel(b.benchId) : "no bench") +
+    var sub = (b.benchId ? benchLabel(b.benchId) : "no employer") +
       (b.kindId ? " · " + kindName(b.kindId) : "") +
-      (isRun ? " · " + p.done + " of " + p.total + " done" : " · procedure");
+      (isRun
+        ? (b.startedOn ? " · started " + niceDate(b.startedOn) : "") +
+          (b.fromBoardId && byId(state.boards, b.fromBoardId)
+            ? ", from “" + byId(state.boards, b.fromBoardId).name + "”" : "")
+        : " · a procedure, not a run");
 
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="board-back">All boards</button>' +
@@ -962,7 +1031,10 @@
       '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
       "</div>";
 
-    var h = pageHead(b.name, esc(sub), tools);
+    /* Built inline rather than through pageHead(), which belongs to the shared
+       runtime and knows nothing about a status cluster. */
+    var h = '<div class="page-head"><div><h2>' + esc(b.name) + "</h2>" +
+      "<p>" + esc(sub) + "</p>" + boardStand(b, p) + "</div>" + tools + "</div>";
 
     if (isRun && b.closedOn) {
       h += '<div class="card"><p class="hint" style="margin:0">Closed on ' + niceDate(b.closedOn) +
@@ -1113,9 +1185,9 @@
           var uf = unfiled(b);
           return '<div class="panel dashed"><div class="grow">' +
             '<div class="nm">' + esc(uf.length === 1 ? uf[0].label : b.name) + "</div>" +
-            '<div class="says">It looks done from the outside. It is not, and the run knows — ' +
-            esc(b.name) + " will not close until " +
-            esc(uf.map(function (n) { return n.label; }).join(" and ")) + ".</div></div>" +
+            '<div class="says">It looks done from the outside. It is not, and the run knows: it will not close while ' +
+            esc(uf.map(function (n) { return String(n.label).charAt(0).toLowerCase() + String(n.label).slice(1); })
+                  .join(" and ")) + " is undone.</div></div>" +
             '<div class="acts"><button class="btn" data-act="board-open" data-id="' + b.id + '">Open it</button></div></div>';
         }).join("") + "</div>";
     }
@@ -2456,6 +2528,76 @@
       m.setAttribute("content", ink("page") || "#1b1e24");
     }
     render();
+  }
+
+  /* The rail carries the work, not just the five tabs. The design puts your
+     live boards under the nav, grouped by who they are for, each with a dot for
+     how it is going and a count of what it is sitting on — so the thing you
+     open twenty times a day is one click from anywhere, and you can see
+     something is late without opening the page that says so.
+
+     Rendered here rather than in renderNav(), which belongs to the shared
+     runtime and has to stay byte-identical across the four apps. */
+  function railWork() {
+    var el = document.getElementById("railWork");
+    if (!el) return;
+
+    var live = boards("run").filter(function (b) { return !b.closedOn; });
+    var tpls = boards("template");
+    var groups = {}, order = [];
+    live.forEach(function (b) {
+      var key = b.benchId ? benchLabel(b.benchId) : "No employer";
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(b);
+    });
+
+    var h = "";
+    order.forEach(function (key) {
+      h += '<div class="rwgroup"><div class="rwhead">' + esc(key) + "</div>";
+      h += groups[key].map(function (b) {
+        var d = dues().filter(function (x) { return x.board.id === b.id; });
+        var lateN = d.filter(function (x) { return x.st === "over"; }).length;
+        var unf = unfiled(b).length;
+        var tone = lateN ? "late" : d.length ? "live" : "idle";
+        var right = lateN ? lateN : unf && !d.length ? "not filed" : d.length ? d.length : "";
+        return '<button class="rwrow' + (openId === b.id ? " on" : "") +
+          '" data-act="board-open" data-id="' + b.id + '">' +
+          '<span class="rwdot ' + tone + '"></span>' +
+          '<span class="rwname">' + esc(b.name) + "</span>" +
+          (right ? '<span class="rwn ' + (lateN || (unf && !d.length) ? "bad" : "") + '">' +
+            esc(String(right)) + "</span>" : "") + "</button>";
+      }).join("");
+      h += "</div>";
+    });
+
+    if (tpls.length) {
+      h += '<div class="rwgroup"><div class="rwhead">Procedures</div>' +
+        tpls.slice(0, 6).map(function (t) {
+          return '<button class="rwrow quiet' + (openId === t.id ? " on" : "") +
+            '" data-act="board-open" data-id="' + t.id + '">' +
+            '<span class="rwname">' + esc(t.name) + "</span></button>";
+        }).join("") + "</div>";
+    }
+
+    h += '<button class="rwnew" data-act="board-new">Write a new procedure</button>';
+    el.innerHTML = h;
+
+    // The count the design puts on the nav item itself, so "something is late"
+    // is visible from every screen rather than only from Waiting.
+    var lateAll = dues().filter(function (d) { return d.st === "over"; }).length;
+    var tab = document.querySelector('#nav [data-tab="waiting"]');
+    if (tab) {
+      var old = tab.querySelector(".tabn");
+      if (old) old.remove();
+      if (lateAll) {
+        var sp = document.createElement("span");
+        sp.className = "tabn";
+        sp.textContent = lateAll + " late";
+        tab.appendChild(sp);
+      }
+    }
+    var bs = document.getElementById("brandSub");
+    if (bs) bs.textContent = syncOn() ? syncWords() : "This computer only";
   }
 
   function railFoot() {
