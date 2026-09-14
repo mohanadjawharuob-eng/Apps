@@ -202,8 +202,9 @@
     background: var(--rail); padding: 1.1rem 0 1.4rem;
     display: flex; flex-direction: column; overflow: hidden;
   }
-  .brand { display: flex; align-items: baseline; gap: 0.6rem; padding: 0 1rem 0.15rem; }
-  .brand-mark { font-size: 1.55rem; line-height: 1; color: var(--ink); font-family: var(--display); }
+  .brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem 0.15rem; }
+  .brand-mark { display: inline-flex; line-height: 0; }
+  .brand-mark svg { display: block; }
   .brand h1 { margin: 0; font-size: 0.78rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brass); font-weight: 600; }
   #nav { display: flex; flex-direction: column; gap: 1px; padding: 0 0.55rem; }
   .tab {
@@ -790,7 +791,20 @@
 
 <div class="shell">
   <aside class="rail">
-    <div class="brand"><span class="brand-mark">&#9707;</span><h1>Mashghal</h1></div>
+    <!-- The app's own mark, the same meem the icon is drawn from: a bowl that
+         is also a node, a tail that is also the flow, one apricot mark at the
+         end of it. It was ◫ — a Unicode box-drawing character that belonged to
+         nothing and said nothing. -->
+    <div class="brand"><span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 512 512" width="26" height="26" fill="none">
+        <path d="M300 168 L372 130" stroke="var(--brass)" stroke-width="16"
+              stroke-dasharray="2 34" stroke-linecap="round"/>
+        <circle cx="392" cy="120" r="30" stroke="var(--brass)" stroke-width="18"/>
+        <circle cx="216" cy="196" r="80" stroke="var(--sage)" stroke-width="42"/>
+        <path d="M216 276 C216 344 292 352 292 424" stroke="var(--sage)"
+              stroke-width="42" stroke-linecap="round"/>
+        <circle cx="292" cy="424" r="24" fill="var(--apricot)" stroke="none"/>
+      </svg></span><h1>Mashghal</h1></div>
     <p class="brand-sub" id="brandSub">This computer only</p>
     <nav id="nav" aria-label="Sections"></nav>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
@@ -1374,7 +1388,8 @@
         return '<i class="t-todo" title="' + esc(n.label) + '"></i>';
       }).join("") + "</div>" +
       '<div class="bstat">' + (runs ? "Run " + runs + (runs === 1 ? " time" : " times") : "Never run yet") +
-      '<span class="bnum">' + steps.length + "</span></div></button>";
+      '<span class="bnum">' + steps.length + (steps.length === 1 ? " step" : " steps") +
+      "</span></div></button>";
   }
 
   /* A card that SHOWS the run rather than describing it.
@@ -1409,7 +1424,7 @@
         return '<i class="t-' + st + '" title="' + esc(n.label) + '"></i>';
       }).join("") + "</div>" +
       '<div class="bstat' + (late ? " bad" : "") + '">' + esc(head) +
-      '<span class="bnum">' + p.done + "/" + p.total + "</span></div>" +
+      '<span class="bnum">' + p.done + " of " + p.total + "</span></div>" +
       (pics.length ? '<div class="bpics">' + pics.slice(0, 4).map(function (t) {
         return '<img data-pic="' + esc(t.pic || "") + '" data-thumb="' + esc(t.id) + '" alt="">';
       }).join("") + "</div>" : "") +
