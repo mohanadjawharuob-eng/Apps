@@ -232,8 +232,15 @@
   }
 
   /* ---------------- page furniture ---------------- */
+  /* min-width:0 on the growing half and overflow-wrap on the name itself: a
+     board called something 400 characters long took the document to 5142px
+     against a 1400px window, so every screen gained a horizontal scrollbar
+     and the header ran off the side. A name can be anything; the layout
+     cannot depend on it being short. */
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.3rem; flex-wrap: wrap; }
-  .page-head h2 { margin: 0; font-size: 1.4rem; }
+  .page-head > div { min-width: 0; flex: 1 1 22rem; }
+  .page-head h2 { margin: 0; font-size: 1.4rem; overflow-wrap: anywhere; }
+  .page-head p { overflow-wrap: anywhere; }
   .page-head p { margin: 0.2rem 0 0; color: var(--dim); font-size: 0.86rem; max-width: 62ch; }
   .card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 1rem 1.05rem; margin-bottom: 0.85rem; }
   .card > h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
@@ -384,7 +391,11 @@
     border: 1px solid var(--rule); background: var(--veil); border-radius: 10px;
     display: grid; grid-auto-flow: column; overflow: hidden;
   }
-  .tblock div { padding: 0.32rem 0.6rem; border-right: 1px solid var(--rule-soft); }
+  .tblock div { padding: 0.32rem 0.6rem; border-right: 1px solid var(--rule-soft); min-width: 0; }
+  /* Clipped, not stretched. Fitting the board's full name made the title block
+     span the whole sheet and cross the legend, leaving both unreadable. */
+  .tblock span { display: block; max-width: 15ch; overflow: hidden;
+                 text-overflow: ellipsis; white-space: nowrap; }
   .tblock div:last-child { border-right: 0; }
   .tblock b { display: block; font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
   .tblock span { font-family: var(--display); font-weight: 500; font-size: 0.8rem; }
@@ -549,6 +560,7 @@
      entry into "Chase Ask for referen\u2026" — a calendar you cannot read is a
      grid of rectangles. */
   .cal-m {
+    display: block; width: 100%; text-align: left; border: 0; font: inherit;
     font-size: 0.7rem; line-height: 1.25; padding: 0.16rem 0.3rem; border-radius: 5px;
     background: var(--raised); color: var(--dim);
     overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -569,6 +581,7 @@
   .cl-day.now b, .cl-day.now span { color: var(--sage-lift); }
   .cl-row {
     display: flex; gap: 0.6rem; align-items: center; padding: 0.5rem 0.6rem;
+    border-top: 0; border-right: 0; border-bottom: 0;
     border-radius: 10px; background: var(--surface); margin-bottom: 4px;
     border-left: 2px solid var(--rule);
   }
@@ -640,6 +653,14 @@
     border: 1px solid transparent; border-radius: 16px;
   }
   .panel .grow { flex: 1; min-width: 0; }
+  /* A whole row that opens something is a button, so the keyboard can reach it
+     — these were divs with click handlers, which meant the Jobs tab could not
+     be opened without a pointer at all. The element changes; the look does not. */
+  .panel.rowbtn, button.cal-m, button.cl-row {
+    width: 100%; font: inherit; color: inherit; text-align: left;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+  }
+  .panel.rowbtn:hover { border-color: var(--rule-mid); }
   .panel .nm {
     font-family: var(--display); font-weight: 500; font-size: 1.22rem;
     letter-spacing: -0.012em; line-height: 1.25;
@@ -817,7 +838,10 @@
 
 <div class="switchbar" id="sbar"></div>
 
-<div class="toasts" id="toasts"></div>
+<!-- Every confirmation and every refused form speaks through here, so it has
+     to be a live region: a reader using a screen reader got no feedback at all
+     when a dialog rejected what they typed. -->
+<div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
 <div id="overlay"></div>
 
@@ -937,10 +961,12 @@
                   make: function (label) { return label; } },
     places:     { of: function () { return PLACES; },      word: "place",
                   make: function (label) { return label; } },
+    /* No edgeKinds entry: the connect dialog carries its own "Or your own
+       words" field, which puts the meaning on the edge's label where the board
+       reads it. A second mechanism that wrote into state.vocab and was never
+       offered by any picker is a trap, not a feature. */
     claimKinds: { of: function () { return CLAIM_KINDS; }, word: "shape",
-                  make: function (label) { return label; } },
-    edgeKinds:  { of: function () { return EDGE_KINDS; },  word: "kind of connection",
-                  make: function (label) { return { word: label.toLowerCase(), says: label.toLowerCase() }; } }
+                  make: function (label) { return label; } }
   };
   var OTHER = "__other";
 
@@ -1036,6 +1062,11 @@
         assets: [],      // {id,name,kind,notes,archived}
         cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
         settings: { showDone: true, companion: false,
+                    // Set the first time jobs are derived from claimants, so
+                    // deleting the last one is not silently undone on the next
+                    // load. Inferring it from "jobs is empty" meant Delete
+                    // reversed itself with no message.
+                    jobsDerived: false,
                     sync: { mode: "none", gistId: "", deviceName: "", borrowed: false, lastPulledAt: "" } },
         forgotten: {},   // id -> name, so a removed thing still reads in history
         tombstones: {},  // id -> when it was deleted, so a merge cannot resurrect it
@@ -1056,6 +1087,7 @@
       if (parsed.settings) {
         if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
         if (typeof parsed.settings.companion === "boolean") s.settings.companion = parsed.settings.companion;
+        if (typeof parsed.settings.jobsDerived === "boolean") s.settings.jobsDerived = parsed.settings.jobsDerived;
         if (parsed.settings.sync && typeof parsed.settings.sync === "object") {
           ["mode", "gistId", "deviceName", "lastPulledAt"].forEach(function (k) {
             if (typeof parsed.settings.sync[k] === "string") s.settings.sync[k] = parsed.settings.sync[k];
@@ -1343,6 +1375,25 @@
 
   /* ================= Boards ================= */
 
+  // Nothing has been written down yet — the same test the first run used.
+  function emptyBook() {
+    return !state.boards.length && !live(state.claimants).length && !live(state.modes).length;
+  }
+
+  function firstRun() {
+    return '<div class="card" style="border-left:2px solid var(--sage-deep)">' +
+      "<h3>Nothing written down yet</h3>" +
+      '<p class="hint" style="margin:0.2rem 0 0.9rem">Mashghal holds what work leaves behind: ' +
+      "who you are waiting on, where you got to, and what still has to be filed. " +
+      "You write a procedure once and run it as often as you like \u2014 and the run remembers, " +
+      "not you. Two ways to start.</p>" +
+      '<div class="tools"><button class="btn primary" data-act="prose-open">Write one in prose</button>' +
+      '<button class="btn" data-act="sample">Open the worked example</button></div>' +
+      '<p class="saynote" style="margin:0.9rem 0 0">The example is one designer\u2019s week \u2014 a brochure ' +
+      "mid-revision, a survey sitting at four steps at once, a visa. It replaces nothing, because there is " +
+      "nothing here yet, and <b>Erase everything</b> in Settings clears it whenever you like.</p></div>";
+  }
+
   function renderBoards() {
     var b = openBoard();
     if (b) return renderBoard(b);
@@ -1352,11 +1403,18 @@
     var tpls = boards("template");
 
     var h = pageHead("Boards", "A procedure is written once. A run is one pass through it.",
-      '<div class="tools">' +
+      emptyBook() ? "" : '<div class="tools">' +
       '<button class="btn" data-act="board-new">New board</button>' +
       '<button class="btn" data-act="prose-open">Write one in prose</button>' +
       (tpls.length ? '<button class="btn primary" data-act="run-start">Start a run</button>' : "") +
       "</div>");
+
+    /* A first run used to replace the empty book with the worked example and
+       SAVE it — you met three jobs, six boards, named people and "three things
+       are late", all fiction, none of it marked as such, and Settings still
+       offered to load the example as though it had not. The example is now an
+       offer, which is what it always was. */
+    if (emptyBook()) return h + firstRun();
 
     h += '<div class="sect">Running</div>';
     h += runs.length ? '<div class="boards">' + runs.map(runCard).join("") + "</div>"
@@ -1588,7 +1646,13 @@ function stateWord(b, n) {
     var st = nodeState(b, n);
     var who = recipientsOf(b, n).map(function (t) { return t.label; }).join(", ");
 
-    var meta = [ACTS[n.act].label];
+    /* Through vocabLabel, never ACTS[…] directly: an act the reader invented
+       through "Other — write it in" is in state.vocab and NOT in ACTS, so the
+       direct lookup threw and took the whole board page with it. After a
+       reload the board could not be opened at all — so the bad step could
+       never be edited out, which made one dropdown choice unrecoverable
+       without a backup. Same fix in proseSays(). */
+    var meta = [vocabLabel("acts", n.act)];
     if (who) meta.push("to " + who);
     else if (n.act === "send") meta.push("nobody linked yet");
     if (n.chaseDays) meta.push("chase after " + n.chaseDays + "d");
@@ -2015,9 +2079,13 @@ function stateWord(b, n) {
       h += '<div class="cal-day' + (day === today() ? " now" : "") + (marks.length ? " has" : "") + '">' +
         '<div class="cal-n">' + Number(day.slice(8)) + "</div>" +
         marks.slice(0, 3).map(function (m) {
-          return '<div class="cal-m t-' + m.tone + '"' +
-            (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
-            ' title="' + esc(m.label + " \u2014 " + m.where) + '">' + esc(clip(m.label, 38)) + "</div>";
+          // A button when it opens something, a plain div when it does not:
+          // a div with a click handler is invisible to the keyboard.
+          var tag = m.id ? "button" : "div";
+          return "<" + tag + ' class="cal-m t-' + m.tone + '"' +
+            (m.id ? ' type="button" data-act="board-open" data-id="' + m.id + '"' : "") +
+            ' title="' + esc(m.label + " \u2014 " + m.where) + '">' + esc(clip(m.label, 38)) +
+            "</" + tag + ">";
         }).join("") +
         (marks.length > 3 ? '<div class="cal-more">+' + (marks.length - 3) + " more</div>" : "") +
         "</div>";
@@ -2041,10 +2109,11 @@ function stateWord(b, n) {
           Number(day.slice(8)) + "</b><span>" + esc(dayName(day)) +
           (day === today() ? " \u00b7 today" : "") + "</span></div>";
         (by[day] || []).forEach(function (m) {
-          h += '<div class="cl-row t-' + m.tone + '"' +
-            (m.id ? ' data-act="board-open" data-id="' + m.id + '" style="cursor:pointer"' : "") +
+          var tag = m.id ? "button" : "div";
+          h += "<" + tag + ' class="cl-row t-' + m.tone + '"' +
+            (m.id ? ' type="button" data-act="board-open" data-id="' + m.id + '"' : "") +
             '><div class="grow"><div class="nm sm">' + esc(m.label) + "</div>" +
-            '<div class="says">' + esc(m.where) + "</div></div></div>";
+            '<div class="says">' + esc(m.where) + "</div></div></" + tag + ">";
         });
       });
     }
@@ -2068,11 +2137,11 @@ function stateWord(b, n) {
     h += '<div class="stack">' + js.map(function (j) {
       var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
       var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
-      return '<div class="panel' + (late ? " late" : "") + '" data-act="job-open" data-id="' + j.id + '" style="cursor:pointer">' +
+      return '<button type="button" class="panel rowbtn' + (late ? " late" : "") +
+        '" data-act="job-open" data-id="' + j.id + '">' +
         '<div class="grow"><div class="nm">' + esc(j.name) + "</div>" +
         '<div class="says">' + esc(jobSays(j, bs.length, d.length)) + "</div></div>" +
-        (late ? '<div class="bigage"><b>' + late + "</b><span>" +
-          (late === 1 ? "late" : "late") + "</span></div>" : "") + "</div>";
+        (late ? '<div class="bigage"><b>' + late + "</b><span>late</span></div>" : "") + "</button>";
     }).join("") + "</div>";
     return h;
   }
@@ -2557,6 +2626,46 @@ function stateWord(b, n) {
   function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v).trim()); }
   function hhmm(v) { v = String(v).trim(); return num(v.slice(0, 2)) * 60 + num(v.slice(3, 5)); }
 
+  /* A date that EXISTS, not a string shaped like one. The old test was the
+     regex alone, so 2026-13-45 passed: it stored, parsed to Invalid Date,
+     counted in no week, showed on no screen and was named by no report — eight
+     hours in a hole nothing could see. Round-tripping through the calendar is
+     the only test that catches it. */
+  function dayOk(v) {
+    v = String(v).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    var d = parseISO(v);
+    return !!d && !isNaN(d.getTime()) && iso(d) === v;
+  }
+
+  /* No minute may belong to two stretches.
+
+     Switching benches already enforces this — the old span ends exactly when
+     the new one starts — but Add time is the path used for everything you
+     forgot to tap, and it had no check at all. 10:00-11:00 beside 10:30-11:30
+     was accepted and the week read 2h for 90 minutes of life. The one figure
+     this app exists to produce was wrong, silently, and it is the figure that
+     goes to an employer.
+
+     Returns the stretches that clash, so the message can name them rather than
+     just refusing. `skipId` is the span being edited, which must not clash
+     with itself. */
+  function clashesWith(dayStr, fromMin, toMin, skipId) {
+    return state.spans.filter(function (sp) {
+      if (sp.id === skipId) return false;
+      if (stampDay(sp.startedAt) !== dayStr) return false;
+      if (!sp.endedAt) return false;                 // an open span is not an hour
+      var a = hhmm(String(sp.startedAt).slice(11)), z = hhmm(String(sp.endedAt).slice(11));
+      return fromMin < z && toMin > a;               // half-open: touching is fine
+    });
+  }
+  function clashWords(list) {
+    return list.map(function (sp) {
+      return String(sp.startedAt).slice(11) + "\u2013" + String(sp.endedAt).slice(11) +
+        " at " + (sp.benchId ? benchLabel(sp.benchId) : "no bench");
+    }).join(", ");
+  }
+
   function spanDialog(sp, day) {
     var isNew = !sp;
     openModal({
@@ -2573,9 +2682,15 @@ function stateWord(b, n) {
         { key: "note", label: "Note", type: "text", span: true, value: sp ? (sp.note || "") : "" }
       ],
       validate: function (v) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+        if (!dayOk(v.day)) return "A day must be a real date, written YYYY-MM-DD.";
         if (!timeOk(v.from) || !timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
         if (hhmm(v.to) <= hhmm(v.from)) return "It has to end after it started.";
+        if (v.day.trim() > today()) return "It cannot be a day that has not happened yet.";
+        var clash = clashesWith(v.day.trim(), hhmm(v.from), hhmm(v.to), sp ? sp.id : "");
+        if (clash.length) {
+          return "That overlaps " + clashWords(clash) +
+            ". Two stretches cannot claim the same minute \u2014 fix one of them first.";
+        }
         return null;
       },
       onConfirm: function (v) {
@@ -3759,8 +3874,13 @@ function stateWord(b, n) {
     if (state.jobs.length &&
         !live(state.benches).some(function (b) { return !b.jobId; }) &&
         !state.boards.some(function (b) { return !b.jobId && b.benchId; })) return false;
-    // One job per claimant, the first time a book meets this.
-    if (!state.jobs.length && live(state.claimants).length) {
+    /* One job per claimant, the first time a book meets this — and ONCE.
+       The test used to be "jobs is empty", so deleting your last job put it
+       back on the next render and the delete you confirmed quietly reversed
+       itself. The flag records that the derivation has happened, which is a
+       fact about the book rather than something to infer from its contents. */
+    if (!state.jobs.length && !state.settings.jobsDerived && live(state.claimants).length) {
+      state.settings.jobsDerived = true;
       live(state.claimants).forEach(function (c) {
         state.jobs.push({ id: uid(), name: c.name, colour: c.colour || "",
                           claimantId: c.id, note: "", noteAt: "",
@@ -3821,7 +3941,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v29 · 14 Sep 2026";
+  var BUILD = "v30 · 14 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -5330,6 +5450,74 @@ function dims(n) {
 
   // Turn an accepted reading into a real board. Separate from the parse on
   // purpose: the parse is allowed to run on every keystroke, this is not.
+  /* Where the sequence comes from — and the one place this used to guess.
+
+     Indices into read.steps are NOT positions in the procedure. A step invented
+     from a branch target ("file the final version", named only as the stop
+     branch) is appended to the end of the list, and the old code chained
+     step i to step i+1 straight down that array. Three things went wrong at
+     once, on the app's own worked example:
+
+       · the lines written AFTER an indented block were never joined to the
+         question above them, so "watch the printing" had no way in and became
+         a second entry node — every run of the example opened telling you to
+         watch the printing of a brochure nobody had designed;
+       · "archive" was chained to the invented "file the final version" purely
+         because it sat next in the array, inventing an edge the writer never
+         wrote and running it backwards;
+       · and the stop branch dead-ended, so choosing it never reached the
+         monitoring or the archiving.
+
+     So sequence is read off the WRITTEN COLUMN — the lines the writer actually
+     typed, in the order they typed them — and the indented block is understood
+     as a detour the column continues after. It continues from the way out that
+     goes FORWARD: the one whose target is not already above it. Exactly one
+     forward way out and that is unambiguous. None, or more than one, and the
+     app genuinely does not know which branch the next line belongs to, so it
+     refuses to join it and says which line it could not place — the same rule
+     as a line nobody pointed anywhere.
+
+     Pure over indices, and used by both the preview and the writer, so what
+     you are shown cannot drift from what gets written down. */
+  function proseLinks(read) {
+    var column = [];
+    read.steps.forEach(function (st, i) { if (!st.made) column.push(i); });
+
+    // Which written step does each way out leave from: the last line above it.
+    // Written steps only — an invented one carries the line of the exit that
+    // made it, which used to let a second exit hang off the first one's target.
+    var waysOf = {};
+    read.exits.forEach(function (x) {
+      var from = -1;
+      column.forEach(function (i) { if (read.steps[i].line < x.line) from = i; });
+      if (from < 0) return;
+      (waysOf[from] = waysOf[from] || []).push(x);
+    });
+
+    function forward(x, k) {
+      var at = column.indexOf(x.toIndex);
+      return at < 0 || at > k;            // invented, or further down the column
+    }
+
+    var chain = [], unjoined = [];
+    column.forEach(function (i, k) {
+      (waysOf[i] || []).forEach(function (x) {
+        x.back = !forward(x, k);          // read by the preview: it loops
+        chain.push({ from: i, to: x.toIndex, label: x.label });
+      });
+    });
+
+    for (var k = 0; k < column.length - 1; k++) {
+      var here = column[k], next = column[k + 1], ways = waysOf[here];
+      if (!ways) { chain.push({ from: here, to: next, label: "" }); continue; }
+      var fwd = ways.filter(function (x) { return forward(x, k); });
+      if (fwd.length === 1) chain.push({ from: fwd[0].toIndex, to: next, label: "" });
+      else unjoined.push({ label: read.steps[next].label, after: read.steps[here].label,
+                           why: fwd.length ? "more than one way out leads onward" : "every way out loops back" });
+    }
+    return { column: column, waysOf: waysOf, chain: chain, unjoined: unjoined };
+  }
+
   function boardFromProse(name, benchId, kindId, read) {
     var nodes = [], edges = [], byIdx = {};
     read.steps.forEach(function (st, i) {
@@ -5337,19 +5525,8 @@ function dims(n) {
                 chaseDays: st.chaseDays || "", dueAt: "", enteredAt: "", doneAt: "", answer: "" };
       byIdx[i] = n; nodes.push(n);
     });
-    // Sequence: each step follows the one above, except where an exit already
-    // says otherwise — a question's ways out replace its straight-through.
-    var branched = {};
-    read.exits.forEach(function (x) {
-      var from = -1;
-      read.steps.forEach(function (st, i) { if (st.line < x.line) from = i; });
-      if (from < 0) return;
-      branched[from] = 1;
-      edges.push({ id: uid(), a: byIdx[from].id, b: byIdx[x.toIndex].id, k: "flow", label: x.label });
-    });
-    read.steps.forEach(function (st, i) {
-      if (i + 1 >= read.steps.length || branched[i]) return;
-      edges.push({ id: uid(), a: byIdx[i].id, b: byIdx[i + 1].id, k: "flow", label: "" });
+    proseLinks(read).chain.forEach(function (c) {
+      edges.push({ id: uid(), a: byIdx[c.from].id, b: byIdx[c.to].id, k: "flow", label: c.label });
     });
     // People named in a send become things, linked to the step that names them.
     read.steps.forEach(function (st, i) {
@@ -5396,18 +5573,19 @@ function dims(n) {
     } else {
       h += '<div class="sect" style="margin-top:0">Read back — ' +
         read.steps.length + (read.steps.length === 1 ? " step" : " steps") + "</div>";
+      // Ownership comes from proseLinks, which counts written lines only.
+      // Recomputing it here over every step let a step invented by an earlier
+      // way out take a later one: "web → Upload it" showed under "Send to the
+      // printer" rather than under the question that asked it.
+      var links = proseLinks(read);
       h += '<div class="stack tight">' + read.steps.map(function (st, i) {
-        var out = read.exits.filter(function (x) {
-          var from = -1;
-          read.steps.forEach(function (s2, j) { if (s2.line < x.line) from = j; });
-          return from === i;
-        });
+        var out = links.waysOf[i] || [];
         return '<div class="panel calm"><div class="grow">' +
           '<div class="nm sm">' + esc(st.label) + (st.made ? ' <span class="made">made from a way out</span>' : "") + "</div>" +
           '<div class="says">' + esc(proseSays(st, read)) + "</div>" +
           (out.length ? '<div class="says">' + out.map(function (x) {
             return "<b>" + esc(x.label) + "</b> → " + esc(read.steps[x.toIndex].label) +
-              (x.toIndex <= i ? " <em>(goes back)</em>" : "");
+              (x.back ? " <em>(goes back)</em>" : "");
           }).join("<br>") + "</div>" : "") +
           "</div></div>";
       }).join("") + "</div>";
@@ -5426,6 +5604,37 @@ function dims(n) {
             '<div class="nm sm">“' + esc(u.text) + '”</div>' +
             '<div class="says">' + esc(u.why) + " Left for you.</div></div></div>";
         }).join("") + "</div>";
+    }
+
+    /* What the preview owes the reader beyond the step list: where the work
+       STARTS, and anything the sequence could not attach. A board with two
+       ways in starts a run on both at once, which is how the worked example
+       used to open on "watch the printing" — so the one figure worth checking
+       before accepting is how many ways in it has. */
+    if (read.steps.length) {
+      var lk = links;
+      var into = {};
+      lk.chain.forEach(function (c) { into[c.to] = 1; });
+      var ins = read.steps.filter(function (st, i) { return !into[i]; });
+      h += '<div class="sect">Where it starts</div>' +
+        '<p class="saynote" style="margin:-0.3rem 0 0.7rem">' +
+        (ins.length === 1
+          ? "One way in \u2014 <b>" + esc(ins[0].label) + "</b>. A run begins there and nowhere else."
+          : cap(numWord(ins.length)) + " ways in \u2014 " +
+            esc(ins.map(function (x) { return x.label; }).join(", ")) +
+            ". A run would begin at all of them at once, which is usually not what was meant.") +
+        "</p>";
+      if (lk.unjoined.length) {
+        h += '<div class="sect">' + (lk.unjoined.length === 1 ? "One line it could not join up" :
+          cap(numWord(lk.unjoined.length)) + " lines it could not join up") + "</div>" +
+          '<div class="stack tight">' + lk.unjoined.map(function (u) {
+            return '<div class="panel dashed"><div class="grow">' +
+              '<div class="nm sm">\u201c' + esc(u.label) + '\u201d</div>' +
+              '<div class="says">After \u201c' + esc(u.after) + '\u201d, ' + esc(u.why) +
+              ", so it cannot tell which branch this follows. It will be written down unattached \u2014 " +
+              "draw the line yourself, or name the branch it belongs to.</div></div></div>";
+          }).join("") + "</div>";
+      }
     }
 
     h += '<div class="tools" style="margin-top:1.2rem">' +
@@ -5459,7 +5668,7 @@ function dims(n) {
   }
 
   function proseSays(st, read) {
-    var bits = [ACTS[st.act].label];
+    var bits = [vocabLabel("acts", st.act)];
     if (st.act === "send" && st.to.length) bits.push("to " + st.to.join(" and "));
     if (st.chaseDays) bits.push("remind after " + st.chaseDays + " days");
     else if (st.act === "send" || st.act === "watch") bits.push("no reminder set");
@@ -5480,7 +5689,6 @@ function dims(n) {
     /* ---- boards ---- */
     "board-open": function (id) { openId = id; view = "boards"; render(); },
     "board-back": function () { openId = ""; foldOpen = false; render(); },
-    "fold-toggle": function () { foldOpen = !foldOpen; render(); },
 
     "board-new": function () {
       openModal({
@@ -5585,9 +5793,14 @@ function dims(n) {
           message: "This run still has " + uf.length + " filing step" + (uf.length === 1 ? "" : "s") +
             " undone — <b>" + esc(uf.map(function (n) { return n.label; }).join(", ")) +
             "</b>. Filing is the thing that gets forgotten, so a run will not close until it is done.",
-          confirmLabel: "Leave it open", cancelLabel: "Close anyway",
-          onConfirm: function () {},
-          onCancel: function () {
+          /* The destructive branch used to sit on onCancel, which is also what
+             Escape, the scrim and the × fire — so every "I didn't mean that"
+             gesture closed a run with its filing undone, on the one dialog
+             guarding the thing that actually gets forgotten. Confirm closes
+             it now; cancel, Escape and the scrim leave it open. */
+          confirmLabel: "Close it anyway", cancelLabel: "Leave it open", danger: true,
+          onCancel: function () {},
+          onConfirm: function () {
             go(function () { b.closedOn = today(); });
             toast("Closed " + b.name + " with filing undone");
           }
@@ -5770,6 +5983,27 @@ function dims(n) {
     },
 
     /* ---- the switch ---- */
+    /* The Job page offers its benches as one tap each. It carried
+       data-act="bench-go" and there was no handler of that name, so every
+       button on the most prominent row of that page did nothing — and the
+       dispatcher ignores an unknown action without a word, which is why it
+       went unnoticed. It is a switch, not a second kind of start: going to a
+       bench while another is open ends the old span at the moment the new one
+       begins, the same as the switch bar, or a minute would belong to both. */
+    "bench-go": function (id) {
+      var bn = byId(state.benches, id); if (!bn || bn.archived) return;
+      var sp = openSpan(), leaving = sp ? sp.benchId : "";
+      if (leaving === id) { toast("Already at " + benchLabel(id)); return; }
+      go(function () {
+        var at = nowStamp();
+        if (sp) sp.endedAt = at;
+        state.spans.push({ id: uid(), startedAt: at, endedAt: "",
+                           benchId: id, note: "", source: "switch" });
+      });
+      if (leaving) askNote(leaving, function () { greet(id); });
+      else greet(id);
+    },
+
     "span-start": function () {
       pickBench("Where are you starting?", function (benchId) {
         go(function () {
@@ -6179,9 +6413,33 @@ function dims(n) {
         }
       });
     },
+    /* This was three lines and no confirmation: one tap on a small × beside
+       the bench name removed it outright, with no toast, no undo and nowhere
+       in the app to bring it back. The bench it met first carried five weeks
+       of logged stretches. Every other removal in the app confirms and says
+       what it touches, so this one does too — and it counts the hours filed
+       against it, because that is the thing you would want to know before
+       pressing Delete. */
     "bench-del": function (id) {
       var b = byId(state.benches, id); if (!b) return;
-      go(function () { state.forgotten[id] = benchLabel(id); b.archived = true; });
+      var mine = state.spans.filter(function (sp) { return sp.benchId === id; });
+      var mins = mine.reduce(function (t, sp) {
+        return t + (sp.endedAt ? minsBetween(sp.startedAt, sp.endedAt) : 0);
+      }, 0);
+      var boards = state.boards.filter(function (bd) { return bd.benchId === id && !bd.archived; }).length;
+      confirmAction({
+        title: "Remove " + benchLabel(id) + "?",
+        message: (mine.length
+          ? "The " + mine.length + (mine.length === 1 ? " stretch" : " stretches") +
+            " logged against it (" + fmtMins(mins) + ") stay exactly as they are and still count. "
+          : "Nothing is logged against it. ") +
+          (boards ? boards + (boards === 1 ? " board is" : " boards are") + " filed under it and " +
+            (boards === 1 ? "keeps" : "keep") + " reading its name. " : "") +
+          "It stops being offered when you log time or start a board."
+      }, function () {
+        go(function () { state.forgotten[id] = benchLabel(id); b.archived = true; });
+        toast("Removed " + benchLabel(id), function () { b.archived = false; });
+      });
     },
     "kind-add": function () { kindDialog(null); },
     "kind-edit": function (id) { kindDialog(byId(state.kinds, id)); },
@@ -6239,11 +6497,10 @@ function dims(n) {
         toast("Restored");
       });
     },
+    /* Asking "everything is replaced?" over an empty book is a question about
+       nothing, so a first run loads it straight away and anything else asks. */
     "sample": function () {
-      confirmAction({
-        title: "Load the example?",
-        message: "Everything in the app now is replaced.", confirmLabel: "Replace it"
-      }, function () {
+      function load() {
         var keepSync = syncCfg();
         state = sampleData(); openId = "";
         state.settings.sync = keepSync;
@@ -6252,8 +6509,14 @@ function dims(n) {
         save(); render();
         toast("Example loaded");
         syncSoon();
-      });
+      }
+      if (emptyBook()) { load(); return; }
+      confirmAction({
+        title: "Load the example?",
+        message: "Everything in the app now is replaced.", confirmLabel: "Replace it"
+      }, load);
     },
+
     "wipe": function () {
       confirmAction({
         title: "Erase everything?",
@@ -6421,11 +6684,22 @@ function dims(n) {
         { key: "kind", label: "Shape", type: "select", value: c ? c.kind : "budget",
           options: vocabOpts("claimKinds") },
         otherField("claimKinds", "kindOther"),
-        { key: "hours", label: "How much", type: "text", value: c ? (c.hours || "") : "", placeholder: "20" },
+        /* A text field with no check turned "twenty" into nothing owed and
+           "-5" into "3h of 0h · met" — num() gives 0 for anything it cannot
+           parse, so nonsense became a confident figure about an employer.
+           A number field, validated, and blank still means on demand. */
+        { key: "hours", label: "How much a week", type: "number", min: 0, step: 0.5,
+          value: c ? (c.hours || "") : "", placeholder: "20",
+          hint: "Hours, or days if the shape above is days. Blank means on demand." },
         { key: "colour", label: "Colour", type: "text", value: c ? c.colour : "#6f96b8", span: true, hint: "A hex colour — it marks this claimant everywhere." }
       ],
       validate: function (v) {
         if (!v.name.trim()) return "Give it a name.";
+        var h = String(v.hours).trim();
+        if (h) {
+          if (!/^\d+(\.\d+)?$/.test(h)) return "How much has to be a number, or blank for on demand.";
+          if (num(h) > 168) return "There are only 168 hours in a week.";
+        }
         if (!/^#[0-9a-fA-F]{3,8}$/.test(v.colour.trim())) return "A colour must be a hex value like #6f96b8.";
         return null;
       },
@@ -6435,7 +6709,9 @@ function dims(n) {
           if (!t) { t = { id: uid(), archived: false }; state.claimants.push(t); }
           t.name = v.name.trim();
           t.kind = vocabTake("claimKinds", v.kind, v.kindOther, "budget");
-          t.hours = v.hours.trim(); t.colour = v.colour.trim();
+          // A number field hands back a number, not a string — String() first
+          // or .trim() throws on every save.
+          t.hours = String(v.hours).trim(); t.colour = v.colour.trim();
         });
       }
     });
@@ -6698,14 +6974,10 @@ function dims(n) {
   /* ================= first run ================= */
 
   APP.afterBoot = function () {
-    if (!state.boards.length && !state.claimants.length && !state.modes.length) {
-      state = sampleData();
-      ensureStamps();
-      save();
-      render();
-      wireAutoSync();
-      return;
-    }
+    /* No seeding here. This used to replace an empty book with sampleData()
+       and save it, so a new reader's first screen was somebody else's work
+       presented as their own — see firstRun() on Boards, which offers it
+       instead. */
     if (ensureJobs()) save();
     if (ensureStamps()) save();
     if (borrowed()) armBorrowed();

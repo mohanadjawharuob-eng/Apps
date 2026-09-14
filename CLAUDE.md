@@ -725,6 +725,113 @@ target off to the right. "Tidy" re-runs it.
   at the start; a thing reaching into a shared table would be a hole in that
   freeze, and renaming a person would rewrite a closed board.
 
+## What an audit of the running app found
+
+Eleven of these came out of driving the real interface rather than reading the
+source, and every one was invisible to the assertions that existed. They are
+written as rules because each is a class of fault, not a one-off.
+
+- **Never index a hardcoded vocabulary map directly — go through `vocabLabel()`.**
+  `ACTS[n.act].label` in `stepRow()` threw for any act the reader invented
+  through "Other — write it in", and it threw *before the page painted*: after
+  a reload the board could not be opened at all, so the offending step could
+  never be edited out and one dropdown choice cost a backup restore. The
+  vocabulary is extensible by design, so `ACTS`, `THINGS`, `PLACES`,
+  `CLAIM_KINDS` and `EDGE_KINDS` are only ever the *built-in half* of the
+  list — `vocabAll()` is the whole of it. Grep for `ACTS[`, `THINGS[` and
+  friends after touching any of this.
+- **A dialog's destructive branch never goes on `onCancel`.** The archive lock
+  read "a run will not close until it is done" and then closed the run on
+  Escape, on a scrim click and on the ×, because the close sat in `onCancel`
+  while `onConfirm` was empty. Those three are the universal "I didn't mean
+  that" gestures and they all fire cancel. Confirm does the thing, cancel
+  undoes the intent, and a confirm that destroys something carries
+  `danger: true` so the loud button is the consequential one. `onCancel` is
+  for cleanup only — discarding a picture nobody named is the legitimate case.
+- **No minute belongs to two stretches, on every path that writes one.**
+  Switching benches always enforced this (the old span ends exactly when the
+  new one starts), but **Add time had no check at all** — and Add time is the
+  path used for everything you forgot to tap. 10:00–11:00 beside 10:30–11:30
+  was accepted and the week read 2h for ninety minutes of life, silently, in
+  the one figure the app exists to produce. `clashesWith()` tests the new
+  stretch against every other on that day, half-open so touching is fine, and
+  the refusal names the stretch it clashes with. An invariant enforced on one
+  path and not its twin is the same bug as not having it.
+- **A date has to exist, not merely be shaped like one.** `^\d{4}-\d{2}-\d{2}$`
+  passed `2026-13-45`, which stored, parsed to `Invalid Date`, counted in no
+  week, appeared on no screen and was named by no report — eight hours in a
+  hole nothing could see. `dayOk()` round-trips through the calendar
+  (`iso(parseISO(v)) === v`), which is the only test that catches it.
+- **Every removal confirms, says what it touches, and offers an undo.**
+  `bench-del` was three lines straight to `go()`: one tap on a small × removed
+  a bench carrying five weeks of logged stretches, with no confirmation, no
+  toast, no undo and nowhere in the app to bring it back. It now counts the
+  hours filed against it and the boards that keep reading its name, because
+  that is what you would want to know before pressing Delete.
+- **A derivation happens once, and the book records that it did.**
+  `ensureJobs()` tested "is `state.jobs` empty", so deleting your last job put
+  it straight back on the next load and a confirmed delete quietly reversed
+  itself. `settings.jobsDerived` is a fact about the book rather than something
+  to infer from its contents. Anything that back-fills state needs the same
+  treatment, and the flag goes through `adoptState` like every other setting.
+- **A first run is an empty book with an offer, never seeded fiction.**
+  `afterBoot` used to replace an empty book with `sampleData()` and **save
+  it**, so a new reader's first screen was three jobs, six boards, named people
+  and "three things are late" — all invented, none of it marked as such, while
+  Settings still offered to load the example as though it had not happened.
+  `firstRun()` on Boards says the book is empty and offers the two ways in;
+  `emptyBook()` is the shared test, and loading the example over an empty book
+  skips the "everything is replaced" question, which was a question about
+  nothing.
+- **The prose sequence is read off the written column, never array order.**
+  A step invented from a branch target is appended to `read.steps`, so chaining
+  `i → i+1` down that array did three wrong things at once on the app's own
+  worked example: the lines after an indented block were never joined to the
+  question above them (giving a second entry node, so every run opened telling
+  you to watch the printing of a brochure nobody had designed), "archive" was
+  chained to the invented "file the final version" backwards, and the stop
+  branch dead-ended. `proseLinks()` reads sequence from the lines the writer
+  actually typed and treats the indented block as a detour the column
+  continues after — from the way out that goes **forward**, meaning its target
+  is not already above it. Exactly one forward way out and that is
+  unambiguous; none or several and it **refuses to join** and says which line
+  it could not place, the same rule as a line nobody pointed anywhere. It is
+  one pure function over indices used by both the preview and the writer, so
+  what you are shown cannot drift from what gets written down — and the
+  preview states **how many ways in** the board has, because two ways in means
+  a run starts on both at once and that is the one figure worth checking
+  before accepting.
+- **A whole row that opens something is a `<button>`.** Job rows and both
+  calendar renderings were `<div data-act="…">`, so the Jobs tab could not be
+  opened by keyboard at all. The element changes and the look does not:
+  `.panel.rowbtn`, `button.cal-m` and `button.cl-row` carry the reset.
+  `#toasts` is a live region too, or a refused form says nothing to anyone
+  using a screen reader — the toast is the only channel validation has.
+- **A name can be any length and the layout may not depend on it.** A
+  400-character board name took the document to 5142px against a 1400px
+  window and stretched the sheet's title block straight through the legend.
+  `min-width: 0` on the growing half of `.page-head`, `overflow-wrap: anywhere`
+  on the name, and a clipped `max-width` on `.tblock span`.
+- **A figure a person types is validated where it is typed.** `claimant.hours`
+  was a text field with no check, and `num()` returns 0 for anything it cannot
+  parse — so "twenty" made a 20-hour-a-week employer read "on demand — nothing
+  is owed" and "-5" read "3h of 0h · met". A number field, bounded, blank
+  still meaning on demand. (And a number field hands back a *number*:
+  `String(v.hours).trim()`, or `.trim()` throws on every save.)
+
+**The scan this adds**, beside the orphan and double-declaration ones — an
+action nobody can click, and a button with no handler. The dispatcher ignores
+an unknown `data-act` without a word, which is how the Job page's whole
+"Where you sit for it" row did nothing for weeks:
+
+```
+python3 -c 'import re;s=open("mashghal/index.html").read()
+i=s.index("APP.actions = {");j=s.index(chr(10)+"  };",i)
+d=set(re.findall(r"^    \"([a-z0-9-]+)\":",s[i:j],re.M))
+u=set(re.findall(r"data-act=\"([a-z0-9-]+)\"",s))
+print("no handler:",sorted(u-d) or "none");print("unclickable:",sorted(d-u) or "none")'
+```
+
 ## Mashghal's look
 
 **Evening ink**, from `mashghal/DESIGN-HANDOFF.md` — chosen out of three
