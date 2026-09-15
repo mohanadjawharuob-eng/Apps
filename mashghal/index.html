@@ -681,6 +681,16 @@ color-scheme: light;
   }
   .cal-m.t-late { background: var(--late-tint); color: var(--apricot-lift); }
   .cal-m.t-dated { background: var(--raised); color: var(--sage-lift); }
+  /* A project's own date, in the project identity colour rather than a state
+     hue. Only the date itself may turn it rose: a project late because a step
+     needs chasing is Waiting's business, and painting a deadline three weeks
+     out because something else is overdue is the "one continuous alarm"
+     mistake again. `projState().overdue` is the narrow question, and it is
+     answered there so nothing here computes it. */
+  .cal-m.t-due {
+    background: color-mix(in srgb, var(--id-project) 16%, transparent);
+    color: var(--id-project); font-weight: 500;
+  }
   .cal-more { font-size: 0.66rem; color: var(--receded); padding-left: 0.3rem; }
   /* The month as a list, for a screen too narrow for a grid. */
   .calist { display: none; }
@@ -701,6 +711,7 @@ color-scheme: light;
   }
   .cl-row.t-late { border-left-color: var(--apricot); }
   .cl-row.t-dated { border-left-color: var(--sage-deep); }
+  .cl-row.t-due { border-left-color: var(--id-project); }
   @media (max-width: 700px) {
     .cal { display: none; }
     .calist { display: block; }
@@ -765,8 +776,11 @@ color-scheme: light;
   .findbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
   .findbtn .ico { display: flex; }
   .findbtn .ico svg { width: 15px; height: 15px; }
+  /* --faint, not --receded. The bottom rung of the state ladder is for text
+     that has receded on purpose (a finished step); a keyboard shortcut is a
+     label somebody has to read, and it measured 2.46:1 in the light theme. */
   .findbtn kbd {
-    margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: var(--receded);
+    margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: var(--faint);
     border: 1px solid var(--rule); border-radius: 5px; padding: 0.04rem 0.28rem;
   }
   .find {
@@ -804,9 +818,9 @@ color-scheme: light;
   .find-hit .st { flex: 0 0 auto; }
   .find-foot {
     margin: 0; padding: 0.5rem 0.85rem; border-top: 1px solid var(--rule);
-    font-size: 0.74rem; color: var(--receded);
+    font-size: 0.74rem; color: var(--faint);
   }
-  .find-foot kbd { font-family: var(--mono); color: var(--faint); }
+  .find-foot kbd { font-family: var(--mono); color: var(--dim); }
   .find-none { padding: 1.1rem 0.85rem; margin: 0; color: var(--dim); font-size: 0.86rem; }
 
   /* The identity channel. An itile is the only place a category colour
@@ -837,6 +851,11 @@ color-scheme: light;
   .t-up    { --tint-of: var(--id-conn); }
   .t-go    { --tint-of: var(--id-know); }
   .t-cmd   { --tint-of: var(--id-output); }
+  /* 1.4rem of panel gap between a 28px glyph and the name it belongs to reads
+     as two separate things, so a tile pulls its own row in. */
+  .panel > .itile { margin-right: -0.8rem; }
+  .t-proj  { --tint-of: var(--id-project); }
+  .t-out   { --tint-of: var(--id-output); }
 
   @media (max-width: 880px) {
     .findbtn { width: auto; margin: 0 0.8rem 0.7rem; }
@@ -909,7 +928,13 @@ color-scheme: light;
   .panel.dashed { border: 1.5px dashed var(--apricot-deep); }
   .panel.calm { padding: 0.85rem 1.1rem; border-radius: 14px; gap: 1rem; }
   .panel.calm.dated { border-left: 4px solid var(--sage); }
-  .panel.calm.late { background: var(--late-tint); border-color: var(--apricot-deep); }
+  /* The same channel rule as `.panel.late`, and this copy was missed when that
+     one was rebuilt — so a late run inside a project page was still a rose
+     card with rose prose on it while the identical row on Waiting was a
+     neutral card with a rose edge. Two rules for one state is how a look
+     drifts back. */
+  .panel.calm.late { background: var(--surface); border-color: var(--rule);
+                     border-left: 3px solid var(--apricot); }
 
   .bigage { text-align: right; flex: 0 0 auto; }
   .bigage b {
@@ -934,6 +959,10 @@ color-scheme: light;
   @media (max-width: 700px) {
     .panel { flex-wrap: wrap; gap: 0.6rem 0.9rem; padding: 0.95rem 1.05rem; }
     .panel .grow { flex: 1 1 100%; order: 1; }
+    /* An identity tile and the name it belongs to stay on one line. `.grow`
+       claiming the whole row put every tile on a line of its own, which read
+       as a stray green square above each person's name. */
+    .panel:has(> .itile) > .grow { flex: 1 1 auto; }
     .bigage { order: 2; text-align: left; }
     .bigage b { font-size: 1.35rem; }
     .panel .age { order: 2; }
@@ -1172,7 +1201,9 @@ color-scheme: light;
     find:   svgIcon('<circle cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/>'),
     run:    svgIcon('<circle cx="10" cy="10" r="7"/><path d="M8.4 7l4.4 3-4.4 3z"/>'),
     bench:  svgIcon('<path d="M3 8.2h14v2.2H3zM5 10.4v5.4M15 10.4v5.4M3 8.2l2-4h10l2 4"/>'),
-    cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>')
+    cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>'),
+    // a project: a bounded body of work with a date on it
+    proj:   svgIcon('<path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M7 11.4h6"/>')
   };
   function actIcon(act) { return ICONS[act] || ICONS.do; }
   function thingIcon(kind) {
@@ -1329,6 +1360,18 @@ color-scheme: light;
            bag you actually open. The kit folds in here too, rather than being
            a tab of its own that has to be decoded. */
         jobs: [],        // {id,name,colour,note,noteAt,software[],links[],archived}
+        /* A project is a bounded body of work; a job is who it is for. They
+           are not the same question and neither contains the other cleanly —
+           a paper co-authored between two universities is one project across
+           two jobs, and a job holds many projects over years. So a project
+           names its job when it has one and leaves it blank when it does not,
+           exactly as a board may have no bench.
+
+           Its progress is NOT stored: it is read off its boards, so the two
+           can never disagree. `parked` is the one thing no derivation could
+           know — work deliberately set down, which looks identical to work
+           with nothing running. */
+        projects: [],    // {id,name,jobId,endsOn,note,parked,archived}
         kinds: [],       // {id,name,colour}
         claimants: [],   // {id,name,kind,hours,colour,archived}
         modes: [],       // {id,name,software[],links[],archived}
@@ -1354,7 +1397,7 @@ color-scheme: light;
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
+      ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       ["forgotten", "tombstones", "devices", "vocab"].forEach(function (k) {
@@ -1383,7 +1426,9 @@ color-scheme: light;
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
       if (v === "cal")      return renderCal();
-      if (v === "jobs")     return openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" }) : renderJobs();
+      if (v === "jobs")     return openProj ? renderProj(projOf(openProj) || { id: "", name: "?" })
+                                   : openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" })
+                                   : renderJobs();
       if (v === "vocab")    return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
       return renderSettings();
     },
@@ -1396,7 +1441,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; calMonth = ""; foldOpen = false; sel = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
 
     actions: {}
   };
@@ -1434,7 +1479,7 @@ color-scheme: light;
   function newBoard(name, kindId, benchId) {
     return {
       id: uid(), kind: "template", name: name, kindId: kindId || "", benchId: benchId || "",
-      fromBoardId: "", nodes: [], edges: [],
+      projectId: "", fromBoardId: "", nodes: [], edges: [],
       startedOn: "", closedOn: "", archived: false
     };
   }
@@ -1669,7 +1714,7 @@ color-scheme: light;
   var navAt = null, navLock = false;
 
   function navSnap() {
-    return { view: view, openId: openId, openJob: openJob, openMode: openMode };
+    return { view: view, openId: openId, openJob: openJob, openProj: openProj, openMode: openMode };
   }
   function navTrack() {
     var at = navSnap(), key = JSON.stringify(at);
@@ -1685,7 +1730,8 @@ color-scheme: light;
     if (!at) return;
     navLock = true;
     view = at.view || "boards";
-    openId = at.openId || ""; openJob = at.openJob || ""; openMode = at.openMode || "";
+    openId = at.openId || ""; openJob = at.openJob || "";
+    openProj = at.openProj || ""; openMode = at.openMode || "";
     foldOpen = false; sel = "";
     render();
     navLock = false;
@@ -1753,6 +1799,7 @@ color-scheme: light;
         tile: findTile(run ? "t-run" : "t-board", run ? ICONS.run : ICONS.boards),
         title: b.name,
         sub: (run ? (b.closedOn ? "closed run" : "run") : "procedure") +
+             (b.projectId && projOf(b.projectId) ? " · " + projName(b.projectId) : "") +
              (b.benchId ? " · " + benchLabel(b.benchId) : "") +
              (b.kindId ? " · " + kindName(b.kindId) : ""),
         st: lateN ? '<span class="st late"><i></i>' + lateN + " late</span>" : "",
@@ -1778,6 +1825,15 @@ color-scheme: light;
       });
     });
 
+    projects().forEach(function (p) {
+      var st = projState(p);
+      out.push({ g: "Projects", key: p.name + " " + (p.jobId ? jobName(p.jobId) : ""),
+                 tile: findTile("t-proj", ICONS.proj),
+                 title: p.name, sub: projSays(p),
+                 st: '<span class="st ' + st.tone + '"><i></i>' + st.word + "</span>",
+                 k: st.tone === "late" ? 0 : 2,
+                 run: function () { findTab("jobs"); openProj = p.id; render(); } });
+    });
     live(state.jobs).forEach(function (j) {
       out.push({ g: "Jobs", key: j.name, tile: findTile("t-job", ICONS.jobs),
                  title: j.name, sub: "job", k: 5,
@@ -1816,6 +1872,7 @@ color-scheme: light;
 
   function findCmds() {
     var cs = [
+      { name: "New project", act: "proj-add", sub: "a bounded piece of work with a date on it" },
       { name: "New board", act: "board-new", sub: "write a procedure from a blank sheet" },
       { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a board" },
       { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
@@ -2668,6 +2725,19 @@ function stateWord(b, n) {
                  where: placeLabel(cd.place), id: "" });
     });
 
+    /* A project's due date is the one dated thing in the app that nobody has
+       to work out — it was typed on the project — so it belongs here more
+       plainly than anything else on the month. A date already gone with the
+       work unfinished draws late, which is the same reading `projState()`
+       gives it; the calendar still computes none of that itself. */
+    projects().forEach(function (p) {
+      if (!p.endsOn || !dayOk(p.endsOn) || p.endsOn.slice(0, 7) !== ym) return;
+      var pst = projState(p);
+      put(p.endsOn, { tone: pst.overdue ? "late" : "due",
+                      label: p.name + " due", where: projSays(p),
+                      id: p.id, act: "proj-open" });
+    });
+
     return by;
   }
 
@@ -2702,7 +2772,8 @@ function stateWord(b, n) {
           // a div with a click handler is invisible to the keyboard.
           var tag = m.id ? "button" : "div";
           return "<" + tag + ' class="cal-m t-' + m.tone + '"' +
-            (m.id ? ' type="button" data-act="board-open" data-id="' + m.id + '"' : "") +
+            (m.id ? ' type="button" data-act="' + (m.act || "board-open") +
+                    '" data-id="' + m.id + '"' : "") +
             ' title="' + esc(m.label + " \u2014 " + m.where) + '">' + esc(clip(m.label, 38)) +
             "</" + tag + ">";
         }).join("") +
@@ -2730,7 +2801,8 @@ function stateWord(b, n) {
         (by[day] || []).forEach(function (m) {
           var tag = m.id ? "button" : "div";
           h += "<" + tag + ' class="cl-row t-' + m.tone + '"' +
-            (m.id ? ' type="button" data-act="board-open" data-id="' + m.id + '"' : "") +
+            (m.id ? ' type="button" data-act="' + (m.act || "board-open") +
+                    '" data-id="' + m.id + '"' : "") +
             '><div class="grow"><div class="nm sm">' + esc(m.label) + "</div>" +
             '<div class="says">' + esc(m.where) + "</div></div></" + tag + ">";
         });
@@ -2747,13 +2819,24 @@ function stateWord(b, n) {
       "</h1></div>" +
       '<p class="saynote">A job is a bag: the benches you sit at for it, the boards you run for it, and what it hands you when you arrive.</p>' +
       '<div class="tools" style="margin-bottom:1.2rem"><button class="btn primary" data-act="job-add">New job</button>' +
+      '<button class="btn" data-act="proj-add">New project</button>' +
       '<button class="btn" data-act="tab-vocab">Claimants, modes and benches</button></div>';
 
-    if (!js.length) {
-      return h + '<p class="empty">Nothing yet. A job is AUB Tripoli 21st Century, or a visa, or a thesis — anything that has its own work and its own things.</p>';
+    // Projects belonging to no job are the brief's "life underneath that
+    // belongs to none of them" — a thesis, a visa, a paper of your own. They
+    // would be invisible under the jobs, so they come first.
+    var loose = projects().filter(function (p) { return !p.jobId || !jobOf(p.jobId); });
+    if (loose.length) {
+      h += '<div class="sect">Yours, under no job</div><div class="stack tight">' +
+        loose.map(projRow).join("") + "</div>";
     }
 
-    h += '<div class="stack">' + js.map(function (j) {
+    if (!js.length) {
+      return h + (loose.length ? "" :
+        '<p class="empty">Nothing yet. A job is AUB Tripoli 21st Century, or a visa, or a thesis — anything that has its own work and its own things.</p>');
+    }
+
+    h += (loose.length ? '<div class="sect">Jobs</div>' : "") + '<div class="stack">' + js.map(function (j) {
       var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
       var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
       return '<button type="button" class="panel rowbtn' + (late ? " late" : "") +
@@ -2768,6 +2851,8 @@ function stateWord(b, n) {
   function jobSays(j, runs, waiting) {
     var bits = [];
     var bn = jobBenches(j.id).length;
+    var pn = jobProjects(j.id).length;
+    if (pn) bits.push(pn + (pn === 1 ? " project" : " projects"));
     bits.push(bn ? bn + (bn === 1 ? " bench" : " benches") : "no bench yet");
     bits.push(runs ? runs + (runs === 1 ? " run under way" : " runs under way") : "nothing running");
     if (waiting) bits.push(waiting + " waiting on you");
@@ -2784,6 +2869,7 @@ function stateWord(b, n) {
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="job-back">All jobs</button>' +
       '<button class="btn" data-act="job-edit" data-id="' + j.id + '">Rename</button>' +
+      '<button class="btn" data-act="proj-add" data-id="' + j.id + '">New project</button>' +
       '<button class="btn" data-act="job-sw-add" data-id="' + j.id + '">Add software</button>' +
       '<button class="btn" data-act="job-link-add" data-id="' + j.id + '">Add a link</button>' +
       '<button class="btn danger" data-act="job-del" data-id="' + j.id + '">Delete</button></div>';
@@ -2812,21 +2898,39 @@ function stateWord(b, n) {
         '<div class="says">' + esc(j.noteAt ? "Written " + agoWords(j.noteAt) : "") + "</div></div></div>";
     }
 
-    h += '<div class="sect">Running</div>';
-    h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
+    /* The projects come before the loose boards, because a project is the
+       thing you mean when you say what you are working on — and the boards
+       under it are how it gets done. */
+    var ps = jobProjects(j.id);
+    h += '<div class="sect">Projects</div>';
+    h += ps.length ? '<div class="stack tight">' + ps.map(projRow).join("") + "</div>"
+      : '<p class="empty">No project yet. A project is a bounded piece of work with a date — the 2026 season, the harbour report — and its boards hang under it.</p>';
+
+    /* Only the boards that are NOT in a project. A board inside one is listed
+       on its project's page; printing it twice made the job page read as
+       though there were two of everything. */
+    var free = looseBoards(j.id);
+    var freeRuns = free.filter(function (b) { return b.kind === "run" && !b.closedOn; });
+    var freeTpls = free.filter(function (b) { return b.kind === "template"; });
+
+    h += '<div class="sect">On its own — not in a project</div>';
+    h += freeRuns.length ? '<div class="stack tight">' + freeRuns.map(function (b) {
       var bd = dues().filter(function (x) { return x.board.id === b.id; });
       var bl = bd.filter(function (x) { return x.st === "over"; }).length;
-      return '<div class="panel calm' + (bl ? " late" : "") + '" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+      return '<button type="button" class="panel rowbtn calm' + (bl ? " late" : "") +
+        '" data-act="board-open" data-id="' + b.id + '">' +
         '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
         '<div class="says">' + (bl ? bl + " late · " : "") + bd.length + " waiting · " +
-        runProgress(b).done + " of " + runProgress(b).total + " done</div></div></div>";
-    }).join("") + "</div>" : '<p class="empty">Nothing running for this job.</p>';
+        runProgress(b).done + " of " + runProgress(b).total + " done</div></div></button>";
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing running outside a project.</p>';
 
-    if (tpls.length) {
-      h += '<div class="sect">Procedures for it</div><div class="stack tight">' + tpls.map(function (b) {
-        return '<div class="panel calm" data-act="board-open" data-id="' + b.id + '" style="cursor:pointer">' +
+    if (freeTpls.length) {
+      h += '<div class="sect">Procedures for it</div><div class="stack tight">' + freeTpls.map(function (b) {
+        return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
           '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
-          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps</div></div></div>";
+          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
+          " steps</div></div></button>";
       }).join("") + "</div>";
     }
 
@@ -3754,7 +3858,7 @@ function stateWord(b, n) {
   //
   // Nothing here ever reaches `state`: the token and the passphrase live in
   // their own storage keys, so a backup of the book carries neither.
-  var SYNC_LISTS = ["jobs", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var SYNC_LISTS = ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
   var TOK_KEY = "mashghal.sync.token";
   var PASS_KEY = "mashghal.sync.pass";
   var DEV_KEY = "mashghal.sync.device";
@@ -4510,6 +4614,7 @@ function stateWord(b, n) {
     // Cheap exit for the overwhelmingly common case: already filed.
     if (state.jobs.length &&
         !live(state.benches).some(function (b) { return !b.jobId; }) &&
+        !(state.projects || []).some(function (p) { return !!p.claimantId; }) &&
         !state.boards.some(function (b) { return !b.jobId && b.benchId; })) return false;
     /* One job per claimant, the first time a book meets this — and ONCE.
        The test used to be "jobs is empty", so deleting your last job put it
@@ -4536,6 +4641,16 @@ function stateWord(b, n) {
       if (b.jobId) return;
       var bn = b.benchId && byId(state.benches, b.benchId);
       if (bn && bn.jobId) { b.jobId = bn.jobId; touched = true; }
+    });
+    /* A project seeded with a claimant rather than a job id — which is all the
+       sample can honestly name, since the jobs do not exist until this runs —
+       is filed the same way, and the handle is dropped once it has been used
+       so this never runs twice on the same record. */
+    (state.projects || []).forEach(function (p) {
+      if (!p.claimantId) return;
+      if (!p.jobId && byClaimant[p.claimantId]) p.jobId = byClaimant[p.claimantId];
+      delete p.claimantId;
+      touched = true;
     });
     // The kit was hung off a mode. It belongs to the job you are doing, since
     // that is what actually hands it to you.
@@ -4570,6 +4685,293 @@ function stateWord(b, n) {
     return dues().filter(function (d) { return d.board.jobId === id; });
   }
 
+  /* ================= projects =================
+
+     A job is who the work is for. A project is a bounded body of work with a
+     date on it — the 2026 season, chapter three, the harbour report — and the
+     two are different questions: a paper written between two universities is
+     one project across two jobs, and a job holds many projects over years. So
+     a project names its job when it has one and leaves it blank when it does
+     not, the same way a board may have no bench.
+
+     Nothing about how a project is GOING is stored. `projState()` reads it off
+     the project's boards, so the two can never disagree — which is the same
+     rule as the hours being derived from spans. `parked` is the single
+     exception and is a statement, not a figure: work deliberately set down
+     looks identical, from the outside, to work with nothing running, and no
+     derivation can tell them apart. */
+
+  var openProj = "";   // view state, never saved
+
+  function projects() { return live(state.projects); }
+  function projOf(id) { return byId(state.projects, id); }
+  function projName(id) {
+    var p = projOf(id);
+    return p ? p.name : (state.forgotten[id] ? state.forgotten[id] + " (removed)" : "");
+  }
+  function projBoards(id) {
+    return state.boards.filter(function (b) { return b.projectId === id && !b.archived; });
+  }
+  function projDues(id) {
+    return dues().filter(function (d) { return d.board.projectId === id; });
+  }
+  function jobProjects(jobId) {
+    return projects().filter(function (p) { return p.jobId === jobId; });
+  }
+  // The boards of a job that are not in any project. They are not an error —
+  // a one-off procedure needs no project — so they keep their own heading
+  // rather than being swept into a project that does not exist.
+  function looseBoards(jobId) {
+    return jobBoards(jobId).filter(function (b) { return !b.projectId || !projOf(b.projectId); });
+  }
+
+  function projRuns(id) {
+    return projBoards(id).filter(function (b) { return b.kind === "run"; });
+  }
+
+  /* Derived, in the order the reader needs it. Late outranks everything, the
+     same as on every other screen; a project past its own date with work still
+     open is late too, because that is exactly the thing a date is for. */
+  function projState(p) {
+    var bs = projBoards(p.id);
+    var runs = projRuns(p.id);
+    var open = runs.filter(function (b) { return !b.closedOn; });
+    var d = projDues(p.id);
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var over = p.endsOn && dayOk(p.endsOn) && daysUntil(p.endsOn) < 0;
+    var unf = open.reduce(function (n, b) { return n + unfiled(b).length; }, 0);
+
+    /* Finished means every run closed with nothing left to file. It is worth
+       stating separately from "nothing running": a project with three closed
+       runs is done, and a project with three procedures nobody has started is
+       not — from a count of open runs alone the two look the same. */
+    var done = runs.length && !open.length && !unf;
+    /* Published rather than left inside the ladder, because the ladder answers
+       "how is this going" and the calendar needs the narrower question "has
+       this date gone by on unfinished work" — a project late for a chase is
+       not a reason to paint a date three weeks out. */
+    var overdue = !!(over && !done);
+
+    function st(word, tone, why) {
+      return { word: word, tone: tone, why: why, overdue: overdue, done: !!done };
+    }
+
+    if (late) return st("late", "late",
+                       late + (late === 1 ? " step is" : " steps are") + " past its chase");
+    /* A date that has gone by on work that is not finished is a fact about the
+       project, so it outranks having been set down: parking something does not
+       move its deadline, and a screen that said "set down" over an overdue
+       project would be hiding the one thing worth knowing. Only a project that
+       is actually done escapes this. */
+    if (overdue) return st("past its date", "late",
+                       "was due " + niceDate(p.endsOn) + " and is not finished");
+    if (p.parked) return st("set down", "idle", "you set it down");
+    if (d.length) return st("in hand", "hand",
+                       d.length + (d.length === 1 ? " step" : " steps") + " waiting on you");
+    if (unf) return st("to file", "watch",
+                       unf + (unf === 1 ? " thing" : " things") + " still to archive");
+    if (done) return st("done", "idle", "every run closed and filed");
+    if (bs.length) return st("nothing running", "idle",
+                       bs.length + (bs.length === 1 ? " board" : " boards") + ", none under way");
+    return st("nothing yet", "idle", "no boards on it");
+  }
+
+  function projSays(p) {
+    var bits = [], st = projState(p);
+    if (p.jobId) bits.push(jobName(p.jobId));
+    bits.push(st.why);
+    /* Three cases, and the middle one is why this is not one line. The state
+       already names the date when it IS the finding, so repeating it says one
+       thing twice ("was due Aug 16 and is not finished · 30d past Aug 16").
+       A project late for a chase AND past its date has to say both, or the
+       deadline goes unmentioned on the row that most needs it. And "-30d left"
+       is what a single unguarded branch printed. */
+    if (p.endsOn && dayOk(p.endsOn)) {
+      if (st.overdue) {
+        if (st.word !== "past its date") bits.push("also past " + niceDate(p.endsOn));
+      } else {
+        var n = daysUntil(p.endsOn);
+        bits.push(n === 0 ? "due today" : n + "d left");
+      }
+    }
+    return bits.join(" · ");
+  }
+
+  /* What a project has actually produced: the filing steps that are done. It
+     is the one list nobody can reconstruct later — the archive lock knows
+     which filings are outstanding, and this is the other half of it. */
+  function projOutputs(id) {
+    var out = [];
+    projBoards(id).forEach(function (b) {
+      b.nodes.forEach(function (n) {
+        if (n.t === "step" && n.act === "file" && n.doneAt) {
+          out.push({ label: n.label, board: b.name, at: n.doneAt, path: n.path || "" });
+        }
+      });
+    });
+    return out.sort(function (a, b) { return a.at < b.at ? 1 : -1; });
+  }
+
+  // Everyone named anywhere on the project, once each. A run freezes its own
+  // copy of a person, so the same name appears on several boards and the list
+  // has to fold them together or it reads as four different Patricias.
+  function projPeople(id) {
+    var seen = {}, out = [];
+    projBoards(id).forEach(function (b) {
+      b.nodes.forEach(function (n) {
+        if (n.t !== "step" && n.kind === "person" && n.label && !seen[n.label.toLowerCase()]) {
+          seen[n.label.toLowerCase()] = 1;
+          out.push({ label: n.label, board: b.name });
+        }
+      });
+    });
+    return out;
+  }
+
+  function projOpts(jobId) {
+    var ps = projects();
+    // A project on this job first, because that is nearly always the answer;
+    // the rest stay reachable, since a project can span two jobs.
+    var mine = ps.filter(function (p) { return p.jobId === jobId; });
+    var rest = ps.filter(function (p) { return p.jobId !== jobId; });
+    return [{ value: "", label: "No project — a one-off" }].concat(
+      mine.map(function (p) { return { value: p.id, label: p.name }; }),
+      rest.map(function (p) {
+        return { value: p.id, label: p.name + (p.jobId ? " — " + jobName(p.jobId) : "") };
+      }));
+  }
+
+  function projRow(p) {
+    var st = projState(p);
+    var d = projDues(p.id), late = d.filter(function (x) { return x.st === "over"; }).length;
+    return '<button type="button" class="panel rowbtn' + (st.tone === "late" ? " late" : "") +
+      '" data-act="proj-open" data-id="' + p.id + '">' +
+      '<span class="itile t-proj">' + ICONS.proj + "</span>" +
+      '<div class="grow"><div class="nm">' + esc(p.name) + "</div>" +
+      '<div class="says">' + esc(projSays(p)) + "</div></div>" +
+      '<span class="st ' + st.tone + '"><i></i>' + esc(st.word) + "</span>" +
+      (late ? '<div class="bigage"><b>' + late + "</b><span>late</span></div>" : "") + "</button>";
+  }
+
+  function renderProj(p) {
+    var st = projState(p);
+    var bs = projBoards(p.id);
+    var runs = bs.filter(function (b) { return b.kind === "run" && !b.closedOn; });
+    var shut = bs.filter(function (b) { return b.kind === "run" && b.closedOn; });
+    var tpls = bs.filter(function (b) { return b.kind === "template"; });
+    var d = projDues(p.id);
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="proj-back">' + (p.jobId ? esc(jobName(p.jobId)) : "All projects") + "</button>" +
+      '<button class="btn" data-act="proj-edit" data-id="' + p.id + '">Edit</button>' +
+      '<button class="btn" data-act="proj-park" data-id="' + p.id + '">' +
+      (p.parked ? "Pick it back up" : "Set it down") + "</button>" +
+      '<button class="btn" data-act="board-new" data-id="' + p.id + '">New board</button>' +
+      '<button class="btn danger" data-act="proj-del" data-id="' + p.id + '">Delete</button></div>';
+
+    var h = '<div class="page-head"><div><h2>' + esc(p.name) + "</h2>" +
+      "<p>" + esc(projSays(p)) + "</p>" +
+      '<div class="stand"><span class="st ' + st.tone + '"><i></i>' + esc(st.word) + "</span>" +
+      (late ? '<span class="sp"><i class="d-late"></i>' + cap(numWord(late)) + " late</span>" : "") +
+      (d.length - late ? '<span class="sp"><i class="d-hand"></i>' + cap(numWord(d.length - late)) + " in hand</span>" : "") +
+      (!d.length ? '<span class="sp muted">Nothing waiting</span>' : "") +
+      "</div></div>" + tools + "</div>";
+
+    if (p.note) {
+      h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
+    }
+
+    h += '<div class="sect">Running</div>';
+    h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
+      var bd = dues().filter(function (x) { return x.board.id === b.id; });
+      var bl = bd.filter(function (x) { return x.st === "over"; }).length;
+      var pr = runProgress(b);
+      return '<button type="button" class="panel rowbtn calm' + (bl ? " late" : "") +
+        '" data-act="board-open" data-id="' + b.id + '">' +
+        '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+        '<div class="says">' + (bl ? bl + " late · " : "") + bd.length + " waiting · " +
+        pr.done + " of " + pr.total + " done</div></div></button>";
+    }).join("") + "</div>" : '<p class="empty">Nothing running. Start a run from one of its procedures.</p>';
+
+    if (tpls.length) {
+      h += '<div class="sect">Procedures</div><div class="stack tight">' + tpls.map(function (b) {
+        return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
+          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
+          " steps</div></div></button>";
+      }).join("") + "</div>";
+    }
+
+    var outs = projOutputs(p.id);
+    h += '<div class="sect">What it has produced</div>';
+    h += outs.length ? '<div class="stack tight">' + outs.map(function (o) {
+      return '<div class="panel calm"><span class="itile sm t-out">' + ICONS.file + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(o.label) + "</div>" +
+        '<div class="says">' + esc(o.board + " · filed " + agoWords(o.at) + (o.path ? " · " + o.path : "")) +
+        "</div></div></div>";
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing filed yet. A filing step that is done is what lands here — the same steps the archive lock watches.</p>';
+
+    var pep = projPeople(p.id);
+    if (pep.length) {
+      h += '<div class="sect">Who is on it</div><div class="stack tight">' + pep.map(function (x) {
+        return '<div class="panel calm"><span class="itile sm t-thing">' + ICONS.person + "</span>" +
+          '<div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
+          '<div class="says">' + esc("first named on " + x.board) + "</div></div></div>";
+      }).join("") + "</div>";
+    }
+
+    if (shut.length) {
+      h += '<div class="sect">Closed</div><div class="stack tight">' + shut.map(function (b) {
+        return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
+          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+          '<div class="says">' + esc("closed " + agoWords(b.closedOn)) + "</div></div></button>";
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function projDialog(p) {
+    var mk = !p;
+    openModal({
+      title: mk ? "New project" : "Edit project",
+      confirmLabel: mk ? "Create" : "Save",
+      message: mk ? "A project is a bounded piece of work with a date on it — a season, a chapter, a report. Its job is who it is for, and it can be left blank: a thesis belongs to no employer."
+                  : "",
+      fields: [
+        { key: "name", label: "Name", type: "text", span: true,
+          value: p ? p.name : "", placeholder: "Harbour report 2026" },
+        { key: "jobId", label: "For which job", type: "select",
+          options: [{ value: "", label: "No job — it is mine" }].concat(opts(state.jobs)),
+          value: p ? p.jobId : (openJob || "") },
+        { key: "endsOn", label: "Due by (optional)", type: "text",
+          value: p ? (p.endsOn || "") : "", placeholder: "YYYY-MM-DD" },
+        { key: "note", label: "What it is", type: "textarea", span: true, rows: 2,
+          value: p ? (p.note || "") : "" }
+      ],
+      validate: function (v) {
+        if (!v.name.trim()) return "Give it a name.";
+        // A date that exists, not a string shaped like one — the same test
+        // every other date in the app goes through.
+        if (v.endsOn.trim() && !dayOk(v.endsOn.trim()))
+          return "A due date has to be a real day, written YYYY-MM-DD.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = p;
+          if (!t) { t = { id: uid(), parked: false, archived: false }; state.projects.push(t); }
+          t.name = v.name.trim(); t.jobId = v.jobId;
+          t.endsOn = v.endsOn.trim(); t.note = v.note.trim();
+          if (mk) openProj = t.id;
+        });
+        toast(mk ? "Project created" : "Saved");
+      }
+    });
+  }
+
+
   /* ================= which build is this =================
 
      There was no way to tell, from inside the app, which version you were
@@ -4578,7 +4980,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v34 · 14 Sep 2026";
+  var BUILD = "v35 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -4622,7 +5024,12 @@ function stateWord(b, n) {
     var tpls = boards("template");
     var groups = {}, order = [];
     live.forEach(function (b) {
-      var key = b.jobId ? jobName(b.jobId) : b.benchId ? benchLabel(b.benchId) : "No job";
+      /* The project is the heading when there is one: it is what the person
+         calls the thing they are working on, and the employer is a fact about
+         it rather than its name. The job is the fallback, then the bench. */
+      var key = b.projectId && projOf(b.projectId) ? projName(b.projectId)
+              : b.jobId ? jobName(b.jobId)
+              : b.benchId ? benchLabel(b.benchId) : "No job";
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(b);
     });
@@ -6363,21 +6770,94 @@ function dims(n) {
     /* ---- the finder ---- */
     "find-open": function () { findOpen(); },
 
-    "board-new": function () {
+    /* ---- projects ---- */
+    "proj-open": function (id) { openProj = id; view = "jobs"; render(); },
+    // Back goes to the job it is for, or to the list when it has none — one
+    // level up, never two, the same rule as every other Back in the app.
+    "proj-back": function () {
+      var p = projOf(openProj);
+      openProj = "";
+      openJob = p && p.jobId && jobOf(p.jobId) ? p.jobId : "";
+      render();
+    },
+    "proj-add": function (id) {
+      if (id && jobOf(id)) openJob = id;
+      projDialog(null);
+    },
+    "proj-edit": function (id) { projDialog(projOf(id)); },
+
+    /* Setting a project down is the one thing about a project that is stated
+       rather than derived: from the outside, work deliberately parked and work
+       with nothing running look identical, and nothing in the record can tell
+       them apart. */
+    "proj-park": function (id) {
+      var p = projOf(id); if (!p) return;
+      var was = !!p.parked;
+      go(function () { p.parked = !was; });
+      toast(was ? "Picked back up" : "Set down — it stays on the list, quietly",
+        function () { go(function () { p.parked = was; }); });
+    },
+
+    /* Deleting a project keeps every board, exactly as Coffer's pocket delete
+       keeps every entry: the boards are the work and the project was only a
+       bag for it. They move to "not in a project" on the job page, and the
+       name is kept so a board that still names it reads "(removed)" rather
+       than losing where it came from. */
+    "proj-del": function (id) {
+      var p = projOf(id); if (!p) return;
+      var bs = projBoards(id), runs = bs.filter(function (b) { return b.kind === "run" && !b.closedOn; }).length;
+      confirmAction({
+        title: "Delete " + p.name + "?",
+        message: "Its " + bs.length + " board" + (bs.length === 1 ? "" : "s") +
+          (runs ? " (" + runs + " still running)" : "") +
+          " stay exactly as they are — they move to “not in a project” under " +
+          (p.jobId ? esc(jobName(p.jobId)) : "no job") +
+          ". Nothing recorded is deleted and no step loses its dates."
+      }, function () {
+        var undo = { id: p.id, rec: JSON.parse(JSON.stringify(p)) };
+        go(function () {
+          state.forgotten[p.id] = p.name;
+          state.projects = state.projects.filter(function (x) { return x.id !== p.id; });
+          if (openProj === p.id) {
+            openProj = "";
+            openJob = undo.rec.jobId && jobOf(undo.rec.jobId) ? undo.rec.jobId : "";
+          }
+        });
+        toast("Deleted — its boards were not touched", function () {
+          go(function () {
+            state.projects.push(undo.rec);
+            delete state.forgotten[undo.id];
+            delete state.tombstones[undo.id];
+          });
+        });
+      });
+    },
+
+    /* `id` is the project to put it in when the button was pressed on a
+       project's own page — there is no sense in asking again on the screen
+       that already answered it. */
+    "board-new": function (id) {
+      var into = id && projOf(id) ? id : (openProj || "");
       openModal({
         title: "New board", confirmLabel: "Create",
         message: "A board is a procedure you can run again and again. A bench is optional — a visa belongs to no employer.",
         fields: [
           { key: "name", label: "Name", type: "text", value: "", span: true, placeholder: "Brochure" },
           { key: "kindId", label: "Kind", type: "select", options: kindOpts(), value: "" },
-          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: "" }
+          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: "" },
+          { key: "projectId", label: "Project", type: "select", span: true,
+            options: projOpts(openJob), value: into }
         ],
         validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
         onConfirm: function (v) {
           go(function () {
             var b = newBoard(v.name.trim(), v.kindId, v.benchId);
+            b.projectId = v.projectId;
             state.boards.push(b);
             openId = b.id;
+            // Opening the new board means leaving the project page, or the
+            // board is created and nothing on screen changes.
+            if (openProj) { openProj = ""; }
           });
           toast("Board created");
         }
@@ -6391,11 +6871,16 @@ function dims(n) {
         fields: [
           { key: "name", label: "Name", type: "text", value: b.name, span: true },
           { key: "kindId", label: "Kind", type: "select", options: kindOpts(), value: b.kindId },
-          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: b.benchId }
+          { key: "benchId", label: "Bench", type: "select", options: benchOpts(), value: b.benchId },
+          { key: "projectId", label: "Project", type: "select", span: true,
+            options: projOpts(b.jobId), value: b.projectId || "" }
         ],
         validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
         onConfirm: function (v) {
-          go(function () { b.name = v.name.trim(); b.kindId = v.kindId; b.benchId = v.benchId; });
+          go(function () {
+            b.name = v.name.trim(); b.kindId = v.kindId; b.benchId = v.benchId;
+            b.projectId = v.projectId;
+          });
         }
       });
     },
@@ -7638,6 +8123,37 @@ function dims(n) {
     span(addDays(wkNow, 2), "10:00", "15:00", bDes.id);
     span(addDays(wkNow, 3), "09:00", "11:30", bGis.id);
     span(addDays(wkNow, 4), "16:00", "17:30", "", "");   // at no bench — suspense
+
+    /* --- projects, one in each state the reader can meet ---
+
+       A project is a bounded body of work; the boards are how it gets done.
+       Deliberately NOT every board: `gis` and `soton` stay outside one, so the
+       job page's "on its own" half has something in it and nobody concludes
+       that a board must belong to a project. */
+    var prHarb = mk({ name: "Harbour festival 2026", jobId: "", endsOn: addDays(today(), 18),
+                      note: "Programme, brochure and signage for the festival.",
+                      parked: false, archived: false });
+    var prPrint = mk({ name: "Balamand print work 2025", jobId: "", endsOn: addDays(today(), -30),
+                       note: "", parked: false, archived: false });
+    var prTeach = mk({ name: "Maritime teaching, 2026/27", jobId: "", endsOn: "",
+                       note: "The lecture, rerun each term.", parked: false, archived: false });
+    var prCyp = mk({ name: "Moving to Cyprus", jobId: "", endsOn: "",
+                     note: "Paused until the funding is decided.", parked: true, archived: false });
+    s.projects = [prHarb, prPrint, prTeach, prCyp];
+
+    /* Its job is filled in by ensureJobs(), which derives one job per claimant
+       and files the benches under it — so the sample cannot name a job id that
+       does not exist yet. The claimant is the honest handle here, and the two
+       projects with no job are the point: a course you teach and a move abroad
+       belong to no employer. */
+    prHarb.claimantId = cBal.id;
+    prPrint.claimantId = cBal.id;
+    prTeach.claimantId = cHff.id;
+
+    broch.projectId = prHarb.id;
+    spring.projectId = prPrint.id;
+    lect.projectId = prTeach.id;
+    visa.projectId = prCyp.id;
 
     s.boards = [broch, gis, spring, soton, lect, visa];
     s.boards.forEach(autoLayout);

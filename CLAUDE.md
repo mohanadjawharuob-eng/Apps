@@ -619,9 +619,10 @@ knowing which board she was on. Four rules:
 
 - **It searches the record, not the screen.** Every hit is built from `state`
   through the same helpers the views use (`boards`, `dues`, `benchLabel`,
-  `nodeState`), so a hit can never name something the app would then fail to
-  open, and a rebuilt screen cannot leave it searching a list that no longer
-  exists.
+  `nodeState`, `projState`), so a hit can never name something the app would
+  then fail to open, and a rebuilt screen cannot leave it searching a list that
+  no longer exists. It reaches projects, boards, runs, steps, people and things,
+  jobs, benches, kit and upkeep.
 - **It changes nothing.** A hit navigates; the handful of commands at the foot
   hand straight over to `APP.actions`, which is the only place a figure may
   move. A command closes the box first, or its dialog opens behind the scrim.
@@ -641,6 +642,10 @@ to centre on it.
 
 **Six tabs: Boards · Waiting · The week · Calendar · Jobs · Settings**, and a
 switch bar
+— and **Jobs is where the hierarchy is walked** (job → project → board), which
+is why Projects did not become a seventh tab. Coffer's rule applies here too:
+new work becomes a page inside an existing section rather than another slot on
+a bar that a phone cannot hold.
 pinned to the bottom of every screen showing where you are, since when, and the
 note you left. Boards lists procedures and runs; opening one shows the canvas
 over an editable list. Waiting is the only screen the phone really needs — dues
@@ -648,9 +653,10 @@ worst-first, unfinished runs, and upkeep filtered by place. The week is the
 standing, suspense and repair, and holds the report. Kit is the vocabulary plus
 each mode's kit.
 
-**Every tab always lands on its list.** Which board is open, which week is
-shown, which report is built and which mode's kit is open are all *view state* —
-module-level `openId`, `weekOf`, `reportOn`, `openMode`, `placeFilter`, none of
+**Every tab always lands on its list.** Which board is open, which job or
+project is open, which week is shown, which report is built and which mode's kit
+is open are all *view state* — module-level `openId`, `openJob`, `openProj`,
+`weekOf`, `reportOn`, `openMode`, `placeFilter`, none of
 them in `state`, so none reaches a backup or survives a reload. Keeping it in settings meant the tab
 showed a different screen depending on what you did ten minutes ago, which is
 the same trap Coffer's Horizon tab fell into.
@@ -664,6 +670,33 @@ target off to the right. "Tidy" re-runs it.
 
 ## Mashghal, as it ended up
 
+- **A project is what you are working on; a job is who it is for.** They are
+  different questions and neither contains the other cleanly, so `state.projects`
+  names its job when it has one and leaves it blank when it does not — a paper
+  written between two universities is one project across two jobs, a thesis and
+  a move abroad belong to no employer, and a job holds many projects over years.
+  The hierarchy is **Job → Project → Board → Node**, and the Jobs tab is where
+  it is walked: a job page lists its projects *and* the boards that are in none
+  of them ("on its own"), which is not an error state — a one-off procedure
+  needs no project, and printing a board under both its project and its job
+  made the page read as though there were two of everything.
+  **Nothing about how a project is going is stored.** `projState()` reads it off
+  the boards, so the two can never disagree, and the ladder is the familiar one:
+  late (a chase) · past its date · set down · in hand · to file · done ·
+  nothing running · nothing yet. Two of those are worth the words: `done` means
+  every run closed *with nothing left to file*, because three closed runs and
+  three procedures nobody started look identical from a count of open runs; and
+  a date gone by on unfinished work **outranks having been set down**, since
+  parking something does not move its deadline. `parked` is the one stated
+  field, because from the outside work deliberately set down and work with
+  nothing running are the same thing and no derivation can tell them apart.
+  `projState()` also publishes **`overdue`** separately from the ladder, for the
+  calendar: a project late for a chase is not a reason to paint a deadline three
+  weeks out, and the mark there is rose only when the date itself has gone.
+  Deleting a project **keeps every board** — they move to "not in a project",
+  exactly as Coffer's pocket delete keeps every entry — and the name goes to
+  `forgotten`, so the undo can put it back and a board still naming it reads
+  "(removed)".
 - **A job is the bag.** `state.jobs` is the top of the hierarchy: one engagement
   holding the benches you sit at for it, the boards you run for it, and the kit
   it hands you. Claimant, mode and bench survive underneath, because the hours
@@ -883,6 +916,14 @@ for ln in c.split(chr(10)):
 sel=re.findall(r"^\s*(\.[A-Za-z][\w-]*)\s*\{",chr(10).join(keep),re.M)
 print([k for k,v in collections.Counter(sel).items() if v>1] or "no collisions")'
 ```
+
+That scan only sees *bare* class rules, and the other half of the same fault is
+a **compound** one: `.panel.late` was rebuilt to the channel rule (a neutral
+card with a rose edge) and `.panel.calm.late` twenty lines below it was not, so
+the identical late row was a neutral card on Waiting and a rose card with rose
+prose inside a project page. **One state, one rule.** When a state's treatment
+changes, grep the state's class name across the whole stylesheet rather than
+editing the rule you happened to be looking at.
 
 ## Mashghal's look
 
