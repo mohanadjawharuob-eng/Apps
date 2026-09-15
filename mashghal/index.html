@@ -4793,15 +4793,53 @@ function stateWord(b, n) {
           base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
       });
   }
+  /* Compressed before it is sealed, because the measured payload runs into a
+     cliff. The bare book is 23KB of JSON and seals to 31KB of base64; twenty
+     travelling thumbnails take it to 1.3MB and forty-seven to 3MB, which is
+     past what a gist hands back inline. Gzipped, the bare book is 6KB and the
+     thumb-heavy one 735KB — base64 wastes a third and gzip reclaims most of
+     it even on already-compressed JPEG.
+
+     `CompressionStream` is a platform API, not a dependency: nothing is
+     fetched and nothing is installed. Where it is missing the blob is sealed
+     uncompressed exactly as before, and `z` is simply absent.
+
+     Compress THEN encrypt, in that order — the other way round compresses
+     random bytes and saves nothing. The usual caveat about compression
+     leaking plaintext length needs an adaptive oracle to exploit, and there
+     is none here: an attacker sees one static blob, whose length already
+     leaked before any of this. */
+  function zipOK() {
+    return typeof CompressionStream === "function" &&
+           typeof DecompressionStream === "function" &&
+           typeof Response === "function";
+  }
+  function zipThrough(stream, bytes) {
+    var w = stream.writable.getWriter();
+    w.write(bytes); w.close();
+    return new Response(stream.readable).arrayBuffer();
+  }
+  function deflate(bytes) { return zipThrough(new CompressionStream("gzip"), bytes); }
+  function inflate(bytes) { return zipThrough(new DecompressionStream("gzip"), bytes); }
+
   function seal(text, pass) {
     var salt = crypto.getRandomValues(new Uint8Array(16));
     var iv = crypto.getRandomValues(new Uint8Array(12));
-    return deriveKey(pass, salt).then(function (key) {
-      return subtle().encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(text));
-    }).then(function (ct) {
-      return JSON.stringify({ v: 1, kdf: "PBKDF2-SHA256", it: 250000,
-                              salt: b64(salt), iv: b64(iv), ct: b64(ct) }, null, 1);
-    });
+    var raw = new TextEncoder().encode(text);
+    var zipped = zipOK();
+    return (zipped ? deflate(raw).then(function (buf) { return new Uint8Array(buf); })
+                   : Promise.resolve(raw))
+      .then(function (body) {
+        return deriveKey(pass, salt).then(function (key) {
+          return subtle().encrypt({ name: "AES-GCM", iv: iv }, key, body);
+        });
+      })
+      .then(function (ct) {
+        var o = { v: 1, kdf: "PBKDF2-SHA256", it: 250000,
+                  salt: b64(salt), iv: b64(iv), ct: b64(ct) };
+        if (zipped) o.z = "gzip";
+        return JSON.stringify(o, null, 1);
+      });
   }
   function unseal(blob, pass) {
     var o;
@@ -4810,8 +4848,21 @@ function stateWord(b, n) {
     return deriveKey(pass, unb64(o.salt)).then(function (key) {
       return subtle().decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.ct));
     }).then(function (pt) {
-      return JSON.parse(new TextDecoder().decode(pt));
+      /* A blob with no `z` is one sealed before this and is read unchanged,
+         which is the whole point of the marker. The reverse is not true: an
+         older copy of the app meeting a gzipped blob decrypts it and fails to
+         parse, and says "wrong passphrase" — misleading, but loud, and both
+         devices are the same person's. */
+      if (o.z !== "gzip") return JSON.parse(new TextDecoder().decode(pt));
+      if (!zipOK()) throw new Error("This book was compressed by another device and this browser cannot unpack it.");
+      return inflate(new Uint8Array(pt)).then(function (buf) {
+        return JSON.parse(new TextDecoder().decode(new Uint8Array(buf)));
+      });
     }, function () {
+      /* The rejection handler is the SECOND argument of this `then`, not of
+         the one above: a handler cannot catch the rejection of its own
+         sibling, so attached one link earlier it never saw a failed decrypt at
+         all and a wrong passphrase came out as an unhandled DOMException. */
       throw new Error("Wrong passphrase — nothing was changed.");
     });
   }
@@ -5757,7 +5808,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v43 · 15 Sep 2026";
+  var BUILD = "v44 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };

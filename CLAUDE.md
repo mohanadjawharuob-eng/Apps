@@ -609,6 +609,26 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 - **The kit is what a mode hands you**, and the re-entry note is what you left
   behind: one line per bench, asked at the moment of leaving because that is the
   only moment you still know, and read back on arrival.
+- **The sealed payload is compressed, and the size was measured before it was
+  changed.** The bare book is 23KB of JSON and seals to 31KB of base64; twenty
+  travelling thumbnails take it to **1.3MB** and forty-seven to **3MB**, past
+  what a gist hands back inline. Gzipped, the bare book is 6KB and a realistic
+  book shape compresses about **7×** — base64 wastes a third and gzip reclaims
+  most of it even on already-compressed JPEG. `CompressionStream` is a platform
+  API and not a dependency: nothing is fetched and nothing is installed, and
+  where it is missing the blob is sealed uncompressed exactly as before.
+  **Compress then encrypt**, in that order: the other way round compresses
+  random bytes and saves nothing. (The usual caveat about compression leaking
+  plaintext length needs an adaptive oracle, and there is none here — an
+  attacker sees one static blob, whose length already leaked.) The envelope
+  carries `z: "gzip"` so a book sealed **before** this still opens, which is
+  the whole point of the marker: without it every gist already out there
+  becomes unreadable the moment one device updates. There is a test that seals
+  an old-style blob by hand and opens it.
+  One promise trap worth remembering: a rejection handler **cannot catch its
+  own sibling's rejection**. Attached as the second argument of the `then` that
+  *starts* the decrypt, it never saw a failed decrypt at all — it belongs on
+  the `then` that follows it.
 - **Sync is sealed here and merged per record.** Whole-file last-write-wins eats
   a day logged on the phone, silently — so every record carries `updatedAt`, a
   hard delete leaves a tombstone, and `go()` stamps only what changed. Pull,
