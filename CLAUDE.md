@@ -988,6 +988,28 @@ written as rules because each is a class of fault, not a one-off.
   preview states **how many ways in** the board has, because two ways in means
   a run starts on both at once and that is the one figure worth checking
   before accepting.
+- **The sheet is operable from the keyboard, and it has two axes because it
+  has two meanings.** It was the one screen a pointer was compulsory for:
+  everything you can do to a node lives behind picking it, and picking it was a
+  tap, so with no mouse the board could be looked at and nothing more. It is
+  `tabindex="0"` and `role="application"` now, never `role="img"` — an image
+  cannot be walked. **Left and right walk the nodes in reading order**, which
+  always works and can never dead-end (the order `autoLayout` places them, so
+  it matches what you see), and they wrap rather than stick. **Down and up
+  follow the flow**, which is what the board is actually saying, cycling when a
+  step has several ways on. `Enter` hands focus to the selection strip, because
+  the strip is rendered *before* the sheet in the document and Tab alone would
+  walk away from the board rather than into it; `Escape` lets go. Focusing with
+  nothing picked lands on `focusNode(b)` — late first, then in hand, then the
+  way in, the same order the fit uses.
+  Two details that make it usable rather than merely present: `panTo()` brings
+  the node into view **without changing the zoom**, for the same reason
+  `paintSel()` exists instead of a full render — a re-fit throws away wherever
+  the reader had got to. And a dead end on the vertical axis is **announced**
+  through `toast()`, which is the app's live region and therefore the only
+  channel a screen reader hears. The keys are written under the sheet in
+  `.cvkeys` rather than hidden in a tooltip: a shortcut nobody can find is a
+  shortcut nobody has.
 - **A whole row that opens something is a `<button>`.** Job rows and both
   calendar renderings were `<div data-act="…">`, so the Jobs tab could not be
   opened by keyboard at all. The element changes and the look does not:

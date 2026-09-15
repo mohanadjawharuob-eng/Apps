@@ -569,6 +569,21 @@ color-scheme: light;
     z-index: 3; pointer-events: none; text-align: center;
     padding: 0 1.4rem; display: flex; flex-direction: column; gap: 0.4rem; align-items: center;
   }
+  /* The sheet's keys, written on the page rather than hidden in a tooltip: a
+     shortcut nobody can find is a shortcut nobody has. Under the sheet, quiet,
+     and it takes the focus ring when the sheet has focus so it is obvious what
+     the arrows are about to do. */
+  .cvkeys {
+    margin: 0.45rem 0 0; font-size: 0.74rem; color: var(--faint); line-height: 1.6;
+  }
+  .cvkeys kbd {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
+    border: 1px solid var(--rule); border-radius: 5px; padding: 0.02rem 0.26rem;
+  }
+  #cv:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  /* The box is the sibling now, not the svg — `:focus-within` on the box is
+     what says the sheet has the keyboard. */
+  .cvbox:focus-within + .cvkeys { color: var(--ink); }
   .cvempty b { font-family: var(--display); font-weight: 500; font-size: 1.05rem; color: var(--dim); }
   .cvempty span { font-size: 0.86rem; color: var(--faint); max-width: 42ch; line-height: 1.5; }
   .cvempty span b { font-family: inherit; font-size: inherit; color: var(--ink); font-weight: 600; }
@@ -5711,7 +5726,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v40 · 15 Sep 2026";
+  var BUILD = "v41 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -6164,7 +6179,13 @@ function dims(n) {
       '<button class="btn" data-act="cv-tidy" data-id="' + b.id + '">Tidy</button>' +
       "</div>" +
       '<div id="selHost">' + selPanel(b) + "</div>" +
-      '<svg id="cv" role="img" aria-label="The board drawn as steps, things and the lines between them"></svg>' +
+      /* Focusable, and no longer role="img": an image cannot be walked, and the
+         sheet was the one screen in the app that a pointer was compulsory for
+         — every action on a node lives behind picking it. `aria-describedby`
+         points at the written instructions, which are on the page rather than
+         in a tooltip so they are readable by everyone. */
+      '<svg id="cv" tabindex="0" role="application" aria-describedby="cvKeys"' +
+      ' aria-label="The board. Arrow keys move between steps and things; Enter opens what can be done to the one you are on."></svg>' +
       '<div class="dropnote" id="dropNote">Let go to put the picture here</div>' +
       /* A new board was an empty grid the height of a laptop screen with
          nothing saying what to do with it, and the written-out list below it
@@ -6180,7 +6201,12 @@ function dims(n) {
       '<span><i class="l-link"></i>belongs with, in no order</span>' +
       '<span><i class="l-step"></i>a step</span>' +
       '<span><i class="l-thing"></i>a thing or a person</span></div>' +
-      "</div>";
+      "</div>" +
+      /* Under the sheet, not inside it: `.cvbox` clips its overflow and every
+         other child of it is absolutely positioned. */
+      '<p class="cvkeys" id="cvKeys">On the sheet: <kbd>←</kbd> <kbd>→</kbd> move through the steps in order, ' +
+      '<kbd>↓</kbd> <kbd>↑</kbd> follow a line on or back, <kbd>Enter</kbd> opens what you can do, ' +
+      '<kbd>Esc</kbd> lets go.</p>';
   }
 
   function svgEl(n, a) {
@@ -6759,6 +6785,123 @@ function dims(n) {
     if (cvSvg && cvSvg._gN) drawNodes(b, cvSvg);
   }
 
+  /* ================= the sheet, from the keyboard =================
+
+     The sheet was the one screen a pointer was compulsory for. Everything you
+     can do to a node lives behind picking it, and picking it was a tap — so
+     with no mouse the board could be looked at and nothing more.
+
+     Two axes, because the sheet has two meanings. **Left and right walk the
+     nodes in reading order**, which always works and can never dead-end: it is
+     the order `autoLayout` places them, top to bottom and left to right, so it
+     matches what you see. **Down and up follow the flow**, which is what the
+     board is actually saying — a way on, a way back — and cycle when a step has
+     several. Enter hands the focus to the strip of things you can do, which is
+     already in the document and already tabbable; Escape lets go. */
+
+  // Reading order, and it must be stable: two nodes at the same y sort by x.
+  function readOrder(b) {
+    return (b.nodes || []).slice().sort(function (p, q) {
+      var dy = (p.y || 0) - (q.y || 0);
+      if (Math.abs(dy) > 8) return dy;
+      return (p.x || 0) - (q.x || 0);
+    });
+  }
+
+  /* Bring a node inside the view without changing the zoom. Panning rather
+     than re-fitting on purpose: a fit would throw away wherever the reader had
+     got to, which is the same reason `paintSel()` exists instead of a full
+     render. Only moves when the node is actually outside. */
+  function panTo(n) {
+    if (!cvSvg || !n) return;
+    var d = dims(n), pad = 40;
+    if (n.x - pad < vb.x) vb.x = n.x - pad;
+    else if (n.x + d.w + pad > vb.x + vb.w) vb.x = n.x + d.w + pad - vb.w;
+    if (n.y - pad < vb.y) vb.y = n.y - pad;
+    else if (n.y + d.h + pad > vb.y + vb.h) vb.y = n.y + d.h + pad - vb.h;
+    applyVB();
+  }
+
+  function selectNode(b, n) {
+    if (!n) return false;
+    sel = n.id;
+    paintSel(b);
+    panTo(n);
+    return true;
+  }
+
+  function stepAlong(b, n, dir) {
+    var edges = dir > 0 ? nextOf(b, n.id) : prevOf(b, n.id);
+    if (!edges.length) return null;
+    /* Cycle, so a step with three ways on can reach all three: the one after
+       whichever is selected now, or the first. `sel` is the node we are on, so
+       the cycle is kept on the node itself rather than in a second variable
+       that could disagree with it. */
+    var targets = edges.map(function (e) { return nodeOf(b, dir > 0 ? e.b : e.a); })
+                       .filter(function (x) { return !!x; });
+    if (!targets.length) return null;
+    var at = targets.map(function (t) { return t.id; }).indexOf(n._kbLast || "");
+    var pick = targets[(at + 1) % targets.length];
+    n._kbLast = pick.id;
+    return pick;
+  }
+
+  function mountKeys(b) {
+    if (!cvSvg || cvSvg._keys) return;
+    cvSvg._keys = true;
+
+    cvSvg.addEventListener("focus", function () {
+      // Arriving with nothing picked lands on what matters: late first, then
+      // what is in hand, then the way in — the same order the fit uses.
+      if (!sel || !nodeOf(b, sel)) selectNode(b, focusNode(b));
+    });
+
+    cvSvg.addEventListener("keydown", function (ev) {
+      var bd = openBoard();
+      if (!bd) return;
+      var n = sel && nodeOf(bd, sel);
+      var order = readOrder(bd);
+      if (!order.length) return;
+
+      if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+        ev.preventDefault();
+        var i = n ? order.map(function (x) { return x.id; }).indexOf(n.id) : -1;
+        var step = ev.key === "ArrowRight" ? 1 : -1;
+        var next = order[(i + step + order.length) % order.length];
+        selectNode(bd, next);
+        return;
+      }
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        if (!n) { selectNode(bd, order[0]); return; }
+        var along = stepAlong(bd, n, ev.key === "ArrowDown" ? 1 : -1);
+        if (along) selectNode(bd, along);
+        /* A dead end is said out loud rather than swallowed: `#toasts` is the
+           app's live region, so this is the one channel a screen reader hears.
+           Nothing else in the app announces a refusal any other way. */
+        else toast(ev.key === "ArrowDown"
+          ? "Nothing comes after " + n.label + ". Left and right still walk the sheet."
+          : "Nothing comes before " + n.label + ". Left and right still walk the sheet.");
+        return;
+      }
+      if (ev.key === "Enter" || ev.key === " ") {
+        // Into the strip of things you can do to it. The strip is rendered
+        // before the sheet in the document, so Tab alone would walk away from
+        // the board rather than into it.
+        ev.preventDefault();
+        if (!n) { selectNode(bd, focusNode(bd)); return; }
+        var first = document.querySelector("#selHost .selacts .btn, #selHost .selacts a");
+        if (first) first.focus();
+        return;
+      }
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        if (sel) { sel = ""; paintSel(bd); }
+        return;
+      }
+    });
+  }
+
   function applyVB() { if (cvSvg) cvSvg.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h); }
 
   /* A card that gains a picture grows from one line to a hundred pixels tall,
@@ -7139,6 +7282,7 @@ function dims(n) {
     if (b.nodes.some(function (n) { return typeof n.x !== "number"; })) { autoLayout(b); save(); }
     drawBoard(b, cvSvg);
     fitBoard(b);
+    mountKeys(b);
 
     cvSvg.addEventListener("pointerdown", function (ev) {
       var g = ev.target.closest ? ev.target.closest("g[data-id]") : null;
