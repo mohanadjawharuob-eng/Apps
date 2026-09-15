@@ -585,7 +585,22 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 - **The report computes nothing of its own and states its own limits** — the
   same two rules Coffer's `buildReport()` lives by. Read it after changing it;
   both defects in the first draft were invisible to assertions and obvious on
-  sight.
+  sight, and so were both of the next two. It knew about runs and nothing about
+  what they were for, so it now opens the work with **PROJECTS** (every word
+  from `projState()` and `projSays()`, the same two the Jobs tab reads, so the
+  report cannot call a project late while the screen calls it in hand — there is
+  a test that compares the two character for character) and closes it with
+  **WHAT WAS FILED IN THIS PERIOD**, because a done filing step is the only
+  thing in the book that says a piece of work left the building. `filings()` is
+  one walk, ranged or not, and `projOutputs()` is the unranged call of it — two
+  walks would eventually answer one question differently.
+  The two defects reading found: **`niceDate()` is relative**, so the
+  week-commencing column printed "w/c yesterday" — `plainDate()` exists for a
+  date in a table, and `niceDate` stays for a date in a sentence. And a
+  four-month report printed **sixteen identical "nothing recorded that week"
+  rows** above the two rows anybody wanted, so consecutive empty weeks collapse
+  to one line that still says how many they were. A report nobody reads to the
+  end is worse than a shorter one.
 - **A cadence has no due date.** Every so often since it was last done, so
   arrears never compound: there is one of each, however far past. It carries a
   place, so the phone offers only what is doable where you are, and it can name
@@ -1081,6 +1096,15 @@ first and fall back to system sans and Georgia — embedding all six faces came
 to 415KB against a 189KB app. Mono only for what is genuinely machine-read:
 clocks, counts, act labels. Panels round at 12px and float; **no shadow inside
 a frame** — separation comes from fill.
+
+**A toast sits above the switch bar, and the bar measures itself.** The bar is
+pinned to the bottom of every screen, so a toast at a fixed `bottom` sat behind
+it: half of "Removed · Undo" was under the bar and the Undo was unreachable on
+a short window. `mountBar()` writes the bar's real height into `--sbh` on every
+render — measured, not written down, because it wraps to two lines when there
+is a re-entry note to read back, and a constant would hide a toast exactly when
+the bar had most to say. The `.toasts` box is `pointer-events: none` with each
+toast taking it back, so it never blocks what is under it.
 
 **On a phone, a row wraps its buttons onto their own line** (under 560px). A
 pill, a sentence and two buttons on one line left the sentence about ten

@@ -1033,7 +1033,21 @@ color-scheme: light;
   .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.1rem 1.1rem; }
 
   /* ---------------- toasts + tip ---------------- */
-  .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.1rem; z-index: 80; display: flex; flex-direction: column; gap: 0.4rem; align-items: center; }
+  /* Above the switch bar, which is pinned to the bottom of every screen — a
+     toast at `bottom: 1.1rem` sat behind it, so half of "Removed · Undo" was
+     under the bar and the Undo was unreachable on a short window. The bar
+     measures itself into `--sbh` on every render (mountBar), because its
+     height is not a constant: it wraps to two lines when there is a re-entry
+     note to read back. */
+  .toasts {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--sbh, 3.4rem) + 0.9rem); z-index: 80;
+    display: flex; flex-direction: column; gap: 0.4rem; align-items: center;
+    pointer-events: none;
+  }
+  /* The box ignores the pointer so it never blocks what is under it; each
+     toast takes it back, or Undo could not be pressed. */
+  .toasts > * { pointer-events: auto; }
   .toast {
     background: var(--raised); border: 1px solid var(--rule); color: var(--ink);
     padding: 0.5rem 0.8rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.7rem;
@@ -3359,7 +3373,14 @@ function stateWord(b, n) {
   }
   function mountBar() {
     var el = document.getElementById("sbar");
-    if (el) el.innerHTML = switchBarHtml();
+    if (!el) return;
+    el.innerHTML = switchBarHtml();
+    /* The bar's own height, published so the toasts can sit above it. Measured
+       rather than written down: it wraps to two lines when there is a
+       re-entry note to read back, and a constant would put a toast half
+       behind it exactly when the bar had most to say. */
+    var h = el.getBoundingClientRect().height;
+    if (h) document.documentElement.style.setProperty("--sbh", Math.round(h) + "px");
   }
 
   /* ---------------- the week screen ---------------- */
@@ -3592,6 +3613,12 @@ function stateWord(b, n) {
   function wordDate(d) {
     return parseISO(d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
   }
+  /* A date in a table, never relative. `niceDate()` says "yesterday" for
+     recent days, which reads well in a sentence and reads as nonsense in a
+     column of week-commencing dates — the report printed "w/c yesterday". */
+  function plainDate(d) {
+    return parseISO(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
   function pad(s, n) { s = String(s); return s + new Array(Math.max(1, n - s.length + 1)).join(" "); }
 
   function weeksBetween(from, to) {
@@ -3642,11 +3669,30 @@ function stateWord(b, n) {
              withEntries.length + (withEntries.length === 1 ? " week" : " weeks") +
              " with entries, of " + weeks.length + " in the period.");
       L.push("");
+      /* A run of weeks with nothing in them is one line, not one line each.
+         Over four months that was sixteen identical rows of "nothing recorded
+         that week" above the two rows anybody wanted to read — and a report
+         nobody reads to the end is worse than a shorter one. The weeks are
+         still all accounted for: the line says how many. */
+      var run = null;
+      function flushRun() {
+        if (!run) return;
+        L.push("    " + pad(run.n === 1 ? "w/c " + plainDate(run.from)
+                                        : plainDate(run.from) + " – " + plainDate(addDays(run.to, 6)), 18) +
+               pad("—", 12) +
+               (run.n === 1 ? "nothing recorded that week"
+                            : "nothing recorded in " + run.n + " weeks"));
+        run = null;
+      }
       rows.forEach(function (r) {
-        var line = "    " + pad("w/c " + niceDate(r.w), 18) +
-          pad(r.lived ? amountWords(r.got, owed.unit) : "—", 12);
-        if (!r.lived) line += "nothing recorded that week";
-        else if (owed.owed && r.whole) {
+        if (!r.lived) {
+          if (run) { run.to = r.w; run.n++; } else { run = { from: r.w, to: r.w, n: 1 }; }
+          return;
+        }
+        flushRun();
+        var line = "    " + pad("w/c " + plainDate(r.w), 18) +
+          pad(amountWords(r.got, owed.unit), 12);
+        if (owed.owed && r.whole) {
           var d = owed.owed - r.got;
           line += d > 0 ? "short by " + amountWords(d, owed.unit)
                         : (d < 0 ? "over by " + amountWords(-d, owed.unit) : "met");
@@ -3655,6 +3701,7 @@ function stateWord(b, n) {
         }
         L.push(line.replace(/\s+$/, ""));
       });
+      flushRun();
       if (owed.owed) {
         var full = rows.filter(function (r) { return r.whole && r.lived; });
         var behind = full.reduce(function (t, r) { return t + Math.max(0, owed.owed - r.got); }, 0);
@@ -3683,8 +3730,34 @@ function stateWord(b, n) {
                         : "  No stretch in this period carries a note, so this section is empty rather than guessed at.");
     L.push("");
 
-    /* ---- the work itself ---- */
+    /* ---- the projects, above the boards that do them ----
+
+       Added because the report knew about runs and nothing about what they
+       were for, which is the first thing anybody reading it asks. Every word
+       here comes from `projState()` and `projSays()`, the same two the Jobs
+       tab reads, so the report cannot say a project is late while the screen
+       says it is in hand. */
     var bs = boardsForClaimant(c ? c.id : "");
+    var projIds = {}, projList = [];
+    bs.forEach(function (b) {
+      if (!b.projectId) return;
+      var p = projOf(b.projectId);
+      if (!p || p.archived || projIds[p.id]) return;
+      projIds[p.id] = 1; projList.push(p);
+    });
+    L.push("PROJECTS");
+    if (!projList.length) {
+      L.push("  No board in this report belongs to a project, so there is nothing to roll up. That is not a gap: a one-off procedure needs no project.");
+    } else {
+      projList.forEach(function (p) {
+        var st = projState(p);
+        L.push("  " + pad(p.name, 34) + st.word);
+        L.push("    " + projSays(p));
+      });
+    }
+    L.push("");
+
+    /* ---- the work itself ---- */
     var runs = bs.filter(function (b) { return b.kind === "run"; });
     L.push("THE WORK");
     if (!runs.length) {
@@ -3711,6 +3784,25 @@ function stateWord(b, n) {
         if (!b.closedOn && !act.length && uf.length) {
           L.push("      not filed: " + uf.map(function (n) { return n.label; }).join(", "));
         }
+      });
+    }
+    L.push("");
+
+    /* ---- what was actually produced in the period ----
+
+       A filing step that is done is the only thing in the book that says a
+       piece of work left the building, which is exactly what a report is for.
+       Dated by when it was FILED, not when the run started, and read through
+       `filings()` — the same walk the project page uses, so the two cannot
+       disagree. */
+    var filed = filings(bs, from, to);
+    L.push("WHAT WAS FILED IN THIS PERIOD");
+    if (!filed.length) {
+      L.push("  Nothing. Either nothing finished, or it finished and was never archived — the unfiled lines above say which.");
+    } else {
+      filed.forEach(function (f) {
+        L.push("  " + pad(plainDate(stampDay(f.at)), 14) + pad(f.label, 34) + f.board);
+        if (f.path) L.push("    " + f.path);
       });
     }
     L.push("");
@@ -3757,6 +3849,12 @@ function stateWord(b, n) {
       L.push("  The first and last weeks are partial, so they are summed but not measured against a weekly figure.");
     }
     L.push("  Every figure is summed from logged stretches. Nothing is estimated, averaged or filled in.");
+    if (projList.length) {
+      L.push("  A project's state is read off its boards, never stored, so it cannot disagree with the screen — and “past its date” means the date has gone by on work that is not finished, not that anything was late.");
+    }
+    if (filed.length) {
+      L.push("  A filing is dated by the day it was archived, not by when the work was done, so a run that finished in March and was filed in May appears under May.");
+    }
     L.push("");
     L.push("Written " + wordDate(today()) + " by Mashghal, from this device only.");
     return L.join("\n");
@@ -5401,17 +5499,24 @@ function stateWord(b, n) {
   /* What a project has actually produced: the filing steps that are done. It
      is the one list nobody can reconstruct later — the archive lock knows
      which filings are outstanding, and this is the other half of it. */
-  function projOutputs(id) {
+  /* One walk, ranged or not, because the project page and the written report
+     both ask this question and two walks would eventually answer it
+     differently. `from`/`to` are optional; omitted, it is every filing there
+     has ever been. */
+  function filings(boardList, from, to) {
     var out = [];
-    projBoards(id).forEach(function (b) {
+    boardList.forEach(function (b) {
       b.nodes.forEach(function (n) {
-        if (n.t === "step" && n.act === "file" && n.doneAt) {
-          out.push({ label: n.label, board: b.name, at: n.doneAt, path: n.path || "" });
-        }
+        if (n.t !== "step" || n.act !== "file" || !n.doneAt) return;
+        var day = stampDay(n.doneAt);
+        if (from && day < from) return;
+        if (to && day > to) return;
+        out.push({ label: n.label, board: b.name, at: n.doneAt, path: n.path || "" });
       });
     });
     return out.sort(function (a, b) { return a.at < b.at ? 1 : -1; });
   }
+  function projOutputs(id) { return filings(projBoards(id)); }
 
   // Everyone named anywhere on the project, once each. A run freezes its own
   // copy of a person, so the same name appears on several boards and the list
@@ -5581,7 +5686,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v38 · 15 Sep 2026";
+  var BUILD = "v39 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
