@@ -1127,6 +1127,36 @@ color-scheme: light;
   @media (hover: none) { .dayhead.bare .btn { opacity: 1; } }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---------------- the standing alarm ----------------
+     For a state the app is IN rather than something that happened: the book
+     could not be read, or the last change could not be written. A toast is
+     wrong for both — it says its piece and leaves, and these keep being true.
+     Pinned to the top so it cannot be scrolled past. */
+  .alarm:empty { display: none; }
+  /* Fixed, not sticky: sticky pins to whichever ancestor scrolls, and in one
+     app that is not the body — so the alarm scrolled away off the top of the
+     page, which is the one thing it may never do. */
+  .alarm {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 70;
+    padding: 0.6rem 0.9rem 0; pointer-events: none;
+  }
+  /* The one-line shape, for the alarm that stands while you keep working. */
+  .alarm-box.thin {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    padding: 0.5rem 0.7rem;
+  }
+  .alarm-box.thin b { display: inline; flex: 0 0 auto; }
+  .alarm-box.thin span { flex: 1; min-width: 12rem; font-size: 0.82rem; }
+  .alarm-box {
+    background: var(--surface); border: 1px solid var(--warn);
+    border-left: 4px solid var(--warn); border-radius: 12px;
+    padding: 0.85rem 1rem; box-shadow: 0 16px 34px -22px #000;
+    pointer-events: auto; max-width: 46rem; margin: 0 auto;
+  }
+  .alarm-box b { display: block; color: var(--ink); font-size: 0.95rem; }
+  .alarm-box p { margin: 0.35rem 0 0.7rem; font-size: 0.84rem; line-height: 1.55; }
+  .alarm-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 </style>
 
 <div class="shell">
@@ -1169,6 +1199,7 @@ color-scheme: light;
 <!-- Every confirmation and every refused form speaks through here, so it has
      to be a live region: a reader using a screen reader got no feedback at all
      when a dialog rejected what they typed. -->
+<div class="alarm" id="alarm" role="alert" aria-live="assertive"></div>
 <div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
 <div id="overlay"></div>
@@ -5726,7 +5757,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v42 · 15 Sep 2026";
+  var BUILD = "v43 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -9454,17 +9485,118 @@ function weekStart(dateStr) {
 
 /* ---------------- storage ---------------- */
 
+/* Two ways the record can be in trouble, and the app used to carry on as
+   though neither had happened.
+
+   **It could not be read.** A truncated write, a half-finished sync, a pasted
+   backup missing its tail — `JSON.parse` throws, the catch returned a blank
+   shape, and the app opened on its first-run screen with not one word said. The
+   only rational reading of that screen is "everything is gone", while the text
+   was still sitting in storage, and the next thing that saved would write over
+   it. An empty book presented as your book is the worst failure this app can
+   have, so the raw text is KEPT and `persist()` refuses until somebody decides.
+
+   **It could not be written.** The old code toasted and moved on: four seconds
+   later nothing said so, and the screen went on showing a change that would
+   vanish on reload. Worse, the sample's own "Example loaded" toast landed
+   directly after two failures, so the app claimed success immediately after
+   admitting failure. A refused save is sticky now, and the first one opens the
+   backup dialog so the work can be copied out of the page it is still in. */
+var bookTrouble = { unread: null, unsaved: false, said: false };
+
 function loadState(shape) {
+  var raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch (e) { raw = null; }
+  if (!raw) return shape();
   try {
-    var raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return shape();
-    var p = JSON.parse(raw);
-    return APP.hydrate(p, shape());
-  } catch (e) { return shape(); }
+    return APP.hydrate(JSON.parse(raw), shape());
+  } catch (e) {
+    bookTrouble.unread = { raw: raw, why: String((e && e.message) || e) };
+    return shape();
+  }
 }
+
 function persist(state) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-  catch (e) { toast("Could not save — this browser's storage may be full or blocked."); }
+  // The unreadable text is the only copy of the work. Writing a blank book
+  // over it IS the loss, so nothing is written until it has been dealt with.
+  if (bookTrouble.unread) { alarmPaint(); return false; }
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    if (bookTrouble.unsaved) { bookTrouble.unsaved = false; alarmPaint(); }
+    return true;
+  } catch (e) {
+    bookTrouble.unsaved = true;
+    alarmPaint();
+    if (!bookTrouble.said) {
+      bookTrouble.said = true;
+      /* Deferred, because this can be reached from inside a dialog's confirm —
+         `go()` saves — and backupDialog takes over the overlay. Opening it on
+         top of a closing dialog leaves the scrim behind. */
+      var text = "";
+      try { text = JSON.stringify(state, null, 2); } catch (e2) { text = ""; }
+      setTimeout(function () {
+        if (!text) return;
+        backupDialog(STORE_KEY + "-unsaved.json", text,
+          "this could not be saved to the browser — keep a copy");
+      }, 0);
+    }
+    return false;
+  }
+}
+
+/* The standing alarm. Not a toast: a toast is for something that happened, and
+   these are states the app is IN — it will keep being true until somebody acts,
+   so it has to keep being on the screen. Wired with real listeners rather than
+   `data-act`, so it works in every app that shares this runtime without any of
+   them having to add an action. */
+function alarmPaint() {
+  var el = document.getElementById("alarm");
+  if (!el) return;
+  if (bookTrouble.unread) {
+    var kb = (bookTrouble.unread.raw.length / 1024).toFixed(1);
+    el.innerHTML = '<div class="alarm-box"><b>This book could not be read, and nothing has been saved over it.</b>' +
+      "<p>There are " + kb + " KB of text in this browser's storage that is not valid " +
+      "— a half-finished write, or a backup pasted in short. What you are looking at is an " +
+      "EMPTY book, not yours: nothing has been lost yet, and nothing will be saved until you choose.</p>" +
+      '<div class="alarm-acts"><button class="btn primary" data-alarm="keep">Show me the text</button>' +
+      '<button class="btn danger" data-alarm="fresh">Throw it away and start fresh</button></div></div>';
+    el.querySelector('[data-alarm="keep"]').addEventListener("click", function () {
+      backupDialog(STORE_KEY + "-damaged.txt", bookTrouble.unread.raw,
+        "the text as it is, unreadable — " + bookTrouble.unread.why);
+    });
+    el.querySelector('[data-alarm="fresh"]').addEventListener("click", function () {
+      confirmAction({
+        title: "Throw away the unreadable text?",
+        confirmLabel: "Throw it away",
+        message: "It is the only copy of whatever was in this browser. Copy it out first if you have not — " +
+          "<b>Show me the text</b> hands it to you. After this the app saves normally again and that text is gone."
+      }, function () {
+        bookTrouble.unread = null;
+        alarmPaint();
+        save();
+        render();
+        toast("Starting fresh. Saving works again.");
+      });
+    });
+    return;
+  }
+  if (bookTrouble.unsaved) {
+    /* One line, not a card. The unread alarm can take the top of the screen
+       because the page behind it is an empty book and covering it costs
+       nothing; this one stands while you carry on working, and a three-line
+       card permanently over the top of every screen is its own problem. The
+       whole essential fact fits on one line. */
+    el.innerHTML = '<div class="alarm-box thin"><b>Not saved.</b>' +
+      "<span>Storage is full or blocked, so everything on screen lives only in this tab.</span>" +
+      '<button class="btn primary" data-alarm="copy">Copy my book out</button></div>';
+    el.querySelector('[data-alarm="copy"]').addEventListener("click", function () {
+      var text = "";
+      try { text = JSON.stringify(state, null, 2); } catch (e) {}
+      if (text) backupDialog(STORE_KEY + "-unsaved.json", text, "what is on the screen, unsaved");
+    });
+    return;
+  }
+  el.innerHTML = "";
 }
 
 /* ---------------- modal ---------------- */
@@ -9639,7 +9771,14 @@ function toast(msg, undo) {
   var box = document.getElementById("toasts");
   var el = document.createElement("div");
   el.className = "toast";
-  el.innerHTML = "<span>" + esc(msg) + "</span>";
+  /* While the book cannot be written, EVERY message the app gives you says so.
+     Without this the app contradicted itself in two channels at once: the
+     alarm said the last change was not saved, and a toast beside it said
+     "Headphone firmware — next in 90 days · Undo", which reads as done and
+     durable. One place, because every success message in every app that shares
+     this runtime comes through here. */
+  el.innerHTML = "<span>" + esc(msg) +
+    (bookTrouble.unsaved ? " \u00b7 <b>not saved</b>" : "") + "</span>";
   function remove() { if (el.parentNode) el.parentNode.removeChild(el); }
   if (undo) {
     var b = document.createElement("button");
@@ -9931,6 +10070,7 @@ function boot() {
   });
 
   render();
+  alarmPaint();
   if (APP.afterBoot) APP.afterBoot();
 }
 

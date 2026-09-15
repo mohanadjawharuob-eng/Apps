@@ -1163,6 +1163,45 @@ pill, a sentence and two buttons on one line left the sentence about ten
 characters wide, and an upkeep row naming a place and the thing it protects
 wrapped to nine.
 
+## Storage failures
+
+**The app may never carry on as though the record were intact.** Two ways it
+can be in trouble, and both were silent.
+
+**It could not be read.** A truncated write, a half-finished sync or a backup
+pasted in short makes `JSON.parse` throw; the catch returned a blank shape and
+the app opened on its first-run screen with **not one word said**. The only
+rational reading of that screen is "everything is gone", while the text was
+still sitting in storage — and the next thing that saved would have written
+over it. An empty book presented as your book is the worst failure this app can
+have. So `loadState` **keeps the raw text** in `bookTrouble.unread`, and
+`persist()` **refuses to write at all** until somebody decides: that text is
+the only copy of the work, and a blank book written over it *is* the loss. The
+alarm offers the two real choices — hand me the text (through `backupDialog`,
+so it can be copied out or saved), or throw it away and start fresh, which
+confirms first and says it is the only copy.
+
+**It could not be written.** The old code toasted and moved on: four seconds
+later nothing said so, and the screen went on showing a change that would
+vanish on reload. Worse, the sample's own "Example loaded" toast landed
+directly after two failures, so the app claimed success immediately after
+admitting failure. A refused save is **sticky** now, the first one opens the
+backup dialog so the work can be copied out of the page it is still in, and
+`toast()` appends **"· not saved"** to every message while it stands — one
+place, because every success message in all four apps comes through there.
+
+Three things about the alarm itself. It is **not a toast**: a toast is for
+something that happened, and these are states the app is IN, true until
+somebody acts. It is **`position: fixed`, not sticky** — sticky pins to
+whichever ancestor scrolls, and in one of these apps that is not the body, so
+it scrolled off the top, which is the one thing it may never do. And it has
+**two shapes**: the unread alarm is a full card, because the page behind it is
+an empty book and covering it costs nothing, while the unsaved one is a single
+line, because it stands while you keep working and a three-line card
+permanently over the top of every screen is its own problem. Its buttons are
+wired with real listeners rather than `data-act`, so every app that shares the
+runtime gets them without adding an action.
+
 ## State
 
 One shape, adopted in one place. `adoptState()` turns a parsed object into
