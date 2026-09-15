@@ -697,6 +697,46 @@ target off to the right. "Tidy" re-runs it.
   exactly as Coffer's pocket delete keeps every entry — and the name goes to
   `forgotten`, so the undo can put it back and a board still naming it reads
   "(removed)".
+- **The registry holds what the work is made OF as well as what it is made
+  WITH.** `state.assets` was four pieces of hardware with upkeep on them
+  (laptop, phone, audio, other, all hardcoded); it is now files, photographs,
+  datasets, documents, software and field kit as well, with `assetKinds` joining
+  the extensible vocabulary so the list is a floor and not a ceiling. Two rules
+  hold it. **A board never points into it** — a run freezes its procedure at the
+  start, so a node reaching back into a shared list would be a hole in that
+  freeze, and renaming a file next year would rewrite a board closed last year.
+  A node made from an entry is a **copy carrying `fromAssetId`**, which is
+  enough for `assetUses()` to answer "where is this used" without any board
+  depending on the registry; there is a test that renames an entry and asserts
+  no board moved. And **provenance is stated, never guessed**: `fromIds` is what
+  this was made from, because that is the one fact about a derived file nobody
+  can reconstruct later — an orthophoto is three hundred frames and a control
+  file, and the file itself says none of it. The reverse (`madeInto`) is derived
+  by walking the other way, so the two cannot disagree, and `asset-from-add`
+  refuses a cycle by walking `madeFromAncestors()` with a seen-set — a book that
+  somehow already holds one (a bad merge, a hand-edited backup) must not take
+  the page down with it.
+  **One name, one entry, in every list that pools them.** The registry and the
+  boards hold the same headphones, so the borrow dialog offered both and the
+  finder showed one row per board that had borrowed a thing — the only hit that
+  knew where it was used buried under its own copies. The finder drops a thing
+  node whose `fromAssetId` still resolves; the borrow pool dedupes by name and
+  the registry entry wins, except where a board copy carries a picture it does
+  not have. Note the trap that caused: the board's vocabulary and the
+  registry's are **different lists** (ArcGIS Pro is "software" in one and was
+  filed as "kit" on the board), so a kind+name key matches nothing — dedupe on
+  the name, and on `fromAssetId` where it is there.
+  `assetLook()` is the single place a kind decides its glyph and its identity
+  colour, because the row, the finder and the detail page all have to agree.
+- **The workbench is three questions behind a strip, not one page six sections
+  long.** It was called Kit and carried claimants, modes, benches, things,
+  upkeep and board kinds on one screen; once the registry grew past four pieces
+  of hardware it stood 3,300 pixels tall, which is Coffer's Today tab again —
+  the screen everybody scrolls past. `KIT_PAGES` is **Things · Upkeep · Words**,
+  a strip rather than three levels, and `kitTab` is view state that resets to
+  Things on every tab press. It is also no longer called Kit: its owner said of
+  the version that was, *"the kit i didn't really get the way it's working and
+  what is what the vocab is kinda weird to get"*.
 - **A job is the bag.** `state.jobs` is the top of the hierarchy: one engagement
   holding the benches you sit at for it, the boards you run for it, and the kit
   it hands you. Claimant, mode and bench survive underneath, because the hours

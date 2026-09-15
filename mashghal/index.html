@@ -856,6 +856,23 @@ color-scheme: light;
   .panel > .itile { margin-right: -0.8rem; }
   .t-proj  { --tint-of: var(--id-project); }
   .t-out   { --tint-of: var(--id-output); }
+  /* The registry's kinds. A row's colour says what sort of thing it is, which
+     is the whole use of the identity channel in a list eight long — nine
+     green squares are nine squares. */
+  .t-doc   { --tint-of: var(--id-asset); }
+  .t-photo { --tint-of: var(--id-output); }
+  .t-soft  { --tint-of: var(--id-soft); }
+  .t-equip { --tint-of: var(--id-equip); }
+
+  /* A strip of pages, not a row of buttons: the one that is open is the
+     primary, and nothing else on the page is. */
+  .subnav { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 1.2rem; }
+  /* A heading inside a page, below `.sect`. `.rwhead` was borrowed for this
+     and it belongs to the rail. */
+  .subhead {
+    font-size: 0.72rem; color: var(--faint); letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 0 0 0.35rem 0.2rem;
+  }
 
   @media (max-width: 880px) {
     .findbtn { width: auto; margin: 0 0.8rem 0.7rem; }
@@ -1267,6 +1284,13 @@ color-scheme: light;
        reads it. A second mechanism that wrote into state.vocab and was never
        offered by any picker is a trap, not a feature. */
     claimKinds: { of: function () { return CLAIM_KINDS; }, word: "shape",
+                  make: function (label) { return label; } },
+    /* The registry's own list, and it was the last hardcoded one: four keys
+       (laptop, phone, audio, other) for a book that has to hold aerials, an
+       orthophoto, a brochure, ArcGIS Pro and a pair of headphones. Read
+       through `vocabLabel("assetKinds", …)` everywhere — `ASSET_KINDS[k]`
+       printed the raw key for anything the reader added. */
+    assetKinds: { of: function () { return ASSET_KINDS; }, word: "kind of thing",
                   make: function (label) { return label; } }
   };
   var OTHER = "__other";
@@ -1378,7 +1402,15 @@ color-scheme: light;
         benches: [],     // {id,modeId,claimantId,note,noteAt,archived}
         boards: [],      // see newBoard()
         spans: [],       // {id,startedAt,endedAt,benchId,note,source}
-        assets: [],      // {id,name,kind,notes,archived}
+        /* The registry. It used to be four pieces of hardware with upkeep on
+           them; it is now what the work is made OF as well as what it is made
+           WITH — the aerials, the orthophoto, the brochure, ArcGIS Pro, the
+           headphones. `fromIds` is provenance: what this was made from, which
+           is the one thing about a derived file nobody can reconstruct later.
+           A board node is never a live reference into here (that would be a
+           hole in the run freeze) but a copy carrying `fromAssetId`, so the
+           registry can still answer "where is this used". */
+        assets: [],      // {id,name,kind,notes,path,url,thumb,where,onDate,fromIds[],archived}
         cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
         settings: { showDone: true, companion: false,
                     // Set the first time jobs are derived from claimants, so
@@ -1429,7 +1461,9 @@ color-scheme: light;
       if (v === "jobs")     return openProj ? renderProj(projOf(openProj) || { id: "", name: "?" })
                                    : openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" })
                                    : renderJobs();
-      if (v === "vocab")    return openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" }) : renderKit();
+      if (v === "vocab")    return openAsset ? assetPage(assetOf(openAsset) || { id: "", name: "?" })
+                                   : openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" })
+                                   : renderKit();
       return renderSettings();
     },
 
@@ -1441,7 +1475,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
 
     actions: {}
   };
@@ -1714,7 +1748,8 @@ color-scheme: light;
   var navAt = null, navLock = false;
 
   function navSnap() {
-    return { view: view, openId: openId, openJob: openJob, openProj: openProj, openMode: openMode };
+    return { view: view, openId: openId, openJob: openJob, openProj: openProj,
+             openMode: openMode, openAsset: openAsset };
   }
   function navTrack() {
     var at = navSnap(), key = JSON.stringify(at);
@@ -1732,6 +1767,7 @@ color-scheme: light;
     view = at.view || "boards";
     openId = at.openId || ""; openJob = at.openJob || "";
     openProj = at.openProj || ""; openMode = at.openMode || "";
+    openAsset = at.openAsset || "";
     foldOpen = false; sel = "";
     render();
     navLock = false;
@@ -1810,6 +1846,15 @@ color-scheme: light;
       (b.nodes || []).forEach(function (n) {
         if (!n.label) return;
         var step = n.t === "step";
+        /* A thing copied from the registry is not a second thing. Typing
+           "aerials" listed the registry entry and one row per board that had
+           borrowed it — three near-identical hits, with the only one that
+           knows where it is used buried under the copies. The registry entry
+           is the canonical hit and it names every board itself; a copy whose
+           source has been removed is listed again, because then nothing else
+           answers for it. */
+        if (!step && n.fromAssetId && assetOf(n.fromAssetId) &&
+            !assetOf(n.fromAssetId).archived) return;
         out.push({
           g: step ? "Steps" : "People and things",
           key: n.label,
@@ -1845,10 +1890,11 @@ color-scheme: light;
                  run: function () { findTab("week"); } });
     });
     live(state.assets).forEach(function (a) {
-      out.push({ g: "Things you depend on", key: a.name + " " + (a.notes || ""),
-                 tile: findTile("t-kit", ICONS.device),
-                 title: a.name, sub: (ASSET_KINDS[a.kind] || a.kind) + (a.notes ? " · " + a.notes : ""), k: 6,
-                 run: function () { findTab("vocab"); } });
+      var look = assetLook(a);
+      out.push({ g: "Things", key: a.name + " " + (a.notes || "") + " " + (a.path || ""),
+                 tile: findTile(look.tile, look.ico),
+                 title: a.name, sub: assetSays(a), k: 4,
+                 run: function () { findTab("vocab"); openAsset = a.id; render(); } });
     });
     live(state.cadences).forEach(function (cd) {
       var st = cadenceState(cd);
@@ -1873,6 +1919,7 @@ color-scheme: light;
   function findCmds() {
     var cs = [
       { name: "New project", act: "proj-add", sub: "a bounded piece of work with a date on it" },
+      { name: "Add a thing", act: "asset-add", sub: "a file, a photograph, a dataset, a laptop" },
       { name: "New board", act: "board-new", sub: "write a procedure from a blank sheet" },
       { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a board" },
       { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
@@ -2820,7 +2867,7 @@ function stateWord(b, n) {
       '<p class="saynote">A job is a bag: the benches you sit at for it, the boards you run for it, and what it hands you when you arrive.</p>' +
       '<div class="tools" style="margin-bottom:1.2rem"><button class="btn primary" data-act="job-add">New job</button>' +
       '<button class="btn" data-act="proj-add">New project</button>' +
-      '<button class="btn" data-act="tab-vocab">Claimants, modes and benches</button></div>';
+      '<button class="btn" data-act="tab-vocab">The workbench</button></div>';
 
     // Projects belonging to no job are the brief's "life underneath that
     // belongs to none of them" — a thesis, a visa, a paper of your own. They
@@ -2954,9 +3001,55 @@ function stateWord(b, n) {
     return h;
   }
 
-  function renderKit() {
-    var h = pageHead("Kit", "Everything here is yours to add, rename and remove. None of it is written into the app.");
+  /* ================= the workbench =================
 
+     This was one page called "Kit" with six sections on it: claimants, modes,
+     benches, things, upkeep and board kinds. Once the registry grew past four
+     pieces of hardware it stood 3,300 pixels tall, which is Coffer's Today
+     tab all over again — the screen everybody scrolls past. Coffer's rule
+     applies: a page past about three cards has stopped answering one
+     question, so split it or give it a strip.
+
+     A strip, because these are three questions and not three levels: **Things**
+     (the registry), **Upkeep** (what has to be done to them every so often)
+     and **Words** (the vocabulary the app has none of its own). Which one is
+     open is view state like everything else, and the tab always lands on
+     Things — the one opened daily.
+
+     It is also no longer called Kit. Its owner said, of the version that was:
+     "the kit i didn't really get the way it's working and what is what the
+     vocab is kinda weird to get". */
+
+  var kitTab = "things";   // view state, never saved
+
+  var KIT_PAGES = [
+    { id: "things", label: "Things" },
+    { id: "upkeep", label: "Upkeep" },
+    { id: "words",  label: "Words" }
+  ];
+
+  function kitStrip() {
+    return '<div class="subnav">' + KIT_PAGES.map(function (p) {
+      return '<button class="btn' + (kitTab === p.id ? " primary" : "") +
+        '" data-act="kit-page" data-id="' + p.id + '">' + p.label + "</button>";
+    }).join("") + "</div>";
+  }
+
+  function renderKit() {
+    var subs = {
+      things: "Anything the work is made of or made with. Each one says what it was made from, where it is used, and what upkeep it carries.",
+      upkeep: "Every so often since it was last done, never on a date — so falling behind never piles up.",
+      words:  "Claimants, modes, benches and board kinds. None of it is written into the app: it is all yours to add, rename and remove."
+    };
+    var h = pageHead("The workbench", esc(subs[kitTab] || subs.things)) + kitStrip();
+
+    if (kitTab === "things") return h + kitThingsHtml();
+    if (kitTab === "upkeep") return h + kitUpkeepHtml();
+    return h + kitWordsHtml();
+  }
+
+  function kitWordsHtml() {
+    var h = "";
     h += '<div class="sect">Claimants</div><div class="card">' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="claimant-add">Add claimant</button></div>' +
       (live(state.claimants).length ? live(state.claimants).map(function (c) {
@@ -2987,8 +3080,6 @@ function stateWord(b, n) {
         return '<div class="row"><span class="grow"><b>' + esc(benchLabel(bn.id)) + "</b></span>" +
           '<span class="tools"><button class="btn quiet danger" data-act="bench-del" data-id="' + bn.id + '">×</button></span></div>';
       }).join("") : '<p class="empty">No benches yet.</p>') + "</div>";
-
-    h += kitUpkeepHtml();
 
     h += '<div class="sect">Board kinds</div><div class="card">' +
       '<p class="hint" style="margin:0 0 0.5rem">A visa or a scholarship belongs to no employer, so a board carries a kind and only sometimes a bench.</p>' +
@@ -3690,7 +3781,14 @@ function stateWord(b, n) {
   var PLACES = { desk: "At the desk", away: "Away from the desk", out: "Out of the house" };
   // Reads an added place as readily as a built-in one.
   function placeLabel(k) { return k ? vocabLabel("places", k) : "Anywhere"; }
-  var ASSET_KINDS = { laptop: "Laptop", phone: "Phone", audio: "Audio", other: "Other" };
+  /* The built-in floor, not the ceiling — `vocabAll("assetKinds")` is the
+     whole of it. Broadened from four pieces of hardware, because the registry
+     holds what the work is made of as well as what it is made with. */
+  var ASSET_KINDS = {
+    file: "File", photo: "Photo", dataset: "Dataset", doc: "Document",
+    software: "Software", laptop: "Laptop", phone: "Phone", audio: "Audio",
+    gear: "Field kit", other: "Other"
+  };
   var placeFilter = "";   // view state, never saved
 
   function cadenceState(cd) {
@@ -3760,7 +3858,7 @@ function stateWord(b, n) {
   function assetOpts() {
     return [{ value: "", label: "Nothing in particular" }].concat(opts(state.assets));
   }
-  function cadenceDialog(cd) {
+  function cadenceDialog(cd, protects) {
     openModal({
       title: cd ? "Edit upkeep" : "New upkeep",
       confirmLabel: cd ? "Save" : "Add",
@@ -3774,7 +3872,7 @@ function stateWord(b, n) {
         { key: "lastDoneOn", label: "Last done", type: "text", span: true,
           value: cd ? (cd.lastDoneOn || "") : "", hint: "YYYY-MM-DD, or blank if never" },
         { key: "protectsAssetId", label: "Protects a thing", type: "select", span: true,
-          options: assetOpts(), value: cd ? (cd.protectsAssetId || "") : "" },
+          options: assetOpts(), value: cd ? (cd.protectsAssetId || "") : (protects || "") },
         { key: "protectsBenchId", label: "…or protects a bench", type: "select", span: true,
           options: [{ value: "", label: "No bench" }].concat(opts(state.benches, function (b) { return benchLabel(b.id); })),
           value: cd ? (cd.protectsBenchId || "") : "" }
@@ -3801,40 +3899,258 @@ function stateWord(b, n) {
     });
   }
 
+  /* ================= the registry =================
+
+     What the work is made of and made with, in one list, so that "where is
+     that orthophoto" and "which laptop needs backing up" are the same
+     question asked of the same place. Two rules hold it:
+
+     **A board never points into it.** A run freezes its procedure at the
+     start, so a node reaching back into a shared list would be a hole in that
+     freeze — renaming a file next year would rewrite a board closed last
+     year. A node made from a registry entry is a COPY that carries
+     `fromAssetId`, which is enough for the registry to answer "where is this
+     used" without any board depending on it.
+
+     **Provenance is stated, never guessed.** `fromIds` is what this was made
+     from, because that is the one fact about a derived file that cannot be
+     reconstructed afterwards: an orthophoto is 340 frames and a control file,
+     and six months later the file itself says none of that. The reverse — what
+     was made FROM this — is derived by walking the other way. */
+
+  var openAsset = "";   // view state, never saved
+
+  function assetOf(id) { return byId(state.assets, id); }
+  function assetKindLabel(a) { return vocabLabel("assetKinds", a.kind) || a.kind; }
+  // What this was made from, dropping ids whose record has gone so a deleted
+  // source cannot make the page throw.
+  function madeFrom(a) {
+    return (a.fromIds || []).map(assetOf).filter(function (x) { return !!x && !x.archived; });
+  }
+  // And the other way round, derived rather than stored — two lists to keep in
+  // step is two lists that will disagree.
+  function madeInto(a) {
+    return live(state.assets).filter(function (x) {
+      return (x.fromIds || []).indexOf(a.id) >= 0;
+    });
+  }
+  /* Every board node copied from this entry, with the board and project it
+     sits on. This is the whole reason a copy carries `fromAssetId`: without it
+     a file in the registry could not say which piece of work used it, and the
+     registry would be a list rather than a record. */
+  function assetUses(a) {
+    var out = [];
+    state.boards.forEach(function (b) {
+      if (b.archived) return;
+      (b.nodes || []).forEach(function (n) {
+        if (n.fromAssetId !== a.id) return;
+        out.push({ board: b, node: n,
+                   proj: b.projectId ? projOf(b.projectId) : null });
+      });
+    });
+    return out;
+  }
+  /* Everything upstream of this, however far back, so a cycle can be refused
+     before it is written. Walked with a seen-set rather than trusted to
+     terminate: a book that somehow already holds a cycle (a bad merge, a
+     hand-edited backup) must not take the page down with it. */
+  function madeFromAncestors(a) {
+    var seen = {}, out = [], queue = madeFrom(a);
+    while (queue.length) {
+      var x = queue.shift();
+      if (!x || seen[x.id]) continue;
+      seen[x.id] = 1; out.push(x);
+      madeFrom(x).forEach(function (y) { queue.push(y); });
+    }
+    return out;
+  }
+  function assetUpkeep(a) {
+    return live(state.cadences).filter(function (cd) { return cd.protectsAssetId === a.id; });
+  }
+  function assetSays(a) {
+    var bits = [assetKindLabel(a)];
+    if (a.where) bits.push(a.where);
+    var n = assetUses(a).length;
+    if (n) bits.push("used on " + n + (n === 1 ? " board" : " boards"));
+    var from = madeFrom(a).length;
+    // "made from 2" is a count with nothing attached; a row has to read as a
+    // sentence, the same rule the warnings live by.
+    if (from) bits.push("made from " + from + (from === 1 ? " thing" : " things"));
+    if (a.notes) bits.push(a.notes);
+    return bits.join(" · ");
+  }
+
   function assetDialog(a) {
+    var mk = !a;
     openModal({
-      title: a ? "Edit thing" : "New thing",
-      confirmLabel: a ? "Save" : "Add",
-      message: a ? "" : "A tool you depend on is something with upkeep, not a given.",
+      title: mk ? "New thing" : "Edit " + a.name,
+      confirmLabel: mk ? "Add" : "Save",
+      wide: true,
+      message: mk ? "Anything the work is made of or made with: a file, a photograph, a dataset, a piece of software, a laptop. Upkeep can be attached to one afterwards."
+                  : "",
       fields: [
-        { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true, placeholder: "Lenovo Legion" },
-        { key: "kind", label: "What is it", type: "select", value: a ? a.kind : "other",
-          options: Object.keys(ASSET_KINDS).map(function (k) { return { value: k, label: ASSET_KINDS[k] }; }) },
-        { key: "notes", label: "Notes", type: "text", span: true, value: a ? (a.notes || "") : "" }
+        { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true,
+          placeholder: "Orthophoto, area 1" },
+        { key: "kind", label: "What is it", type: "select",
+          value: a ? a.kind : "file", options: vocabOpts("assetKinds") },
+        otherField("assetKinds", "kindOther"),
+        { key: "path", label: "Where it is", type: "text", span: true,
+          value: a ? (a.path || "") : "",
+          hint: "A path you would paste into Win+R, or a room for a piece of kit. Left blank it is just named." },
+        { key: "url", label: "A link to it", type: "text", span: true,
+          value: a ? (a.url || "") : "",
+          hint: "A Google Drive share link, so the full-size copy opens on any device." },
+        { key: "where", label: "Kept where", type: "text", value: a ? (a.where || "") : "",
+          placeholder: "field bag" },
+        { key: "onDate", label: "Made or acquired on", type: "text",
+          value: a ? (a.onDate || "") : "", placeholder: "YYYY-MM-DD" },
+        { key: "notes", label: "Notes", type: "textarea", span: true, rows: 2,
+          value: a ? (a.notes || "") : "" }
       ],
-      validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
+      validate: function (v) {
+        if (!v.name.trim()) return "Give it a name.";
+        // The same round-trip every other date in the app goes through: a
+        // string shaped like a date is not a date.
+        if (v.onDate.trim() && !dayOk(v.onDate.trim()))
+          return "A date has to be a real day, written YYYY-MM-DD.";
+        return null;
+      },
       onConfirm: function (v) {
         go(function () {
           var t = a;
-          if (!t) { t = { id: uid(), archived: false }; state.assets.push(t); }
-          t.name = v.name.trim(); t.kind = v.kind; t.notes = v.notes.trim();
+          if (!t) { t = { id: uid(), fromIds: [], archived: false }; state.assets.push(t); }
+          t.name = v.name.trim();
+          t.kind = vocabTake("assetKinds", v.kind, v.kindOther, t.kind || "other");
+          t.path = v.path.trim(); t.url = v.url.trim();
+          t.where = v.where.trim(); t.onDate = v.onDate.trim();
+          t.notes = v.notes.trim();
+          if (mk) openAsset = t.id;
         });
+        toast(mk ? "Added" : "Saved");
       }
     });
   }
 
-  function kitUpkeepHtml() {
-    var h = '<div class="sect">Things you depend on</div><div class="card">' +
-      '<p class="hint" style="margin:0 0 0.5rem">A laptop, a phone, a pair of headphones. Upkeep can be attached to one.</p>' +
-      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="asset-add">Add a thing</button></div>' +
-      (live(state.assets).length ? live(state.assets).map(function (a) {
-        return '<div class="row"><span class="pill p-brass">' + esc(ASSET_KINDS[a.kind] || a.kind) + "</span>" +
-          '<span class="grow"><b>' + esc(a.name) + "</b>" + (a.notes ? "<small>" + esc(a.notes) + "</small>" : "") + "</span>" +
-          '<span class="tools"><button class="btn quiet" data-act="asset-edit" data-id="' + a.id + '">Edit</button>' +
-          '<button class="btn quiet danger" data-act="asset-del" data-id="' + a.id + '">×</button></span></div>';
-      }).join("") : '<p class="empty">Nothing yet.</p>') + "</div>";
+  /* One place decides how a kind is drawn, because the row, the finder and the
+     detail page all have to agree — three copies of this mapping is three
+     chances for a photograph to be a green document in one of them. A kind the
+     reader invented falls through to the kit glyph rather than to nothing. */
+  function assetLook(a) {
+    var k = a.kind;
+    if (k === "photo") return { tile: "t-photo", ico: ICONS.photo };
+    if (k === "software") return { tile: "t-soft", ico: ICONS.device };
+    if (k === "file" || k === "doc" || k === "dataset") return { tile: "t-doc", ico: ICONS.doc };
+    if (k === "laptop" || k === "phone" || k === "audio" || k === "gear")
+      return { tile: "t-equip", ico: k === "phone" ? ICONS.device : ICONS.kit };
+    return { tile: "t-kit", ico: ICONS.kit };
+  }
 
-    h += '<div class="sect">Upkeep</div><div class="card">' +
+  function assetRow(a) {
+    var look = assetLook(a);
+    return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + a.id + '">' +
+      '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
+      '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
+      '<div class="says">' + esc(assetSays(a)) + "</div></div></button>";
+  }
+
+  function assetPage(a) {
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="asset-back">All things</button>' +
+      '<button class="btn" data-act="asset-edit" data-id="' + a.id + '">Edit</button>' +
+      (a.path ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '">Copy the path</button>' : "") +
+      (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
+      '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
+      '<button class="btn" data-act="cadence-add" data-id="' + a.id + '">Add upkeep</button>' +
+      '<button class="btn danger" data-act="asset-del" data-id="' + a.id + '">Delete</button></div>';
+
+    var h = '<div class="page-head"><div><h2>' + esc(a.name) + "</h2>" +
+      "<p>" + esc(assetSays(a)) + "</p></div>" + tools + "</div>";
+
+    if (a.path || a.url || a.onDate) {
+      h += '<div class="card"><div class="sect" style="margin-top:0">Where and when</div>';
+      if (a.path) h += '<div class="row"><span class="grow"><b>Path</b><small>' + esc(a.path) + "</small></span></div>";
+      if (a.url) h += '<div class="row"><span class="grow"><b>Link</b><small>' + esc(a.url) + "</small></span></div>";
+      if (a.onDate) h += '<div class="row"><span class="grow"><b>Dated</b><small>' +
+        esc(niceDate(a.onDate)) + "</small></span></div>";
+      h += "</div>";
+    }
+    if (a.notes) {
+      h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(a.notes) + "</div></div></div>";
+    }
+
+    /* Provenance, both ways. The forward list is stated and the reverse is
+       derived from it, so the two cannot disagree. */
+    var from = madeFrom(a), into = madeInto(a);
+    h += '<div class="sect">What it was made from</div>';
+    h += from.length ? '<div class="stack tight">' + from.map(function (x) {
+      var lk = assetLook(x);
+      return '<div class="panel calm"><span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
+        '<div class="says">' + esc(assetKindLabel(x)) + "</div></div>" +
+        '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' + x.id + '">Look</button>' +
+        '<button class="btn quiet danger" data-act="asset-from-del" data-id="' + a.id + ":" + x.id +
+        '" title="Not made from this">×</button></div></div>';
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing said. For anything derived — an orthophoto, a map, a report — this is the one fact the file itself will not tell you in six months.</p>';
+
+    if (into.length) {
+      h += '<div class="sect">What was made from it</div><div class="stack tight">' + into.map(function (x) {
+        var lk = assetLook(x);
+        return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
+          '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+          '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
+          '<div class="says">' + esc(assetKindLabel(x)) + "</div></div></button>";
+      }).join("") + "</div>";
+    }
+
+    var uses = assetUses(a);
+    h += '<div class="sect">Where it is used</div>';
+    h += uses.length ? '<div class="stack tight">' + uses.map(function (u) {
+      return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + u.board.id + '">' +
+        '<div class="grow"><div class="nm sm">' + esc(u.board.name) + "</div>" +
+        '<div class="says">' + esc("as “" + u.node.label + "”" +
+          (u.proj ? " · " + u.proj.name : "")) + "</div></div></button>";
+    }).join("") + "</div>"
+      : '<p class="empty">Not on any board yet. Bring it onto one with “Bring one in” on the sheet — a copy is taken, so the board keeps working even if this entry changes.</p>';
+
+    var up = assetUpkeep(a);
+    if (up.length) {
+      h += '<div class="sect">Upkeep on it</div><div class="stack tight">' + up.map(function (cd) {
+        var st = cadenceState(cd);
+        return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(cd.label) + "</div>" +
+          '<div class="says">' + esc("every " + cd.everyDays + "d · " + placeLabel(cd.place)) + "</div></div>" +
+          '<span class="st ' + (st.word === "overdue" ? "late" : st.word === "due" ? "watch" : "idle") +
+          '"><i></i>' + esc(st.word) + "</span></div>";
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  /* The registry, grouped by kind. It was a flat list of four pieces of
+     hardware; now that it holds files, photographs, datasets and software as
+     well, the kind is what you scan by and every row opens a page. */
+  function kitThingsHtml() {
+    var as = live(state.assets), byKind = {}, order = [];
+    as.forEach(function (a) {
+      var k = assetKindLabel(a) || "Other";
+      if (!byKind[k]) { byKind[k] = []; order.push(k); }
+      byKind[k].push(a);
+    });
+    order.sort();
+
+    var h = '<div class="tools" style="margin-bottom:0.9rem">' +
+      '<button class="btn" data-act="asset-add">Add a thing</button></div>';
+    h += as.length ? order.map(function (k) {
+      return '<div class="subhead">' + esc(k) + "</div>" +
+        '<div class="stack tight" style="margin-bottom:1rem">' +
+        byKind[k].map(assetRow).join("") + "</div>";
+    }).join("")
+      : '<p class="empty">Nothing yet. Start with the file you can never find.</p>';
+    return h;
+  }
+
+  function kitUpkeepHtml() {
+    var h = '<div class="card">' +
       '<p class="hint" style="margin:0 0 0.5rem">Every so often since it was last done. It shows up on Waiting, filtered by where you have to be to do it.</p>' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="cadence-add">Add upkeep</button></div>' +
       (live(state.cadences).length ? live(state.cadences).map(function (cd) {
@@ -4980,7 +5296,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v35 · 15 Sep 2026";
+  var BUILD = "v36 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -7239,7 +7555,10 @@ function dims(n) {
 
     /* ---- upkeep ---- */
     "place-filter": function (id) { placeFilter = id || ""; render(); },
-    "cadence-add":  function () { cadenceDialog(null); },
+    // `id` is the thing it protects when the button was pressed on that
+    // thing's own page — a stale backup is a threat to the work behind it, and
+    // asking again on the screen that already said which thing is a second job.
+    "cadence-add":  function (id) { cadenceDialog(null, id && assetOf(id) ? id : ""); },
     "cadence-edit": function (id) { cadenceDialog(byId(state.cadences, id)); },
     "cadence-done": function (id) {
       var cd = byId(state.cadences, id); if (!cd) return;
@@ -7254,18 +7573,83 @@ function dims(n) {
       });
     },
     "asset-add":  function () { assetDialog(null); },
-    "asset-edit": function (id) { assetDialog(byId(state.assets, id)); },
+    "asset-edit": function (id) { assetDialog(assetOf(id)); },
+    "asset-open": function (id) { openAsset = id; view = "vocab"; openMode = ""; render(); },
+    "asset-back": function () { openAsset = ""; render(); },
+    "asset-copy": function (id) {
+      var a = assetOf(id);
+      if (!a || !a.path) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(a.path).then(
+          function () { toast("Copied — Win+R, paste, Enter"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+
+    /* Provenance is stated, one source at a time, because it is the one fact
+       about a derived file that cannot be reconstructed later. It refuses a
+       cycle: A made from B made from A is not a history, and it would make
+       both pages recurse. */
+    "asset-from-add": function (id) {
+      var a = assetOf(id); if (!a) return;
+      var have = a.fromIds || [];
+      var pool = live(state.assets).filter(function (x) {
+        if (x.id === a.id || have.indexOf(x.id) >= 0) return false;
+        // Not something this is already an ancestor of.
+        return !madeFromAncestors(x).some(function (y) { return y.id === a.id; });
+      });
+      if (!pool.length) { toast("Nothing else in the registry it could have come from."); return; }
+      openModal({
+        title: "What was " + a.name + " made from?",
+        confirmLabel: "Add it",
+        message: "One source at a time. This is what the file itself will not tell you in six months — an orthophoto is three hundred frames and a control file, and nothing in the file says so.",
+        fields: [
+          { key: "pick", label: "Made from", type: "select", span: true, value: pool[0].id,
+            options: pool.map(function (x) {
+              return { value: x.id, label: x.name + " — " + String(assetKindLabel(x)).toLowerCase() };
+            }) }
+        ],
+        onConfirm: function (v) {
+          go(function () {
+            a.fromIds = (a.fromIds || []).concat([v.pick]);
+          });
+          toast("Recorded");
+        }
+      });
+    },
+    "asset-from-del": function (id) {
+      var q = String(id).split(":"), a = assetOf(q[0]); if (!a) return;
+      var was = (a.fromIds || []).slice();
+      go(function () {
+        a.fromIds = (a.fromIds || []).filter(function (x) { return x !== q[1]; });
+      });
+      toast("No longer made from it", function () { go(function () { a.fromIds = was; }); });
+    },
+
+    /* Removing a registry entry leaves every board alone. A board node is a
+       copy, so nothing on a board breaks — but the copies keep `fromAssetId`,
+       which is why the name goes to `forgotten`: without it the page that
+       asked "where did this come from" would answer with an id. */
     "asset-del":  function (id) {
-      var a = byId(state.assets, id); if (!a) return;
-      var uses = live(state.cadences).filter(function (cd) { return cd.protectsAssetId === id; });
+      var a = assetOf(id); if (!a) return;
+      var ups = assetUpkeep(a), uses = assetUses(a), into = madeInto(a);
+      var bits = [];
+      if (uses.length) bits.push("It is on " + uses.length + (uses.length === 1 ? " board" : " boards") +
+        " as a copy, and those copies stay exactly as they are — nothing on a board breaks.");
+      if (into.length) bits.push(into.length + (into.length === 1 ? " thing" : " things") +
+        " here says it was made from this, and will stop naming it.");
+      if (ups.length) bits.push("The " + ups.length + (ups.length === 1 ? " upkeep" : " upkeeps") +
+        " attached to it stay, and stop naming what they protect.");
       confirmAction({
         title: "Remove " + a.name + "?",
-        message: uses.length
-          ? "The " + uses.length + (uses.length === 1 ? " cadence" : " cadences") +
-            " attached to it stay, and stop naming what they protect."
-          : "Nothing is attached to it."
+        message: bits.length ? bits.join(" ") : "Nothing is attached to it."
       }, function () {
-        go(function () { state.forgotten[id] = a.name; a.archived = true; });
+        go(function () {
+          state.forgotten[id] = a.name;
+          a.archived = true;
+          if (openAsset === id) openAsset = "";
+        });
+        toast("Removed", function () { go(function () { a.archived = false; delete state.forgotten[id]; }); });
       });
     },
 
@@ -7375,7 +7759,8 @@ function dims(n) {
     /* ---- jobs ---- */
     "job-open": function (id) { openJob = id; view = "jobs"; render(); },
     "job-back": function () { openJob = ""; render(); },
-    "tab-vocab": function () { view = "vocab"; openMode = ""; render(); },
+    "tab-vocab": function () { view = "vocab"; openMode = ""; openAsset = ""; kitTab = "things"; render(); },
+    "kit-page": function (id) { kitTab = id || "things"; openMode = ""; openAsset = ""; render(); },
     "job-add": function () { jobDialog(null); },
     "job-edit": function (id) { jobDialog(jobOf(id)); },
     "job-del": function (id) {
@@ -7764,13 +8149,60 @@ function dims(n) {
     var pool = allThings().filter(function (t) {
       return !here[(t.kind || "") + "\u0000" + t.label.toLowerCase()];
     });
+    /* The registry is the other half of the pool, and the same rule covers
+       both: a copy is taken. A registry entry brings its path, its link and
+       its thumbnail with it, and the copy keeps `fromAssetId` so the registry
+       can still answer "where is this used" without any board depending on
+       it. The board node's kind is the board's vocabulary, not the
+       registry's, so it is mapped rather than passed through — a node whose
+       kind is "dataset" would draw as the fallback circle. */
+    /* Already-here is tested on the NAME alone for a registry entry, not on
+       kind and name: the board's vocabulary and the registry's are different
+       lists, so the same ArcGIS Pro is "software" in one and was filed as
+       "kit" on the board — and a kind+name key then offered it a second time.
+       `fromAssetId` settles it outright where it is present. */
+    var hereByName = {}, hereByAsset = {};
+    (b.nodes || []).forEach(function (n) {
+      if (n.t !== "thing") return;
+      hereByName[String(n.label).toLowerCase()] = 1;
+      if (n.fromAssetId) hereByAsset[n.fromAssetId] = 1;
+    });
+    live(state.assets).forEach(function (a) {
+      var kind = a.kind === "photo" ? "photo"
+               : a.kind === "file" || a.kind === "doc" || a.kind === "dataset" ? "file"
+               : a.kind === "software" ? "device" : "asset";
+      if (hereByAsset[a.id] || hereByName[String(a.name).toLowerCase()]) return;
+      pool.push({ kind: kind, label: a.name, path: a.path || "", url: a.url || "",
+                  pic: "", thumb: a.thumb || "", seen: 1,
+                  from: "the registry", assetId: a.id });
+    });
+
+    /* One name, one entry. The registry and the boards hold the same
+       headphones, so the list offered both — twice the same thing, and
+       choosing wrongly loses either the registry link or a picture. The
+       registry entry wins on principle, since it is the record the rest of
+       the app points at, EXCEPT where the board copy carries a picture it
+       does not have: a photograph is not something to silently drop. */
+    var byName = {}, keep = [];
+    pool.forEach(function (t) {
+      var k = String(t.label).toLowerCase(), had = byName[k];
+      if (!had) { byName[k] = t; keep.push(t); return; }
+      var betterPic = (t.pic || t.thumb) && !(had.pic || had.thumb);
+      var betterReg = t.assetId && !had.assetId && !(had.pic || had.thumb);
+      if (betterPic || betterReg) {
+        keep[keep.indexOf(had)] = t;
+        byName[k] = t;
+      }
+    });
+    pool = keep;
+
     if (!pool.length) {
-      toast("Nothing on another board that is not already here.");
+      toast("Nothing on another board or in the registry that is not already here.");
       return;
     }
     openModal({
-      title: "Bring one in from another board",
-      message: "A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
+      title: "Bring one in",
+      message: "From another board, or from the registry. A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
       confirmLabel: "Bring it in",
       fields: [
         // The value is the position in the list, not a composed key: a NUL
@@ -7789,7 +8221,8 @@ function dims(n) {
         go(function () {
           b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
                          path: pick.path, url: pick.url, pic: pick.pic,
-                         thumb: pick.thumb || "" });
+                         thumb: pick.thumb || "",
+                         fromAssetId: pick.assetId || "" });
           autoLayout(b);
         });
         toast("Brought in — link it to a step to say where it belongs");
@@ -8077,12 +8510,49 @@ function dims(n) {
       edge(a2, a0, "link"), edge(a1, a1t, "link")
     ];
 
-    /* --- things that need looking after --- */
-    var aLap = mk({ name: "Lenovo Legion", kind: "laptop", notes: "no RTX", archived: false });
-    var aPho = mk({ name: "Nothing Phone", kind: "phone", notes: "", archived: false });
-    var aHed = mk({ name: "Nothing headphones", kind: "audio", notes: "", archived: false });
-    var aBud = mk({ name: "CMF earbuds", kind: "audio", notes: "", archived: false });
-    s.assets = [aLap, aPho, aHed, aBud];
+    /* --- the registry: what the work is made of, and made with ---
+
+       Five kinds, a chain of provenance three deep, one entry used on a board
+       and one piece of software with a path the launcher could open. A feature
+       with no representation here is a feature nobody can be shown. */
+    var aLap = mk({ name: "Lenovo Legion", kind: "laptop", notes: "no RTX", where: "desk",
+                    path: "", url: "", fromIds: [], archived: false });
+    var aPho = mk({ name: "Nothing Phone", kind: "phone", notes: "", where: "pocket",
+                    path: "", url: "", fromIds: [], archived: false });
+    var aHed = mk({ name: "Nothing headphones", kind: "audio", notes: "", where: "field bag",
+                    path: "", url: "", fromIds: [], archived: false });
+    var aBud = mk({ name: "CMF earbuds", kind: "audio", notes: "", where: "field bag",
+                    path: "", url: "", fromIds: [], archived: false });
+    var aArc = mk({ name: "ArcGIS Pro", kind: "software", notes: "3.2, licence through AUB",
+                    path: "C:\\Program Files\\ArcGIS\\Pro\\bin\\ArcGISPro.exe",
+                    url: "", where: "", fromIds: [], archived: false });
+    var aAer = mk({ name: "Aerials 1916·1930·1970", kind: "dataset",
+                    notes: "Scanned from the IFPO plates. Three epochs, area 1.",
+                    path: "D:\\aub21\\area1\\aerials", url: "",
+                    where: "", onDate: back(240), fromIds: [], archived: false });
+    var aOrt = mk({ name: "Orthophoto, area 1", kind: "file",
+                    notes: "Georeferenced against the 1970 sheet.",
+                    path: "D:\\aub21\\area1\\ortho_area1.tif", url: "",
+                    where: "", onDate: back(40), fromIds: [aAer.id], archived: false });
+    var aMap = mk({ name: "Area 1 building layer", kind: "dataset",
+                    notes: "Digitised over the orthophoto.",
+                    path: "D:\\aub21\\area1\\area1.aprx", url: "",
+                    where: "", onDate: back(11), fromIds: [aOrt.id, aArc.id], archived: false });
+    var aRef = mk({ name: "Harbour reference photo", kind: "photo", notes: "",
+                    path: "", url: "https://drive.google.com/file/d/EXAMPLE/view",
+                    where: "", fromIds: [], archived: false });
+    s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud];
+
+    /* One board node copied from the registry, so "where it is used" has
+       something in it — and it is the aerials, which is the node the GIS run
+       already had. A copy, with `fromAssetId` pointing home: the board keeps
+       working whatever happens to the registry entry. */
+    g0.fromAssetId = aAer.id;
+    g0.path = aAer.path;
+    ga.fromAssetId = aArc.id;
+    ga.path = aArc.path;
+    t1.fromAssetId = aRef.id;
+    t1.url = aRef.url;
 
     function cadence(label, every, lastAgo, place, o) {
       s.cadences.push(mk(Object.assign({
@@ -8092,7 +8562,9 @@ function dims(n) {
       }, o || {})));
     }
     // One of each state: past its interval, never done, nearly due, and fine.
+    // One of each kind of thing protected: a bench, a dataset, and hardware.
     cadence("Back up the GIS project", 14, 21, "desk", { protectsBenchId: bGis.id });
+    cadence("Re-export the building layer", 30, 34, "desk", { protectsAssetId: aMap.id });
     cadence("Headphone firmware", 90, null, "away", { protectsAssetId: aHed.id });
     cadence("Haircut", 42, 40, "out");
     cadence("Update the phone", 30, 12, "away", { protectsAssetId: aPho.id });
