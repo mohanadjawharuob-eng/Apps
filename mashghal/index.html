@@ -1509,9 +1509,15 @@ color-scheme: light;
     for (var i = 0; i < list.length; i++) { if (list[i].id === id) return list[i]; }
     return null;
   }
+  /* An ARCHIVED record is removed, and has to read that way. This checked the
+     list first and returned the plain name, so a bench kept reading
+     "GIS · AUB Tripoli 21st C" after that claimant was removed — `forget()`
+     had put the name in `forgotten` and nothing ever looked, because the
+     record was still there. The record survives on purpose (it is what the
+     spans point at); what it must not do is look live. */
   function nameOf(list, id, what) {
     var r = byId(list, id);
-    if (r) return r.name;
+    if (r) return r.archived ? r.name + " (removed)" : r.name;
     if (state.forgotten[id]) return state.forgotten[id] + " (removed)";
     return id ? "(removed " + what + ")" : "";
   }
@@ -3311,15 +3317,29 @@ function stateWord(b, n) {
     return { unit: c.kind === "watch" ? "" : "h", owed: 0 };
   }
 
+  /* Every claimant with something to say about this week, which is not the
+     same as every LIVE claimant. A removed one that still has hours logged in
+     the week has to appear, or the week reads "counted 7h across 2 claimants"
+     above a breakdown accounting for nought — the figure and its parts
+     disagreeing, silently, in the one number this screen exists to produce.
+     Nothing is owed to somebody who is gone, so `owed` is forced to nought and
+     the row says why rather than reporting them short. */
   function standing(fromDay) {
     var toDay = addDays(fromDay, 6);
-    return live(state.claimants).filter(function (c) { return c.kind !== "watch"; })
-      .map(function (c) {
-        var o = owedOf(c);
-        var got = o.unit === "d" ? daysFor(c.id, fromDay, toDay) : minsFor(c.id, fromDay, toDay);
-        return { c: c, unit: o.unit, owed: o.owed, got: got, floor: !!o.floor,
-                 short: o.owed ? Math.max(0, o.owed - got) : 0 };
-      });
+    var list = state.claimants.filter(function (c) {
+      if (c.kind === "watch") return false;
+      if (!c.archived) return true;
+      return minsFor(c.id, fromDay, toDay) > 0;
+    });
+    return list.map(function (c) {
+      var o = owedOf(c);
+      var gone = !!c.archived;
+      var got = o.unit === "d" ? daysFor(c.id, fromDay, toDay) : minsFor(c.id, fromDay, toDay);
+      var owed = gone ? 0 : o.owed;
+      return { c: c, unit: o.unit, owed: owed, got: got, gone: gone,
+               floor: !gone && !!o.floor,
+               short: owed ? Math.max(0, owed - got) : 0 };
+    });
   }
 
   // How far behind a claimant has fallen, added up over whole weeks and never
@@ -3438,12 +3458,17 @@ function stateWord(b, n) {
         var fig = r.unit === "d" ? r.got + (r.owed ? " of " + r.owed : "") + (r.got === 1 && !r.owed ? " day" : " days")
                                  : fmtMins(r.got) + (r.owed ? " of " + fmtMins(r.owed) : "");
         var note;
-        if (!r.owed) note = "on demand — nothing is owed";
+        if (r.gone) note = "removed — these hours stay on the record and are measured against nothing";
+        else if (!r.owed) note = "on demand — nothing is owed";
         else if (r.short) note = (r.floor ? "under its floor by " : "short by ") + amountWords(r.short, r.unit);
         else note = r.floor ? "over its floor" : "met";
-        var beh = behindBy(r.c);
+        // A removed claimant is not behind: nothing is owed to somebody gone,
+        // and a cumulative shortfall against them would be a figure about
+        // nothing.
+        var beh = r.gone ? null : behindBy(r.c);
         return '<div class="wk"><span class="wk-dot" style="background:' + esc(r.c.colour) + '"></span>' +
-          '<div class="wk-main"><div class="wk-top"><b>' + esc(r.c.name) + "</b><span>" + esc(fig) + "</span></div>" +
+          '<div class="wk-main"><div class="wk-top"><b>' +
+          esc(r.gone ? r.c.name + " (removed)" : r.c.name) + "</b><span>" + esc(fig) + "</span></div>" +
           '<div class="meter"><div class="' + (r.short ? "meter-pace" : "meter-fill") +
           '" style="width:' + pct + '%"></div></div>' +
           '<small>' + esc(note) +
@@ -5686,7 +5711,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v39 · 15 Sep 2026";
+  var BUILD = "v40 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -8211,15 +8236,35 @@ function dims(n) {
     /* ---- vocabulary ---- */
     "claimant-add": function () { claimantDialog(null); },
     "claimant-edit": function (id) { claimantDialog(byId(state.claimants, id)); },
+    /* Every removal confirms, says what it touches, and offers an undo. This
+       one said only that boards keep their history, and left out the three
+       things you would actually want to know: how many hours are filed against
+       it, which benches stop being usable, and that the job it was derived
+       from stays put with its boards. */
     "claimant-del": function (id) {
       var c = byId(state.claimants, id); if (!c) return;
+      var bens = live(state.benches).filter(function (b) { return b.claimantId === id; });
+      var mins = state.spans.reduce(function (t, sp) {
+        var bn = byId(state.benches, sp.benchId);
+        return t + (bn && bn.claimantId === id ? minsIn(sp, "0000-01-01", "9999-12-31") : 0);
+      }, 0);
+      var js = live(state.jobs).filter(function (j) { return j.claimantId === id; });
+      var bits = ["Boards already filed against it keep reading “" + esc(c.name) +
+                  " (removed)” rather than losing their history."];
+      if (mins) bits.push(fmtMins(mins) + " is logged against it. Every stretch stays exactly as recorded and keeps appearing on the week — measured against nothing, because nothing is owed to somebody who is gone.");
+      if (bens.length) bits.push("Its " + bens.length + (bens.length === 1 ? " bench" : " benches") +
+        " (" + bens.map(function (b) { return esc(benchLabel(b.id)); }).join(", ") +
+        ") stay on the list and read as removed.");
+      if (js.length) bits.push("The job " + js.map(function (j) { return "“" + esc(j.name) + "”"; }).join(", ") +
+        " stays, with its boards — the engagement was real whether or not the claimant is still on the list.");
       confirmAction({
         title: "Remove " + c.name + "?",
-        message: "Boards already filed against it keep reading &ldquo;" + esc(c.name) +
-          " (removed)&rdquo; rather than losing their history."
+        message: bits.join(" ")
       }, function () {
         go(function () { forget(state.claimants, id); c.archived = true; });
-        toast("Removed " + c.name);
+        toast("Removed " + c.name, function () {
+          go(function () { c.archived = false; delete state.forgotten[id]; });
+        });
       });
     },
     "mode-open": function (id) { openMode = id; render(); },

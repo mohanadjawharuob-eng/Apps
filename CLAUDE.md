@@ -934,7 +934,27 @@ written as rules because each is a class of fault, not a one-off.
   a bench carrying five weeks of logged stretches, with no confirmation, no
   toast, no undo and nowhere in the app to bring it back. It now counts the
   hours filed against it and the boards that keep reading its name, because
-  that is what you would want to know before pressing Delete.
+  that is what you would want to know before pressing Delete. `claimant-del`
+  had the confirmation and neither the facts nor the undo: it named only the
+  boards, and left out the hours filed against it, the benches that stop being
+  usable, and the job that stays put with its work.
+- **A figure may never disagree with its own parts, and archiving is where that
+  breaks.** After removing a claimant the week read **"counted 7h across 2
+  claimants" above a breakdown accounting for nought** — the total walked every
+  span and `standing()` walked `live(state.claimants)`, so the removed
+  claimant's real hours stayed in the total and vanished from the parts. This
+  is the "history stops being history" rule in the one number the screen exists
+  to produce. `standing()` now keeps an archived claimant **that still has hours
+  in the week**, with `owed` forced to nought and `behindBy()` skipped, because
+  nothing is owed to somebody who is gone and a cumulative shortfall against
+  them would be a figure about nothing.
+  The other half of the same fault: **`nameOf()` checked the list first and
+  returned the plain name**, so a bench read "GIS · AUB Tripoli 21st C" after
+  that claimant was removed. `forget()` had put the name in `forgotten` and
+  nothing ever looked, because the record was still there — it survives on
+  purpose, since the spans point at it; what it must not do is look live. An
+  archived record now reads "(removed)" from that one function, which fixes
+  every place in the app that names one.
 - **A derivation happens once, and the book records that it did.**
   `ensureJobs()` tested "is `state.jobs` empty", so deleting your last job put
   it straight back on the next load and a confirmed delete quietly reversed
