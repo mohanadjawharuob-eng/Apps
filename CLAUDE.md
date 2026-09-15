@@ -603,7 +603,26 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 - **The launcher is handed an id, never a path.** `mashghal://enter/<id>` and
   nothing else; the PowerShell handler refuses any other shape and looks the id
   up in a file already on the machine. A handler that ran what a link told it to
-  would be an RCE hole registered on your own laptop.
+  would be an RCE hole registered on your own laptop. **The id now names three
+  kinds of thing and the URL shape did not change by one character**, which is
+  the whole discipline: widening what a link may *say* would be dangerous,
+  widening what the machine already knows is not. `launchTable()` writes
+  `benches`, `steps` and `things`, and the handler looks in all three — reading
+  `benches` first and unchanged, because a per-mode kit file already on
+  somebody's machine has to keep working.
+  The **step** case is the one worth having. A bench opens ArcGIS Pro and three
+  bookmarks; a step opens the project file, the reference photograph and the mail
+  search for *that* piece of work, which is exactly what the link edge was built
+  to carry — so `stepNeeds()` reads it rather than recording anything new, and a
+  step's own `path`/`url` counts too, since a `file` step usually holds the
+  folder it files into. **Only open runs contribute steps**: a closed run's
+  paths are history and a lookup table is not an archive. The table holds
+  labels, paths and URLs and nothing else — it sits unencrypted in a user folder
+  because the script must read it without a passphrase, so it is written to be
+  worth little, the same reasoning as the digest. Every link comes from
+  `launchLink()`, the one place it is built, and every one of them disappears
+  when `settings.companion` is off, with the copy-path fallback staying either
+  way because a managed laptop can block a scheme handler outright.
 - **The digest is numbers only.** No label, no name, no note — it can leak in
   full and say nothing about the work. A scheduled job cannot hold the
   passphrase, so the file is written to be worth nothing instead.

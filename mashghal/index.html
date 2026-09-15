@@ -3190,9 +3190,11 @@ function stateWord(b, n) {
 
     h += '<div class="card"><h3>The launcher</h3>' +
       '<p class="card-sub">' + (state.settings.companion ? "Launch links are on" : "Off") + "</p>" +
-      '<p class="hint" style="margin:0 0 0.6rem">A browser cannot open ArcGIS Pro. A registry entry and one PowerShell script can — see <code>mashghal/companion/</code>. A link carries an opaque bench id and nothing else; every path it opens comes from a file you exported onto your own machine.</p>' +
+      '<p class="hint" style="margin:0 0 0.6rem">A browser cannot open ArcGIS Pro. A registry entry and one PowerShell script can — see <code>mashghal/companion/</code>. A link carries an <b>opaque id and nothing else</b>; every path it opens comes from a table you saved onto your own machine, so nothing executable ever arrives from the web.</p>' +
+      '<p class="hint" style="margin:0 0 0.6rem">The table covers three things: a <b>bench</b> (everything the craft hands you), a <b>live step</b> (the file, the photograph and the filtered inbox linked to that one piece of work) and a <b>thing</b> with a path. Save it again whenever you change one — the launcher reads the file, never the app. It holds paths and links and no notes.</p>' +
       '<div class="tools"><button class="btn" data-act="companion-toggle">' +
-      (state.settings.companion ? "Turn the links off" : "Turn the links on") + "</button></div></div>";
+      (state.settings.companion ? "Turn the links off" : "Turn the links on") + "</button>" +
+      '<button class="btn" data-act="launch-export">Save the launcher table</button></div></div>';
 
     h += '<div class="card"><h3>What this app will not do</h3>' +
       '<div class="notes">' +
@@ -4088,6 +4090,10 @@ function stateWord(b, n) {
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="asset-back">All things</button>' +
       '<button class="btn" data-act="asset-edit" data-id="' + a.id + '">Edit</button>' +
+      // The launcher first when it is on, because pasting into Win+R is the
+      // fallback and not the point; the copy button stays either way, since a
+      // managed laptop can block the scheme handler outright.
+      (a.path && state.settings.companion ? launchLink(a.id, "Open it") : "") +
       (a.path ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '">Copy the path</button>' : "") +
       (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
       '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
@@ -5575,7 +5581,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v37 · 15 Sep 2026";
+  var BUILD = "v38 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -5897,6 +5903,90 @@ function stateWord(b, n) {
     });
     download("mashghal-" + m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".json",
              JSON.stringify(out, null, 2), "application/json");
+  }
+
+  /* ================= what a step needs =================
+
+     A bench's kit is what the craft hands you. A *step* is narrower and more
+     useful: the reference photo, the project file and the filtered inbox that
+     this one piece of work needs, which is exactly what the link edge was
+     built to carry. Linking a thing to a step already means "this belongs with
+     it", so there is nothing new to record — `stepNeeds()` reads it.
+
+     A step's own `path` or `url` counts too: a `file` step often carries the
+     folder it files into, and that is the thing you want open. */
+  function stepNeeds(b, n) {
+    var sw = [], lk = [], seen = {};
+    function take(label, path, url) {
+      if (path && !seen["p" + path]) { seen["p" + path] = 1; sw.push({ label: label, path: path }); }
+      if (url && !seen["u" + url]) { seen["u" + url] = 1; lk.push({ label: label, url: url }); }
+    }
+    take(n.label, n.path || "", n.url || "");
+    edgesOf(b, n.id, "link").forEach(function (e) {
+      var t = nodeOf(b, e.a === n.id ? e.b : e.a);
+      if (!t || t.t !== "thing") return;
+      take(t.label, t.path || "", t.url || "");
+    });
+    return { software: sw, links: lk };
+  }
+  function hasNeeds(b, n) {
+    var w = stepNeeds(b, n);
+    return !!(w.software.length || w.links.length);
+  }
+
+  /* One table for the whole book, because the launcher is handed an id and has
+     to be able to find it whatever kind of thing it names. Three maps, one
+     shape each, and the URL scheme is unchanged: `mashghal://enter/<id>` still
+     carries an opaque id and nothing else, so nothing executable arrives from
+     the web — there is simply one more place on the machine to look it up.
+
+     Only OPEN runs contribute steps. A closed run's paths are history, and a
+     lookup table is not an archive. */
+  function launchTable() {
+    var out = { v: 2, madeOn: today(), benches: {}, steps: {}, things: {} };
+
+    state.benches.forEach(function (bn) {
+      if (bn.archived) return;
+      var m = byId(state.modes, bn.modeId);
+      out.benches[bn.id] = {
+        label: benchLabel(bn.id),
+        software: m ? modeSoftware(m).map(function (x) { return { label: x.label, path: x.path || "" }; }) : [],
+        links: m ? modeLinks(m).map(function (x) { return { label: x.label, url: x.url }; }) : []
+      };
+    });
+
+    boards("run").forEach(function (b) {
+      if (b.closedOn) return;
+      activeNodes(b).forEach(function (n) {
+        var w = stepNeeds(b, n);
+        if (!w.software.length && !w.links.length) return;
+        out.steps[n.id] = { label: n.label + " — " + b.name,
+                            software: w.software, links: w.links };
+      });
+    });
+
+    live(state.assets).forEach(function (a) {
+      if (!a.path && !a.url) return;
+      out.things[a.id] = {
+        label: a.name,
+        software: a.path ? [{ label: a.name, path: a.path }] : [],
+        links: a.url ? [{ label: a.name, url: a.url }] : []
+      };
+    });
+    return out;
+  }
+
+  function launchExport() {
+    var t = launchTable();
+    var n = Object.keys(t.benches).length + Object.keys(t.steps).length + Object.keys(t.things).length;
+    download("mashghal-launch.json", JSON.stringify(t, null, 2), "application/json");
+    toast(n + (n === 1 ? " thing" : " things") + " the launcher can now open");
+  }
+
+  // The link itself, and the only place it is built. It is nothing but the id:
+  // a link that carried a path would be the hole the launcher exists to avoid.
+  function launchLink(id, label) {
+    return '<a class="btn" href="mashghal://enter/' + esc(id) + '">' + esc(label || "Open it") + "</a>";
   }
 
   /* ================= the canvas ================= */
@@ -6748,6 +6838,18 @@ function dims(n) {
         } else {
           acts += '<button class="btn" data-act="step-reopen" data-id="' + b.id + ":" + n.id + '">Reopen</button>';
         }
+      }
+      /* What this step needs, opened in one press. It is the strongest thing
+         the launcher does: the reference photo, the project file and the
+         filtered inbox for THIS piece of work, rather than everything the
+         craft owns. Only on a live step of an open run — opening the folder a
+         closed run filed into is not what you meant — and only when the
+         launcher is switched on and the table has been written. */
+      if (state.settings.companion && b.kind === "run" && !b.closedOn &&
+          n.enteredAt && !n.doneAt && hasNeeds(b, n)) {
+        var need = stepNeeds(b, n);
+        var cnt = need.software.length + need.links.length;
+        acts += launchLink(n.id, "Open what it needs (" + cnt + ")");
       }
       acts += '<button class="btn" data-act="photo-here" data-id="' + b.id + ":" + n.id + '">Add a photo</button>';
       if (n.act === "send") acts += '<button class="btn" data-act="send-to" data-id="' + b.id + ":" + n.id + '">Waiting on…</button>';
@@ -8324,6 +8426,7 @@ function dims(n) {
     },
 
     /* ---- sync ---- */
+    "launch-export": function () { launchExport(); },
     "companion-toggle": function () {
       go(function () { state.settings.companion = !state.settings.companion; });
       toast(state.settings.companion
