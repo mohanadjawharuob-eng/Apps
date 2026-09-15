@@ -1378,6 +1378,34 @@ function closeModal() {
   if (escHandler) { document.removeEventListener("keydown", escHandler); escHandler = null; }
 }
 
+/* Escape and a focus trap, for ANY dialog in the overlay. Tab used to walk out
+   of the last button and into the page behind the scrim, where a keyboard
+   reader could reach controls they could neither see nor click.
+
+   Extracted because openModal was not the only dialog: the backup and restore
+   dialogs build the overlay by hand, so they had no Escape at all — the one
+   key everybody presses to get out of a modal did nothing, and Tab walked
+   straight through the scrim. Anything that writes overlay.innerHTML itself
+   calls this. */
+function trapOverlay(onEscape) {
+  var trap = function () {
+    return Array.prototype.filter.call(
+      overlay.querySelectorAll("button, input, select, textarea, a[href], label, [tabindex]:not([tabindex='-1'])"),
+      function (el) { return !el.disabled && el.offsetParent !== null; });
+  };
+  escHandler = function (e) {
+    if (e.key === "Escape") { closeModal(); if (onEscape) onEscape(); return; }
+    if (e.key !== "Tab") return;
+    var f = trap();
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (!overlay.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener("keydown", escHandler);
+}
+
 // fields: [{key,label,type,value,options,placeholder,step,min,hint,span,rows}]
 function openModal(opts) {
   closeModal();
@@ -1490,25 +1518,7 @@ function openModal(opts) {
   });
   dependants();
 
-  /* Escape and a focus trap. Tab used to walk out of the last button and into
-     the page behind the scrim, where a keyboard reader could reach controls
-     they could neither see nor click. */
-  var trap = function () {
-    return Array.prototype.filter.call(
-      overlay.querySelectorAll("button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])"),
-      function (el) { return !el.disabled && el.offsetParent !== null; });
-  };
-  escHandler = function (e) {
-    if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); return; }
-    if (e.key !== "Tab") return;
-    var f = trap();
-    if (!f.length) return;
-    var first = f[0], last = f[f.length - 1];
-    if (!overlay.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  };
-  document.addEventListener("keydown", escHandler);
+  trapOverlay(opts.onCancel);
 
   var firstField = overlay.querySelector(".modal input, .modal select, .modal textarea");
   if (firstField) firstField.focus(); else overlay.querySelector("[data-mok]").focus();
@@ -1582,6 +1592,8 @@ function backupDialog(name, text, summary) {
     "</div></div></div>";
 
   var ta = document.getElementById("bkText");
+  trapOverlay();
+  ta.focus();
   overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
   overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
     if (e.target === e.currentTarget) closeModal();
@@ -1645,6 +1657,8 @@ function restoreDialog(describe, onJson) {
   }
 
   ta.addEventListener("input", peek);
+  trapOverlay();
+  ta.focus();
   overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
   overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
     if (e.target === e.currentTarget) closeModal();

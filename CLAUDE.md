@@ -907,6 +907,16 @@ written as rules because each is a class of fault, not a one-off.
   `CLAIM_KINDS` and `EDGE_KINDS` are only ever the *built-in half* of the
   list — `vocabAll()` is the whole of it. Grep for `ACTS[`, `THINGS[` and
   friends after touching any of this.
+- **Escape and the focus trap belong to the OVERLAY, not to `openModal`.**
+  `backupDialog` and `restoreDialog` write `overlay.innerHTML` themselves, so
+  neither had an Escape handler or a trap: the one key everybody presses to get
+  out of a modal did nothing, and Tab walked straight through the scrim into the
+  page behind, where a keyboard reader could reach controls they could neither
+  see nor click. `trapOverlay(onEscape)` is the extracted pair, and **anything
+  that writes `overlay.innerHTML` itself has to call it** — a facility that
+  lives inside one constructor is a facility the other two dialogs silently do
+  without. It is in the shared runtime, so the fix landed in all four apps at
+  once and the md5 test is what proves it did.
 - **A dialog's destructive branch never goes on `onCancel`.** The archive lock
   read "a run will not close until it is done" and then closed the run on
   Escape, on a scrim click and on the ×, because the close sat in `onCancel`
