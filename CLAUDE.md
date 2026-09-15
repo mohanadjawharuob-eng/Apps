@@ -499,6 +499,19 @@ for n in sorted(set(re.findall(r"^  function ([A-Za-z_$][\w$]*)\(",s,re.M))):
 what renders instead. Six were removed this way; only `pad2` is allowed to
 survive uncalled, as a one-line utility.
 
+**The scan has two false negatives and both have hidden a dead function.** The
+word boundary `(?<![\w$.])` allows a **hyphen** in front, so every
+`"text-anchor": "middle"` on Mashghal's sheet read as a call to `anchor()` and
+it survived three reshapes uncalled. And a mention inside a *comment* counts,
+which is how `picThumb` stayed on the list after nothing called it. Sharpened,
+the test requires the name to be followed by a call or a hand-over:
+
+```
+python3 -c 'import re;s=open("mashghal/index.html").read()
+for n in sorted(set(re.findall(r"^  function ([A-Za-z_$][\w$]*)\(",s,re.M))):
+  if len(re.findall(r"(?<![\w$.\-])"+n+r"(?![\w$])(?=\s*[(,)\];]|\s*$)",s))<=1: print(n)'
+```
+
 `accountOptions()` returns a **grouped** list — an account with pockets comes
 back as `{group, options}` and carries no `value` of its own. Anything that
 needs a first entry to default to, or builds its own `<select>`, takes
@@ -886,6 +899,32 @@ target off to the right. "Tidy" re-runs it.
   Drive share link for opening the full-size one elsewhere. Drive's own API is
   not used and will not be — it needs Google's script from a CDN and an OAuth
   client, and this app fetches nothing and holds no secret.
+- **Both copies are made off the thread that paints, and the resize happens
+  inside the decode.** A photograph is taken on a phone, which is the slowest
+  device the app runs on, and the old route put every expensive part exactly
+  where it is felt: a `FileReader` turned a five-megabyte file into a
+  seven-megabyte base64 string, `new Image()` decoded that string, `toDataURL`
+  encoded the result, and then `picThumb` decoded the whole picture **a second
+  time** for the small copy. Measured on a desktop, the decode alone was 167ms
+  and the encode 118ms, twice over — on a phone the app simply stopped, with
+  nothing on screen saying why.
+  `createImageBitmap(blob, {resizeWidth, resizeHeight, resizeQuality})` is the
+  whole of the fix and the options are the half that matters: the bare call
+  decodes off the thread but hands back the full 3000×2250 bitmap, and the
+  `drawImage` that scales it down runs on the thread that paints — which
+  measured at 131ms for the big copy against 4ms for a blit of a bitmap that
+  is already the right size. `OffscreenCanvas.convertToBlob` moves the encode
+  off too. `picPair(file)` makes both copies from **two** off-thread decodes,
+  deliberately: one decode at full size plus two scalings here puts both
+  scalings where they hurt. `sizeOf()` reads the dimensions off a loaded
+  `<img>` without ever drawing it, because loading needs the header and the
+  decode is what we are avoiding.
+  Both are platform APIs, not dependencies — and where either is missing the
+  old route is still there, still correct and still slow, which is the only
+  honest way to use a capability that is not everywhere. **There is a test that
+  takes both APIs away** (`addInitScript` deleting them) and fails if the
+  fallback stops producing the two copies: a path nobody drives is a path
+  nobody can trust.
 - **The board is the screen, and the words fold away under it.** Opening a board
   shows the sheet; the same facts written out as rows sit behind one
   `<details class="fold big">` that remembers nothing, so a board always opens
@@ -1270,6 +1309,25 @@ committed PNGs modified as a side effect of a Coffer change. Name the scripts
 you mean, and `git status` before committing. Screenshot anything visual and *look at it* —
 a bug that renders 55 plants identically passes every assertion you thought to
 write.
+
+**A script that finds nothing must fail, not return.** `pics.js` looked for
+`pic-add` on a board that had just opened, found nothing because the words are
+folded away and because that button renders only on a node that is already a
+photograph, printed `NO`, and **returned without failing** — so it sat in the
+suite for weeks testing nothing while reporting nothing. Any `if (!el) return`
+in a test is that bug; it exits non-zero or it is not a test.
+
+**A performance test must not charge the app for the harness's own cost.**
+`picperf.js` reported a 1279ms freeze on adding a photograph and the app was
+innocent: timestamping every long task against the moment the file was handed
+over showed the block starting *before* `createImageBitmap` was ever called —
+it was Playwright materialising a five-megabyte file into the file input, and
+generating twenty-seven million pixels in the page was another 1.4 seconds.
+So the photo is made once before the observer starts, every entry is recorded
+with its `startTime`, and the ones that began before the app had the file are
+**named and excluded** rather than quietly dropped — a reader has to be able
+to see what was left out. Inside the app's own stretch the figure is now
+`none`.
 
 The scripts drive the real UI, so **a reshaped screen breaks them and that is
 not a regression** — but a suite nobody trusts is a suite nobody runs, so fix

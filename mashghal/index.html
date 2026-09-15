@@ -5262,25 +5262,110 @@ function stateWord(b, n) {
   var PIC_THUMB = 300;            // longest edge of the travelling copy
   var THUMB_CHARS = 34 * 1024;    // data-URL characters; over this, no thumbnail
 
-  function picThumb(dataUrl) {
-    return new Promise(function (res) {
+  /* ---------------- getting a picture in, off the main thread ----------------
+
+     The old route did every expensive part on the thread that paints: a
+     FileReader turned a five-megabyte phone photo into a seven-megabyte base64
+     string, `new Image()` decoded that string, and `toDataURL` encoded the
+     result. On a phone — which is where a photograph is actually taken — the
+     app froze for the duration of all three, with nothing on screen to say
+     why.
+
+     `createImageBitmap` takes the Blob straight and decodes **off** the main
+     thread, so the base64 round trip on the way in disappears entirely.
+     `OffscreenCanvas.convertToBlob` encodes off it too. Both are platform
+     APIs; where either is missing the old path is still here and still
+     correct, which is the only honest way to use a capability that is not
+     everywhere. */
+
+  /* The dimensions, without asking for the pixels. An <img> reports
+     naturalWidth once it has loaded, and loading only needs the header — the
+     decode happens when something draws it, which is exactly what we are
+     avoiding on this thread. */
+  function sizeOf(blob) {
+    return new Promise(function (res, rej) {
+      if (!window.URL || !URL.createObjectURL) { rej(new Error("no object urls")); return; }
+      var url = URL.createObjectURL(blob);
       var img = new Image();
-      img.onerror = function () { res(""); };
       img.onload = function () {
-        var scale = Math.min(1, PIC_THUMB / Math.max(img.width, img.height));
-        var c = document.createElement("canvas");
-        c.width = Math.max(1, Math.round(img.width * scale));
-        c.height = Math.max(1, Math.round(img.height * scale));
-        var x = c.getContext("2d");
-        x.imageSmoothingQuality = "high";
-        x.drawImage(img, 0, 0, c.width, c.height);
-        var out = c.toDataURL("image/jpeg", 0.62);
-        if (out.length > THUMB_CHARS) out = c.toDataURL("image/jpeg", 0.45);
-        res(out.length > THUMB_CHARS ? "" : out);
+        var out = { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height };
+        URL.revokeObjectURL(url);
+        if (!out.w || !out.h) rej(new Error("That does not look like a picture."));
+        else res(out);
       };
-      img.src = dataUrl;
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        rej(new Error("That does not look like a picture."));
+      };
+      img.src = url;
     });
   }
+
+  /* Decode AND resize in one off-thread call. This is the whole of the fix:
+     `createImageBitmap(file)` alone decodes off the thread but hands back the
+     full 3000×2250 bitmap, and the `drawImage` that scales it down runs on
+     the thread that paints — which measured as a 1.3-second freeze on a
+     phone-sized photograph. With `resizeWidth`/`resizeHeight` the scaling
+     happens inside the decode, and all the main thread ever does is blit a
+     bitmap that is already the right size. */
+  function bitmapAt(blob, w, h, edge) {
+    if (typeof createImageBitmap !== "function") return Promise.reject(new Error("no bitmap"));
+    var scale = Math.min(1, edge / Math.max(w, h));
+    var cw = Math.max(1, Math.round(w * scale));
+    var ch = Math.max(1, Math.round(h * scale));
+    return createImageBitmap(blob, {
+      resizeWidth: cw, resizeHeight: ch, resizeQuality: "high"
+    }).then(function (bmp) { return { bmp: bmp, w: cw, h: ch }; });
+  }
+  function offscreenOK() {
+    return typeof OffscreenCanvas === "function" &&
+           typeof OffscreenCanvas.prototype.convertToBlob === "function";
+  }
+  function blobToDataUrl(blob) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onerror = function () { rej(new Error("Could not read that picture back.")); };
+      fr.onload = function () { res(fr.result); };
+      fr.readAsDataURL(blob);
+    });
+  }
+  /* Draw a source of known size into a canvas at `edge` and encode it. The
+     encode is the part worth moving: a 1400px JPEG is the difference between
+     a visible stall and none. */
+  function drawTo(src, w, h, edge, quality) {
+    var scale = Math.min(1, edge / Math.max(w, h));
+    var cw = Math.max(1, Math.round(w * scale));
+    var ch = Math.max(1, Math.round(h * scale));
+    if (offscreenOK()) {
+      var oc = new OffscreenCanvas(cw, ch);
+      var ox = oc.getContext("2d");
+      ox.imageSmoothingQuality = "high";
+      ox.drawImage(src, 0, 0, cw, ch);
+      return oc.convertToBlob({ type: "image/jpeg", quality: quality }).then(blobToDataUrl);
+    }
+    var c = document.createElement("canvas");
+    c.width = cw; c.height = ch;
+    var x = c.getContext("2d");
+    x.imageSmoothingQuality = "high";
+    x.drawImage(src, 0, 0, cw, ch);
+    return Promise.resolve(c.toDataURL("image/jpeg", quality));
+  }
+
+  /* The thumbnail, from the bitmap where there is one. Encoding it from the
+     full data URL meant decoding the whole picture a second time, which is
+     the same stall again for no reason. */
+  function thumbFrom(src, w, h) {
+    return drawTo(src, w, h, PIC_THUMB, 0.62).then(function (out) {
+      if (out.length <= THUMB_CHARS) return out;
+      return drawTo(src, w, h, PIC_THUMB, 0.45).then(function (small) {
+        return small.length > THUMB_CHARS ? "" : small;
+      });
+    });
+  }
+
+  // picThumb is gone: it took a finished data URL and decoded the whole picture
+  // a second time to make the small one. thumbFrom() works from whatever was
+  // already decoded, and picPair() makes both copies from one decode.
 
   /* A node HAS a picture if either copy is here: the full one on this device,
      or the travelling thumbnail, which is what a phone sees of a photograph
@@ -5347,34 +5432,71 @@ function stateWord(b, n) {
   /* Resized before it is stored. A modern phone photo is four or five
      megabytes; at 1400px it is a couple of hundred KB and still far more than
      enough to recognise a frame or read a label. */
-  function picShrink(file) {
-    return new Promise(function (res, rej) {
-      var fr = new FileReader();
-      fr.onerror = function () { rej(new Error("Could not read that file.")); };
-      fr.onload = function () {
-        var img = new Image();
-        img.onerror = function () { rej(new Error("That does not look like a picture.")); };
-        img.onload = function () {
-          var w = img.width, h = img.height, scale = Math.min(1, PIC_MAX / Math.max(w, h));
-          var c = document.createElement("canvas");
-          c.width = Math.round(w * scale); c.height = Math.round(h * scale);
-          var x = c.getContext("2d");
-          x.imageSmoothingQuality = "high";
-          x.drawImage(img, 0, 0, c.width, c.height);
-          var out = c.toDataURL("image/jpeg", 0.82);
-          if (out.length > PIC_BYTES * 1.37) {
-            out = c.toDataURL("image/jpeg", 0.6);
+  /* Both copies, each from its own off-thread decode-and-resize. Two decodes
+     rather than one is deliberate: they happen off the thread that paints,
+     and the alternative — decode once at full size, then scale twice here —
+     puts both scalings exactly where they hurt. */
+  function picPair(file) {
+    function legacy() {
+      // No createImageBitmap or no object URLs: the old route, unchanged and
+      // still correct, and still slow — which is why it is the fallback.
+      function fromSource(src, w, h) {
+        return drawTo(src, w, h, PIC_MAX, 0.82).then(function (out) {
+          if (out.length <= PIC_BYTES * 1.37) return out;
+          return drawTo(src, w, h, PIC_MAX, 0.6);
+        }).then(function (full) {
+          if (full.length > PIC_BYTES * 1.37) {
+            throw new Error("Still too large after resizing. Try a smaller picture.");
           }
-          if (out.length > PIC_BYTES * 1.37) {
-            rej(new Error("Still too large after resizing. Try a smaller picture."));
-            return;
-          }
-          res(out);
+          return thumbFrom(src, w, h).then(function (small) {
+            return { full: full, thumb: small };
+          }, function () { return { full: full, thumb: "" }; });
+        });
+      }
+      return new Promise(function (res, rej) {
+        var fr = new FileReader();
+        fr.onerror = function () { rej(new Error("Could not read that file.")); };
+        fr.onload = function () {
+          var img = new Image();
+          img.onerror = function () { rej(new Error("That does not look like a picture.")); };
+          img.onload = function () { fromSource(img, img.width, img.height).then(res, rej); };
+          img.src = fr.result;
         };
-        img.src = fr.result;
-      };
-      fr.readAsDataURL(file);
-    });
+        fr.readAsDataURL(file);
+      });
+    }
+
+    if (typeof createImageBitmap !== "function") return legacy();
+
+    return sizeOf(file).then(function (nat) {
+      // the full copy
+      return bitmapAt(file, nat.w, nat.h, PIC_MAX).then(function (big) {
+        return drawTo(big.bmp, big.w, big.h, PIC_MAX, 0.82).then(function (out) {
+          if (out.length <= PIC_BYTES * 1.37) return out;
+          return drawTo(big.bmp, big.w, big.h, PIC_MAX, 0.6);
+        }).then(function (full) {
+          if (big.bmp.close) big.bmp.close();
+          if (full.length > PIC_BYTES * 1.37) {
+            throw new Error("Still too large after resizing. Try a smaller picture.");
+          }
+          return full;
+        }, function (e) {
+          if (big.bmp.close) big.bmp.close();
+          throw e;
+        });
+      }).then(function (full) {
+        // and the travelling one, from its own decode at 300px
+        return bitmapAt(file, nat.w, nat.h, PIC_THUMB).then(function (small) {
+          return thumbFrom(small.bmp, small.w, small.h).then(function (th) {
+            if (small.bmp.close) small.bmp.close();
+            return { full: full, thumb: th };
+          }, function () {
+            if (small.bmp.close) small.bmp.close();
+            return { full: full, thumb: "" };
+          });
+        }, function () { return { full: full, thumb: "" }; });
+      });
+    }, legacy);
   }
 
   var BK_DB = "mashghal-backups", BK_STORE = "snaps", BK_KEEP = 10;
@@ -5914,7 +6036,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v45 · 15 Sep 2026";
+  var BUILD = "v46 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -6404,13 +6526,12 @@ function dims(n) {
   }
 
   function centre(n) { var d = dims(n); return { x: n.x + d.w / 2, y: n.y + d.h / 2 }; }
-  function anchor(n, tx, ty) {
-    var c = centre(n), d = dims(n), dx = tx - c.x, dy = ty - c.y;
-    if (!dx && !dy) return c;
-    var s = Math.min(dx ? (d.w / 2 + 5) / Math.abs(dx) : Infinity,
-                     dy ? (d.h / 2 + 5) / Math.abs(dy) : Infinity);
-    return { x: c.x + dx * s, y: c.y + dy * s };
-  }
+  /* `anchor(n, tx, ty)` is gone. It found the point on a card's edge facing a
+     target, for a line drawn centre-to-centre; `drawEdges()` draws from the
+     card's side instead and the arrowhead sits on the border, so nothing had
+     called it for some time. It survived because the orphan scan's word
+     boundary allowed a hyphen in front — every `"text-anchor": "middle"` on
+     the sheet read as a caller. */
 
   // Nobody should ever meet a blank sheet. Steps are ranked by how far they
   // sit from an entry point and laid out in columns; things are parked above
@@ -7225,9 +7346,10 @@ function dims(n) {
       return;
     }
     toast("Reading it\u2026");
-    picShrink(file).then(function (dataUrl) {
-      var key = uid();
-      return picPut(key, dataUrl).then(function () { return picThumb(dataUrl); }).then(function (small) {
+    // One decode, both copies — see picPair.
+    picPair(file).then(function (pair) {
+      var dataUrl = pair.full, key = uid();
+      return picPut(key, dataUrl).then(function () { return pair.thumb; }).then(function (small) {
         var guess = String(file.name || "").replace(/\.[a-z0-9]+$/i, "").replace(/_+/g, " ").replace(/\s+/g, " ").trim();
         var steps = b.nodes.filter(function (n) { return n.t === "step"; });
         openModal({
@@ -8725,11 +8847,11 @@ function dims(n) {
         var f = inp.files && inp.files[0];
         if (!f) return;
         toast("Reading it…");
-        picShrink(f)
-          .then(function (dataUrl) {
+        picPair(f)
+          .then(function (pair) {
             var key = n.pic || uid();
-            return picPut(key, dataUrl)
-              .then(function () { return picThumb(dataUrl); })
+            return picPut(key, pair.full)
+              .then(function () { return pair.thumb; })
               .then(function (small) {
                 go(function () { n.pic = key; n.thumb = small; settleNode(b, n); });
                 toast(small ? "Kept here, and a thumbnail goes to your other devices"
