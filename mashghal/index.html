@@ -859,6 +859,7 @@ color-scheme: light;
   /* The registry's kinds. A row's colour says what sort of thing it is, which
      is the whole use of the identity channel in a list eight long — nine
      green squares are nine squares. */
+  .t-person { --tint-of: var(--id-conn); }
   .t-doc   { --tint-of: var(--id-asset); }
   .t-photo { --tint-of: var(--id-output); }
   .t-soft  { --tint-of: var(--id-soft); }
@@ -1411,6 +1412,12 @@ color-scheme: light;
            hole in the run freeze) but a copy carrying `fromAssetId`, so the
            registry can still answer "where is this used". */
         assets: [],      // {id,name,kind,notes,path,url,thumb,where,onDate,fromIds[],archived}
+        /* The stated half of a person. Everything about how a thread with
+           them is GOING is derived from the sends they are linked to, so this
+           holds only what no board could know: where they work, what they do,
+           how to reach them, and one line of your own. Boards never point
+           into it — same freeze rule as the registry. */
+        contacts: [],    // {id,name,org,role,email,note,archived}
         cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
         settings: { showDone: true, companion: false,
                     // Set the first time jobs are derived from claimants, so
@@ -1429,7 +1436,7 @@ color-scheme: light;
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"].forEach(function (k) {
+      ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "contacts", "cadences"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       ["forgotten", "tombstones", "devices", "vocab"].forEach(function (k) {
@@ -1462,6 +1469,8 @@ color-scheme: light;
                                    : openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" })
                                    : renderJobs();
       if (v === "vocab")    return openAsset ? assetPage(assetOf(openAsset) || { id: "", name: "?" })
+                                   : openPerson ? (personOf(openPerson) ? personPage(personOf(openPerson))
+                                                   : (openPerson = "", renderKit()))
                                    : openMode ? kitModeDetail(byId(state.modes, openMode) || { name: "?", id: "" })
                                    : renderKit();
       return renderSettings();
@@ -1475,7 +1484,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
 
     actions: {}
   };
@@ -1749,7 +1758,8 @@ color-scheme: light;
 
   function navSnap() {
     return { view: view, openId: openId, openJob: openJob, openProj: openProj,
-             openMode: openMode, openAsset: openAsset };
+             openMode: openMode, openAsset: openAsset, openPerson: openPerson,
+             kitTab: kitTab };
   }
   function navTrack() {
     var at = navSnap(), key = JSON.stringify(at);
@@ -1767,7 +1777,8 @@ color-scheme: light;
     view = at.view || "boards";
     openId = at.openId || ""; openJob = at.openJob || "";
     openProj = at.openProj || ""; openMode = at.openMode || "";
-    openAsset = at.openAsset || "";
+    openAsset = at.openAsset || ""; openPerson = at.openPerson || "";
+    kitTab = at.kitTab || "things";
     foldOpen = false; sel = "";
     render();
     navLock = false;
@@ -1855,6 +1866,11 @@ color-scheme: light;
            answers for it. */
         if (!step && n.fromAssetId && assetOf(n.fromAssetId) &&
             !assetOf(n.fromAssetId).archived) return;
+        /* And people are never listed from a board at all: `people()` folds
+           every mention of one person into a single row that says what is
+           outstanding with them, which is strictly more than a board node can
+           say. Four boards naming a supervisor gave four identical hits. */
+        if (!step && n.kind === "person") return;
         out.push({
           g: step ? "Steps" : "People and things",
           key: n.label,
@@ -1889,6 +1905,17 @@ color-scheme: light;
                  title: benchLabel(bn.id), sub: "bench · a mode and who it is for", k: 6,
                  run: function () { findTab("week"); } });
     });
+    people().forEach(function (p) {
+      var tone = p.late ? "late" : p.waits.length ? "watch" : "idle";
+      out.push({ g: "People", key: p.name + " " + (p.contact ? (p.contact.org || "") + " " +
+                   (p.contact.role || "") + " " + (p.contact.email || "") : ""),
+                 tile: findTile("t-person", ICONS.person),
+                 title: p.name, sub: personSays(p),
+                 st: p.waits.length ? '<span class="st ' + tone + '"><i></i>' +
+                     (p.late ? p.late + " late" : "waiting") + "</span>" : "",
+                 k: p.late ? 0 : 4,
+                 run: function () { findTab("vocab"); kitTab = "people"; openPerson = p.key; render(); } });
+    });
     live(state.assets).forEach(function (a) {
       var look = assetLook(a);
       out.push({ g: "Things", key: a.name + " " + (a.notes || "") + " " + (a.path || ""),
@@ -1920,6 +1947,7 @@ color-scheme: light;
     var cs = [
       { name: "New project", act: "proj-add", sub: "a bounded piece of work with a date on it" },
       { name: "Add a thing", act: "asset-add", sub: "a file, a photograph, a dataset, a laptop" },
+      { name: "Add someone", act: "contact-add", sub: "where they work and how to reach them" },
       { name: "New board", act: "board-new", sub: "write a procedure from a blank sheet" },
       { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a board" },
       { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
@@ -3024,6 +3052,7 @@ function stateWord(b, n) {
 
   var KIT_PAGES = [
     { id: "things", label: "Things" },
+    { id: "people", label: "People" },
     { id: "upkeep", label: "Upkeep" },
     { id: "words",  label: "Words" }
   ];
@@ -3038,12 +3067,14 @@ function stateWord(b, n) {
   function renderKit() {
     var subs = {
       things: "Anything the work is made of or made with. Each one says what it was made from, where it is used, and what upkeep it carries.",
+      people: "Everyone the book names, worst first. What is outstanding with each of them is read off the sends that name them — it is never typed.",
       upkeep: "Every so often since it was last done, never on a date — so falling behind never piles up.",
       words:  "Claimants, modes, benches and board kinds. None of it is written into the app: it is all yours to add, rename and remove."
     };
     var h = pageHead("The workbench", esc(subs[kitTab] || subs.things)) + kitStrip();
 
     if (kitTab === "things") return h + kitThingsHtml();
+    if (kitTab === "people") return h + kitPeopleHtml();
     if (kitTab === "upkeep") return h + kitUpkeepHtml();
     return h + kitWordsHtml();
   }
@@ -4126,6 +4157,254 @@ function stateWord(b, n) {
     return h;
   }
 
+  /* ================= people =================
+
+     The one cut of the record the app could not give. Waiting answers "what
+     is late", step by step; nobody could ask "I am about to write to Rita —
+     what else is outstanding with her", because a person existed only as a
+     node inside whichever frozen board named them. So a person is assembled
+     here from both halves:
+
+     **Derived**, and it is nearly all of it: every `send` and `watch` they are
+     linked to, across every board, with how long it has been waiting and
+     whether it is past its chase. Nothing about a thread is stored — the same
+     rule the hours and the projects live by.
+
+     **Stated**, and only what no board could know: where they work, what they
+     do, how to reach them, one line of your own. Boards never point into that
+     record, so renaming a contact cannot rewrite a board that named them
+     three years ago.
+
+     The two halves are matched by `fromContactId` where a board node was
+     brought in from the list, and by lowercased NAME otherwise — which is how
+     `allThings()` has always folded people together, and the only key the
+     older frozen copies carry. */
+
+  var openPerson = "";   // view state, never saved
+
+  function contactOf(id) { return byId(state.contacts, id); }
+
+  /* Everyone the book knows, from both halves, folded by name. A contact with
+     no board mention still appears (you added them for a reason); a person
+     named only on a board appears too, with nothing stated about them. */
+  function people() {
+    var byKey = {}, out = [];
+    /* Keyed on the CONTACT where there is one, and on the lowercased name
+       otherwise. Name alone was wrong and the screenshot showed it: renaming
+       a contact (which deliberately does not rewrite the boards) split one
+       person into two rows — "Prof. Supervisor" with the address and nothing
+       outstanding, "Supervisor" with three boards and a late send. The id
+       survives a rename; the name is the fallback for the copies that predate
+       `fromContactId`, and the display name is always the contact's, since
+       that is the current truth. */
+    function slot(name, contact) {
+      var key = contact ? "c:" + contact.id : "n:" + String(name).toLowerCase();
+      if (!byKey[key]) {
+        byKey[key] = { key: key, name: contact ? contact.name : name,
+                       contact: contact || null, boards: [], waits: [], seen: 0 };
+        out.push(byKey[key]);
+      }
+      return byKey[key];
+    }
+    // The legacy match, so a book written before contacts existed still folds
+    // its people together: a board node naming somebody who is now in the
+    // list belongs to them.
+    var byName = {};
+    live(state.contacts).forEach(function (c) {
+      byName[c.name.toLowerCase()] = c;
+      slot(c.name, c);
+    });
+
+    state.boards.forEach(function (b) {
+      if (b.archived) return;
+      (b.nodes || []).forEach(function (n) {
+        if (n.t !== "thing" || n.kind !== "person" || !n.label) return;
+        var c = n.fromContactId ? contactOf(n.fromContactId) : null;
+        if (c && c.archived) c = null;          // forgotten: back to a bare name
+        if (!c) c = byName[String(n.label).toLowerCase()] || null;
+        var p = slot(n.label, c);
+        p.seen++;
+        if (p.boards.indexOf(b) < 0) p.boards.push(b);
+
+        /* What is outstanding with them: the waits they are linked to that are
+           still open. A template's steps are not outstanding — nothing has
+           been sent yet — so only a live run counts, which is the same test
+           `dues()` makes. */
+        if (b.kind !== "run" || b.closedOn) return;
+        edgesOf(b, n.id, "link").forEach(function (e) {
+          var st = nodeOf(b, e.a === n.id ? e.b : e.a);
+          if (!st || st.t !== "step") return;
+          if (st.act !== "send" && st.act !== "watch") return;
+          if (!st.enteredAt || st.doneAt) return;
+          p.waits.push({ board: b, node: st, over: overdueBy(st), days: daysWaiting(st) });
+        });
+      });
+    });
+
+    out.forEach(function (p) {
+      p.waits.sort(function (x, y) {
+        if ((x.over > 0) !== (y.over > 0)) return x.over > 0 ? -1 : 1;
+        return y.over - x.over || y.days - x.days;
+      });
+      p.late = p.waits.filter(function (w) { return w.over > 0; }).length;
+    });
+    // Worst first, then whoever you are waiting on at all, then by name.
+    return out.sort(function (a, z) {
+      if (a.late !== z.late) return z.late - a.late;
+      if (a.waits.length !== z.waits.length) return z.waits.length - a.waits.length;
+      return a.name.localeCompare(z.name);
+    });
+  }
+
+  function personOf(key) {
+    var all = people();
+    for (var i = 0; i < all.length; i++) if (all[i].key === key) return all[i];
+    return null;
+  }
+
+  function personSays(p) {
+    var bits = [], c = p.contact;
+    if (c && c.role) bits.push(c.role);
+    if (c && c.org) bits.push(c.org);
+    if (p.late) bits.push(p.late + (p.late === 1 ? " thing is late" : " things are late") + " with them");
+    else if (p.waits.length) bits.push("waiting on " + p.waits.length +
+      (p.waits.length === 1 ? " thing" : " things"));
+    else if (p.boards.length) bits.push("on " + p.boards.length +
+      (p.boards.length === 1 ? " board" : " boards") + ", nothing outstanding");
+    else bits.push("nothing on a board yet");
+    return bits.join(" · ");
+  }
+
+  function personRow(p) {
+    var tone = p.late ? "late" : p.waits.length ? "watch" : "idle";
+    var word = p.late ? "late" : p.waits.length ? "waiting" : "clear";
+    return '<button type="button" class="panel rowbtn calm' + (p.late ? " late" : "") +
+      '" data-act="person-open" data-id="' + esc(p.key) + '">' +
+      '<span class="itile t-person">' + ICONS.person + "</span>" +
+      '<div class="grow"><div class="nm sm">' + esc(p.name) + "</div>" +
+      '<div class="says">' + esc(personSays(p)) + "</div></div>" +
+      '<span class="st ' + tone + '"><i></i>' + word + "</span></button>";
+  }
+
+  function personPage(p) {
+    var c = p.contact;
+    var tools = '<div class="tools">' +
+      '<button class="btn" data-act="person-back">Everyone</button>' +
+      (c ? '<button class="btn" data-act="contact-edit" data-id="' + c.id + '">Edit</button>'
+         : '<button class="btn" data-act="contact-add" data-id="' + esc(p.name) + '">Say who they are</button>') +
+      (c && c.email ? '<a class="btn" href="mailto:' + esc(c.email) + '">Write to them</a>' : "") +
+      (c ? '<button class="btn danger" data-act="contact-del" data-id="' + c.id + '">Forget them</button>' : "") +
+      "</div>";
+
+    var h = '<div class="page-head"><div><h2>' + esc(p.name) + "</h2>" +
+      "<p>" + esc(personSays(p)) + "</p></div>" + tools + "</div>";
+
+    if (c && (c.email || c.note)) {
+      h += '<div class="card">' +
+        (c.email ? '<div class="row"><span class="grow"><b>Email</b><small>' + esc(c.email) + "</small></span></div>" : "") +
+        (c.note ? '<div class="row"><span class="grow"><b>Note</b><small>' + esc(c.note) + "</small></span></div>" : "") +
+        "</div>";
+    }
+    if (!c) {
+      h += '<p class="hint">Nothing is stated about them — they are here because a board names them. ' +
+        "Saying who they are adds where they work and how to reach them, and no board changes when you do.</p>";
+    }
+
+    /* The whole point of the page. Worst first, and each row says which run it
+       is on, because "waiting three weeks" means nothing without it. */
+    h += '<div class="sect">What is outstanding with them</div>';
+    h += p.waits.length ? '<div class="stack tight">' + p.waits.map(function (w) {
+      var late = w.over > 0;
+      return '<button type="button" class="panel rowbtn calm' + (late ? " late" : "") +
+        '" data-act="board-open" data-id="' + w.board.id + '">' +
+        '<div class="grow"><div class="nm sm">' + esc(w.node.label) + "</div>" +
+        '<div class="says">' + esc(w.board.name + " · " + vocabLabel("acts", w.node.act) +
+          " · " + w.days + (w.days === 1 ? " day" : " days") +
+          // "6 days, 1 past the chase" reads as a fragment; the unit belongs
+          // on both figures or on neither.
+          (late ? ", " + w.over + (w.over === 1 ? " day" : " days") + " past the chase" : "")) +
+        "</div></div>" +
+        '<span class="st ' + (late ? "late" : "watch") + '"><i></i>' +
+        (late ? "late" : "waiting") + "</span></button>";
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing. Every send and watch that names them is either finished or not started.</p>';
+
+    if (p.boards.length) {
+      h += '<div class="sect">Where they appear</div><div class="stack tight">' + p.boards.map(function (b) {
+        return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
+          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+          '<div class="says">' + esc(b.kind === "run" ? (b.closedOn ? "closed run" : "run") : "procedure") +
+          "</div></div></button>";
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function kitPeopleHtml() {
+    var all = people();
+    var h = '<div class="tools" style="margin-bottom:0.9rem">' +
+      '<button class="btn" data-act="contact-add">Add someone</button></div>';
+    if (!all.length) {
+      return h + '<p class="empty">Nobody yet. A person arrives here the moment a board names them — or add one, so their address is somewhere you can find it.</p>';
+    }
+    var owing = all.filter(function (p) { return p.waits.length; });
+    var clear = all.filter(function (p) { return !p.waits.length; });
+    if (owing.length) {
+      h += '<div class="subhead">Waiting on them</div><div class="stack tight" style="margin-bottom:1rem">' +
+        owing.map(personRow).join("") + "</div>";
+    }
+    if (clear.length) {
+      h += '<div class="subhead">Everyone else</div><div class="stack tight">' +
+        clear.map(personRow).join("") + "</div>";
+    }
+    return h;
+  }
+
+  function contactDialog(c, name) {
+    var mk = !c;
+    openModal({
+      title: mk ? "Add someone" : "Edit " + c.name,
+      confirmLabel: mk ? "Add" : "Save",
+      wide: true,
+      message: mk ? "Only what no board could know: where they work, what they do, and how to reach them. What is outstanding with them is read off the sends that name them, and never typed."
+                  : "",
+      fields: [
+        { key: "name", label: "Name", type: "text", span: true,
+          value: c ? c.name : (name || ""), placeholder: "N. Haddad" },
+        { key: "role", label: "What they do", type: "text", value: c ? (c.role || "") : "",
+          placeholder: "reviewer" },
+        { key: "org", label: "Where", type: "text", value: c ? (c.org || "") : "",
+          placeholder: "U. of Balamand" },
+        { key: "email", label: "Email", type: "text", span: true, value: c ? (c.email || "") : "" },
+        { key: "note", label: "One line of your own", type: "textarea", span: true, rows: 2,
+          value: c ? (c.note || "") : "" }
+      ],
+      validate: function (v) {
+        if (!v.name.trim()) return "Give them a name.";
+        /* Not a validator for email in general — that is a fool's errand — but
+           a mailto: link built from something with no @ in it fails silently
+           when you press it, which is worse than refusing it here. */
+        if (v.email.trim() && v.email.trim().indexOf("@") < 0)
+          return "An email address needs an @, or leave it blank.";
+        var dup = live(state.contacts).some(function (x) {
+          return x !== c && x.name.toLowerCase() === v.name.trim().toLowerCase();
+        });
+        if (dup) return "Somebody of that name is already here.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = c;
+          if (!t) { t = { id: uid(), archived: false }; state.contacts.push(t); }
+          t.name = v.name.trim(); t.role = v.role.trim(); t.org = v.org.trim();
+          t.email = v.email.trim(); t.note = v.note.trim();
+          openPerson = "c:" + t.id;
+        });
+        toast(mk ? "Added" : "Saved");
+      }
+    });
+  }
+
   /* The registry, grouped by kind. It was a flat list of four pieces of
      hardware; now that it holds files, photographs, datasets and software as
      well, the kind is what you scan by and every row opens a page. */
@@ -4174,7 +4453,7 @@ function stateWord(b, n) {
   //
   // Nothing here ever reaches `state`: the token and the passphrase live in
   // their own storage keys, so a backup of the book carries neither.
-  var SYNC_LISTS = ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "cadences"];
+  var SYNC_LISTS = ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "contacts", "cadences"];
   var TOK_KEY = "mashghal.sync.token";
   var PASS_KEY = "mashghal.sync.pass";
   var DEV_KEY = "mashghal.sync.device";
@@ -5296,7 +5575,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v36 · 15 Sep 2026";
+  var BUILD = "v37 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -7653,6 +7932,54 @@ function dims(n) {
       });
     },
 
+    /* ---- people ---- */
+    /* A person is addressed by the key `people()` built, not by an id: half of
+       them exist only as a node on a frozen board and have no record at all.
+       `c:<id>` for somebody in the list, `n:<lowercased name>` for somebody a
+       board merely mentions. */
+    "person-open": function (id) {
+      openPerson = String(id || ""); view = "vocab";
+      kitTab = "people"; openAsset = ""; openMode = ""; render();
+    },
+    "person-back": function () { openPerson = ""; kitTab = "people"; render(); },
+    "contact-add": function (id) { contactDialog(null, id || ""); },
+    "contact-edit": function (id) { contactDialog(contactOf(id)); },
+    /* Forgetting somebody removes what you stated about them and nothing else.
+       Every board that names them still names them — they are copies — so the
+       person does not vanish from the list; they go back to being someone a
+       board mentions with nothing said about them. The dialog says exactly
+       that, because "forget" otherwise reads as losing the history. */
+    "contact-del": function (id) {
+      var c = contactOf(id); if (!c) return;
+      /* Counted off the boards rather than through `personOf()`: that is keyed
+         on what `people()` built, and reading it with a lowercased name found
+         nothing the moment the key became `c:<id>` — so the dialog quietly
+         dropped the one sentence that stops "forget" reading as losing the
+         history. A fact the reader needs is not allowed to depend on a lookup
+         that can miss. */
+      var p = personOf("c:" + c.id);
+      var n = p ? p.boards.length : 0;
+      confirmAction({
+        title: "Forget " + c.name + "?",
+        confirmLabel: "Forget them",
+        message: (n ? "The " + n + (n === 1 ? " board" : " boards") + " that name them are untouched, and they stay on this list — "
+                    : "") +
+          "what goes is where they work, how to reach them and your note. Nothing recorded is deleted."
+      }, function () {
+        go(function () {
+          state.forgotten[id] = c.name;
+          c.archived = true;
+          // Their key was `c:<id>` and that no longer resolves, so the page
+          // would fall back to the list without saying why. They are still a
+          // person — a name on a board — so follow them there.
+          if (openPerson === "c:" + id) openPerson = "n:" + c.name.toLowerCase();
+        });
+        toast("Forgotten — the boards still name them", function () {
+          go(function () { c.archived = false; delete state.forgotten[id]; });
+        });
+      });
+    },
+
     /* ---- the report ---- */
     "report-new":  function () { reportDialog(); },
     "report-back": function () { reportOn = null; render(); },
@@ -7759,8 +8086,10 @@ function dims(n) {
     /* ---- jobs ---- */
     "job-open": function (id) { openJob = id; view = "jobs"; render(); },
     "job-back": function () { openJob = ""; render(); },
-    "tab-vocab": function () { view = "vocab"; openMode = ""; openAsset = ""; kitTab = "things"; render(); },
-    "kit-page": function (id) { kitTab = id || "things"; openMode = ""; openAsset = ""; render(); },
+    "tab-vocab": function () { view = "vocab"; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; render(); },
+    "kit-page": function (id) {
+      kitTab = id || "things"; openMode = ""; openAsset = ""; openPerson = ""; render();
+    },
     "job-add": function () { jobDialog(null); },
     "job-edit": function (id) { jobDialog(jobOf(id)); },
     "job-del": function (id) {
@@ -8176,6 +8505,15 @@ function dims(n) {
                   pic: "", thumb: a.thumb || "", seen: 1,
                   from: "the registry", assetId: a.id });
     });
+    // And the people list, which is what gets borrowed most: a send needs
+    // somebody on it, and typing a name again is how two spellings of one
+    // person end up in the book.
+    live(state.contacts).forEach(function (c) {
+      if (hereByName[String(c.name).toLowerCase()]) return;
+      pool.push({ kind: "person", label: c.name, path: "", url: "",
+                  pic: "", thumb: "", seen: 1,
+                  from: "your people", contactId: c.id });
+    });
 
     /* One name, one entry. The registry and the boards hold the same
        headphones, so the list offered both — twice the same thing, and
@@ -8222,7 +8560,8 @@ function dims(n) {
           b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
                          path: pick.path, url: pick.url, pic: pick.pic,
                          thumb: pick.thumb || "",
-                         fromAssetId: pick.assetId || "" });
+                         fromAssetId: pick.assetId || "",
+                         fromContactId: pick.contactId || "" });
           autoLayout(b);
         });
         toast("Brought in — link it to a step to say where it belongs");
@@ -8542,6 +8881,23 @@ function dims(n) {
                     path: "", url: "https://drive.google.com/file/d/EXAMPLE/view",
                     where: "", fromIds: [], archived: false });
     s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud];
+
+    /* Two of the people the boards already name, said properly — so the
+       People page has one row with an address and a role and one with nothing
+       but a name, which are the two states it has to read well in. The rest
+       of the book's people arrive from the boards on their own. */
+    s.contacts = [
+      mk({ name: "N. Haddad", role: "reviewer", org: "U. of Balamand",
+           email: "n.haddad@example.edu", note: "Replies in the evening, never before.",
+           archived: false }),
+      mk({ name: "Supervisor", role: "supervisor", org: "Southampton",
+           email: "", note: "", archived: false })
+    ];
+    /* And the board copies point home, so renaming the contact cannot move a
+       board and the page can still say which boards name them. */
+    p1.fromContactId = s.contacts[0].id;
+    a0.fromContactId = s.contacts[1].id;
+    k2.fromContactId = s.contacts[1].id;
 
     /* One board node copied from the registry, so "where it is used" has
        something in it — and it is the aerials, which is the node the GIS run

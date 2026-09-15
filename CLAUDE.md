@@ -621,8 +621,12 @@ knowing which board she was on. Four rules:
   through the same helpers the views use (`boards`, `dues`, `benchLabel`,
   `nodeState`, `projState`), so a hit can never name something the app would
   then fail to open, and a rebuilt screen cannot leave it searching a list that
-  no longer exists. It reaches projects, boards, runs, steps, people and things,
-  jobs, benches, kit and upkeep.
+  no longer exists. It reaches projects, boards, runs, steps, people, things,
+  jobs, benches and upkeep — and it reaches each of them **once**: a thing
+  node whose `fromAssetId` resolves is dropped in favour of the registry entry,
+  and a person node is never listed from a board at all, because `people()`
+  folds every mention into one row that says what is outstanding with them.
+  Four boards naming a supervisor gave four identical hits.
 - **It changes nothing.** A hit navigates; the handful of commands at the foot
   hand straight over to `APP.actions`, which is the only place a figure may
   move. A command closes the box first, or its dialog opens behind the scrim.
@@ -728,11 +732,38 @@ target off to the right. "Tidy" re-runs it.
   the name, and on `fromAssetId` where it is there.
   `assetLook()` is the single place a kind decides its glyph and its identity
   colour, because the row, the finder and the detail page all have to agree.
+- **A person is half derived and half stated, and the derived half is nearly
+  all of it.** Waiting answers "what is late" step by step; nobody could ask
+  *"I am about to write to Rita — what else is outstanding with her"*, because a
+  person existed only as a node inside whichever frozen board named them.
+  `people()` assembles both halves: every open `send`/`watch` they are linked
+  to, across every live run, with how long it has waited and whether it is past
+  its chase — **nothing about a thread is stored** — beside `state.contacts`,
+  which holds only what no board could know (where they work, what they do, an
+  address, one line of your own). Boards never point into that record, so
+  renaming a contact cannot rewrite a board that named them three years ago;
+  there is a test.
+  **Fold on the contact id, fall back to the name.** Keying on the name alone
+  was wrong and only a screenshot showed it: renaming a contact split one
+  person into two rows — the new name with the address and nothing outstanding,
+  the old one with three boards and a late send. So the key is `c:<id>` for
+  anybody in the list and `n:<lowercased name>` for anybody a board merely
+  mentions, the display name is always the contact's (the current truth), and a
+  board node with no `fromContactId` still joins a contact whose name it
+  matches, so a book written before contacts existed folds correctly. Forgetting
+  somebody archives the stated half only: they stay on the list as a name on a
+  board, and `openPerson` is moved from `c:<id>` to `n:<name>` so the page
+  follows them rather than falling silently back to the list.
+  A related trap: a fact the reader needs may not depend on a lookup that can
+  miss. The forget dialog's "the boards that name them are untouched" sentence
+  was counted through `personOf(name.toLowerCase())`, which found nothing the
+  moment the key became `c:<id>` — so the one sentence that stops "forget"
+  reading as losing the history quietly disappeared.
 - **The workbench is three questions behind a strip, not one page six sections
   long.** It was called Kit and carried claimants, modes, benches, things,
   upkeep and board kinds on one screen; once the registry grew past four pieces
   of hardware it stood 3,300 pixels tall, which is Coffer's Today tab again —
-  the screen everybody scrolls past. `KIT_PAGES` is **Things · Upkeep · Words**,
+  the screen everybody scrolls past. `KIT_PAGES` is **Things · People · Upkeep · Words**,
   a strip rather than three levels, and `kitTab` is view state that resets to
   Things on every tab press. It is also no longer called Kit: its owner said of
   the version that was, *"the kit i didn't really get the way it's working and
