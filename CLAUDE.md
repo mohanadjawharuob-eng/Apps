@@ -629,6 +629,27 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
   own sibling's rejection**. Attached as the second argument of the `then` that
   *starts* the decrypt, it never saw a failed decrypt at all — it belongs on
   the `then` that follows it.
+- **The pictures travel in their own file, so the record can never fail to sync
+  because of them.** Measured: the book is 6KB sealed and five big thumbnails
+  took the picture file from 888 bytes to 185KB while the book grew by
+  **88 bytes**. That is the whole reason for two gist files — compression alone
+  bought headroom and the cliff was still there at forty pictures.
+  Three things hold it. `payload()` **copies** the boards rather than deleting
+  `thumb` in place, because it hands back the live arrays and a delete would
+  take the pictures off the screen as a side effect of syncing. The map is keyed
+  by **`n.pic`, never the node id**: `startRun()` deep-copies a template without
+  re-issuing node ids, so a run and the procedure it came from share every one
+  of them, while `pic` is a fresh `uid()` per picture — which is what a
+  thumbnail actually belongs to. And `mergeThumbs()` runs **after** the book
+  merge, never before: the merge replaces the node records and the remote
+  copies carry no `thumb` at all, so re-attaching from the merged map is the
+  only thing keeping a picture on screen through a sync that did not carry it.
+  It never *clears* one either — a node with no entry in the map keeps what it
+  had, which is how the device holding the full picture stays ahead.
+  A picture file that will not open, or will not seal, is caught on its own and
+  **the book goes anyway**, with the toast saying the pictures did not travel
+  this time. There is a test that breaks the picture file deliberately and
+  fails if the board stops crossing.
 - **Sync is sealed here and merged per record.** Whole-file last-write-wins eats
   a day logged on the phone, silently — so every record carries `updatedAt`, a
   hard delete leaves a tombstone, and `go()` stamps only what changed. Pull,

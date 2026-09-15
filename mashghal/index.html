@@ -4634,6 +4634,13 @@ function stateWord(b, n) {
   var DEV_KEY = "mashghal.sync.device";
   var GIST_FILE = "mashghal.json";
   var DIGEST_FILE = "digest.json";
+  /* Thumbnails travel in their own file, sealed separately. The record must
+     never fail to sync because of pictures: the book is a few kilobytes and
+     always fits, while twenty travelling thumbnails measured 1.3MB inside it
+     and forty-seven measured 3MB, past what a gist hands back inline. Split,
+     the book syncs whatever happens to the pictures, and a failure on one
+     side says so instead of taking the other down with it. */
+  var THUMB_FILE = "thumbs.json";
   var snap = {};          // id -> the record as last stamped
   var syncing = false;
 
@@ -4734,7 +4741,61 @@ function stateWord(b, n) {
   function payload() {
     var o = { v: 1, tombstones: state.tombstones, forgotten: state.forgotten, devices: state.devices };
     SYNC_LISTS.forEach(function (k) { o[k] = state[k] || []; });
+    /* The boards go without their thumbnails. Copied rather than stripped in
+       place: `payload()` hands back the live arrays, and deleting a field off
+       them would take the pictures off the screen as a side effect of
+       syncing. Shallow copies all the way to the node, which is as deep as
+       the field lives. */
+    o.boards = (state.boards || []).map(function (b) {
+      var c = {}, k;
+      for (k in b) if (k !== "nodes") c[k] = b[k];
+      c.nodes = (b.nodes || []).map(function (n) {
+        if (!n.thumb) return n;
+        var m = {}, j;
+        for (j in n) if (j !== "thumb") m[j] = n[j];
+        return m;
+      });
+      return c;
+    });
     return o;
+  }
+
+  /* Keyed by the PICTURE id, not the node id. Node ids are unique within a
+     board and no further — `startRun()` deep-copies a template without
+     re-issuing them, so a run and the procedure it came from share every node
+     id. `pic` is a fresh `uid()` per picture, which is what a thumbnail
+     actually belongs to.
+
+     Pruned to pictures something still points at, or the map only ever grows. */
+  function thumbPayload() {
+    var out = {}, seen = {};
+    (state.boards || []).forEach(function (b) {
+      (b.nodes || []).forEach(function (n) {
+        if (!n.pic) return;
+        seen[n.pic] = 1;
+        if (n.thumb) out[n.pic] = n.thumb;
+      });
+    });
+    return { v: 1, thumbs: out };
+  }
+
+  // Union, and the local copy wins: a thumbnail is derived from a picture this
+  // device may hold in full, and there is nothing to lose by keeping ours.
+  function mergeThumbs(remote) {
+    var mine = thumbPayload().thumbs;
+    var all = {}, k;
+    var theirs = (remote && remote.thumbs) || {};
+    for (k in theirs) all[k] = theirs[k];
+    for (k in mine) all[k] = mine[k];
+    var put = 0;
+    (state.boards || []).forEach(function (b) {
+      (b.nodes || []).forEach(function (n) {
+        // Never clear one: a node with no thumb in the map keeps whatever it
+        // had, which is how a device that has the full picture stays ahead.
+        if (n.pic && all[n.pic] && n.thumb !== all[n.pic]) { n.thumb = all[n.pic]; put++; }
+      });
+    });
+    return put;
   }
   // Merge is symmetrical and loses nothing it can avoid losing: a record that
   // exists on one side only survives unless a tombstone newer than it says it
@@ -4885,23 +4946,41 @@ function stateWord(b, n) {
       throw e;
     });
   }
+  // One request, both files: the book and the pictures are read together and
+  // a second round trip would only widen the window in which they disagree.
   function gistRead(id, token) {
     return ghFetch("https://api.github.com/gists/" + id, token).then(function (g) {
-      var f = g.files && g.files[GIST_FILE];
+      var files = g.files || {};
+      var f = files[GIST_FILE];
       if (!f) throw new Error("That gist has no " + GIST_FILE + " in it.");
-      if (f.truncated && f.raw_url) return fetch(f.raw_url).then(function (r) { return r.text(); });
-      return f.content;
+      function body(x) {
+        if (!x) return Promise.resolve("");
+        if (x.truncated && x.raw_url) return fetch(x.raw_url).then(function (r) { return r.text(); });
+        return Promise.resolve(x.content || "");
+      }
+      return body(f).then(function (book) {
+        /* A thumbnail file that will not come back is not a reason to fail the
+           sync. The book is the record; pictures are a convenience, and a
+           device that cannot read them keeps the ones it already has. */
+        return body(files[THUMB_FILE]).then(
+          function (th) { return { book: book, thumbs: th }; },
+          function () { return { book: book, thumbs: "", thumbsFailed: true }; });
+      });
     });
   }
-  function gistWrite(id, token, content) {
+  function gistWrite(id, token, content, thumbBlob) {
     var files = {};
     files[GIST_FILE] = { content: content };
     files[DIGEST_FILE] = { content: JSON.stringify(digestPayload(), null, 1) };
+    if (thumbBlob) files[THUMB_FILE] = { content: thumbBlob };
     return ghFetch("https://api.github.com/gists/" + id, token,
       { method: "PATCH", body: JSON.stringify({ files: files }) });
   }
-  function gistCreate(token, content) {
+  function gistCreate(token, content, thumbBlob) {
     var files = {}; files[GIST_FILE] = { content: content };
+    // The pictures go in at creation too, or the first device keeps them to
+    // itself until something else happens to change.
+    if (thumbBlob) files[THUMB_FILE] = { content: thumbBlob };
     return ghFetch("https://api.github.com/gists", token, {
       method: "POST",
       body: JSON.stringify({ description: "Mashghal — sealed", "public": false, files: files })
@@ -4928,19 +5007,39 @@ function stateWord(b, n) {
     var cfg = syncCfg(), tok = secret(TOK_KEY), pass = secret(PASS_KEY);
     if (!quiet) toast("Syncing…");
     stampRecords();
+    var picsFailed = false;
     gistRead(cfg.gistId, tok)
-      .then(function (blob) {
-        if (!String(blob || "").trim()) return null;
-        return unseal(blob, pass);
+      .then(function (got) {
+        picsFailed = !!got.thumbsFailed;
+        var book = String(got.book || "").trim();
+        var th = String(got.thumbs || "").trim();
+        return (book ? unseal(book, pass) : Promise.resolve(null)).then(function (remote) {
+          /* A thumbnail file that will not open is not a reason to fail the
+             sync. The book is the record; pictures are a convenience, and a
+             device that cannot read them keeps the ones it already has. */
+          if (!th) return { remote: remote, thumbs: null };
+          return unseal(th, pass).then(
+            function (t) { return { remote: remote, thumbs: t }; },
+            function () { picsFailed = true; return { remote: remote, thumbs: null }; });
+        });
       })
-      .then(function (remote) {
-        var counts = remote ? mergeIn(remote) : { added: 0, updated: 0, removed: 0 };
+      .then(function (got) {
+        var counts = got.remote ? mergeIn(got.remote) : { added: 0, updated: 0, removed: 0 };
+        /* After the book, never before: the merge replaces the node records,
+           and the remote copies carry no `thumb` at all now. Re-attaching
+           from the merged map is what keeps a picture on the screen through a
+           sync that did not carry it. */
+        counts.pics = mergeThumbs(got.thumbs);
         noteDevice();
         stampRecords();
         cfg.lastPulledAt = stampNow();
         save();
         return seal(JSON.stringify(payload()), pass).then(function (sealed) {
-          return gistWrite(cfg.gistId, tok, sealed);
+          return seal(JSON.stringify(thumbPayload()), pass).then(
+            function (th) { return gistWrite(cfg.gistId, tok, sealed, th); },
+            // Sealing the pictures failed; push the book without them rather
+            // than not at all.
+            function () { picsFailed = true; return gistWrite(cfg.gistId, tok, sealed, null); });
         }).then(function () { return counts; });
       })
       .then(function (counts) {
@@ -4949,7 +5048,10 @@ function stateWord(b, n) {
         var bits = [];
         if (counts.added) bits.push(counts.added + " new");
         if (counts.updated) bits.push(counts.updated + " updated");
-        toast(bits.length ? "Synced — " + bits.join(", ") : "Synced — nothing had changed elsewhere");
+        if (counts.pics) bits.push(counts.pics + (counts.pics === 1 ? " picture" : " pictures"));
+        var said = bits.length ? "Synced — " + bits.join(", ") : "Synced — nothing had changed elsewhere";
+        toast(picsFailed ? said + ". The pictures did not travel this time; the book did."
+                         : said);
       })
       .catch(function (e) {
         syncing = false;
@@ -5074,7 +5176,11 @@ function stateWord(b, n) {
         }
         toast("Making a gist…");
         seal(JSON.stringify(payload()), v.pass.trim())
-          .then(function (sealed) { return gistCreate(v.token.trim(), sealed); })
+          .then(function (sealed) {
+            return seal(JSON.stringify(thumbPayload()), v.pass.trim()).then(
+              function (th) { return gistCreate(v.token.trim(), sealed, th); },
+              function () { return gistCreate(v.token.trim(), sealed, null); });
+          })
           .then(function (g) {
             cfg.gistId = g.id;
             noteDevice(); save(); render();
@@ -5808,7 +5914,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v44 · 15 Sep 2026";
+  var BUILD = "v45 · 15 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
