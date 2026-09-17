@@ -282,7 +282,7 @@ in the same commit that ships the change, so it cannot drift from the code.
 - Ledger grouped by day; a "spent today" card on the overview.
 - Quick-entry shorthand and paste-a-list bulk entry.
 - **Financial plans**: write a year as text, import it, and score real spending
-  against it on the Plan tab. See `coffer/PLAN-FORMAT.md`.
+  against it on the Plan tab. See `coffer/docs/plan-format.md`.
 - Self-updating service worker, and a build marker in Settings.
 - **Six tabs instead of eight**, each answering one question: Today (log and
   right now) · Ledger (what happened) · Plan (what you intend — budgets, bills,
@@ -290,7 +290,7 @@ in the same commit that ships the change, so it cannot drift from the code.
   debts, net worth) · Insights (patterns) · Settings. Overview's seven stacked
   blocks are gone, Goals and Debts no longer own near-empty tabs, and the
   cashflow chart that rendered on two tabs now renders on one.
-- A written prompt (`coffer/PLAN-PROMPT.md`) that makes any AI emit a plan file
+- A written prompt (`coffer/docs/plan-prompt.md`) that makes any AI emit a plan file
   Coffer will accept.
 
 ### Shipped: built for irregular income and a moving currency
@@ -737,14 +737,14 @@ figure set in the serif, cards separated by fill rather than elevation.
 - Today, Plan › Budgets and Worth rebuilt to the design; the other three tabs
   inherit the system through the shared card and row primitives.
 
-`coffer/DESIGN-BRIEF.md` is the brief that was sent;
-`coffer/DESIGN-HANDOFF.md` is what came back, including the tokens and the
+`coffer/docs/design-brief-round-1.md` is the brief that was sent;
+`coffer/docs/design-system.md` is what came back, including the tokens and the
 gauge maths.
 
 ### Not designed yet
 Ledger, Insights and Settings have no bespoke screens. They now use the same
 component vocabulary as the rest — one card header, one pill, one row — so they
-are coherent, but nobody composed them. `coffer/DESIGN-BRIEF-2.md` is the
+are coherent, but nobody composed them. `coffer/docs/design-brief-round-2.md` is the
 follow-up brief for Claude Design covering those three plus the dense row,
 empty states, the under-three-months runway and the modal shell.
 
@@ -823,13 +823,13 @@ a way of preparing what comes next** — in its owner's words, *"مش بس عن 
 ### Next
 - **A step that holds a small matrix.** GIS work runs over a grid (layer × area
   × year); one node per cell would be forty nodes on one board. Open question,
-  and the first one in `DESIGN-BRIEF.md`.
+  and the first one in `docs/design-brief-round-1.md`.
 - **Observations** — fragmentation and learned tool pairs. Deliberately last:
   they are the only part of the idea that is about watching yourself rather
   than doing the work, and it is not yet clear they earn their place.
 - **Canvas selection** — clicking a node opens its editor; there is no select,
   multi-select or delete from the sheet.
-- **A second design pass.** `DESIGN-BRIEF.md` is written for a designer and
+- **A second design pass.** `docs/design-brief-round-1.md` is written for a designer and
   deliberately withholds the current look.
 
 ### Considered and turned down

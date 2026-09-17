@@ -25,6 +25,9 @@ Each app is one self-contained directory, and that is deliberate — a single
 worker covering the whole folder claims every app at once, and then only the
 first one you install actually installs.
 
+**An app directory holds only what a browser loads.** Three files, always the
+same three, so you can tell at a glance what is shipped and what is not:
+
 ```
 <app>/index.html            the entire app, one file
 <app>/manifest.webmanifest  id, scope and icons; scope is the app's own directory
@@ -34,16 +37,35 @@ icons/                      192, 512 and maskable 512 per app
 index.html                  this launcher; not installable, on purpose
 ```
 
+Everything else about an app sits in a folder that says what it is, and each
+one has a `README.md` listing its contents:
+
+```
+<app>/docs/                 briefs, the design system, formats — nothing served
+tools/                      icon generators; nothing ships, no app loads them
+mashghal/companion/         the mashghal:// handler for Windows, to install
+mashghal/mailer/            the scheduled digest workflow, to install
+handoff/                    not an app: one page of screenshots for a round
+```
+
+Bustan (`garden/`) is the one app that is more than one file — `app.js`,
+`ui.js`, `species.js`, `sprites.js` and `icons.js` beside its `index.html`,
+all of them precached and all of them loaded. Note the directory is `garden/`
+and the app is called **Bustan**: the name changed and the path did not,
+because a manifest `id` and `scope` are the app's own directory and moving
+either makes the browser treat it as a different app. The same reason the
+`handoff/` URL is left alone.
+
 ## Coffer plans
 
 Coffer takes a written financial plan — budgets, expected income, commitments,
 savings goals and grants — and scores what you actually spend against it. The
 format is plain text you can write in Word or a notes app; it is documented in
-[`coffer/PLAN-FORMAT.md`](./coffer/PLAN-FORMAT.md) and inside the import dialog
+[`coffer/docs/plan-format.md`](./coffer/docs/plan-format.md) and inside the import dialog
 itself. Nothing is applied until a preview has shown every line, and a line
 whose currency, account or date cannot be resolved blocks the import rather than
 being guessed at. To have an AI write one for you, paste
-[`coffer/PLAN-PROMPT.md`](./coffer/PLAN-PROMPT.md) into it.
+[`coffer/docs/plan-prompt.md`](./coffer/docs/plan-prompt.md) into it.
 
 Coffer is organised as six tabs, one question each: **Today** (log something,
 and see where the day and month are going) · **Ledger** (what happened) ·

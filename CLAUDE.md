@@ -25,6 +25,45 @@ done
 
 Four identical hashes, or a copy has drifted.
 
+## Where things live
+
+**An app directory holds only what a browser loads** — `index.html`,
+`manifest.webmanifest`, `sw.js` (and Bustan's five scripts, which really are
+loaded). Everything else moved out into a folder that says what it is, because
+six shouting `.md` files sitting beside the app they describe are
+indistinguishable from app files, and one of them turned out to be two dead
+`.dc.html` design comps referencing a `support.js` that was never committed
+and pulling webfonts off a CDN — inside the directory of an app whose first
+rule is that it fetches nothing.
+
+```
+<app>/docs/                 briefs, the design system, formats — never served
+tools/                      icon generators; nothing ships, no app loads them
+mashghal/companion/         the mashghal:// handler, to be installed
+mashghal/mailer/            the scheduled digest workflow, to be installed
+handoff/                    not an app: one page of screenshots for a round
+```
+
+Every one of those folders carries a `README.md` naming its contents, and
+inside `docs/` the names are lowercase-kebab and say what the file is:
+`design-system.md` rather than `DESIGN-HANDOFF.md`, `design-brief-round-2.md`
+rather than `DESIGN-BRIEF-2.md`. Shouting names are reserved for the three
+files at the root that are the repo's own conventions — `CLAUDE.md`,
+`README.md`, `ROADMAP.md`.
+
+**Two paths were deliberately left alone.** `garden/` is Bustan: the name
+changed and the directory did not, because the manifest `id` and `scope` are
+the app's own directory and moving either makes the browser treat it as a
+different app and orphans every install. And `handoff/` keeps its
+uninformative name because it is a live URL on the Pages site; it got a
+`README.md` instead. **Renaming a served path is never worth a tidier tree** —
+say what a directory is in a file inside it.
+
+`.gitignore` exists for one reason: `shots/`, where the Playwright scripts
+write their screenshots. Those are evidence for one change, and a blanket
+`for f in *.js` sweep once left three committed PNGs modified as a side
+effect of a Coffer change.
+
 ## Rules that are not negotiable
 
 - **One app, one directory, one file.** `<app>/index.html` holds the entire app:
@@ -414,7 +453,7 @@ Four identical hashes, or a copy has drifted.
 
 ## Coffer's look
 
-The Press system, from `coffer/DESIGN-HANDOFF.md`. Three rules worth keeping in
+The Press system, from `coffer/docs/design-system.md`. Three rules worth keeping in
 mind before adding anything:
 
 - **Green means healthy state and nothing else** — the runway arc, an on-pace
@@ -1167,7 +1206,7 @@ editing the rule you happened to be looking at.
 **Deep navy**, and it is the third palette this app has had — which is the
 point of writing the reasons down. The first build's drafting room was one cold
 hue with state on hairlines and uppercase mono labels, and read as an instrument
-panel. **Evening ink** replaced it (`mashghal/DESIGN-HANDOFF.md`) and was
+panel. **Evening ink** replaced it (`mashghal/docs/design-system.md`) and was
 committed dark with no light palette at all. The navy system replaced *that*
 when the app grew from four nouns into a workspace with sections: eight
 categories need eight identity colours, which evening ink's two-hue rule had no

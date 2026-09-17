@@ -280,7 +280,7 @@ No images or third-party icon libraries. Everything is drawn inline.
 - `Coffer A - Slate.dc.html` — the alternative direction, same three screens, `light` / `dark`. Reference only, but its Budgets and Worth screens carry detail Press's do not.
 - `Coffer Directions.dc.html` — the review canvas that embeds both, with the notes written during design review.
 - `support.js` — the runtime the three files need in order to open. Not part of the design; do not port it.
-- `DESIGN-BRIEF.md` — the original brief, including the product constraints (no web fonts, local-first, five-second logging) that shaped these decisions.
+- `design-brief-round-1.md` — the original brief, including the product constraints (no web fonts, local-first, five-second logging) that shaped these decisions.
 
 ## Not designed yet
 

@@ -1,6 +1,6 @@
 # What came back, and what was chosen
 
-`DESIGN-BRIEF.md` went out deliberately withholding the existing look. Two
+`design-brief.md` went out deliberately withholding the existing look. Two
 canvases came back: three whole-app directions and five treatments of the board.
 `design/` holds both.
 
@@ -12,7 +12,7 @@ canvases came back: three whole-app directions and five treatments of the board.
 | **1b** *the quieter one* | warm paper, sentence case, one warm red | runner-up |
 | **1c** *evening ink* | dark and soft, apricot and sage, panels that float | **chosen** |
 
-**1a is gone from `design/directions.dc.html`.** It was the same mistake the
+**1a is gone from `design-rounds/palette-directions.html`.** It was the same mistake the
 first build made: everything in one cold hue, state carried by hairlines and
 uppercase mono labels, and the whole thing reading as instrument panel rather
 than workshop. It was removed rather than kept for reference, because keeping it

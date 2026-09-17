@@ -1,0 +1,6 @@
+# Screenshots the Playwright scripts write when driving the apps. They are
+# evidence for one change, not part of the repo — and a blanket `for f in *.js`
+# sweep once left three committed PNGs modified as a side effect of a Coffer
+# change, which is the reason this file exists.
+shots/
+*.local.*
