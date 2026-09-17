@@ -1317,6 +1317,19 @@ written as rules because each is a class of fault, not a one-off.
   window and stretched the sheet's title block straight through the legend.
   `min-width: 0` on the growing half of `.page-head`, `overflow-wrap: anywhere`
   on the name, and a clipped `max-width` on `.tblock span`.
+  The same rule caught a **half-fix** on the phone rows: `.panel:has(> .itile)
+  > .grow` was set to `flex: 1 1 auto` to stop an identity tile landing on a
+  line of its own, and with the basis at `auto` the grow starts at its
+  *max-content* width — so a short name stayed beside its tile and a long one
+  pushed the tile off again. `flex: 1 1 0` is the fix: from a basis of nought
+  the text wraps inside the grow, where it belongs, and the row went 138px to
+  94px. **A fix that holds for the short case and not the long one is the same
+  bug with a smaller reproduction.**
+  And a warning about measuring it: two flex children on one line do **not**
+  share a `top`. A 28px tile centred against a three-line text block sits
+  ~18px lower, so `Math.abs(a.top - b.top) < 12` reports a wrap that is not
+  there. Compare the widths against the row's, or read `flex-wrap` and the
+  line count.
 - **A figure a person types is validated where it is typed.** `claimant.hours`
   was a text field with no check, and `num()` returns 0 for anything it cannot
   parse — so "twenty" made a 20-hour-a-week employer read "on demand — nothing

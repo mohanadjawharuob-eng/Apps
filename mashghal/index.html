@@ -1169,8 +1169,16 @@ color-scheme: light;
     .panel .grow { flex: 1 1 100%; order: 1; }
     /* An identity tile and the name it belongs to stay on one line. `.grow`
        claiming the whole row put every tile on a line of its own, which read
-       as a stray green square above each person's name. */
-    .panel:has(> .itile) > .grow { flex: 1 1 auto; }
+       as a stray green square above each person's name.
+
+       `1 1 0` and not `1 1 auto`, which is what this was and which only half
+       worked: with the basis at `auto` the grow starts at its max-content
+       width, so a SHORT name stayed on the tile's line and a long one — "Amphora
+       sherd 4.12 · Artifact · in Trench 4 · Rim, combed…" — pushed the tile
+       onto its own row again. A name can be any length and the layout may not
+       depend on it being short; from a basis of nought the text wraps inside
+       the grow, where it belongs, and the tile never moves. */
+    .panel:has(> .itile) > .grow { flex: 1 1 0; }
     .bigage { order: 2; text-align: left; }
     .bigage b { font-size: 1.35rem; }
     .panel .age { order: 2; }
