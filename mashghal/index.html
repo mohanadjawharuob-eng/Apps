@@ -2207,8 +2207,14 @@ color-scheme: light;
                  title: t.label, sub: "section", k: 7,
                  run: function () { findTab(t.id); } });
     });
-    out.push({ g: "Sections", key: "Kit vocabulary acts kinds places", tile: findTile("t-go", ICONS.kit),
-               title: "Kit", sub: "section · modes, software and the app's own words", k: 7,
+    /* The section was renamed the workbench and the finder went on calling
+       it Kit, which is the one place the old name could still be read \u2014 and
+       the finder is how somebody looks for a screen whose name they have
+       forgotten. The old word stays in `key`, so typing "kit" still finds it;
+       what it SAYS is the current name. */
+    out.push({ g: "Sections", key: "workbench kit vocabulary crafts acts kinds places words things people upkeep",
+               tile: findTile("t-go", ICONS.kit),
+               title: "The workbench", sub: "section \u00b7 things, people, upkeep and the app's own words", k: 7,
                run: function () { findTab("vocab"); } });
     out.push({ g: "Sections", key: "Write a procedure prose", tile: findTile("t-go", ICONS.note),
                title: "Write a procedure", sub: "page · type it out in words", k: 7,
@@ -2280,7 +2286,7 @@ color-scheme: light;
     });
     live(state.benches).forEach(function (bn) {
       out.push({ g: "Benches", key: benchLabel(bn.id), tile: findTile("t-bench", ICONS.bench),
-                 title: benchLabel(bn.id), sub: "bench · a mode and who it is for", k: 6,
+                 title: benchLabel(bn.id), sub: "bench · a craft and who it is for", k: 6,
                  run: function () { findTab("week"); } });
     });
     people().forEach(function (p) {
@@ -3141,9 +3147,22 @@ function stateWord(b, n) {
     var tk = openTasks();
     var s = stuck();
     var up = upkeepLate();
+    /* A DEADLINE THAT HAS GONE IS THE ONE MOST WORTH COUNTING. This filtered
+       on `p.endsOn >= today()`, so the tile read "0 deadlines \u00b7 none
+       inside a fortnight" directly above a card saying "Balamand print work
+       2025 \u2014 past its date". A figure may never disagree with what is on
+       the screen below it, and of the two readings the one to keep is
+       obvious: a date you have missed does not stop mattering.
+       `projState().overdue` is not the test here \u2014 that is true for a
+       chase as well, and this tile is about dates. A project already
+       delivered is out: `endsOn` gone with every run closed and nothing left
+       to file is a finished job, not a missed one. */
     var deadlines = projects().filter(function (p) {
-      return p.endsOn && dayOk(p.endsOn) && daysBetween(today(), p.endsOn) <= 14 && p.endsOn >= today();
+      if (!p.endsOn || !dayOk(p.endsOn)) return false;
+      if (p.endsOn >= today()) return daysBetween(today(), p.endsOn) <= 14;
+      return projState(p).word !== "done";
     }).sort(function (a, b) { return a.endsOn.localeCompare(b.endsOn); });
+    var dlGone = deadlines.filter(function (p) { return p.endsOn < today(); }).length;
 
     var h = '<div class="finding"><h1>' + esc(homeGreeting()) + "</h1>" +
       '<span class="stamp">' + esc(nowWords()) + "</span></div>";
@@ -3157,8 +3176,10 @@ function stateWord(b, n) {
                   tkLate.length ? cap(numWord(tkLate.length)) + " past its date" : "none past its date",
                   tkLate.length ? "late" : "", "task-add");
     h += homeTile(deadlines.length, deadlines.length === 1 ? "deadline" : "deadlines",
-                  deadlines.length ? "nearest " + niceDate(deadlines[0].endsOn) : "none inside a fortnight",
-                  "", "tab-jobs");
+                  !deadlines.length ? "none inside a fortnight"
+                    : dlGone ? cap(numWord(dlGone)) + " already gone \u00b7 " + niceDate(deadlines[0].endsOn)
+                    : "nearest " + niceDate(deadlines[0].endsOn),
+                  dlGone ? "late" : "", "tab-jobs");
     h += homeTile(over.length, over.length === 1 ? "chase" : "chases",
                   over.length ? "somebody is waiting on you" : "nobody is waiting",
                   over.length ? "late" : "", "tab-waiting");
@@ -3239,7 +3260,11 @@ function stateWord(b, n) {
         }).join("") + "</div>";
     }
 
-    h += '<p class="saynote foot">Every figure on this screen is read off the record by the same function the screen it belongs to uses. Nothing here is kept separately, so nothing here can disagree with the rest of the app.</p>';
+    /* This said the same thing in the language of the code \u2014 "read off the
+       record by the same function the screen it belongs to uses" is a fact
+       about where the figures come from, and the reader is not the person who
+       wrote them. What they need from it is whether to trust the numbers. */
+    h += '<p class="saynote foot">Nothing on this screen is a second copy. Every figure is counted from the record itself, so it cannot fall behind what the rest of the app says.</p>';
     return h;
   }
 
@@ -3277,7 +3302,15 @@ function stateWord(b, n) {
       '<button class="btn" data-act="field-on">Field mode</button></div>';
 
     if (!list.length && !s.length && !tk.length && !live(state.cadences).length) {
-      h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
+      /* "Either everything is done, or nothing has been started" \u2014 the app
+         knows which, and offering the reader two readings of their own book
+         is the app declining to answer the one question this screen exists
+         for. Counted, and said. */
+      var anyRun = state.boards.some(function (b) { return b.kind === "run" && !b.closedOn; });
+      h += '<p class="empty">Nothing is waiting on you. ' +
+        (anyRun ? "Every open run is sitting on a step in your hands, or on nothing at all."
+                : "Nothing is running \u2014 start a run of a procedure and its steps appear here.") +
+        "</p>";
       return h;
     }
 
@@ -3596,7 +3629,11 @@ function stateWord(b, n) {
     var h = '<div class="finding"><h1>' + esc(monthName(ym)) + "</h1>" +
       '<span class="stamp">' + (count ? count + (count === 1 ? " thing is dated" : " things are dated")
                                       : "nothing dated this month") + "</span></div>" +
-      '<p class="saynote">Everything here came off a board or a cadence. There is nothing to add: a calendar you can type into is a second place for a commitment to live, and then two places disagree.</p>' +
+      /* "A cadence" is the word in the code and nowhere on screen: every
+         other surface calls it upkeep. A screen may not use a word it has
+         not defined \u2014 the same rule that took "out of promises" out of
+         Coffer's afford card. */
+      '<p class="saynote">Everything here came off a board, a task or a piece of upkeep. There is nothing to add: a calendar you can type into is a second place for a commitment to live, and then two places disagree.</p>' +
       '<div class="tools" style="margin-bottom:1rem">' +
       /* "Back · This month · On" — "On" was nobody's word for next month. The
          same three the week uses, so one habit covers both screens. */
@@ -3773,7 +3810,8 @@ function stateWord(b, n) {
       return '<button class="btn' + (here ? " primary" : "") + '" data-act="bench-go" data-id="' + bn.id + '">' +
         esc(benchLabel(bn.id)) + (here ? " · here now" : "") + "</button>";
     }).join("") + "</div>"
-      : '<p class="empty">No bench yet. A bench is a claimant and a craft together — add one under “Claimants, modes and benches”.</p>';
+      : '<p class="empty">No bench yet. A bench is a claimant and a craft together — add one on the workbench, under Words.</p>' +
+        '<div class="tools"><button class="btn" data-act="kit-words">The workbench \u00b7 Words</button></div>';
 
     if (j.note) {
       h += '<div class="sect">Where you left off</div>' +
@@ -3886,7 +3924,7 @@ function stateWord(b, n) {
       things: "Anything the work is made of or made with. Each one says what it was made from, where it is used, and what upkeep it carries.",
       people: "Everyone the book names, worst first. What is outstanding with each of them is read off the sends that name them — it is never typed.",
       upkeep: "Every so often since it was last done, never on a date — so falling behind never piles up.",
-      words:  "Claimants, modes, benches and board kinds. None of it is written into the app: it is all yours to add, rename and remove."
+      words:  "Claimants, crafts, benches and board kinds. None of it is written into the app: it is all yours to add, rename and remove."
     };
     var h = pageHead("The workbench", esc(subs[kitTab] || subs.things)) + kitStrip();
 
@@ -3910,8 +3948,16 @@ function stateWord(b, n) {
           '<button class="btn quiet danger" data-act="claimant-del" data-id="' + c.id + '">×</button></span></div>';
       }).join("") : '<p class="empty">No claimants yet.</p>') + "</div>";
 
-    h += '<div class="sect">Modes</div><div class="card">' +
-      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="mode-add">Add mode</button></div>' +
+    /* ONE WORD FOR ONE THING. "Mode" meant two unrelated things in this
+       app — the craft you are working in, and Field mode, the posture you
+       switch on at a site — and the owner said of this screen that "the
+       vocab is kinda weird to get". The record still stores `modes`, because
+       renaming a state key migrates nothing and risks everything; what
+       changed is the word on the screen, which is the only one anybody
+       reads. CLAUDE.md's own prose already called it a craft. */
+    h += '<div class="sect">Crafts</div><div class="card">' +
+      '<p class="hint" style="margin:0 0 0.5rem">A craft is the kind of work \u2014 GIS, design, photogrammetry \u2014 and it carries the programs, files and links that work needs.</p>' +
+      '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="mode-add">Add craft</button></div>' +
       (live(state.modes).length ? live(state.modes).map(function (m) {
         var sw = modeSoftware(m).length, lk = modeLinks(m).length;
         return '<div class="row"><span class="grow"><b>' + esc(m.name) + "</b><small>" +
@@ -3919,10 +3965,10 @@ function stateWord(b, n) {
           "</small></span>" +
           '<span class="tools"><button class="btn" data-act="mode-open" data-id="' + m.id + '">Its kit</button>' +
           '<button class="btn quiet danger" data-act="mode-del" data-id="' + m.id + '">×</button></span></div>';
-      }).join("") : '<p class="empty">No modes yet.</p>') + "</div>";
+      }).join("") : '<p class="empty">No crafts yet \u2014 "Add craft" above makes the first one.</p>') + "</div>";
 
     h += '<div class="sect">Benches</div><div class="card">' +
-      '<p class="hint" style="margin:0 0 0.5rem">A bench is a mode and a claimant together — GIS for one employer is not GIS for another.</p>' +
+      '<p class="hint" style="margin:0 0 0.5rem">A bench is a craft and a claimant together \u2014 GIS for one employer is not GIS for another.</p>' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="bench-add">Add bench</button></div>' +
       (live(state.benches).length ? live(state.benches).map(function (bn) {
         return '<div class="row"><span class="grow"><b>' + esc(benchLabel(bn.id)) + "</b></span>" +
@@ -3957,7 +4003,12 @@ function stateWord(b, n) {
 
     h += '<div class="card"><h3>Light or dark</h3>' +
       '<p class="card-sub">' + esc(THEME_WORD[themeChoice()]) + "</p>" +
-      '<p class="hint" style="margin:0 0 0.6rem">The dark is the evening-ink drawing; the light is the paper one. Both are drawn designs rather than one inverted, so late changes colour between them — apricot carries on ink and vanishes on paper, which takes a warm red instead. This is per device and never travels with your book.</p>' +
+      /* This sentence described the palette BEFORE the navy one, down to a
+         colour the app no longer uses: it told the reader that late is
+         apricot on ink, and late has been rose in both themes for two
+         designs. A screen explaining itself has to be re-read when the thing
+         it explains changes, or it is confidently wrong. */
+      '<p class="hint" style="margin:0 0 0.6rem">Two drawn designs rather than one inverted, so each is mixed for the light it is read in \u2014 the same rose means late in both, over a deep navy or over paper. This is per device and never travels with your book.</p>' +
       '<div class="tools">' +
       ["auto", "light", "dark"].map(function (k) {
         return '<button class="btn' + (themeChoice() === k ? " primary" : "") +
@@ -4248,7 +4299,15 @@ function stateWord(b, n) {
 
     h += '<div class="sect">Where the week went</div>';
     if (!rows.length) {
-      h += '<p class="empty">No claimants yet — add one in Kit and the week has something to measure against.</p>';
+      /* It said "add one in Kit". Kit was renamed the workbench, split into
+         four pages and moved off the tab bar, so this sentence sent the
+         reader to a screen that does not exist — and it is the one sentence
+         on an empty week that is supposed to say what to do. A dead
+         instruction is worse than none, so it names the page it means AND
+         carries the button, which is one tap instead of three. */
+      h += '<p class="empty">Nothing to measure against yet. A claimant is whoever is owed the hours \u2014 an employer, a funder, your own thesis.</p>' +
+        '<div class="tools"><button class="btn primary" data-act="claimant-add">Add a claimant</button>' +
+        '<button class="btn" data-act="kit-words">The workbench \u00b7 Words</button></div>';
     } else {
       h += '<div class="card">' + rows.map(function (r) {
         var pct = r.owed ? Math.min(100, Math.round(r.got / r.owed * 100)) : 0;
@@ -4410,8 +4469,27 @@ function stateWord(b, n) {
     });
   }
 
+  /* A REFUSAL HAS TO CARRY THE WAY OUT. Both refusals below were toasts
+     naming "Kit" — a screen renamed the workbench, split into four pages and
+     moved off the tab bar — so the one sentence telling a new reader what to
+     do pointed at a place that does not exist, and pressing Start on an empty
+     book produced two of them in a row from a bar pinned to every screen.
+     A dialog instead: it says what the missing thing IS, and its confirm
+     button lands on the page that makes one. */
+  function needWords(title, message) {
+    openModal({
+      title: title, message: message,
+      confirmLabel: "Take me there", cancelLabel: "Not now",
+      onConfirm: function () { APP.actions["kit-words"](); }
+    });
+  }
+
   function pickBench(title, onPick) {
-    if (!live(state.benches).length) { toast("Add a bench in Kit first."); return; }
+    if (!live(state.benches).length) {
+      needWords("No bench to count against yet",
+        "A bench is a craft and a claimant together \u2014 GIS for one employer is different work from GIS for another, and the hours have to be owed to somebody. They are made on the workbench, under Words.");
+      return;
+    }
     openModal({
       title: title, confirmLabel: "Go",
       fields: [{ key: "benchId", label: "Bench", type: "select", span: true,
@@ -4819,13 +4897,22 @@ function stateWord(b, n) {
                                   open, with the one-line fix
 
      `kind` is what the caller renders; `how` is what to tell the reader. */
+  /* `how` is the whole reason, for the tooltip and for the card that states
+     it once above the list. `brief` is what a ROW says — because the reason
+     is a fact about the machine and not about any one entry, and printed in
+     full on every row it was the same twenty words four times on the Files
+     page, directly under a card already saying it. Said once, and the rows
+     say only what is true of themselves. */
   function openHandle(a) {
-    if (a.url) return { kind: "url", href: a.url, label: "Open", how: "opens in the browser" };
+    if (a.url) return { kind: "url", href: a.url, label: "Open",
+                        how: "opens in the browser", brief: "opens in the browser" };
     if (a.path && state.settings.companion)
       return { kind: "launch", href: "mashghal://enter/" + a.id, label: "Open",
-               how: "opens on this machine through the launcher" };
+               how: "opens on this machine through the launcher",
+               brief: "opens through the launcher" };
     if (a.path) return { kind: "copy", label: "Copy the path",
-                         how: "a browser is not allowed to open a file on your machine \u2014 turn the launcher on in Settings and this becomes one tap" };
+                         how: "a browser is not allowed to open a file on your machine \u2014 turn the launcher on in Settings and this becomes one tap",
+                         brief: "on this machine only" };
     return null;
   }
   var placeFilter = "";   // view state, never saved
@@ -5402,7 +5489,7 @@ function stateWord(b, n) {
     var n = assetUses(a).length;
     var says = [assetKindLabel(a)], stt = thingState(a);
     if (lastUsedWords(a)) says.push(lastUsedWords(a));
-    if (h) says.push(h.how);
+    if (h) says.push(h.brief || h.how);
     /* "nothing to open yet" reads as a gap to fill, and for a device it is
        not one — a pair of headphones has nothing to open, ever. So it is said
        only where a handle is the point (an app, a site, a file) and the
@@ -5561,8 +5648,13 @@ function stateWord(b, n) {
         '<div class="acts"><button class="btn" data-act="tab-settings">Turn the launcher on</button></div></div>';
     }
 
+    /* The empty line used to repeat `page.blurb`, which is printed in full
+       forty words above it — the same sentence twice on a screen with
+       nothing else on it. It says what to do instead, which is the one thing
+       an empty list is for. */
     h += rows.length ? '<div class="stack tight">' + rows.map(repoRow).join("") + "</div>"
-      : '<p class="empty">Nothing under ' + esc(page.label) + ' yet. ' + esc(page.blurb) + "</p>";
+      : '<p class="empty">Nothing under ' + esc(page.label) + ' yet \u2014 "New ' +
+        esc(page.one) + '" above puts the first one in.</p>';
     return h;
   }
 
@@ -7768,7 +7860,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v50 · 17 Sep 2026";
+  var BUILD = "v51 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -7949,7 +8041,7 @@ function stateWord(b, n) {
 
   function kitModeDetail(m) {
     var sw = modeSoftware(m), lk = modeLinks(m), bs = benchesOfMode(m.id);
-    var h = pageHead(m.name, "A mode and everything it hands you",
+    var h = pageHead(m.name, "A craft and everything it hands you",
       '<div class="tools"><button class="btn" data-act="mode-back">All of Kit</button>' +
       '<button class="btn" data-act="mode-edit" data-id="' + m.id + '">Rename</button>' +
       '<button class="btn" data-act="sw-add" data-id="' + m.id + '">Add software</button>' +
@@ -7989,7 +8081,7 @@ function stateWord(b, n) {
         '<span class="tools">' +
         (state.settings.companion ? '<a class="btn" href="mashghal://enter/' + esc(b.id) + '">Launch</a>' : "") +
         '<button class="btn quiet" data-act="note-edit" data-id="' + b.id + '">Edit</button></span></div>';
-    }).join("") : '<p class="empty">This mode has no benches yet.</p>';
+    }).join("") : '<p class="empty">This craft has no benches yet.</p>';
     h += "</div>";
     return h;
   }
@@ -8002,7 +8094,7 @@ function stateWord(b, n) {
       fields: [
         { key: "label", label: "Name", type: "text", span: true, value: x ? x.label : "", placeholder: "ArcGIS Pro" },
         { key: "path", label: "Path", type: "text", span: true, value: x ? (x.path || "") : "",
-          hint: "Left blank it is just a reminder that this mode uses it." }
+          hint: "Left blank it is just a reminder that this craft uses it." }
       ],
       validate: function (v) { return v.label.trim() ? null : "Give it a name."; },
       onConfirm: function (v) {
@@ -10739,6 +10831,11 @@ function dims(n) {
     },
     "job-map-close": function (id) { jobMap = null; openJob = id || openJob; unmaximize(); render(); },
     "tab-vocab": function () { view = "vocab"; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; render(); },
+    /* The workbench opened on ITS page, rather than on Things and a second
+       tap. Somewhere that points at a particular page of it should be able to
+       say so; `tab-vocab` still lands on Things, which is the right default
+       when nobody has said. */
+    "kit-words":  function () { view = "vocab"; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "words"; render(); },
     /* Settings is no longer a tab, so it needs a route — and the gear plus
        the Repo's launcher note are both calling it. The data-act scan is what
        caught this: the dispatcher ignores an unknown action without a word,
@@ -10934,13 +11031,19 @@ function dims(n) {
     },
     "bench-add": function () {
       if (!live(state.modes).length || !live(state.claimants).length) {
-        toast("Add a mode and a claimant first."); return;
+        var missing = !live(state.modes).length && !live(state.claimants).length
+            ? "a craft and a claimant"
+          : !live(state.modes).length ? "a craft" : "a claimant";
+        needWords("Nothing to make a bench from yet",
+          "A bench is a craft and a claimant together, and there is no " + missing +
+          " yet. Both are on the workbench, under Words \u2014 a craft is GIS or design, a claimant is whoever the hours are owed to.");
+        return;
       }
       openModal({
         title: "New bench", confirmLabel: "Add",
-        message: "A bench is a mode and a claimant together, because GIS for one employer is different work from GIS for another.",
+        message: "A bench is a craft and a claimant together, because GIS for one employer is different work from GIS for another.",
         fields: [
-          { key: "modeId", label: "Mode", type: "select", options: opts(state.modes), value: live(state.modes)[0].id },
+          { key: "modeId", label: "Craft", type: "select", options: opts(state.modes), value: live(state.modes)[0].id },
           { key: "claimantId", label: "Claimant", type: "select", options: opts(state.claimants), value: live(state.claimants)[0].id }
         ],
         validate: function (v) {
@@ -11383,9 +11486,9 @@ function dims(n) {
 
   function modeDialog(m) {
     openModal({
-      title: m ? "Edit mode" : "New mode",
+      title: m ? "Edit craft" : "New craft",
       confirmLabel: m ? "Save" : "Add",
-      fields: [{ key: "name", label: "Mode", type: "text", value: m ? m.name : "", span: true, placeholder: "Photogrammetry" }],
+      fields: [{ key: "name", label: "Craft", type: "text", value: m ? m.name : "", span: true, placeholder: "Photogrammetry" }],
       validate: function (v) { return v.name.trim() ? null : "Give it a name."; },
       onConfirm: function (v) {
         go(function () {

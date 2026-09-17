@@ -1313,6 +1313,75 @@ against the viewBox and fails if one is outside it.
   at the start; a thing reaching into a shared table would be a hole in that
   freeze, and renaming a person would rewrite a closed board.
 
+## What READING every screen found
+
+Eleven faults from driving the interface; these came from **reading** it —
+every screen's text, on an empty book and on the sample, printed out and gone
+through line by line. Not one was visible to an assertion, because an
+assertion tests behaviour and these are sentences. They are written as rules
+because each is a class.
+
+- **A SCREEN MAY NEVER NAME A PLACE THAT DOES NOT EXIST.** "Kit" was renamed
+  the workbench, split into four pages and taken off the tab bar, and five
+  sentences went on sending the reader there — the empty week's one line of
+  advice ("add one in Kit"), the job page's no-bench line, and the refusal
+  that fires from the switch bar on **every** screen. The finder was the worst
+  of them: it still listed the section as "Kit", and the finder is exactly
+  where somebody looks up a screen whose name they have forgotten. The old
+  word stays in the finder's `key` so typing "kit" still finds it; what it
+  *says* is the current name. Grep a renamed screen's old name across the file
+  before calling a rename done.
+- **A REFUSAL HAS TO CARRY THE WAY OUT.** Pressing Start on an empty book
+  gave "Add a bench in Kit first", and following that gave "Add a mode and a
+  claimant first" — two dead toasts naming two places, one of which was gone,
+  from a bar pinned to every screen. `needWords()` is the shape: a dialog
+  saying what the missing thing **is**, with its confirm button landing on the
+  page that makes one. A toast cannot carry a route, so a refusal that needs
+  to point somewhere may not be a toast.
+- **ONE WORD FOR ONE THING.** "Mode" meant the craft you work in *and* Field
+  mode, the posture you switch on at a site — and the owner had already said
+  of that screen, *"the vocab is kinda weird to get"*. It is a **craft** now
+  in every sentence a reader sees; the record still stores `modes`, because
+  renaming a state key migrates nothing and risks everything. CLAUDE.md's own
+  prose had been calling it a craft all along, which is the tell. The test is
+  not that the word is gone but that **every** use of it is Field mode.
+- **A word the code uses is not a word the screen may use.** The Calendar said
+  "everything here came off a board or a cadence"; every surface a reader sees
+  calls that upkeep. Same rule that took "out of promises" out of Coffer's
+  afford card.
+- **A FIGURE MAY NOT READ NOUGHT ABOVE A CARD CONTRADICTING IT.** Home's
+  deadline tile filtered on `p.endsOn >= today()`, so it read "0 deadlines ·
+  none inside a fortnight" directly above "Balamand print work 2025 — past
+  its date". A date you have **missed** is the one most worth counting. It
+  counts a gone deadline, says "One already gone", and goes amber; a project
+  whose runs are all closed with nothing left to file is out, because that is
+  a finished job rather than a missed one.
+- **Do not offer the reader two readings of their own book.** Waiting said
+  "Nothing is waiting on you. Either everything is done, or nothing has been
+  started." The app knows which — it is the one question that screen exists
+  to answer.
+- **A screen that explains itself has to be re-read when the thing it
+  explains changes.** Settings described the palette from two designs ago,
+  down to a colour the app no longer uses: it told the reader that late is
+  apricot on ink and vanishes on paper, and late has been rose in both themes
+  since the navy system. Confidently wrong is worse than silent.
+- **Say it once.** The Repo printed `page.blurb` under the tools and again
+  inside "Nothing under Devices yet" forty words below — the same sentence
+  twice on a screen with nothing else on it. And the launcher's reason,
+  which CLAUDE.md already says is *stated once above the list*, was also in
+  full on every row: the same twenty words four times on the Files page,
+  under a card already saying them. `openHandle()` carries `brief` for a row
+  and `how` for the card and the tooltip.
+- An empty list's one job is to say **what to do**, so it names the button
+  that does it rather than repeating what the section is.
+
+`words.js` is the test, and it is the shape to copy for this kind of fault:
+it walks every screen and every strip page in both states, collects the text,
+and asserts on the *words* — no screen names Kit, no screen says cadence,
+every "mode" is Field mode, a refusal opens a dialog whose button lands
+somewhere, and the deadline tile cannot read nought above a card saying past
+its date.
+
 ## What an audit of the running app found
 
 Eleven of these came out of driving the real interface rather than reading the
