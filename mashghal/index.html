@@ -3210,7 +3210,8 @@ function stateWord(b, n) {
     return out.filter(function (r) { return !!r.at; }).slice(0, n || 4);
   }
   function boardRecentSays(b) {
-    if (b.kind !== "run") return "a procedure \u00b7 " + runProgress(b).total + " steps";
+    if (b.kind !== "run") var n = runProgress(b).total;
+      return "a procedure \u00b7 " + n + (n === 1 ? " step" : " steps");
     var p = runProgress(b);
     if (b.closedOn) return "closed \u00b7 " + p.done + " of " + p.total + " done";
     var act = activeNodes(b);
@@ -3318,7 +3319,8 @@ function stateWord(b, n) {
             '<span class="itile t-proj">' + ICONS.proj + "</span>" +
             '<div class="grow"><div class="nm sm">' + esc(x.p.name) + "</div>" +
             '<div class="bar ' + barTone(x.st) + '"><i style="width:' + x.pace.pct + '%"></i></div>' +
-            '<div class="says">' + esc(x.st.word) + " \u00b7 " + x.pace.done + " of " + x.pace.total + " steps done</div></div>" +
+            '<div class="says">' + esc(x.st.word) + " \u00b7 " + x.pace.done + " of " + x.pace.total +
+            (x.pace.total === 1 ? " step done" : " steps done") + "</div></div>" +
             '<div class="pct">' + x.pace.pct + "%</div></button>";
         }).join("") + "</div>";
     }
@@ -3547,7 +3549,7 @@ function stateWord(b, n) {
       right = esc(niceDate(n.dueAt) + (away > 0 ? ", in " + away + (away === 1 ? " day" : " days") : ""));
     } else if (d.st === "waiting") {
       says = n.chaseDays
-        ? "You will chase this after " + n.chaseDays + " days"
+        ? "You will chase this after " + n.chaseDays + (num(n.chaseDays) === 1 ? " day" : " days")
         : "You never set a reminder for this one, so it can wait for ever";
       right = "waiting " + d.days + "d";
     } else {
@@ -3959,10 +3961,10 @@ function stateWord(b, n) {
 
     if (freeTpls.length) {
       h += '<div class="sect">Procedures for it</div><div class="stack tight">' + freeTpls.map(function (b) {
+        var ns = b.nodes.filter(function (n) { return n.t === "step"; }).length;
         return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
           '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
-          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
-          " steps</div></div></button>";
+          '<div class="says">' + ns + (ns === 1 ? " step" : " steps") + "</div></div></button>";
       }).join("") + "</div>";
     }
 
@@ -4118,8 +4120,14 @@ function stateWord(b, n) {
       }).join("") + "</div></div>";
 
     h += '<div class="card"><h3>Your book</h3>' +
-      '<p class="card-sub">' + tpls + " procedures · " + runs + " runs · " +
-      live(state.claimants).length + " claimants · " + live(state.benches).length + " benches</p>" +
+      /* A count of one is a real book on its first week, so every one of
+         these picks its own word. */
+      '<p class="card-sub">' + [
+        tpls + (tpls === 1 ? " procedure" : " procedures"),
+        runs + (runs === 1 ? " run" : " runs"),
+        live(state.claimants).length + (live(state.claimants).length === 1 ? " claimant" : " claimants"),
+        live(state.benches).length + (live(state.benches).length === 1 ? " bench" : " benches")
+      ].join(" \u00b7 ") + "</p>" +
       '<div class="tools"><button class="btn" data-act="backup">Export backup</button>' +
       '<button class="btn" data-act="restore">Restore a backup</button></div>' +
       '<p class="hint">A backup is a plain JSON file. Restoring replaces everything in the app with what is in the file.</p></div>';
@@ -4387,7 +4395,8 @@ function stateWord(b, n) {
       '<button class="btn" data-act="span-add">Add time</button></div>');
 
     h += '<div class="tiles">' +
-      tile("Counted", fmtMins(total), "across " + rows.length + " claimants") +
+      tile("Counted", fmtMins(total),
+           "across " + rows.length + (rows.length === 1 ? " claimant" : " claimants")) +
       tile("Not said", fmtMins(susp), susp ? "waiting to be attributed" : "nothing unattributed", susp ? "loss" : "") +
       "</div>";
 
@@ -5030,10 +5039,17 @@ function stateWord(b, n) {
   // One sentence, in this order: what it guards, where it is doable, when it
   // was last done. What it protects comes first because that is the reason to
   // bother — a stale backup is a threat to the work behind it, not a chore.
+  /* "every 1 days" is what a daily backup read as. Two shapes because the
+     sentence wants "every day" and the toast wants "in 1 day". */
+  function everyWords(n) { return num(n) === 1 ? "every day" : "every " + n + " days"; }
+  function everyDaysWords(n) { return num(n) === 1 ? "1 day" : n + " days"; }
+
   function upkeepSays(x) {
     var cd = x.cd, p = protects(cd), bits = [];
     if (p) bits.push("Keeps " + p + " safe");
-    bits.push((p ? "e" : "E") + "very " + cd.everyDays + " days, " +
+    /* "every 1 days" on a daily backup. One helper, because the same
+       interval is printed in five places. */
+    bits.push((p ? everyWords(cd.everyDays) : cap(everyWords(cd.everyDays))) + ", " +
               String(placeLabel(cd.place)).toLowerCase());
     bits.push(cd.lastDoneOn ? "last done " + niceDate(cd.lastDoneOn) : "never done yet");
     return bits.join(" · ");
@@ -5673,10 +5689,10 @@ function stateWord(b, n) {
     }).join("") + "</div>";
 
     if (!libTopic) {
+      var carry = live(state.assets).filter(function (a) { return assetTopics(a).length; }).length;
       return h + '<p class="empty">Pick a subject. ' + topics.length +
         (topics.length === 1 ? " subject is" : " subjects are") + " written across " +
-        live(state.assets).filter(function (a) { return assetTopics(a).length; }).length +
-        " things.</p>";
+        carry + (carry === 1 ? " thing." : " things.") + "</p>";
     }
 
     var all = assetsOnTopic(libTopic);
@@ -7799,7 +7815,8 @@ function stateWord(b, n) {
 
     h += '<div class="sect">How far along</div>';
     h += '<div class="panel calm"><div class="grow">' +
-      '<div class="nm sm">' + pace.done + " of " + pace.total + " steps done" +
+      '<div class="nm sm">' + pace.done + " of " + pace.total +
+      (pace.total === 1 ? " step done" : " steps done") +
       (pace.runs ? "" : " \u2014 nothing has been started") + "</div>" +
       '<div class="bar ' + barTone(st) + '"><i style="width:' + pace.pct + '%"></i></div>' +
       '<div class="says">' + pace.pct + "% \u00b7 " +
@@ -7849,10 +7866,10 @@ function stateWord(b, n) {
 
     h += '<div class="sect">Procedures</div>';
     h += tpls.length ? '<div class="stack tight">' + tpls.map(function (b) {
+      var ns = b.nodes.filter(function (n) { return n.t === "step"; }).length;
       return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
         '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
-        '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
-        " steps</div></div></button>";
+        '<div class="says">' + ns + (ns === 1 ? " step" : " steps") + "</div></div></button>";
     }).join("") + "</div>"
       : '<p class="empty">No procedure of its own yet. Write one and every run of it starts from the same shape.</p>';
 
@@ -7973,7 +7990,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v53 · 17 Sep 2026";
+  var BUILD = "v54 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -10045,7 +10062,7 @@ function dims(n) {
 
     h += '<div class="tools" style="margin-top:1.2rem">' +
       '<button class="btn primary" data-act="prose-accept"' + (read.steps.length ? "" : " disabled") + '>' +
-      (read.steps.length ? "Accept — " + read.steps.length + " steps" : "Nothing to accept") + "</button>" +
+      (read.steps.length ? "Accept — " + read.steps.length + (read.steps.length === 1 ? " step" : " steps") : "Nothing to accept") + "</button>" +
       '<span class="saynote" style="margin:0;align-self:center">Nothing exists until you accept it.</span></div>';
     h += "</div></div>";
     return h;
@@ -10076,7 +10093,7 @@ function dims(n) {
   function proseSays(st, read) {
     var bits = [vocabLabel("acts", st.act)];
     if (st.act === "send" && st.to.length) bits.push("to " + st.to.join(" and "));
-    if (st.chaseDays) bits.push("remind after " + st.chaseDays + " days");
+    if (st.chaseDays) bits.push("remind after " + st.chaseDays + (num(st.chaseDays) === 1 ? " day" : " days"));
     else if (st.act === "send" || st.act === "watch") bits.push("no reminder set");
     if (st.act === "file") bits.push("will block closing");
     if (st.dueWords) bits.push("dated: " + st.dueWords);
@@ -10146,11 +10163,15 @@ function dims(n) {
       var bs = projBoards(id), runs = bs.filter(function (b) { return b.kind === "run" && !b.closedOn; }).length;
       confirmAction({
         title: "Delete " + p.name + "?",
-        message: "Its " + bs.length + " board" + (bs.length === 1 ? "" : "s") +
-          (runs ? " (" + runs + " still running)" : "") +
-          " stay exactly as they are — they move to “not in a project” under " +
-          (p.jobId ? esc(jobName(p.jobId)) : "no job") +
-          ". Nothing recorded is deleted and no step loses its dates."
+        message: (bs.length
+          ? "Its " + numWord(bs.length) + (bs.length === 1 ? " board" : " boards") +
+            (runs ? " (" + numWord(runs) + " still running)" : "") +
+            (bs.length === 1 ? " stays" : " stay") + " exactly as " +
+            (bs.length === 1 ? "it is" : "they are") + " \u2014 " +
+            (bs.length === 1 ? "it moves" : "they move") + " to \u201cnot in a project\u201d under " +
+            (p.jobId ? esc(jobName(p.jobId)) : "no job") + ". "
+          : "It holds no boards. ") +
+          "Nothing recorded is deleted and no step loses its dates."
       }, function () {
         var undo = { id: p.id, rec: JSON.parse(JSON.stringify(p)) };
         go(function () {
@@ -10303,8 +10324,17 @@ function dims(n) {
         });
         return;
       }
+      /* Nothing left to file, so it closes — but it may still be sitting on
+         a step in somebody else's court, and chasing is the FIRST of the
+         three forgettings. No second dialog for a routine act; the toast
+         says what it took with it, and the undo is right there. The archive
+         lock guards filing and only filing, which is why this is said rather
+         than refused. */
+      var open = activeNodes(b).filter(function (n) { return n.t === "step"; });
       go(function () { b.closedOn = today(); });
-      toast("Closed " + b.name, function () { b.closedOn = ""; });
+      toast("Closed " + b.name +
+        (open.length ? " \u00b7 " + open.length + (open.length === 1 ? " step was still open" : " steps were still open") : ""),
+        function () { b.closedOn = ""; });
     },
 
     "run-reopen": function (id) {
@@ -10598,7 +10628,7 @@ function dims(n) {
           made = startRun(tpl, tpl.name + " \u2014 " + plainDate(today()));
           cd.lastDoneOn = today();
         });
-        toast(cd.label + " \u2014 the run is open, next in " + cd.everyDays + " days",
+        toast(cd.label + " \u2014 the run is open, next in " + everyDaysWords(cd.everyDays),
           function () {
             cd.lastDoneOn = was;
             if (made) state.boards = state.boards.filter(function (b) { return b.id !== made.id; });
@@ -10607,7 +10637,7 @@ function dims(n) {
         return;
       }
       go(function () { cd.lastDoneOn = today(); });
-      toast(cd.label + " — next in " + cd.everyDays + " days", function () { cd.lastDoneOn = was; });
+      toast(cd.label + " \u2014 next in " + everyDaysWords(cd.everyDays), function () { cd.lastDoneOn = was; });
     },
 
     /* ---- field mode ---- */
@@ -10792,7 +10822,13 @@ function dims(n) {
       confirmAction({
         title: "Forget " + c.name + "?",
         confirmLabel: "Forget them",
-        message: (n ? "The " + n + (n === 1 ? " board" : " boards") + " that name them are untouched, and they stay on this list — "
+        /* "The 1 board that name them are untouched" — the count was
+           pluralised and the two verbs after it were not, and a sentence that
+           cannot agree with itself reads as the app not knowing what it is
+           talking about. The figure is a word as well (`numWord`), which is
+           the app's own habit everywhere else. */
+        message: (n ? cap(numWord(n)) + (n === 1 ? " board names them and is untouched" : " boards name them and are untouched") +
+                      ", and they stay on this list \u2014 "
                     : "") +
           "what goes is where they work, how to reach them and your note. Nothing recorded is deleted."
       }, function () {
@@ -10850,9 +10886,10 @@ function dims(n) {
       var bits = ["Boards already filed against it keep reading “" + esc(c.name) +
                   " (removed)” rather than losing their history."];
       if (mins) bits.push(fmtMins(mins) + " is logged against it. Every stretch stays exactly as recorded and keeps appearing on the week — measured against nothing, because nothing is owed to somebody who is gone.");
-      if (bens.length) bits.push("Its " + bens.length + (bens.length === 1 ? " bench" : " benches") +
-        " (" + bens.map(function (b) { return esc(benchLabel(b.id)); }).join(", ") +
-        ") stay on the list and read as removed.");
+      if (bens.length) bits.push("Its " + numWord(bens.length) + (bens.length === 1 ? " bench" : " benches") +
+        " (" + bens.map(function (b) { return esc(benchLabel(b.id)); }).join(", ") + ")" +
+        (bens.length === 1 ? " stays" : " stay") + " on the list and " +
+        (bens.length === 1 ? "reads" : "read") + " as removed.");
       if (js.length) bits.push("The job " + js.map(function (j) { return "“" + esc(j.name) + "”"; }).join(", ") +
         " stays, with its boards — the engagement was real whether or not the claimant is still on the list.");
       confirmAction({
@@ -10898,7 +10935,7 @@ function dims(n) {
       if (!read.steps.length) { toast("Nothing to accept yet."); return; }
       openModal({
         title: "Name the procedure",
-        message: "It will be written down as " + read.steps.length + " steps" +
+        message: "It will be written down as " + read.steps.length + (read.steps.length === 1 ? " step" : " steps") +
           (read.exits.length ? " with " + read.exits.length + " way" + (read.exits.length === 1 ? "" : "s") + " out" : "") +
           (read.unplaced.length ? ". The " + (read.unplaced.length === 1 ? "line" : "lines") +
             " it could not place will not be included." : "."),
@@ -10913,7 +10950,8 @@ function dims(n) {
           var b = boardFromProse(v.name.trim(), v.benchId, v.kindId, read);
           go(function () { state.boards.push(b); autoLayout(b); openId = b.id; view = "boards"; });
           proseText = "";
-          toast("Written down — " + b.nodes.filter(function (n) { return n.t === "step"; }).length + " steps");
+          var wn = b.nodes.filter(function (n) { return n.t === "step"; }).length;
+          toast("Written down \u2014 " + wn + (wn === 1 ? " step" : " steps"));
         }
       });
     },
@@ -10974,10 +11012,19 @@ function dims(n) {
       var bn = jobBenches(id).length, bd = jobBoards(id).length;
       confirmAction({
         title: "Remove " + j.name + "?",
-        message: "Its " + bn + " bench" + (bn === 1 ? "" : "es") + " and " + bd + " board" +
-          (bd === 1 ? "" : "s") + " stay exactly as they are — they simply stop being filed under a job. " +
-          "Nothing recorded is deleted, and the name is kept so old entries still read “" +
-          j.name + " (removed)”."
+        /* With nothing under it, "Its 0 benches and 0 boards stay exactly as
+           they are" is a sentence about nothing — and with one of each it has
+           to agree with itself. */
+        message: (bn || bd
+          ? "Its " + [bn ? numWord(bn) + (bn === 1 ? " bench" : " benches") : "",
+                      bd ? numWord(bd) + (bd === 1 ? " board" : " boards") : ""]
+                     .filter(Boolean).join(" and ") +
+            ((bn === 1 && !bd) || (bd === 1 && !bn) ? " stays" : " stay") +
+            " exactly as " + ((bn === 1 && !bd) || (bd === 1 && !bn) ? "it is" : "they are") +
+            " \u2014 they simply stop being filed under a job. "
+          : "Nothing is filed under it. ") +
+          "Nothing recorded is deleted, and the name is kept so old entries still read \u201c" +
+          j.name + " (removed)\u201d."
       }, function () {
         go(function () {
           state.forgotten[j.id] = j.name;
@@ -11185,10 +11232,13 @@ function dims(n) {
       confirmAction({
         title: "Remove " + benchLabel(id) + "?",
         message: (mine.length
-          ? "The " + mine.length + (mine.length === 1 ? " stretch" : " stretches") +
-            " logged against it (" + fmtMins(mins) + ") stay exactly as they are and still count. "
+          ? cap(numWord(mine.length)) + (mine.length === 1 ? " stretch" : " stretches") +
+            " logged against it (" + fmtMins(mins) + ")" +
+            (mine.length === 1 ? " stays" : " stay") + " exactly as " +
+            (mine.length === 1 ? "it is" : "they are") + " and still " +
+            (mine.length === 1 ? "counts" : "count") + ". "
           : "Nothing is logged against it. ") +
-          (boards ? boards + (boards === 1 ? " board is" : " boards are") + " filed under it and " +
+          (boards ? cap(numWord(boards)) + (boards === 1 ? " board is" : " boards are") + " filed under it and " +
             (boards === 1 ? "keeps" : "keep") + " reading its name. " : "") +
           "It stops being offered when you log time or start a board."
       }, function () {

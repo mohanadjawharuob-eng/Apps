@@ -1410,6 +1410,44 @@ ANYTHING.** The screens had been read; the dialogs had not. Four more:
   way round and asserts where the focus actually went rather than reading a
   property that lies.
 
+**AND THEN COUNT TO ONE.** A count of one is where a bare plural shows, and a
+source scan for it drowns in state keys, ids and comments — so `ones.js`
+builds a book where **every countable thing is exactly one**, walks every
+screen, every strip page, every board and every confirmation dialog, and reads
+the rendered text. It found ten sites: "a procedure · 1 steps", "0 of 1 steps
+done", "waiting 1 days", "across 1 claimants", "1 procedures · 1 runs · 1
+claimants · 1 benches" in Settings, "written across 1 things", and "every 1
+days" on a daily backup (`everyWords()` and `everyDaysWords()` are the one
+place that interval is put into words now, because it is printed in five).
+
+Reading its output found three more that no regex would catch, all in the one
+sentence somebody reads before pressing Delete:
+
+- **A sentence has to agree with itself.** "The 1 stretch logged against it
+  stay exactly as they are" pluralised the count and left both verbs alone;
+  "The 1 board that name them are untouched" did it twice.
+- **A small count in prose is a WORD**, which is this app's habit everywhere
+  else (`numWord`) — "Its 2 boards", "2 boards are filed under it". A figure
+  in a tile or a heading stays a figure; prose spells it out.
+- **A sentence about nothing should not be printed.** "Its 0 benches and 0
+  boards stay exactly as they are" — a job with nothing filed under it now
+  reads "Nothing is filed under it."
+
+Two cheap rules stand in for the grammar, since there is no linter here: a
+digit followed by a countable noun inside a sentence, and a singular noun
+followed by a plural verb. And the dialog walk had the `if (!el) return` fault
+in its first version — it hunted for each button by walking tabs and printed
+"(no route on this book)" for eight of the nine, reporting nothing wrong. Each
+is reached by its real route now and a missing route fails. **A route that has
+to be searched for is not a route.**
+
+One thing that reading it changed in the app rather than in its words:
+**closing a run says what it took with it.** With nothing left to file a run
+closes without asking — the archive lock guards filing and only filing, and
+this is a routine act with an undo in the toast — but it can be sitting on
+somebody else's court, and chasing is the first of the three forgettings. The
+toast names it: "Closed One run · 1 step was still open".
+
 `words.js` is the test, and it is the shape to copy for this kind of fault:
 it walks every screen and every strip page in both states, collects the text,
 and asserts on the *words* — no screen names Kit, no screen says cadence,
