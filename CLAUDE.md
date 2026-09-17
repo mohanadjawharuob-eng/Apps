@@ -1745,6 +1745,37 @@ is a re-entry note to read back, and a constant would hide a toast exactly when
 the bar had most to say. The `.toasts` box is `pointer-events: none` with each
 toast taking it back, so it never blocks what is under it.
 
+**A GREEN BAR ON A LATE ROW IS THE APP CONTRADICTING ITSELF.** Home drew a
+project's progress at 67% in sage inside a card whose left edge was rose and
+whose own words read "past its date" — one card saying two opposite things,
+and green means healthy state and nothing else. Progress is not a state, so
+`barTone()` gives the bar its row's: rose when late, sage in hand, neutral
+when nothing is running or the work is set down. One function, because the bar
+is drawn on Home and again on a project's own Overview, and the two may not
+disagree — the same reason `stateTone()` and `NODE_INK` are one ladder in two
+renderings.
+
+**A state with no channel is a state the screen does not say.** Upkeep past
+its interval sat on Home as an ordinary card, indistinguishable from prose,
+directly under a rose one. It is not late — nobody is waiting and nothing has
+a date — it is **drift**, which is what amber is for, so `.panel.drift` is the
+amber-edged sibling of `.panel.late`.
+
+**HALF THE BUTTONS IN THIS APP ARE LINKS, so `.btn` needs
+`text-decoration: none`.** `openHandle()` gives a `url` an `<a>` and a path a
+`<button>`, so Quick run drew "ArcGIS Pro" plain beside "Drive — area 1" and
+"Mail: harbour brochure" underlined: three controls in one row doing the same
+job, wearing two different clothes, for a reason that is purely an
+implementation detail.
+
+**One question with three parts has to look like three of the same thing.**
+Home's Today row went three-into-two columns on a phone, leaving the third as
+a wide banner under two squares — a shape that says "two things and one other
+thing". Under 560px all three are rows of the same shape, the figure beside
+the words rather than over them (`.htw` wraps them, so it is one flex rule and
+no second markup), which came out **shorter** than the two-column version as
+well as consistent.
+
 **On a phone, a row wraps its buttons onto their own line** (under 560px). A
 pill, a sentence and two buttons on one line left the sentence about ten
 characters wide, and an upkeep row naming a place and the thing it protects
@@ -1762,6 +1793,43 @@ dead-edge had to come **down** from the obvious `#93a3b5`, which is only
 have to follow the line**, or a line raised to 3.92:1 ends in a tip still at
 1.54:1. `--line-dim` keeps its own job where low contrast is correct; the
 sheet no longer reads it.
+
+**`--receded` IS NOT A TEXT COLOUR, AND THE ONLY WAY TO KNOW WAS TO MEASURE
+EVERY RUN OF TEXT IN BOTH THEMES.** The app is dark-first with a real light
+palette and nearly every screenshot round had been dark, so the light one was
+carrying a **2.29:1** footnote on Home and Waiting — and measuring the dark one
+found the same token failing there too at **3.68:1**. That is right for
+something deliberately sunk (a finished step, a marker glyph beside a label
+that carries the meaning) and wrong for anything a reader has to read. Three
+places were reading it: the calendar's "+2 more", which is the only thing on a
+cell saying the day holds more than it shows; the footnote under Home and
+Waiting; and the label on the dialogs' own fold. All three take `--faint`
+(6.97:1 / 5.45:1). Same lesson as the sheet's edges — *dimmer is not the same
+as invisible*.
+
+Two more the measurement found, each a rule already in this file being broken
+in one place:
+
+- **A late card was recolouring its prose.** `.bcard.late .bsub` was mute rose
+  on the late tint — 4:1 against a 4.5 floor, so three of four board cards in
+  the sample carried a line nobody could quite read — while the rule *a late
+  row is a neutral card with a coloured edge and a pill* sat twenty lines
+  above it. Left at `--faint` it is 6.35:1 and the state is said by the edge
+  and the word, which is the only channel state is allowed.
+- **A hardcoded colour in a rule that also reads a token breaks in one theme.**
+  `.btn.primary:hover` was `background: #fbf7ef` beside `color: var(--page)`:
+  on ink that is dark text on near-white at 17.5:1, and on paper it is
+  `#f4f7fb` on `#fbf7ef` — **1.01:1**, so the label of the SELECTED strip page
+  vanished the moment a pointer touched it. `--ink-hover` is defined per theme
+  like everything else, lifting off the ink in the dark and deepening on paper
+  (10.7:1). The sheet's edge tokens exist for exactly this reason.
+
+That last one was found **by accident** — clicking a strip page leaves the
+pointer on it, and the measurement that followed read 1.01:1. A rest state
+never shows it, so `lightlook.js` now hovers every button on a screen and
+measures it there too. It walks **up** for the background (a transparent card
+over a tinted panel is where these hide) and exempts nothing: if a run of text
+is on screen, a reader is meant to read it.
 
 **The sheet fills the screen** (`.cvbox.max`, and `setMax`). Inside a page it
 is a letterbox — about 420px against a board three screens wide — so reading
@@ -1889,6 +1957,25 @@ folded away and because that button renders only on a node that is already a
 photograph, printed `NO`, and **returned without failing** — so it sat in the
 suite for weeks testing nothing while reporting nothing. Any `if (!el) return`
 in a test is that bug; it exits non-zero or it is not a test.
+
+**The same rule one level up: A MEASURING SCRIPT HAS TO ASSERT THE SCREEN
+RENDERED.** `lightlook.js` walks every screen measuring contrast, visited a
+project page whose render was **throwing**, and passed — because a screen that
+never painted has no low-contrast text on it. "Nothing found" is not "nothing
+wrong". Every stop now checks the view holds something, and checks the
+`pageerror` list **per stop** rather than once at the end, so the throw is
+named against the screen that caused it. It had the `if (x) {}` fault too: it
+opened the first job, which has no projects, and skipped the whole project
+block in silence — it reads the job that actually has one out of the record
+and fails if there is none.
+
+**And the `new Function` parse check cannot see a FREE VARIABLE.** `barTone(st)`
+inside `projOver` referenced a name that function never had — `st` is a local
+of `renderProj` — which is legal JavaScript, parses clean, and threw at render
+time so the project page simply refused to open. There is no lint here and
+nothing is installed, so the only guard is that **every driving script listens
+for `pageerror` and fails on it**, and that the walk actually reaches every
+screen. Both of those were what caught this.
 
 **A sweep's own pattern can cry wolf.** `grep -cE '^FAIL|[0-9]+ failed'`
 matches the string `0 failed`, so a clean 26-assertion run reported as a

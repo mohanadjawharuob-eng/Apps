@@ -77,6 +77,7 @@
     --rule-mid: #27395a;
     --rule-strong: #3a5074;
     --ink: #e9eff8;
+    --ink-hover: #fbf7ef;    /* a primary button under the finger: lifts off the ink */
     --dim: #b3c4d8;
     --faint: #8ba0b8;
     --receded: #5b7089;
@@ -161,6 +162,7 @@
     --rule-mid: #c1cfdf;
     --rule-strong: #a6b8cd;
     --ink: #0f1b2d;
+    --ink-hover: #24395f;    /* on paper it deepens instead, or the label vanishes */
     --dim: #3d5169;
     --faint: #51677d;
     --receded: #95a7bb;
@@ -229,6 +231,7 @@
     --rule-mid: #c1cfdf;
     --rule-strong: #a6b8cd;
     --ink: #0f1b2d;
+    --ink-hover: #24395f;    /* on paper it deepens instead, or the label vanishes */
     --dim: #3d5169;
     --faint: #51677d;
     --receded: #95a7bb;
@@ -417,15 +420,31 @@ color-scheme: light;
     .row > .tools { flex: 1 1 100%; justify-content: flex-end; }
   }
 
+  /* `text-decoration: none` because HALF THE BUTTONS IN THIS APP ARE LINKS.
+     `openHandle()` gives a `url` an <a> and a path a <button>, so Quick run
+     drew "ArcGIS Pro" plain beside "Drive — area 1" and "Mail: harbour
+     brochure" underlined — three controls in one row doing the same job,
+     wearing two different clothes, for a reason that is an implementation
+     detail. `display: inline-block` so an <a> takes the padding the same way
+     a <button> does. */
   .btn {
     background: transparent; border: 1px solid var(--rule); color: var(--dim);
     padding: 0.32rem 0.72rem; cursor: pointer; font-size: 0.82rem; border-radius: 8px;
     font-family: var(--sans); transition: var(--t);
+    text-decoration: none; display: inline-block;
   }
   .btn:hover { color: var(--ink); border-color: var(--brass-deep); background: var(--raised); }
   .btn:active { transform: translateY(1px); }
   .btn.primary { color: var(--page); background: var(--ink); border-color: var(--ink); font-weight: 500; }
-  .btn.primary:hover { background: #fbf7ef; border-color: #fbf7ef; color: var(--page); }
+  /* A HARDCODED COLOUR IN A RULE THAT ALSO READS A TOKEN BREAKS IN ONE THEME.
+     This was `background: #fbf7ef` with `color: var(--page)`: on ink that is
+     dark text on near-white and reads at 17.5:1, and on paper it is
+     `#f4f7fb` text on `#fbf7ef` — 1.01:1, so the label of the SELECTED strip
+     page disappeared the moment a pointer touched it. `--ink-hover` is
+     defined per theme like everything else: lifting off the ink in the dark,
+     deepening on paper (10.7:1). Same discipline as the sheet's edge tokens,
+     which exist for exactly this reason. */
+  .btn.primary:hover { background: var(--ink-hover); border-color: var(--ink-hover); color: var(--page); }
   .btn.quiet { border-color: transparent; }
   /* Apricot is the only alarm on this sheet and it means late. A row of
      delete buttons inked in it competes with the one step that is actually
@@ -485,8 +504,15 @@ color-scheme: light;
     font-size: 1.12rem; letter-spacing: -0.012em; line-height: 1.25;
   }
   .bcard .bsub { font-size: 0.82rem; color: var(--faint); }
+  /* A LATE CARD IS A NEUTRAL CARD WITH A COLOURED EDGE AND A PILL. That rule
+     is already written down — it is why the whole late panel on Waiting was
+     rebuilt out of rose-on-rose — and this card was still recolouring its
+     sub-line, which put a state hue on prose. Measured, it also failed: the
+     mute rose on the late tint is 4:1 against a 4.5 floor, so three of four
+     board cards in the sample carried a line nobody could quite read. Left
+     at `--faint` it is 6.35:1 and the state is said by the edge and the word
+     in the pill, which is the only channel state is allowed. */
   .bcard.late { background: var(--late-tint); border-color: var(--apricot-deep); }
-  .bcard.late .bsub { color: var(--apricot-mute); }
 
   /* The run drawn as a track: one mark per step, in order. "3 of 8 done" is a
      sentence you have to parse; three filled marks out of eight is the same
@@ -815,7 +841,16 @@ color-scheme: light;
     background: color-mix(in srgb, var(--id-project) 16%, transparent);
     color: var(--id-project); font-weight: 500;
   }
-  .cal-more { font-size: 0.66rem; color: var(--receded); padding-left: 0.3rem; }
+  /* `--receded` IS NOT A TEXT COLOUR. Measured against the page it is
+     3.68:1 on ink and 2.29:1 on paper — under the 4.5 floor in BOTH themes,
+     which is right for something deliberately sunk (a finished step, a
+     marker glyph beside a label that carries the meaning) and wrong for
+     anything a reader has to read. Three places were reading it: this "+2
+     more" — the only thing on a calendar cell saying the day holds more than
+     it shows — the footnote under Home and Waiting, and the label on the
+     dialogs' own fold. All three take `--faint` (6.97:1 / 5.45:1). Same
+     lesson as the sheet's edges: dimmer is not the same as invisible. */
+  .cal-more { font-size: 0.66rem; color: var(--faint); padding-left: 0.3rem; }
   /* The month as a list, for a screen too narrow for a grid. */
   .calist { display: none; }
   .cl-day {
@@ -950,24 +985,41 @@ color-scheme: light;
     display: block; font-family: var(--display); font-weight: 500;
     font-size: 1.7rem; line-height: 1; letter-spacing: -0.02em;
   }
-  .hometile span { display: block; font-size: 0.82rem; color: var(--dim); margin-top: 0.15rem; }
+  .hometile .htw { display: block; }
+  .hometile .htw > span { display: block; font-size: 0.82rem; color: var(--dim); margin-top: 0.15rem; }
   .hometile small { display: block; font-size: 0.72rem; color: var(--faint); margin-top: 0.3rem; line-height: 1.35; }
   /* State on the edge and nowhere else — the tile is not a coloured card, the
      same rule every late row in this app follows. */
   .hometile.late { border-left-color: var(--apricot); }
   .hometile.late b { color: var(--apricot); }
+  /* ONE QUESTION WITH THREE PARTS HAS TO LOOK LIKE THREE OF THE SAME THING.
+     Three into two columns left the third as a wide banner under two squares
+     — the shape said "two things and one other thing", which is not what the
+     row means. On a phone all three become rows of the same shape, figure
+     beside words rather than over them, which is both consistent and shorter
+     than the two-column version it replaces (168px against ~200px). */
   @media (max-width: 560px) {
-    .homerow { grid-template-columns: 1fr 1fr; }
-    /* Three into two columns leaves one on its own row, so it takes the
-       width rather than sitting half-empty beside nothing. */
-    .homerow .hometile:nth-child(3) { grid-column: 1 / -1; }
-    .hometile b { font-size: 1.45rem; }
+    .homerow { grid-template-columns: 1fr; gap: 0.45rem; }
+    .hometile { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.6rem 0.8rem; }
+    .hometile b { font-size: 1.45rem; flex: 0 0 auto; min-width: 1.6rem; }
+    .hometile .htw { min-width: 0; flex: 1 1 0; }
+    .hometile span { margin-top: 0; }
+    .hometile small { margin-top: 0.1rem; }
   }
 
   /* A project's progress, and its figure. The bar is the percentage drawn —
      both come from `projPace`, so the two cannot disagree. */
+  /* A GREEN BAR ON A LATE ROW IS THE APP CONTRADICTING ITSELF. Green means
+     healthy state and nothing else, and this drew 67% in sage inside a card
+     whose left edge was rose and whose own words read "past its date" — the
+     same card saying two opposite things. Progress is not a state, so the bar
+     takes its row's state: rose when late, sage in hand, neutral when nothing
+     is running or the work is set down. The width still IS the percentage
+     string, out of one `projPace` call, so those two cannot disagree either. */
   .bar { height: 4px; border-radius: 3px; background: var(--rule); margin: 0.4rem 0 0.35rem; overflow: hidden; }
   .bar i { display: block; height: 100%; background: var(--sage); border-radius: 3px; }
+  .bar.b-late i { background: var(--apricot); }
+  .bar.b-idle i { background: var(--line-dim); }
   .pct { flex: none; font-family: var(--mono); font-size: 0.8rem; color: var(--dim); }
   .age { flex: none; font-family: var(--mono); font-size: 0.72rem; color: var(--faint); }
 
@@ -1123,7 +1175,7 @@ color-scheme: light;
   }
   .finding .stamp { font-size: 0.82rem; color: var(--faint); }
   .saynote { margin: 0 0 1.3rem; font-size: 0.85rem; color: var(--faint); }
-  .saynote.foot { margin: 1.6rem 0 0; color: var(--receded); }
+  .saynote.foot { margin: 1.6rem 0 0; color: var(--faint); }
 
   .stack { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; }
   .stack.tight { gap: 0.5rem; }
@@ -1160,6 +1212,13 @@ color-scheme: light;
      nothing. The row stays a card; the edge and the pill carry the state. */
   .panel.late { background: var(--surface); border-color: var(--rule);
                 border-left: 3px solid var(--apricot); }
+  /* DRIFT HAS ITS OWN EDGE. Upkeep past its interval is not late — nobody is
+     waiting on you and nothing has a date — but on Home it was an ordinary
+     card, indistinguishable from prose, directly under a rose one. Amber is
+     drift and staleness, which is exactly what this is, and a state with no
+     channel is a state the screen does not say. */
+  .panel.drift { background: var(--surface); border-color: var(--rule);
+                 border-left: 3px solid var(--amber); }
   .panel.late.unnamed { border-left-color: var(--amber); }
   .panel.late .says { color: var(--faint); }
 
@@ -1260,7 +1319,7 @@ color-scheme: light;
   .modal-more { margin: 0.9rem 0 0; border-top: 1px solid var(--rule-soft); }
   .modal-more summary {
     cursor: pointer; list-style: none; padding: 0.55rem 0 0.2rem;
-    font-size: var(--fs-sm); color: var(--receded); letter-spacing: 0.01em;
+    font-size: var(--fs-sm); color: var(--faint); letter-spacing: 0.01em;
   }
   .modal-more summary::-webkit-details-marker { display: none; }
   .modal-more summary::before { content: "\25b8"; margin-right: 0.35em; color: var(--receded); }
@@ -3164,6 +3223,16 @@ function stateWord(b, n) {
      function the cards use, so the bar and the card can never disagree. A
      project with nothing started reads 0% rather than being hidden, because
      "nothing has begun" is the most useful thing that screen can tell you. */
+  /* One place, because the bar is drawn on Home and again on a project's own
+     Overview and the two may not disagree — the same fault as `stateTone()`
+     and `NODE_INK` being one ladder in two renderings. */
+  function barTone(st) {
+    if (!st) return "";
+    if (st.tone === "late") return "b-late";
+    if (st.word === "in hand" || st.word === "to file") return "";
+    return "b-idle";
+  }
+
   function projPace(p) {
     var bs = projBoards(p.id).filter(function (b) { return b.kind === "run"; });
     var done = 0, total = 0;
@@ -3227,7 +3296,7 @@ function stateWord(b, n) {
           "</div><div class=\"says\">A run will not close while a filing step is undone \u2014 which is exactly the thing that gets forgotten.</div></div></button>";
       }
       if (up.length) {
-        h += '<button type="button" class="panel rowbtn" data-act="tab-waiting">' +
+        h += '<button type="button" class="panel rowbtn drift" data-act="tab-waiting">' +
           '<div class="grow"><div class="nm sm">' +
           (up.length === 1 ? "One piece of upkeep is past its interval" : cap(numWord(up.length)) + " pieces of upkeep are past their interval") +
           '</div><div class="says">' + esc(up.slice(0, 3).map(function (x) { return x.cd.label; }).join(" \u00b7 ")) + "</div></div></button>";
@@ -3248,7 +3317,7 @@ function stateWord(b, n) {
             '" data-act="proj-open" data-id="' + x.p.id + '">' +
             '<span class="itile t-proj">' + ICONS.proj + "</span>" +
             '<div class="grow"><div class="nm sm">' + esc(x.p.name) + "</div>" +
-            '<div class="bar"><i style="width:' + x.pace.pct + '%"></i></div>' +
+            '<div class="bar ' + barTone(x.st) + '"><i style="width:' + x.pace.pct + '%"></i></div>' +
             '<div class="says">' + esc(x.st.word) + " \u00b7 " + x.pace.done + " of " + x.pace.total + " steps done</div></div>" +
             '<div class="pct">' + x.pace.pct + "%</div></button>";
         }).join("") + "</div>";
@@ -3298,10 +3367,13 @@ function stateWord(b, n) {
     return h;
   }
 
+  /* The words are wrapped in `.htw` so a phone can put them BESIDE the figure
+     instead of under it, with one flex rule and no second markup. */
   function homeTile(n, unit, says, tone, act) {
     return '<button type="button" class="hometile' + (tone ? " " + tone : "") +
-      '" data-act="' + act + '"><b>' + n + "</b><span>" + esc(unit) + "</span>" +
-      '<small>' + esc(says) + "</small></button>";
+      '" data-act="' + act + '"><b>' + n + "</b>" +
+      '<span class="htw"><span>' + esc(unit) + "</span>" +
+      '<small>' + esc(says) + "</small></span></button>";
   }
   /* The time of day, and nothing else pretending to be personal. A name here
      would have to come from somewhere, and this app asks for nothing. */
@@ -7714,6 +7786,12 @@ function stateWord(b, n) {
      disagree. */
   function projOver(p, runs, tpls) {
     var pace = projPace(p);
+    /* Read here rather than taken from `renderProj`'s local: `barTone(st)`
+       referenced a name this function never had, which the `new Function`
+       parse check cannot see (a free variable is legal JavaScript) and which
+       threw at render time — the project page simply refused to open. The
+       suite caught it; the parser never would. */
+    var st = projState(p);
     var h = "";
     if (p.note) {
       h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
@@ -7723,7 +7801,7 @@ function stateWord(b, n) {
     h += '<div class="panel calm"><div class="grow">' +
       '<div class="nm sm">' + pace.done + " of " + pace.total + " steps done" +
       (pace.runs ? "" : " \u2014 nothing has been started") + "</div>" +
-      '<div class="bar"><i style="width:' + pace.pct + '%"></i></div>' +
+      '<div class="bar ' + barTone(st) + '"><i style="width:' + pace.pct + '%"></i></div>' +
       '<div class="says">' + pace.pct + "% \u00b7 " +
       (pace.runs ? pace.runs + (pace.runs === 1 ? " run" : " runs") : "no runs") +
       (tpls.length ? " \u00b7 " + tpls.length + (tpls.length === 1 ? " procedure" : " procedures") : "") +
@@ -7895,7 +7973,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v52 · 17 Sep 2026";
+  var BUILD = "v53 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
