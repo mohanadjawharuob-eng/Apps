@@ -896,7 +896,38 @@ run a photograph belongs to — one open run and it goes there, several and it
 asks, none and it says so rather than opening a camera with nowhere to put the
 result.
 
-**The finder is above the six tabs, because it reaches further than any of
+**HOME IS FIRST, AND IT IS WHAT WAS MISSING.** The app opened on Boards — a
+list of procedures, which is the right screen once you know what you are doing
+and the wrong one to arrive on. The mockup calls panel 1 "mission control";
+this is it, and the rule that keeps it honest is the one the report and the
+adviser already live by: **nothing on Home is stored and nothing on it is
+computed here.** Every figure comes from the function the screen it points at
+uses — `dues()`, `projState()`, `runProgress()`, `openTasks()`,
+`openHandle()` — so Home cannot drift from the rest of the app. There is a
+test that reads the chase tile against Waiting's own headline and fails if one
+says nothing is late while the other shows a rose row.
+
+Even "recent" is derived: `updatedAt` is already stamped on every record for
+the sync merge, so `recentlyTouched()` reads the trail off the stamps and
+there is no `recents` list to keep in step (asserted — the test fails if such
+a key appears in the record).
+
+**The order is the argument.** TODAY first, because it is the only thing that
+cannot wait — three tiles, not three cards, because it is one question with
+three parts. Then WHAT IS MOVING, because that is what you came to work on;
+the bar's width *is* the percentage string, both out of `projPace`, so the two
+cannot disagree. Then QUICK RUN, because the next thing you do is open
+something. Then CONTINUE WORKING and RECENT THINGS, which answer "where was
+I" — the second of the three forgettings this app was built around.
+
+An empty book gets `firstRun()`, not a dashboard of noughts: a grid of zeroes
+presented as your morning is the "seeded fiction" fault in reverse.
+
+**SEVEN TABS NOW**, and the bar still holds them — measured at 390px, 360px
+and 320px with nothing wrapping and nothing scrolled off the edge. Settings
+staying on the gear is what paid for the seventh.
+
+**The finder is above the tabs, because it reaches further than any of
 them.** Ctrl+K, `/` when you are not typing, or the box at the top of the rail.
 Nothing in the app could be reached by its name before it: six sections, boards
 inside them, steps inside those, and a person's name written only on a step
@@ -1018,6 +1049,35 @@ target off to the right. "Tidy" re-runs it.
   the name, and on `fromAssetId` where it is there.
   `assetLook()` is the single place a kind decides its glyph and its identity
   colour, because the row, the finder and the detail page all have to agree.
+- **WHERE A THING IS AND WHEN IT WAS LAST USED ARE BOTH STATED, AND SAYING
+  NOTHING IS A STATE.** The mockup's Equipment panel reads *available · in the
+  field · maintenance*, and it is tempting to derive that — a board that
+  borrowed the sonar looks like the sonar being out. It is not: a run freezes
+  its procedure, so a board that named the total station in March says nothing
+  about where it is this week, and no walk of the record can tell a machine in
+  the van from one back on the bench. So `a.state` is typed
+  (`THING_STATES`: ready · out · fixing · busy · done · lost) and `a.lastUsedOn`
+  is typed beside it, refused in the future by `dayOk` the same as every other
+  date. What must **not** happen is a guess dressed as a fact: a thing nobody
+  has said anything about carries **no pill at all** on its row, and its page
+  says "Nothing said about how it stands" in as many words rather than leaving
+  a hole a reader will fill in wrongly. `thingState(a)` is the one place the
+  word and its pill tone are decided, `stateTone`'s ladder again: `out` and
+  `fixing` read as drift, `lost` as late, `ready` calm.
+- **"What you can do next" is built from what the entry actually holds, never
+  from its kind.** The mockup prints a menu per kind (*Open in CloudCompare ·
+  Import to QGIS*), which would be a list of buttons that cannot do the thing
+  they name — exactly the fault `openHandle()` exists to prevent. `nextActions(a)`
+  offers only routes that exist: `openHandle()`'s one answer for opening it,
+  what it was made into (`madeInto`), everything on its own topics, and upkeep
+  when it has none. There is a test that clicks one and fails if the screen
+  does not move.
+- **The Library's kind chips are counted from what is under the open subject.**
+  Five hardcoded type words would show "Survey" over an empty list on a subject
+  holding three photographs. Each chip carries its own count, so no chip can
+  empty the list, and the chip **clears when the subject changes** — a filter
+  surviving a subject change lands you on nothing and reads as the app having
+  lost your things.
 - **A person is half derived and half stated, and the derived half is nearly
   all of it.** Waiting answers "what is late" step by step; nobody could ask
   *"I am about to write to Rita — what else is outstanding with her"*, because a
@@ -1349,6 +1409,23 @@ d=set(re.findall(r"^    \"([a-z0-9-]+)\":",s[i:j],re.M))
 u=set(re.findall(r"data-act=\"([a-z0-9-]+)\"",s))
 print("no handler:",sorted(u-d) or "none");print("unclickable:",sorted(d-u) or "none")'
 ```
+
+**The `data-act` scan has a blind spot: an INTERPOLATED action.** It matches
+`data-act="literal"` only, so a helper that builds the attribute from a
+variable — `'" data-act="' + act + '"'`, which is how Home's three tiles are
+written — is invisible to it, and the action reads as unclickable while being
+clicked every day. `tab-jobs` sits on that list for exactly this reason. Both
+halves still matter: "no handler" is never a false positive and is the half
+that catches a button doing nothing silently, and "unclickable" needs the
+interpolated sites checked by hand:
+
+```
+grep -n "data-act=\"' *+" mashghal/index.html
+```
+
+Four sites today. It did earn its keep on this change, though: it found a
+`tab-home` handler that nothing could ever call, because a tab is reached
+through `data-tab` and not through an action at all.
 
 **And one for CSS, because a class name can be taken already.** A new
 identity-tile class called `.tile` landed 400 lines below the figure tiles on
