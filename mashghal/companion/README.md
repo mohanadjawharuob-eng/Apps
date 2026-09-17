@@ -1,11 +1,33 @@
 # The launcher
 
-A browser cannot open ArcGIS Pro. This is the smallest thing that can, and it
-is deliberately not an application: a registry entry and one PowerShell script,
-both of which you can read in Notepad in a minute.
+A browser cannot open ArcGIS Pro, and **it cannot open a file on your machine
+either.** This is the smallest thing that can, and it is deliberately not an
+application: a registry entry and one PowerShell script, both of which you can
+read in Notepad in a minute.
 
 It is optional. Everything else in Mashghal works without it, and the app falls
 back to copying a path for you to paste into Win+R.
+
+## Why a path does nothing without this
+
+If you have noticed that **a link opens and a file does not**, nothing is
+broken. A page served over `https://` is not allowed to navigate to
+`file:///C:/…` — every browser blocks it, and Chrome blocks it *silently*, so
+the tap does nothing at all and says nothing about why. It is a security rule
+older than this app: a web page that could open arbitrary files on your disk
+would be a very bad idea, so the browser simply refuses.
+
+That leaves exactly two honest routes, and the Repo tab shows whichever one
+you are on rather than offering a control that quietly fails:
+
+| | what a path does |
+|---|---|
+| **launcher off** | the row copies the path, and says why it cannot open it |
+| **launcher on** | the row *is* `mashghal://enter/<id>`, and one tap opens it |
+
+A website or a Drive link needs none of this and never did — it is an ordinary
+link, and the app has always opened those in one tap. This page is about the
+other half.
 
 ## The rule it exists to enforce
 
