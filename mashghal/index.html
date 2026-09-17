@@ -458,7 +458,22 @@ color-scheme: light;
   #overlay .btn.danger {
     color: var(--apricot-lift); border-color: var(--apricot-deep); background: var(--late-tint);
   }
-  .btn:focus-visible, .tab:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+  /* ONE FOCUS RING FOR EVERY TAPPABLE THING, the same way `--t` is applied
+     once rather than per component. Only `.btn` and `.tab` had the app's
+     ring; every whole-row control — a board card, a calendar cell, a Home
+     tile, a panel row, the Repo's open control — fell back to Chromium's
+     default `outline: auto`, which on a deep navy surface is a pale double
+     ring belonging to no design in this app. Measured after the transition,
+     because `.btn` carries `transition: var(--t)` with no property (so
+     `all`) and the ring animates in from nought. */
+  .btn:focus-visible, .tab:focus-visible,
+  .panel:focus-visible, .rowbtn:focus-visible, .bcard:focus-visible,
+  .hometile:focus-visible, .cal-m:focus-visible, .cl-row:focus-visible,
+  .repo-hit:focus-visible, .repo-row:focus-visible, .rwrow:focus-visible,
+  .gearbtn:focus-visible, .findbtn:focus-visible, .chip:focus-visible,
+  .tinypic:focus-visible {
+    outline: 1px solid var(--brass); outline-offset: 2px;
+  }
   .btn:disabled { opacity: 0.38; cursor: default; }
   .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
 
@@ -7990,7 +8005,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v54 · 17 Sep 2026";
+  var BUILD = "v55 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };

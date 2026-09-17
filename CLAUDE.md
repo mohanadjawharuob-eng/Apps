@@ -1819,6 +1819,27 @@ pill, a sentence and two buttons on one line left the sentence about ten
 characters wide, and an upkeep row naming a place and the thing it protects
 wrapped to nine.
 
+**ONE FOCUS RING FOR EVERY TAPPABLE THING**, applied once the way `--t` is
+rather than per component. Only `.btn` and `.tab` carried the app's ring
+(brass, 1px, 2px offset); every whole-row control — a board card, a calendar
+cell, a Home tile, a panel row, the Repo's open control — fell back to
+Chromium's default `outline: auto`, which on a deep navy surface is a pale
+double ring belonging to no design in this app. `keys.js` drives the whole app
+from the keyboard and asserts three things per screen: every control is a real
+control (that rule was already written down, because the Jobs tab could not be
+opened by keyboard at all), the focus is visible, and the ring is the app's
+rather than the browser's. Everything else about the keyboard story turned out
+to be sound already, which is worth knowing.
+
+Two measuring traps it walked into first. **A scripted `.focus()` does not
+match `:focus-visible`** when the last interaction was a mouse click, so
+reading the style after one reports every control as unringed — it "found" the
+tab bar and the finder, which both have a ring. Tab is the interaction the
+rule is about, so Tab is what the test presses. And **reading a style straight
+after an interaction reads the START of the transition**: `.btn` carries
+`transition: var(--t)` with no property, which is `all`, so the outline
+animates in from nought and every button in the app measured at `0px`.
+
 **A LINE ON THE SHEET IS NOT A HAIRLINE.** The four edge tokens — `--edge`,
 `--edge-dead`, `--edge-assoc`, `--edge-back` — exist because the sheet used to
 borrow `--line-dim` and `--rule-mid`, both `#27395a`, which is **1.54:1**
