@@ -474,6 +474,15 @@ color-scheme: light;
   .tinypic:focus-visible {
     outline: 1px solid var(--brass); outline-offset: 2px;
   }
+  /* A LAUNCHER BUTTON IS ONE LINE. A name can be any length and a
+     200-character one turned a Quick run button into a six-line paragraph
+     filling the row. The full name is on the thing's own page and in the
+     `title`; the button says as much of it as fits. */
+  .btn.clip {
+    max-width: 15rem; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; vertical-align: bottom;
+  }
+  @media (max-width: 560px) { .btn.clip { max-width: 11rem; } }
   .btn:disabled { opacity: 0.38; cursor: default; }
   .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
 
@@ -3343,12 +3352,17 @@ function stateWord(b, n) {
     // QUICK RUN — the launcher, the two or three things you open every day.
     var apps = repoIn("app").concat(repoIn("site")).filter(function (a) { return !!openHandle(a); }).slice(0, 6);
     h += '<div class="sect">Quick run</div>';
+    /* `.chip` clips the name to one line. A name can be any length, and a
+       200-character one turned a launcher button into a six-line paragraph
+       filling the row — the full name is on the thing's own page, and the
+       `title` carries it here. A chip that is not chip-shaped is not a
+       launcher. */
     h += apps.length ? '<div class="tools">' + apps.map(function (a) {
-      var hd = openHandle(a), look = assetLook(a);
+      var hd = openHandle(a);
       return hd.kind === "copy"
-        ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '" title="' + esc(hd.how) + '">' + esc(a.name) + "</button>"
-        : '<a class="btn" href="' + esc(hd.href) + '"' + (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
-          ' title="' + esc(hd.how) + '">' + esc(a.name) + "</a>";
+        ? '<button class="btn clip" data-act="asset-copy" data-id="' + a.id + '" title="' + esc(a.name + " \u2014 " + hd.how) + '">' + esc(a.name) + "</button>"
+        : '<a class="btn clip" href="' + esc(hd.href) + '"' + (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+          ' title="' + esc(a.name + " \u2014 " + hd.how) + '">' + esc(a.name) + "</a>";
     }).join("") + '<button class="btn quiet" data-act="tab-repo">All of it</button></div>'
       : '<p class="empty">Nothing to open yet. Put the apps and sites you use into the <b>Repo</b> and they appear here, one tap each.</p>';
 
@@ -8014,7 +8028,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v56 · 17 Sep 2026";
+  var BUILD = "v57 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };

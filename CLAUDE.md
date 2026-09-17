@@ -1821,6 +1821,14 @@ the words rather than over them (`.htw` wraps them, so it is one flex rule and
 no second markup), which came out **shorter** than the two-column version as
 well as consistent.
 
+**A LAUNCHER BUTTON IS ONE LINE.** Not running off the side is the floor, and
+a 200-character name cleared it while still turning a Quick run button into a
+six-line paragraph filling the row — which passes every overflow check and is
+not a launcher. `.btn.clip` clips to one line with the full name in the
+`title`, and `awkward.js` asserts no button on any screen grows past 64px
+tall. (Not `.chip`: that is a pill, and mixing two shapes to borrow one
+property is how a class name ends up meaning two things.)
+
 **On a phone, a row wraps its buttons onto their own line** (under 560px). A
 pill, a sentence and two buttons on one line left the sentence about ten
 characters wide, and an upkeep row naming a place and the thing it protects
