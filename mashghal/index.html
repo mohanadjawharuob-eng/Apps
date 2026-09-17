@@ -302,6 +302,7 @@ color-scheme: light;
     background: var(--rail); padding: 1.1rem 0 1.4rem;
     display: flex; flex-direction: column; overflow: hidden;
   }
+  .railtop { display: contents; }
   .brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem 0.15rem; }
   .brand-mark { display: inline-flex; line-height: 0; }
   .brand-mark svg { display: block; }
@@ -320,15 +321,61 @@ color-scheme: light;
   .rail-foot p { margin: 0; font-size: 0.72rem; line-height: 1.6; color: var(--faint); font-family: var(--serif); font-style: italic; }
   .view { flex: 1; min-width: 0; padding: 1.5rem 1.6rem 4rem; max-width: 1560px; }
 
+  /* ON A PHONE THE CHROME WAS A QUARTER OF THE SCREEN. Measured off its
+     owner's own handset: the wordmark on its own row, the finder full-width on
+     a second, and six tabs that wrapped "The week" onto two lines came to
+     about 208 CSS px before one word of the work — on a 780px-tall screen.
+     Three changes, and none of them removes anything:
+
+     1. THE BRAND AND THE FINDER SHARE ONE ROW. The mark stays (it is how you
+        know which of six apps you are in) and the wordmark goes, because the
+        mark already says it and the row is the scarcest thing on the screen.
+     2. NO TAB WRAPS AND NONE SCROLLS OFF. Six at 1/6th each with `nowrap`
+        fits inside 390px; the scrolling strip it used to be hid the last two,
+        and this repo already learned that a tab off the edge is a tab nobody
+        opens.
+     3. The gap under the bar goes: the page's own heading is the next thing
+        and it does not need announcing twice. */
   @media (max-width: 760px) {
     .shell { flex-direction: column; }
-    .rail { width: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0.8rem 0 0; }
-    .brand { padding: 0 0.9rem 0.7rem; }
-    #nav { flex-direction: row; overflow-x: auto; padding: 0 0.6rem; gap: 0.15rem; }
-    .tab { flex-direction: column; gap: 0.15rem; border-left: 0; border-bottom: 2px solid transparent; padding: 0.45rem 0.7rem; font-size: 0.76rem; }
+    .rail { width: auto; border-right: 0; border-bottom: 1px solid var(--rule);
+            padding: calc(0.45rem + env(safe-area-inset-top)) 0 0; }
+    /* One row: mark, then the finder taking the rest. */
+    .railtop { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.7rem 0.5rem; }
+    .brand { padding: 0; flex: none; }
+    .brand h1 { display: none; }
+    .railtop .findbtn { margin: 0; width: auto; flex: 1 1 auto; min-width: 0; }
+    #nav { flex-direction: row; overflow: hidden; padding: 0 0.3rem; gap: 0; }
+    .tab {
+      flex: 1 1 0; min-width: 0; flex-direction: column; gap: 0.1rem;
+      border-left: 0; border-bottom: 2px solid transparent;
+      padding: 0.36rem 0.1rem 0.4rem; font-size: 0.665rem; text-align: center;
+      white-space: nowrap; letter-spacing: -0.01em;
+    }
+    .tab .ico { width: auto; }
     .tab[aria-current="page"] { border-left-color: transparent; border-bottom-color: var(--brass); }
     .rail-foot { display: none; }
-    .view { padding: 1.1rem 0.95rem 4rem; }
+    .view { padding: 0.9rem 0.85rem 4rem; }
+    /* A run card stood 370px tall for a name, a job and two figures. The
+       content is right; the air around it was not. Nothing is removed — the
+       thumbnails, the track and the words all stay — it is the padding, the
+       display size and the gaps that come in. */
+    .bcard { padding: 0.7rem 0.75rem; }
+    .bcard h3 { font-size: 0.99rem; }
+    .bcard .bsub { font-size: 0.76rem; }
+    .track { margin: 0.5rem 0 0.35rem; }
+    .bpics { margin-top: 0.45rem; }
+    .bpics img { width: 44px; height: 32px; }
+    .stack { gap: 0.55rem; }
+    .sect { margin: 1rem 0 0.4rem; }
+    .finding h1 { font-size: 1.5rem; }
+    .saynote { margin: 0.25rem 0 0.7rem; }
+  }
+  /* A very narrow handset (a Nothing Phone in a case, a Mini) still has to fit
+     six without one of them wrapping, so the label shrinks once more rather
+     than the bar starting to scroll. */
+  @media (max-width: 400px) {
+    .tab { font-size: 0.62rem; padding: 0.34rem 0.05rem 0.38rem; }
   }
 
   /* ---------------- page furniture ---------------- */
@@ -447,8 +494,16 @@ color-scheme: light;
     flex: 1 1 0; height: 5px; border-radius: 3px; background: var(--rule);
     min-width: 4px;
   }
+  /* DONE IS FILLED, IN HAND IS HOLLOW. Both were a solid green bar — sage for
+     in hand, sage-deep for done — so a run with two steps being worked on and
+     none finished drew two bright green marks beside the words "0 of 5". Its
+     owner read that as the app contradicting itself, and fairly: on every
+     progress bar anybody has ever seen, filled means finished. A ring says
+     "started, not finished" without borrowing a second hue, and the words
+     beside it still say which is which for a reader who cannot separate
+     them. */
   .track i.t-done { background: var(--sage-deep); }
-  .track i.t-now { background: var(--sage); }
+  .track i.t-now { background: transparent; box-shadow: inset 0 0 0 1.5px var(--sage); }
   .track i.t-waiting { background: var(--receded); }
   .track i.t-over { background: var(--apricot); }
 
@@ -1216,6 +1271,13 @@ color-scheme: light;
          is also a node, a tail that is also the flow, one apricot mark at the
          end of it. It was ◫ — a Unicode box-drawing character that belonged to
          nothing and said nothing. -->
+    <!-- One wrapper so a phone can put the mark and the finder on ONE row
+         (`.railtop { display: flex }` under 760px) while a laptop is
+         unchanged: `display: contents` there, so the rail's own column layout
+         still sees brand, sub-line and finder as its direct children and
+         nothing about the wide layout moves. Same trick as `.cvadd` on the
+         sheet's toolbar. -->
+    <div class="railtop">
     <div class="brand"><span class="brand-mark" aria-hidden="true">
       <svg viewBox="0 0 512 512" width="26" height="26" fill="none">
         <path d="M300 168 L372 130" stroke="var(--brass)" stroke-width="16"
@@ -1236,6 +1298,7 @@ color-scheme: light;
         cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span>
       <span>Find anything</span><kbd>Ctrl K</kbd>
     </button>
+    </div>
     <nav id="nav" aria-label="Sections"></nav>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
          belongs to the shared runtime and must stay byte-identical. -->
@@ -2349,8 +2412,13 @@ color-scheme: light;
         var st = nodeState(b, n);
         return '<i class="t-' + st + '" title="' + esc(n.label) + '"></i>';
       }).join("") + "</div>" +
+      /* "0 of 5" with no word said nothing about WHAT it counted, and sat
+         directly beside "Two steps in hand" — two different measures on one
+         line, which is the "a figure may never disagree with its own parts"
+         rule in miniature. `boardStand` had the word all along; the card had
+         dropped it. */
       '<div class="bstat' + (late ? " bad" : "") + '">' + esc(head) +
-      '<span class="bnum">' + p.done + " of " + p.total + "</span></div>" +
+      '<span class="bnum">' + p.done + " of " + p.total + " done</span></div>" +
       (pics.length ? '<div class="bpics">' + pics.slice(0, 4).map(function (t) {
         return '<img data-pic="' + esc(t.pic || "") + '" data-thumb="' + esc(t.id) + '" alt="">';
       }).join("") + "</div>" : "") +
@@ -5112,9 +5180,17 @@ function stateWord(b, n) {
         if (counts.added) bits.push(counts.added + " new");
         if (counts.updated) bits.push(counts.updated + " updated");
         if (counts.pics) bits.push(counts.pics + (counts.pics === 1 ? " picture" : " pictures"));
+        /* `quiet` was honoured in the .catch and IGNORED here, so the 90s
+           heartbeat and the every-change debounce both announced themselves —
+           "Synced — nothing had changed elsewhere", over the card you were
+           reading, on a sync nobody asked for. A background pass says
+           something only when something actually crossed, or when the
+           pictures did not: silence is the correct report for a no-op, and a
+           toast is for something that happened. Pressing Sync yourself still
+           always gets an answer, because then you asked. */
         var said = bits.length ? "Synced — " + bits.join(", ") : "Synced — nothing had changed elsewhere";
-        toast(picsFailed ? said + ". The pictures did not travel this time; the book did."
-                         : said);
+        if (picsFailed) toast(said + ". The pictures did not travel this time; the book did.");
+        else if (bits.length || !quiet) toast(said);
       })
       .catch(function (e) {
         syncing = false;
