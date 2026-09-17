@@ -737,6 +737,107 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 
 ## Mashghal's shape
 
+**Six tabs, and a gear: Boards · Waiting · The week · Calendar · Jobs ·
+Repo.** Settings gave up its slot and moved to a gear beside the finder —
+exactly the trade Coffer made to pay for Horizon, and for the same reason: it
+is opened a few times a year and was holding a sixth of a bar a phone can only
+just carry six of. A seventh tab was the other option and it is the one this
+repo has already learned not to take.
+
+**The Repo is one store, presented four ways.** `state.assets` already held
+files, photos, datasets, documents, software and field kit with a path, a
+link, upkeep and provenance, so a second list for "the apps and sites and
+files I log into" would have been the *one name, one entry* mistake this file
+already records. `REPO_PAGES` is **Devices · Apps · Sites · Files**, and
+**which section an entry is in is stated, not derived** (`a.repo`, with
+`repoOf()` falling back on the kind so nothing written before it needs a
+migration). Deriving it is tempting and wrong for the same reason `parked` is
+stored on a project: ArcGIS Pro has a path *and* a licence page, and a reader
+who types a name should never have to wonder which of four lists it landed in.
+
+**In the Repo the row IS the open control**, and that is the only place in the
+app where a row does not navigate. This tab is a launcher — its owner asked
+for "all apps and all webs and all files that i use" — and row, then page,
+then "Open the link" was two taps to do the one thing. Everywhere else a row
+still opens a page, because there the question is "tell me about this".
+
+**`openHandle(a)` is the one place that decides what "open" means**, because
+there are three answers and only one is a plain link:
+
+- a `url` opens in the browser, and works with nothing installed;
+- a `path` with the companion on becomes `mashghal://enter/<id>`;
+- a `path` with the companion off is **copy only, and the screen says why**.
+
+That last one is not a limitation of this app. **A page served over https is
+not allowed to navigate to `file:///C:/…`** — every browser blocks it and
+Chrome blocks it *silently*, so the tap does nothing at all. Its owner
+reported exactly that ("clicking open file from the pc don't open the file, it
+only work with links on web") and the app was not broken; the browser was
+refusing. So a path is **never rendered as a `file://` href** — a control that
+quietly does nothing is worse than no control — and the reason is stated once
+above the list with the one-line fix, only where it is actually true.
+
+**The whole job on one sheet** (`jobSheet`, reached from the job page) is the
+same canvas one level up: the job, its projects, and every board hanging off
+them. Three rules keep it honest. It is **derived and throwaway** — rebuilt
+from `state` on every render, so it can never disagree with what it draws and
+there is no second copy of the hierarchy to keep in step. It is
+**read-only, and the canvas is told so**: `b.derived` guards every mutating
+path, because `save()` would write a board that is not in `state.boards`, and
+a sheet that looked editable and silently dropped every edit would be worse
+than no sheet. And **a tap opens the board** rather than selecting it — on a
+real sheet picking a node is how you reach what can be done to it, and here
+there is exactly one thing to do.
+`openBoard()` returns `jobMap` when one is up, which is what lets Fill, Fit,
+the zoom, the pan and the arrow keys all work on it with no second copy of any
+of them. Two traps it walked into: **`autoLayout` is for a procedure, not a
+tree** — it ranks steps into columns and parks things above them, so the job
+and "on its own" landed side by side on one row and the shape said nothing
+(`mapLayout` places depth down and siblings across, parents centred over their
+children, walked bottom-up). And **a node on a derived sheet carries its own
+state and sub-line** (`_mapState`, `_says`, `_pill`), because `nodeState` and
+`stepMeta` answer questions a *board* does not have — a chase interval, a due
+date — and drawn from the thing vocabulary the job and "on its own" both read
+"note", a word belonging to neither.
+
+**A TASK IS THE ONE THING SOMEBODY TYPES, and it names the work it belongs
+to.** Everything else on Waiting is derived — a live step of a run, or a day
+passing — and the standing rule was that *a due is born, never typed*. Its
+owner asked for tasks anyway, so the shape is the one that does not unravel
+the model: `state.tasks` names a job, a project **or** a board, and that
+attachment is the whole reason a task lives here rather than in Daybook, which
+already owns free-floating errands. Three rules hold it:
+
+- **`dues()` does not absorb them.** A due is derived from a run, and folding
+  typed lines into that function would make every figure built on it — the tab
+  badge, the report, `projState()` — quietly stop meaning what it says.
+  Waiting carries them in their own section and **says out loud** which half
+  is which; the foot of that screen used to read "nothing here was typed in by
+  hand", which with tasks on it would be a screen contradicting itself.
+- **The headline counts them, because a headline is a figure.** Left counting
+  only derived dues it read "Nothing is late." above a rose row saying a typed
+  task was past its date — *a figure may never disagree with its own parts.*
+- **One attachment, the narrowest.** The dialog offers job, project and board;
+  storing all three would put the same task under a project *and* under its
+  job, which is the "two of everything" fault the job page already had once.
+  And **a task is never drawn on the sheet**: it is not a step, nothing waits
+  on it and a run does not advance through it, so a node would be exactly the
+  conflation the two edge kinds exist to prevent.
+
+A task with no date is **never called late**, however long it sits — the same
+rule as `overdueBy()` returning 0 for a wait with no chase interval.
+
+**A DRILL IS A CADENCE THAT STARTS A RUN**, and that is the whole of it: no
+fifth noun. Asked for "a repeating drill", the two nouns to compose were
+already there — upkeep says *every so often since it was last done*, and a
+procedure says *what to actually do*. A chore you tick is upkeep naming no
+procedure; a drill is upkeep naming one (`cd.runsBoardId`), and ticking it
+**starts the run and stamps the date in one act**, with the undo taking back
+both — a half-undone drill would leave a run nobody started beside a date
+saying it was done. Only templates are offered, because starting a run *of* a
+run is not a thing, and a cadence whose procedure has since been deleted falls
+back to being ticked rather than refusing: the interval is still true.
+
 **The finder is above the six tabs, because it reaches further than any of
 them.** Ctrl+K, `/` when you are not typing, or the box at the top of the rail.
 Nothing in the app could be reached by its name before it: six sections, boards
@@ -1281,6 +1382,72 @@ toast taking it back, so it never blocks what is under it.
 pill, a sentence and two buttons on one line left the sentence about ten
 characters wide, and an upkeep row naming a place and the thing it protects
 wrapped to nine.
+
+**A LINE ON THE SHEET IS NOT A HAIRLINE.** The four edge tokens — `--edge`,
+`--edge-dead`, `--edge-assoc`, `--edge-back` — exist because the sheet used to
+borrow `--line-dim` and `--rule-mid`, both `#27395a`, which is **1.54:1**
+against the dark sheet. And on a template board nothing has started, so that
+was *every* edge on the screen: its owner said they could not see the links,
+and they were right. Measured, per theme: dark 8.17 / 3.92 / 7.10 / 8.20:1,
+light 5.14 / 3.09 / 4.07 / 6.70:1. Two things worth keeping: the light
+dead-edge had to come **down** from the obvious `#93a3b5`, which is only
+2.58:1 — *dimmer is not the same as invisible* — and **the arrowhead markers
+have to follow the line**, or a line raised to 3.92:1 ends in a tip still at
+1.54:1. `--line-dim` keeps its own job where low contrast is correct; the
+sheet no longer reads it.
+
+**The sheet fills the screen** (`.cvbox.max`, and `setMax`). Inside a page it
+is a letterbox — about 420px against a board three screens wide — so reading
+it meant panning constantly and losing your place. **Not the Fullscreen API**:
+it is refused without a gesture in some contexts, it takes the whole document
+so a dialog opened from the sheet can render *behind* it, and leaving it is a
+different key on every platform. A fixed box at **z-index 55** is the same
+effect with none of that — above the switch bar (50), below the storage alarm
+(70) and the overlay (90), so every dialog and alarm still lands on top.
+Toggling is **not a render** (that would re-fit and throw away wherever the
+reader panned to, the same reason `paintSel()` exists), but the class is
+written into the markup **as well**, because any render that rebuilds the
+sheet builds a fresh box — and a box without it dropped out of full screen
+mid-edit while `html.cvmax` stayed on, leaving the page unscrollable behind a
+sheet no longer covering it. Every route that leaves the board calls
+`unmaximize()` for the same reason.
+
+**AN ESCAPE STACK IS WRITTEN ONCE.** It was written twice — in the sheet's key
+handler and in the document-level one — and both saw the same keypress,
+because the sheet's called `preventDefault` but not `stopPropagation` and they
+sit on different targets. So one Escape cleared the node **and** left the full
+screen, the opposite of stacking. `sheetEscape()` is the single copy. Two
+copies of a rule is the same bug as no rule.
+
+## What the phone found
+
+Its owner sent one screenshot of the app on their own handset, and it was the
+most useful thing in the whole round — every item here was invisible from a
+laptop.
+
+- **A quarter of the screen was chrome.** 208 CSS px of wordmark, finder and a
+  tab bar that wrapped "The week" onto two lines, on a screen 780px tall. The
+  mark and the finder share one row now (a `.railtop` wrapper at
+  `display: contents` on a laptop, so the wide layout does not move by a
+  pixel), the wordmark goes because the mark already says it, and **no tab
+  wraps and none scrolls off** — six at a sixth each with `nowrap`, down to
+  0.62rem under 400px. 208px → 122px.
+- **A run card was 370px tall for a name and two figures.** 124px now, by
+  taking out air rather than content.
+- **Done was filled and in hand was also filled.** Both track marks were a
+  solid green bar, so a run with two steps in hand and none finished drew two
+  bright green marks beside the words "0 of 5", and its owner read that as the
+  app contradicting itself. On every progress bar ever made, filled means
+  finished. In hand is a **ring** now. And the figure said "0 of 5" with no
+  word saying what it counted, directly beside "Two steps in hand" — two
+  different measures on one line. `boardStand()` had the word all along; the
+  card had dropped it.
+- **A background sync announced that nothing had happened.** `quiet` was
+  honoured in the `.catch` and ignored in the success branch, so the 90s
+  heartbeat and the every-change debounce both toasted "Synced — nothing had
+  changed elsewhere" over whatever you were reading. **Silence is the correct
+  report for a no-op**; pressing Sync yourself still always gets an answer,
+  because then you asked.
 
 ## Storage failures
 

@@ -344,7 +344,7 @@ color-scheme: light;
     .railtop { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.7rem 0.5rem; }
     .brand { padding: 0; flex: none; }
     .brand h1 { display: none; }
-    .railtop .findbtn { margin: 0; width: auto; flex: 1 1 auto; min-width: 0; }
+    .railtop .findrow { flex: 1 1 auto; min-width: 0; padding: 0; }
     #nav { flex-direction: row; overflow: hidden; padding: 0 0.3rem; gap: 0; }
     .tab {
       flex: 1 1 0; min-width: 0; flex-direction: column; gap: 0.1rem;
@@ -895,6 +895,46 @@ color-scheme: light;
     transition: color var(--t), border-color var(--t);
   }
   .findbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
+  /* The gear Settings moved onto. Same height and radius as the finder beside
+     it, so the header row reads as one control and not as a button bolted to
+     the end of a field. */
+  .findrow { display: flex; align-items: stretch; gap: 0.4rem; padding: 0 0.55rem 0.7rem; }
+  .findrow .findbtn { flex: 1 1 auto; min-width: 0; width: auto; margin: 0; }
+  .gearbtn {
+    flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; margin: 0;
+    background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px;
+    color: var(--faint); cursor: pointer; transition: color var(--t), border-color var(--t);
+  }
+  .gearbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
+  .gearbtn .ico { display: flex; }
+
+  /* A REPO ROW IS TWO CONTROLS, and the big one opens the thing. A whole row
+     that is an <a> may not contain a <button>, so the row is a panel holding
+     a full-width hit area beside the small acts rather than a link wrapped
+     round everything. */
+  .repo-row { align-items: stretch; gap: 0; padding: 0; overflow: hidden; }
+  .repo-hit {
+    display: flex; align-items: center; gap: 0.7rem; flex: 1 1 auto; min-width: 0;
+    padding: 0.6rem 0.7rem; background: none; border: 0; color: inherit;
+    font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+    transition: background var(--t);
+  }
+  .repo-hit:hover { background: var(--raised); }
+  .repo-acts { display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.6rem 0.5rem 0; flex: none; }
+  /* Under 560px the two acts drop under the name rather than squeezing it to
+     ten characters — the same rule every other row in this app follows. */
+  @media (max-width: 560px) {
+    .repo-row { flex-direction: column; align-items: stretch; }
+    .repo-acts { padding: 0 0.6rem 0.55rem; justify-content: flex-end; }
+    .repo-open { display: none; }
+  }
+  /* The count on a strip button: a section with nothing in it is visible
+     without being opened. */
+  .subnav .cnt {
+    font-family: var(--mono); font-size: 0.68rem; opacity: 0.75;
+    margin-left: 0.25rem;
+  }
   .findbtn .ico { display: flex; }
   .findbtn .ico svg { width: 15px; height: 15px; }
   /* --faint, not --receded. The bottom rung of the state ladder is for text
@@ -976,6 +1016,11 @@ color-scheme: light;
      as two separate things, so a tile pulls its own row in. */
   .panel > .itile { margin-right: -0.8rem; }
   .t-proj  { --tint-of: var(--id-project); }
+  /* A typed task takes the ACTION hue, the same as a step: it is a thing to
+     do that you wrote down rather than derived. Not the knowledge hue, which
+     belongs to what you have learned, and not output, which is what has left
+     the building. */
+  .t-note  { --tint-of: var(--id-action); }
   .t-out   { --tint-of: var(--id-output); }
   /* The registry's kinds. A row's colour says what sort of thing it is, which
      is the whole use of the identity channel in a list eight long — nine
@@ -997,7 +1042,7 @@ color-scheme: light;
   }
 
   @media (max-width: 880px) {
-    .findbtn { width: auto; margin: 0 0.8rem 0.7rem; }
+    .findrow { padding: 0 0.8rem 0.7rem; }
     .find { padding: 4vh 0.6rem 0.6rem; }
   }
 
@@ -1292,12 +1337,29 @@ color-scheme: light;
     <!-- Above the nav, because it reaches further than any of the sections
          under it: a step three levels inside a board has no other route to it
          than typing its name. -->
+    <!-- The finder and the gear are ONE rail child, so the gear cannot end up
+         alone on a row of its own: with `.railtop` at `display: contents` the
+         rail lays its children out in a column, and a bare gear became an
+         orphaned button under the search field. -->
+    <div class="findrow">
     <button class="findbtn" data-act="find-open">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15" fill="none"
         stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle
         cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span>
       <span>Find anything</span><kbd>Ctrl K</kbd>
     </button>
+    <!-- Settings gave up its slot on the tab bar so the Repo could have one,
+         so it lives here, on every screen, beside the finder. Icon-only with
+         the label in `title` and `aria-label`: one glyph everybody already
+         reads, and a word would cost the row it is trying to save. -->
+    <button class="gearbtn" data-act="tab-settings" title="Settings"
+            aria-label="Settings"><span class="ico" aria-hidden="true">
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10" cy="10" r="2.6"/>
+        <path d="M10 2.6v2M10 15.4v2M2.6 10h2M15.4 10h2M4.8 4.8l1.4 1.4M13.8 13.8l1.4 1.4M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4"/>
+      </svg></span></button>
+    </div>
     </div>
     <nav id="nav" aria-label="Sections"></nav>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
@@ -1536,13 +1598,21 @@ color-scheme: light;
 
   var APP = {
     storeKey: "mashghal.v1",
+    /* SIX TABS, AND A GEAR. The Repo needed a slot on a bar a phone can only
+       just hold six of, and Settings is opened a few times a year — exactly
+       the trade Coffer made to pay for Horizon. So Settings moves to a gear
+       in the header, where it sits beside the finder on every screen, and
+       the slot it was holding goes to the thing you open twenty times a day.
+       A seventh tab was the other option and it is the one this repo has
+       already learned not to take: a label that does not fit is a tab nobody
+       opens. */
     tabs: [
       { id: "boards",  label: "Boards",   ico: ICONS.boards },
       { id: "waiting", label: "Waiting",  ico: ICONS.waiting },
       { id: "week",    label: "The week", ico: ICONS.week },
       { id: "cal",     label: "Calendar", ico: ICONS.cal },
       { id: "jobs",    label: "Jobs",     ico: ICONS.jobs },
-      { id: "settings",label: "Settings", ico: ICONS.settings }
+      { id: "repo",    label: "Repo",     ico: ICONS.kit }
     ],
 
     blank: function () {
@@ -1592,7 +1662,23 @@ color-scheme: light;
            how to reach them, and one line of your own. Boards never point
            into it — same freeze rule as the registry. */
         contacts: [],    // {id,name,org,role,email,note,archived}
-        cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,archived}
+        /* Upkeep, and its second shape: a DRILL is a cadence that names a
+           procedure (`runsBoardId`), so ticking it off starts a run instead
+           of only stamping the date. Two nouns composed rather than a new
+           one — "every so often since it was last done" was already here, and
+           so was "what to actually do". */
+        cadences: [],    // {id,label,everyDays,lastDoneOn,place,protects…,runsBoardId,archived}
+        /* A TASK is the one thing in this app somebody types. Every other line
+           on Waiting is derived — a live step of a run, or a day passing — and
+           the standing rule was that a due is born, never typed. Its owner
+           asked for tasks anyway, so here is the shape that does not unravel
+           the model: a task is ATTACHED TO THE WORK. It names a job, a
+           project or a board, and that attachment is the whole reason it is
+           here rather than in Daybook, which already owns free-floating
+           errands. `dues()` does not absorb them — a due is derived from a
+           run and conflating the two would make that function lie — so
+           Waiting lists them in their own section and says they were typed. */
+        tasks: [],       // {id,label,doneAt,dueAt,jobId,projId,boardId,place,note,archived}
         settings: { showDone: true, companion: false,
                     // Set the first time jobs are derived from claimants, so
                     // deleting the last one is not silently undone on the next
@@ -1610,7 +1696,7 @@ color-scheme: light;
     // here — hand-copying key lists is how Coffer quietly lost grants.
     hydrate: function (parsed, shape) {
       var s = shape;
-      ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "contacts", "cadences"].forEach(function (k) {
+      ["jobs", "projects", "kinds", "claimants", "modes", "benches", "boards", "spans", "assets", "contacts", "cadences", "tasks"].forEach(function (k) {
         if (Array.isArray(parsed[k])) s[k] = parsed[k];
       });
       ["forgotten", "tombstones", "devices", "vocab"].forEach(function (k) {
@@ -1639,9 +1725,11 @@ color-scheme: light;
       if (v === "waiting")  return renderWaiting();
       if (v === "week")     return reportOn ? renderReport() : renderWeek();
       if (v === "cal")      return renderCal();
-      if (v === "jobs")     return openProj ? renderProj(projOf(openProj) || { id: "", name: "?" })
+      if (v === "jobs")     return jobMap ? renderJobMap(jobOf(jobMap.jobId) || { name: "?", id: "" })
+                                   : openProj ? renderProj(projOf(openProj) || { id: "", name: "?" })
                                    : openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" })
                                    : renderJobs();
+      if (v === "repo")     return renderRepo();
       if (v === "vocab")    return openAsset ? assetPage(assetOf(openAsset) || { id: "", name: "?" })
                                    : openPerson ? (personOf(openPerson) ? personPage(personOf(openPerson))
                                                    : (openPerson = "", renderKit()))
@@ -1658,7 +1746,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; openJob = ""; openProj = ""; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -1716,7 +1804,12 @@ color-scheme: light;
      it is view state like `openId` and `sel`: it never reaches a backup, and a
      tab press or a reload puts you back on the page. */
   var cvMax = false;
-  function openBoard() { return byId(state.boards, openId); }
+  /* The job map is a board as far as the canvas is concerned. Returning it
+     here is what lets Fill, Fit, the zoom, the pan and the arrow keys all
+     work on it without a second copy of any of them — and `b.derived` is what
+     stops the mutating half from writing to a board that is not in
+     `state.boards`. */
+  function openBoard() { return jobMap || byId(state.boards, openId); }
 
   function nodeOf(b, id) { return byId(b.nodes, id); }
   function edgesOf(b, id, k) {
@@ -2109,12 +2202,24 @@ color-scheme: light;
     });
     live(state.cadences).forEach(function (cd) {
       var st = cadenceState(cd);
-      out.push({ g: "Upkeep", key: cd.label, tile: findTile("t-up", ICONS.waiting),
+      var tpl = cd.runsBoardId ? byId(state.boards, cd.runsBoardId) : null;
+      out.push({ g: tpl ? "Drills" : "Upkeep", key: cd.label,
+                 tile: findTile(tpl ? "t-run" : "t-up", tpl ? ICONS.run : ICONS.waiting),
                  title: cd.label,
-                 sub: "every " + cd.everyDays + "d · " + placeLabel(cd.place),
+                 sub: (tpl ? "runs \u201c" + tpl.name + "\u201d every " : "every ") +
+                      cd.everyDays + "d \u00b7 " + placeLabel(cd.place),
                  st: st.word === "due" || st.word === "overdue"
                      ? '<span class="st watch"><i></i>' + esc(st.word) + "</span>" : "",
                  k: 6, run: function () { findTab("waiting"); } });
+    });
+    /* Typed lines are searchable too, or the one thing in the app you wrote
+       in your own words is the one thing you cannot find by typing it. */
+    openTasks().forEach(function (t) {
+      out.push({ g: "Written down", key: t.label + " " + (t.note || ""),
+                 tile: findTile("t-note", ICONS.note),
+                 title: t.label, sub: taskSays(t),
+                 st: taskLate(t) ? '<span class="st late"><i></i>late</span>' : "",
+                 k: 5, run: function () { findTab("waiting"); } });
     });
 
     findCmds().forEach(function (c) { out.push(c); });
@@ -2487,9 +2592,17 @@ color-scheme: light;
         (b.nodes.some(function (n) { return n.t === "step"; }) ? "" : " disabled title=\"Add a step first\"") +
         ">Run it</button>") +
       (isRun && !b.closedOn ? '<button class="btn" data-act="run-close" data-id="' + b.id + '">Close run</button>' : "") +
+      '<button class="btn" data-act="task-add-board" data-id="' + b.id + '">Something to do</button>' +
       '<button class="btn" data-act="board-edit" data-id="' + b.id + '">Rename</button>' +
       '<button class="btn danger" data-act="board-del" data-id="' + b.id + '">Delete</button>' +
       "</div>";
+
+    /* Typed against this board. NOT on the sheet: a task is not a step — it
+       is not in the flow, nothing waits on it and a run does not advance
+       through it — and drawing one as a node would be exactly the conflation
+       the two edge kinds exist to prevent. It sits above the sheet as a row,
+       where it reads as what it is: a note to yourself about this board. */
+    var bt = tasksFor("board", b.id);
 
     /* One handle rather than five buttons: on a phone the five plus the four
        zoom controls wrapped to four rows and stood taller than a third of the
@@ -2507,6 +2620,11 @@ color-scheme: light;
        runtime and knows nothing about a status cluster. */
     var h = '<div class="page-head"><div><h2>' + esc(b.name) + "</h2>" +
       "<p>" + esc(sub) + "</p>" + boardStand(b, p) + "</div>" + tools + "</div>";
+
+    if (bt.length) {
+      h += '<div class="sect">Written down for this board</div><div class="stack tight">' +
+        bt.map(taskRow).join("") + "</div>";
+    }
 
     if (isRun && b.closedOn) {
       h += '<div class="card"><p class="hint" style="margin:0">Closed on ' + niceDate(b.closedOn) +
@@ -2729,6 +2847,126 @@ function stateWord(b, n) {
      do the reading. "Two things are late" has already done it. Nothing on this
      screen is a pill either — a state is a sentence, because "7D PAST" tells
      you less than "a day past your reminder" in the same space. */
+  /* ================= tasks =================
+
+     The one thing in this app somebody types. Everything else on Waiting is
+     derived — a live step of a run, or a day passing — and the standing rule
+     was that a due is born, never typed. Its owner asked for tasks, so the
+     shape is the one that does not unravel the model: a task NAMES THE WORK
+     IT BELONGS TO. That attachment is the whole reason it lives here and not
+     in Daybook, which already owns errands; and it is why a task shows up on
+     the job, the project or the board it was written against rather than only
+     on one list.
+
+     Kept out of `dues()` deliberately. A due is derived from a run, and
+     folding typed lines into that function would make every figure built on
+     it — the tab badge, the report, `projState` — quietly stop meaning what
+     it says. Waiting carries them in their own section and says out loud that
+     these are the typed ones. */
+  function tasks() { return live(state.tasks); }
+  function taskOf(id) { return byId(state.tasks, id); }
+  function openTasks() { return tasks().filter(function (t) { return !t.doneAt; }); }
+  /* Late is a date gone by and nothing else. A task with no date is not late
+     however long it sits — the same rule as a wait with no chase interval,
+     which `overdueBy()` returns 0 for. */
+  function taskLate(t) {
+    return !t.doneAt && t.dueAt && dayOk(t.dueAt) && t.dueAt < today();
+  }
+  function tasksLate() { return openTasks().filter(taskLate); }
+  // Everything typed against one piece of work, at whatever level it was hung.
+  function tasksFor(kind, id) {
+    return openTasks().filter(function (t) {
+      return kind === "job" ? t.jobId === id
+           : kind === "proj" ? t.projId === id
+           : t.boardId === id;
+    });
+  }
+  function taskSays(t) {
+    var bits = [];
+    if (t.dueAt && dayOk(t.dueAt)) {
+      bits.push(taskLate(t) ? "was due " + plainDate(t.dueAt) : "due " + niceDate(t.dueAt));
+    } else bits.push("no date");
+    var where = t.boardId && byId(state.boards, t.boardId) ? byId(state.boards, t.boardId).name
+              : t.projId && projOf(t.projId) ? projName(t.projId)
+              : t.jobId && jobOf(t.jobId) ? jobName(t.jobId) : "";
+    if (where) bits.push("on " + where);
+    if (t.place) bits.push(vocabLabel("places", t.place) || t.place);
+    if (t.note) bits.push(t.note);
+    return bits.join(" \u00b7 ");
+  }
+  function taskRow(t) {
+    var late = taskLate(t);
+    return '<div class="panel calm' + (late ? " late" : "") + '"><div class="grow">' +
+      '<div class="nm sm">' + esc(t.label) + "</div>" +
+      '<div class="says">' + esc(taskSays(t)) + "</div></div>" +
+      (late ? '<span class="st late"><i></i>late</span>' : "") +
+      '<div class="acts">' +
+      '<button class="btn" data-act="task-done" data-id="' + t.id + '">Done</button>' +
+      '<button class="btn quiet" data-act="task-edit" data-id="' + t.id + '">Edit</button>' +
+      '<button class="btn quiet danger" data-act="task-del" data-id="' + t.id + '" title="Remove it">\u00d7</button>' +
+      "</div></div>";
+  }
+
+  /* `at` pre-attaches the task to whatever page it was written from, so the
+     one question that makes a task worth having here is answered without
+     being asked twice. */
+  function taskDialog(t, at) {
+    var mk = !t;
+    at = at || {};
+    openModal({
+      title: mk ? "Something to do" : "Edit it",
+      confirmLabel: mk ? "Add" : "Save",
+      wide: true,
+      message: mk ? "The one thing in this app you type rather than derive. Say what it belongs to and it shows up there as well as on Waiting \u2014 an errand that belongs to nothing belongs in Daybook."
+                  : "",
+      fields: [
+        { key: "label", label: "What", type: "text", span: true,
+          value: t ? t.label : "", placeholder: "Chase the print quote" },
+        { key: "dueAt", label: "By when", type: "text",
+          value: t ? (t.dueAt || "") : "", placeholder: "YYYY-MM-DD",
+          hint: "Blank is fine \u2014 then it is never called late." },
+        { key: "place", label: "Where", type: "select",
+          value: t ? (t.place || "") : "", options: [{ value: "", label: "Anywhere" }].concat(vocabOpts("places")) },
+        { key: "jobId", label: "For which job", type: "select", span: true,
+          value: t ? (t.jobId || "") : (at.jobId || ""),
+          options: [{ value: "", label: "No job" }].concat(opts(live(state.jobs), function (j) { return j.name; })) },
+        { key: "projId", label: "\u2026or which project", type: "select", span: true,
+          value: t ? (t.projId || "") : (at.projId || ""),
+          options: [{ value: "", label: "No project" }].concat(opts(live(state.projects), function (p) { return p.name; })) },
+        { key: "boardId", label: "\u2026or which board", type: "select", span: true,
+          value: t ? (t.boardId || "") : (at.boardId || ""),
+          options: [{ value: "", label: "No board" }].concat(opts(state.boards.filter(function (b) { return !b.archived; }), function (b) { return b.name; })) },
+        { key: "note", label: "Note", type: "textarea", span: true, rows: 2,
+          value: t ? (t.note || "") : "" }
+      ],
+      validate: function (v) {
+        if (!v.label.trim()) return "Say what it is.";
+        if (v.dueAt.trim() && !dayOk(v.dueAt.trim()))
+          return "A date has to be a real day, written YYYY-MM-DD, or blank.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var x = t;
+          if (!x) { x = { id: uid(), doneAt: "", archived: false }; state.tasks.push(x); }
+          x.label = v.label.trim();
+          x.dueAt = v.dueAt.trim();
+          x.place = v.place;
+          x.note = v.note.trim();
+          /* One attachment, not three. Offering job, project and board and
+             then storing all three would put the same task under a project
+             AND under its job, which is the "two of everything" fault the job
+             page already had. The narrowest wins, because it is the most
+             specific thing the writer said. */
+          x.boardId = byId(state.boards, v.boardId) ? v.boardId : "";
+          x.projId = !x.boardId && projOf(v.projId) ? v.projId : "";
+          x.jobId = !x.boardId && !x.projId && jobOf(v.jobId) ? v.jobId : "";
+        });
+        toast(mk ? "Written down" : "Saved");
+      }
+    });
+  }
+
   function renderWaiting() {
     var list = dues();
     var over = list.filter(function (d) { return d.st === "over"; });
@@ -2736,11 +2974,15 @@ function stateWord(b, n) {
     var s = stuck();
     var up = upkeepLate();
 
-    var h = '<div class="finding"><h1>' + esc(waitingHeadline(over.length, s.length, up.length)) + "</h1>" +
+    var h = '<div class="finding"><h1>' + esc(waitingHeadline(over.length, s.length, up.length, tasksLate().length)) + "</h1>" +
       '<span class="stamp">' + esc(nowWords()) + "</span></div>" +
       '<p class="saynote">Nothing will buzz at you. This is the whole list.</p>';
 
-    if (!list.length && !s.length && !live(state.cadences).length) {
+    var tk = openTasks(), tkLate = tasksLate();
+
+    h += '<div class="tools" style="margin:0 0 1rem"><button class="btn" data-act="task-add">Write something down</button></div>';
+
+    if (!list.length && !s.length && !tk.length && !live(state.cadences).length) {
       h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
       return h;
     }
@@ -2763,19 +3005,46 @@ function stateWord(b, n) {
         }).join("") + "</div>";
     }
 
+    /* The typed ones, in their own section and said to be typed. A late task
+       goes above the calm dues for the same reason a late send does — a date
+       gone by outranks a wait that is fine. */
+    if (tkLate.length) {
+      h += '<div class="sect">Written down, and past its date</div><div class="stack tight">' +
+        tkLate.map(taskRow).join("") + "</div>";
+    }
+
     if (calm.length) {
       h += '<div class="sect">Waiting, and that is fine</div><div class="stack tight">' +
         calm.map(calmRow).join("") + "</div>";
     }
 
+    var tkCalm = tk.filter(function (t) { return !taskLate(t); });
+    if (tkCalm.length) {
+      h += '<div class="sect">Written down</div><div class="stack tight">' +
+        tkCalm.map(taskRow).join("") + "</div>";
+    }
+
     h += upkeepCard();
-    h += '<p class="saynote foot">Nothing here was typed in by hand. Every line came out of a procedure, or out of a day passing.</p>';
+    /* This line used to say "nothing here was typed in by hand", and with
+       tasks on the screen that would be a screen contradicting itself. It says
+       which half is which instead. */
+    h += '<p class="saynote foot">' +
+      (tk.length
+        ? "Everything above the written-down sections came out of a procedure or out of a day passing. The written-down ones are yours."
+        : "Nothing here was typed in by hand. Every line came out of a procedure, or out of a day passing.") +
+      "</p>";
     return h;
   }
 
   // The headline is the reading, so it has to be true for every shape of list —
   // including the one where nothing is late but something is unfiled.
-  function waitingHeadline(late, stuckN, upN) {
+  /* A FIGURE MAY NEVER DISAGREE WITH ITS OWN PARTS, and a headline is a
+     figure. Left counting only derived dues, it read "Nothing is late." above
+     a rose row saying a typed task was past its date — so `tkLate` is folded
+     into the first branch, because a late thing is a late thing however it
+     got onto the list. */
+  function waitingHeadline(late, stuckN, upN, tkLate) {
+    late = (late || 0) + (tkLate || 0);
     if (late) return late === 1 ? "One thing is late." : cap(numWord(late)) + " things are late.";
     if (stuckN) return stuckN === 1 ? "One run is finished but not put away."
                                     : cap(numWord(stuckN)) + " runs are finished but not put away.";
@@ -3010,6 +3279,17 @@ function stateWord(b, n) {
                       id: p.id, act: "proj-open" });
     });
 
+    /* A task's date is the same kind of fact as a project's: typed, not
+       worked out. It belongs on the month for exactly that reason — the
+       calendar is where you look for what is dated, and a typed line with a
+       day on it that appeared nowhere on it would be the one thing the tab
+       exists for and cannot show. */
+    openTasks().forEach(function (t) {
+      if (!t.dueAt || !dayOk(t.dueAt) || t.dueAt.slice(0, 7) !== ym) return;
+      put(t.dueAt, { tone: taskLate(t) ? "late" : "due", label: t.label,
+                     where: "written down", id: "", act: "" });
+    });
+
     return by;
   }
 
@@ -3132,6 +3412,39 @@ function stateWord(b, n) {
     return bits.join(" · ");
   }
 
+  /* The page around the derived sheet. Deliberately thin: a heading, a way
+     back, and the sheet — because the job page below it already says
+     everything in words, and this screen exists to say it in one shape. */
+  function renderJobMap(j) {
+    var d = jobDues(j.id);
+    var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var bs = jobBoards(j.id);
+    var runs = bs.filter(function (b) { return b.kind === "run" && !b.closedOn; });
+
+    var h = '<div class="page-head"><div><h2>' + esc(j.name) + "</h2>" +
+      "<p>Every project and every board in this job, on one sheet. A tap opens one.</p>" +
+      '<div class="stand">' +
+      '<span class="sp muted">' + jobProjects(j.id).length +
+        (jobProjects(j.id).length === 1 ? " project" : " projects") + "</span>" +
+      '<span class="sp muted">' + bs.length + (bs.length === 1 ? " board" : " boards") + "</span>" +
+      (late ? '<span class="sp"><i class="d-late"></i>' + cap(numWord(late)) + " late</span>" : "") +
+      (runs.length ? '<span class="sp"><i class="d-hand"></i>' + cap(numWord(runs.length)) +
+        (runs.length === 1 ? " run under way" : " runs under way") + "</span>" : "") +
+      "</div></div>" +
+      '<div class="tools">' +
+      '<button class="btn" data-act="job-map-close" data-id="' + j.id + '">Back to the job</button>' +
+      "</div></div>";
+
+    /* No sheet toolbar: there is nothing to add to a sheet nobody authored.
+       The zoom, Fit, Tidy and Fill buttons come from sheetHtml itself, which
+       is what makes this screen worth having on a phone at all. */
+    h += canvasHtml(jobMap, "");
+    if (!bs.length && !jobProjects(j.id).length) {
+      h += '<p class="empty">Nothing in this job yet. A project is a bounded piece of work with a date; a board is a procedure you run. Either one makes this sheet worth looking at.</p>';
+    }
+    return h;
+  }
+
   function renderJob(j) {
     var d = jobDues(j.id);
     var late = d.filter(function (x) { return x.st === "over"; }).length;
@@ -3140,8 +3453,12 @@ function stateWord(b, n) {
 
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="job-back">All jobs</button>' +
+      /* First after the way out, because it is the thing you came to the job
+         page to see: where all of this actually stands. */
+      '<button class="btn primary" data-act="job-map" data-id="' + j.id + '">The whole job</button>' +
       '<button class="btn" data-act="job-edit" data-id="' + j.id + '">Rename</button>' +
       '<button class="btn" data-act="proj-add" data-id="' + j.id + '">New project</button>' +
+      '<button class="btn" data-act="task-add-job" data-id="' + j.id + '">Something to do</button>' +
       '<button class="btn" data-act="job-sw-add" data-id="' + j.id + '">Add software</button>' +
       '<button class="btn" data-act="job-link-add" data-id="' + j.id + '">Add a link</button>' +
       '<button class="btn danger" data-act="job-del" data-id="' + j.id + '">Delete</button></div>';
@@ -3168,6 +3485,15 @@ function stateWord(b, n) {
       h += '<div class="sect">Where you left off</div>' +
         '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(j.note) + "</div>" +
         '<div class="says">' + esc(j.noteAt ? "Written " + agoWords(j.noteAt) : "") + "</div></div></div>";
+    }
+
+    /* Typed lines against this job, above the projects: it is the half of
+       the page nothing else in the app will remind you about, because unlike
+       a due it was never derived from anything. */
+    var jt = tasksFor("job", j.id);
+    if (jt.length) {
+      h += '<div class="sect">Written down for this job</div><div class="stack tight">' +
+        jt.map(taskRow).join("") + "</div>";
     }
 
     /* The projects come before the loose boards, because a project is the
@@ -4119,9 +4445,85 @@ function stateWord(b, n) {
      holds what the work is made of as well as what it is made with. */
   var ASSET_KINDS = {
     file: "File", photo: "Photo", dataset: "Dataset", doc: "Document",
-    software: "Software", laptop: "Laptop", phone: "Phone", audio: "Audio",
-    gear: "Field kit", other: "Other"
+    software: "Software", site: "Website or service", laptop: "Laptop",
+    phone: "Phone", audio: "Audio", gear: "Field kit", other: "Other"
   };
+
+  /* ---------------- the Repo: what you own and what you use ----------------
+
+     Four sections over ONE store. `state.assets` already held files, photos,
+     datasets, documents, software and field kit with a path, a link, upkeep
+     and provenance — so a second list for "the apps and sites and files I log
+     into" would be the same mistake this app already has a rule against:
+     one name, one entry, in every list that pools them. The registry IS the
+     repo; the Repo tab is where you open things from, and the workbench page
+     is where you describe them.
+
+     WHICH SECTION IS STATED, NOT GUESSED. It is tempting to derive it — a url
+     and no path is a site, `.exe` is an app — and it is wrong for the same
+     reason `parked` is stored on a project: ArcGIS Pro has a path AND a
+     licence page, a dataset lives on a share AND in Drive, and a reader who
+     types a name should never have to wonder which of four lists it landed
+     in. So `a.repo` is asked, with `repoOf()` falling back on the kind so
+     every entry written before this lands somewhere sensible with no
+     migration. */
+  var REPO_PAGES = [
+    { id: "device", label: "Devices", one: "device",
+      blurb: "What you own and carry. A laptop, a phone, a total station, the headphones." },
+    { id: "app",    label: "Apps",    one: "app",
+      blurb: "What you open to work. ArcGIS Pro, Agisoft, Illustrator \u2014 with the path the launcher opens." },
+    { id: "site",   label: "Sites",   one: "site",
+      blurb: "What you log into. Drive, the library catalogue, a mail search you keep coming back to." },
+    { id: "file",   label: "Files",   one: "file",
+      blurb: "What the work is made of. The orthophoto, the control file, the brochure." }
+  ];
+  var repoTab = "device";   // view state, never saved — a tab lands on its list
+
+  /* The one place a kind decides its section, so the row, the strip's counts
+     and the picker cannot disagree. Hardware is a device, software an app, a
+     link-shaped thing a site, everything else a file — and an entry that says
+     so itself always wins. */
+  function repoOf(a) {
+    if (a.repo && REPO_PAGES.some(function (p) { return p.id === a.repo; })) return a.repo;
+    var k = a.kind;
+    if (k === "laptop" || k === "phone" || k === "audio" || k === "gear") return "device";
+    if (k === "software") return "app";
+    if (k === "site") return "site";
+    if (k === "other" && a.url && !a.path) return "site";
+    return "file";
+  }
+  function repoIn(id) {
+    return live(state.assets).filter(function (a) { return repoOf(a) === id; })
+      .sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); });
+  }
+
+  /* WHAT "OPEN" MEANS, in one place, because there are three different
+     answers and only one of them is a plain link.
+
+     A `url` opens. A PATH ON THIS MACHINE CANNOT: a page served over https is
+     not allowed to navigate to `file:///C:/...` — every browser blocks it and
+     Chrome blocks it *silently*, so the tap does nothing at all. That is
+     exactly what this app's owner reported ("clicking open file from the pc
+     don't open the file, it only work with links on web") and the app was not
+     broken; the browser was refusing. There are only two real routes and the
+     screen now says which one it is on rather than showing a control that
+     quietly does nothing:
+
+       - the companion is on   -> mashghal://enter/<id>, which hands the
+                                  handler an ID and never a path
+       - the companion is off  -> copy the path, and SAY why it cannot just
+                                  open, with the one-line fix
+
+     `kind` is what the caller renders; `how` is what to tell the reader. */
+  function openHandle(a) {
+    if (a.url) return { kind: "url", href: a.url, label: "Open", how: "opens in the browser" };
+    if (a.path && state.settings.companion)
+      return { kind: "launch", href: "mashghal://enter/" + a.id, label: "Open",
+               how: "opens on this machine through the launcher" };
+    if (a.path) return { kind: "copy", label: "Copy the path",
+                         how: "a browser is not allowed to open a file on your machine \u2014 turn the launcher on in Settings and this becomes one tap" };
+    return null;
+  }
   var placeFilter = "";   // view state, never saved
 
   function cadenceState(cd) {
@@ -4208,12 +4610,29 @@ function stateWord(b, n) {
           options: assetOpts(), value: cd ? (cd.protectsAssetId || "") : (protects || "") },
         { key: "protectsBenchId", label: "…or protects a bench", type: "select", span: true,
           options: [{ value: "", label: "No bench" }].concat(opts(state.benches, function (b) { return benchLabel(b.id); })),
-          value: cd ? (cd.protectsBenchId || "") : "" }
+          value: cd ? (cd.protectsBenchId || "") : "" },
+        /* A DRILL IS A CADENCE THAT STARTS A RUN, and that is the whole of it
+           — no fifth noun. Asked for "a repeating drill", the two nouns to
+           compose were already here: upkeep says *every so often since it was
+           last done*, and a procedure says *what to actually do*. A chore you
+           tick is upkeep with no procedure named; a drill is upkeep that
+           names one, and ticking it starts a run and stamps the date in the
+           same act. Only templates are offered: starting a run OF a run is
+           not a thing. */
+        { key: "runsBoardId", label: "…or runs a whole procedure", type: "select", span: true,
+          options: [{ value: "", label: "Nothing \u2014 it is just ticked off" }]
+            .concat(opts(boards("template"), function (b) { return b.name; })),
+          value: cd ? (cd.runsBoardId || "") : "",
+          hint: "A drill: every so often, run this procedure again. Ticking it off starts the run." }
       ],
       validate: function (v) {
         if (!v.label.trim()) return "Give it a name.";
         if (num(v.everyDays) < 1) return "It has to repeat at least every day.";
-        if (v.lastDoneOn.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(v.lastDoneOn.trim())) return "A date must be YYYY-MM-DD, or blank.";
+        /* dayOk, not the shape regex: `2026-13-45` is shaped like a date and
+           is not one, and this file already records what that costs — it
+           stores, parses to Invalid Date, counts in no week and appears on no
+           screen. This dialog had been missed when the rest were fixed. */
+        if (v.lastDoneOn.trim() && !dayOk(v.lastDoneOn.trim())) return "A date has to be a real day, written YYYY-MM-DD, or blank.";
         if (v.lastDoneOn.trim() > today()) return "It cannot have been done in the future.";
         return null;
       },
@@ -4227,6 +4646,9 @@ function stateWord(b, n) {
           t.lastDoneOn = v.lastDoneOn.trim();
           t.protectsAssetId = v.protectsAssetId;
           t.protectsBenchId = v.protectsAssetId ? "" : v.protectsBenchId;
+          // Dropped if the procedure it named has since been deleted, so a
+          // drill can never point at a board that is not there.
+          t.runsBoardId = byId(state.boards, v.runsBoardId) ? v.runsBoardId : "";
         });
       }
     });
@@ -4313,7 +4735,13 @@ function stateWord(b, n) {
     return bits.join(" · ");
   }
 
-  function assetDialog(a) {
+  /* `into` is the Repo section the reader was standing in when they pressed
+     New, so it is what the picker opens on. Editing an existing entry opens
+     on whatever `repoOf` says today, which is its stated section or the one
+     its kind falls back to — so saving an entry written before this field
+     existed writes down what the app was already showing, rather than
+     quietly moving it. */
+  function assetDialog(a, into) {
     var mk = !a;
     openModal({
       title: mk ? "New thing" : "Edit " + a.name,
@@ -4325,8 +4753,14 @@ function stateWord(b, n) {
         { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true,
           placeholder: "Orthophoto, area 1" },
         { key: "kind", label: "What is it", type: "select",
-          value: a ? a.kind : "file", options: vocabOpts("assetKinds") },
+          value: a ? a.kind : (into === "device" ? "gear" : into === "app" ? "software"
+                               : into === "site" ? "site" : "file"),
+          options: vocabOpts("assetKinds") },
         otherField("assetKinds", "kindOther"),
+        { key: "repo", label: "Which list it shows in", type: "select",
+          value: a ? repoOf(a) : (into || "file"),
+          options: REPO_PAGES.map(function (p) { return { value: p.id, label: p.label }; }),
+          hint: "Devices are what you own, Apps what you open, Sites what you log into, Files what the work is made of." },
         { key: "path", label: "Where it is", type: "text", span: true,
           value: a ? (a.path || "") : "",
           hint: "A path you would paste into Win+R, or a room for a piece of kit. Left blank it is just named." },
@@ -4354,6 +4788,7 @@ function stateWord(b, n) {
           if (!t) { t = { id: uid(), fromIds: [], archived: false }; state.assets.push(t); }
           t.name = v.name.trim();
           t.kind = vocabTake("assetKinds", v.kind, v.kindOther, t.kind || "other");
+          t.repo = v.repo;
           t.path = v.path.trim(); t.url = v.url.trim();
           t.where = v.where.trim(); t.onDate = v.onDate.trim();
           t.notes = v.notes.trim();
@@ -4376,6 +4811,107 @@ function stateWord(b, n) {
     if (k === "laptop" || k === "phone" || k === "audio" || k === "gear")
       return { tile: "t-equip", ico: k === "phone" ? ICONS.device : ICONS.kit };
     return { tile: "t-kit", ico: ICONS.kit };
+  }
+
+  /* THE ROW IS THE OPEN CONTROL. This tab is a launcher — its owner asked for
+     "all apps and all webs and all files that i use" — and the old route was
+     row, then page, then "Open the link": two taps to do the one thing. So in
+     the Repo the row opens the thing and a separate small button opens its
+     page. Everywhere else (the workbench, the finder) the row still
+     navigates, because there the question is "tell me about this", not "open
+     it".
+
+     An entry with nothing to open is not a dead link: the row navigates
+     instead, and the sub-line says it is only named. A control that does
+     nothing is worse than no control. */
+  function repoRow(a) {
+    var look = assetLook(a), h = openHandle(a);
+    var n = assetUses(a).length;
+    var says = [assetKindLabel(a)];
+    if (h) says.push(h.how);
+    /* "nothing to open yet" reads as a gap to fill, and for a device it is
+       not one — a pair of headphones has nothing to open, ever. So it is said
+       only where a handle is the point (an app, a site, a file) and the
+       entry has none; on a device the row says where the thing is instead,
+       which is the question you actually ask of one. */
+    else if (repoOf(a) !== "device") says.push("nothing to open yet");
+    if (a.where) says.push(a.where);
+    if (n) says.push("on " + n + (n === 1 ? " board" : " boards"));
+
+    var face = '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
+      '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
+      '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div>";
+
+    /* `repo-open` so a phone can drop it: under 560px the acts move onto
+       their own line, and the row is already the open control — so a second
+       button saying the same thing costs a line per row for nothing. It
+       stays on a laptop, where the row is wide and a labelled button is
+       what a pointer reaches for. */
+    var open = !h ? ""
+      : h.kind === "copy"
+        ? '<button class="btn quiet repo-open" data-act="asset-copy" data-id="' + a.id +
+          '" title="' + esc(h.how) + '">' + esc(h.label) + "</button>"
+        : '<a class="btn quiet repo-open" href="' + esc(h.href) + '"' +
+          (h.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+          ' title="' + esc(h.how) + '">' + esc(h.label) + "</a>";
+
+    /* Two controls, and the BIG one is the open. A whole row that is an <a>
+       cannot hold a button inside it (a link may not contain one), so the row
+       is a flex panel holding the open control across the face and a small
+       "About" beside it — both real, both reachable by keyboard. */
+    return '<div class="panel calm repo-row">' +
+      (h
+        ? (h.kind === "copy"
+            ? '<button type="button" class="repo-hit" data-act="asset-copy" data-id="' + a.id + '">' + face + "</button>"
+            : '<a class="repo-hit" href="' + esc(h.href) + '"' +
+              (h.kind === "url" ? ' target="_blank" rel="noopener"' : "") + ">" + face + "</a>")
+        : '<button type="button" class="repo-hit" data-act="asset-open" data-id="' + a.id + '">' + face + "</button>") +
+      '<div class="repo-acts">' + open +
+      '<button class="btn quiet" data-act="asset-open" data-id="' + a.id +
+      '" title="What it is, where it is used, what it was made from">About</button></div></div>';
+  }
+
+  function renderRepo() {
+    if (openAsset && byId(state.assets, openAsset)) return assetPage(byId(state.assets, openAsset));
+    var page = REPO_PAGES.filter(function (p) { return p.id === repoTab; })[0] || REPO_PAGES[0];
+    var rows = repoIn(page.id);
+    var total = live(state.assets).length;
+
+    var h = '<div class="finding"><h1>' +
+      (total ? (total === 1 ? "One thing." : cap(numWord(total)) + " things.") : "Nothing in the repo yet.") +
+      "</h1></div>" +
+      '<p class="saynote">Everything you own and everything you open, in one place \u2014 and a tap on a row opens it. The same entries carry their upkeep and what they were made from on the workbench.</p>';
+
+    // The strip carries a count each, so an empty section is visible without
+    // being opened.
+    h += '<div class="subnav">' + REPO_PAGES.map(function (p) {
+      var n = repoIn(p.id).length;
+      return '<button class="btn' + (p.id === repoTab ? " primary" : "") +
+        '" data-act="repo-page" data-id="' + p.id + '">' + p.label +
+        (n ? ' <span class="cnt">' + n + "</span>" : "") + "</button>";
+    }).join("") + "</div>";
+
+    h += '<div class="tools" style="margin:0.9rem 0 0.5rem">' +
+      '<button class="btn primary" data-act="repo-add" data-id="' + page.id + '">New ' + esc(page.one) + "</button>" +
+      '<button class="btn" data-act="tab-vocab">The workbench</button></div>';
+
+    h += '<p class="hint" style="margin:0 0 0.8rem">' + esc(page.blurb) + "</p>";
+
+    /* Said once, above the list, and only where it is true: with the launcher
+       off every path in the app is copy-only, and that is a fact about the
+       machine rather than about any one row. In every row it was the same
+       sentence over and over. */
+    if (page.id !== "site" && !state.settings.companion &&
+        rows.some(function (a) { return a.path && !a.url; })) {
+      h += '<div class="panel calm"><div class="grow"><div class="nm sm">A browser cannot open a file on your machine</div>' +
+        '<div class="says">That is the browser refusing, not this app failing \u2014 a page served over https may not follow a file:// link, and Chrome refuses it without a word. ' +
+        'The launcher is the way round it: one small handler, and every path here becomes one tap.</div></div>' +
+        '<div class="acts"><button class="btn" data-act="tab-settings">Turn the launcher on</button></div></div>';
+    }
+
+    h += rows.length ? '<div class="stack tight">' + rows.map(repoRow).join("") + "</div>"
+      : '<p class="empty">Nothing under ' + esc(page.label) + ' yet. ' + esc(page.blurb) + "</p>";
+    return h;
   }
 
   function assetRow(a) {
@@ -5873,6 +6409,174 @@ function stateWord(b, n) {
     return dues().filter(function (d) { return d.board.jobId === id; });
   }
 
+  /* ---------------- the whole job, on one sheet ----------------
+
+     "From the outside there's a broad board for the whole job showing all
+     boards." A job page is a list of lists — projects, then the boards under
+     each, then the boards under none — and a list cannot show you the shape of
+     a season the way the sheet shows the shape of a procedure. This is the
+     same sheet, one level up: the job, its projects, and every board hanging
+     off them.
+
+     THREE RULES, and they are what keep it honest rather than decorative.
+
+     It is DERIVED AND THROWAWAY. `jobSheet()` builds a fresh board object on
+     every render out of `state`, with `autoLayout` placing it; nothing is
+     stored, so it can never disagree with the jobs and boards it is drawn
+     from, and there is no second copy of the hierarchy to keep in step. The
+     cost is that you cannot arrange it — which is right, because there is
+     nothing here you authored.
+
+     It is READ-ONLY, and the canvas is told so. `b.derived` guards every
+     mutating path: dragging does not persist (`save()` would write a board
+     that is not in `state.boards`), a dragged connection does not open the
+     connect dialog, and a picture dropped on it is refused. A sheet that
+     looked editable and silently dropped every edit would be worse than no
+     sheet.
+
+     A TAP OPENS THE BOARD. On a real sheet a tap selects, because everything
+     you can do to a node lives behind picking it; here there is exactly one
+     thing to do with a node, so picking it would be a step to nowhere.
+
+     The vocabulary is the sheet's own, unchanged: a board is a step (a
+     rectangle — a thing you do), a project is a thing (an oval — a thing that
+     holds), and the line between them is `flow`, because a board really does
+     come after the project that contains it. */
+  function jobSheet(j) {
+    var nodes = [], edges = [], seq = 0;
+    function nid(p) { return p + (++seq); }
+
+    var ps = jobProjects(j.id);
+    var free = looseBoards(j.id);
+
+    function boardNode(b) {
+      var st = b.kind === "run"
+        ? (b.closedOn ? "done"
+           : dues().some(function (d) { return d.board.id === b.id && d.st === "over"; }) ? "over"
+           : activeNodes(b).length ? "now" : "waiting")
+        : "todo";
+      var p = runProgress(b);
+      return {
+        id: nid("b"), t: "step", act: b.kind === "run" ? "do" : "file",
+        label: b.name,
+        /* Stamped so `stepMeta` is never asked about a board — it would go
+           looking for a chase interval and a due date that a board has
+           neither of. `_says` is what the card prints under the name. */
+        _says: b.kind === "run"
+          ? (b.closedOn ? "closed \u00b7 " + p.done + " of " + p.total + " done"
+             : p.done + " of " + p.total + " done")
+          : "a procedure \u00b7 " + p.total + (p.total === 1 ? " step" : " steps"),
+        _mapState: st, _open: b.id
+      };
+    }
+
+    // The job itself, so the sheet has one way in and the shape reads as a
+    // tree rather than as several unrelated columns.
+    var root = { id: nid("j"), t: "thing", kind: "note", label: j.name,
+                 _pill: "job", _mapState: "now", _root: true };
+    nodes.push(root);
+
+    ps.forEach(function (p) {
+      var stt = projState(p);
+      var pn = { id: nid("p"), t: "thing", kind: "note", _pill: "project",
+                 label: p.name, _mapState: stt.overdue ? "over" : "waiting",
+                 _openProj: p.id };
+      nodes.push(pn);
+      edges.push({ id: nid("e"), a: root.id, b: pn.id, k: "flow", label: "" });
+      var bs = projBoards(p.id);
+      if (!bs.length) {
+        var none = { id: nid("n"), t: "thing", kind: "note", _pill: "empty",
+                     label: "nothing running yet", _mapState: "todo" };
+        nodes.push(none);
+        edges.push({ id: nid("e"), a: pn.id, b: none.id, k: "flow", label: "" });
+      }
+      bs.forEach(function (b) {
+        var bn = boardNode(b);
+        nodes.push(bn);
+        edges.push({ id: nid("e"), a: pn.id, b: bn.id, k: "flow", label: "" });
+      });
+    });
+
+    /* Boards in no project hang off the job directly, under a node that says
+       so. This is not an error state — a one-off procedure needs no project —
+       and the job page already says as much in words. */
+    if (free.length) {
+      var on = { id: nid("o"), t: "thing", kind: "note", _pill: "no project",
+                 label: "on its own", _mapState: "waiting" };
+      nodes.push(on);
+      edges.push({ id: nid("e"), a: root.id, b: on.id, k: "flow", label: "" });
+      free.forEach(function (b) {
+        var bn = boardNode(b);
+        nodes.push(bn);
+        edges.push({ id: nid("e"), a: on.id, b: bn.id, k: "flow", label: "" });
+      });
+    }
+
+    return { id: "jobmap:" + j.id, name: j.name + " \u2014 everything in it",
+             kind: "template", derived: true, benchId: "", jobId: j.id,
+             nodes: nodes, edges: edges };
+  }
+
+  /* THE MAP LAYS ITSELF OUT, because `autoLayout` is built for a procedure
+     and this is a tree. That function ranks STEPS into columns and parks
+     THINGS above them, which is right on a board — a reference photo is
+     context hanging off a step, not a stage of the work. Here the containers
+     are things, so the job and "on its own" landed side by side on one row
+     with a line dropping from the wrong one, and the shape read as nothing.
+
+     A job is three deep and never more: job, project, board. So the layout is
+     the obvious one — depth down, siblings across, each parent centred over
+     its children — walked bottom-up so a project sits above the middle of its
+     boards rather than at the left edge of them. */
+  function mapLayout(b) {
+    var ROWH = 150, GAP = 34;
+    var kids = {}, depth = {}, root = b.nodes[0];
+    if (!root) return;
+    b.nodes.forEach(function (n) { kids[n.id] = []; });
+    b.edges.forEach(function (e) { if (kids[e.a]) kids[e.a].push(e.b); });
+
+    // Depth first, so every node knows its row before anything is placed.
+    (function walk(id, d) {
+      if (depth[id] !== undefined) return;   // a malformed map must not spin
+      depth[id] = d;
+      kids[id].forEach(function (k) { walk(k, d + 1); });
+    })(root.id, 0);
+
+    /* Place the leaves left to right in one pass, then give every parent the
+       midpoint of its children. `cursor` is shared across the whole tree, so
+       two projects can never overlap however many boards each holds. */
+    var cursor = 0;
+    function place(id) {
+      var n = byId(b.nodes, id);
+      var ks = kids[id];
+      if (!n) return 0;
+      n.y = depth[id] * ROWH;
+      if (!ks.length) {
+        n.x = cursor;
+        cursor += dims(n).w + GAP;
+        return n.x + dims(n).w / 2;
+      }
+      var mids = ks.map(place);
+      var mid = (Math.min.apply(null, mids) + Math.max.apply(null, mids)) / 2;
+      n.x = mid - dims(n).w / 2;
+      return mid;
+    }
+    place(root.id);
+
+    // Anything the walk never reached (a node with no edge to it) still needs
+    // a position, or the canvas draws it at NaN and the whole sheet vanishes.
+    b.nodes.forEach(function (n) {
+      if (typeof n.x !== "number" || typeof n.y !== "number") {
+        n.x = cursor; n.y = 0; cursor += dims(n).w + GAP;
+      }
+    });
+  }
+
+  /* Set while a job map is on screen, and read by `openBoard()` so the whole
+     canvas — drawing, fitting, panning, zooming, Fill, the arrow keys —
+     works on it with no second copy of any of that. View state, never saved. */
+  var jobMap = null;
+
   /* ================= projects =================
 
      A job is who the work is for. A project is a bounded body of work with a
@@ -6063,6 +6767,7 @@ function stateWord(b, n) {
       '<button class="btn" data-act="proj-park" data-id="' + p.id + '">' +
       (p.parked ? "Pick it back up" : "Set it down") + "</button>" +
       '<button class="btn" data-act="board-new" data-id="' + p.id + '">New board</button>' +
+      '<button class="btn" data-act="task-add-proj" data-id="' + p.id + '">Something to do</button>' +
       '<button class="btn danger" data-act="proj-del" data-id="' + p.id + '">Delete</button></div>';
 
     var h = '<div class="page-head"><div><h2>' + esc(p.name) + "</h2>" +
@@ -6075,6 +6780,12 @@ function stateWord(b, n) {
 
     if (p.note) {
       h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
+    }
+
+    var pt = tasksFor("proj", p.id);
+    if (pt.length) {
+      h += '<div class="sect">Written down for this project</div><div class="stack tight">' +
+        pt.map(taskRow).join("") + "</div>";
     }
 
     h += '<div class="sect">Running</div>';
@@ -6175,7 +6886,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v46 · 15 Sep 2026";
+  var BUILD = "v47 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -6967,11 +7678,16 @@ function dims(n) {
     while (g.firstChild) g.removeChild(g.firstChild);
     b.nodes.forEach(function (n) {
       var isStep = n.t === "step";
-      var st = isStep ? nodeState(b, n) : "";
+      /* A derived sheet's nodes carry their own state and their own sub-line
+         (`_mapState`, `_says`), because `nodeState` and `stepMeta` answer
+         questions a BOARD does not have — a chase interval, a due date, which
+         ways in are done. Asking them about a board would be guessing, and
+         this app's whole discipline is that it does not. */
+      var st = n._mapState !== undefined ? n._mapState : (isStep ? nodeState(b, n) : "");
       var late = st === "over", done = st === "done";
       var isAsk = isStep && n.act === "ask", isFile = isStep && n.act === "file";
       var dated = isStep && !!n.dueAt;
-      var says = isStep ? stepMeta(b, n) : "";
+      var says = n._says !== undefined ? n._says : (isStep ? stepMeta(b, n) : "");
 
       /* Measured BEFORE the card is drawn, and stashed on the node, because
          dims() decides the height from how many lines the name takes and the
@@ -7135,7 +7851,11 @@ function dims(n) {
     }
     inner.appendChild(svgEl("rect", { x: 0, y: 0, width: d.w, height: d.h, rx: d.h / 2,
       fill: ink("sunken"), stroke: ink("rule"), "stroke-width": 1 }));
-    var kind = String(vocabLabel("things", n.kind) || "thing").toLowerCase();
+    /* `_pill` lets a derived sheet name its own containers. Drawn from the
+       thing vocabulary, the job and "on its own" both read "note" — a word
+       that belongs to neither and says nothing about either. */
+    var kind = String(n._pill !== undefined ? n._pill
+                      : (vocabLabel("things", n.kind) || "thing")).toLowerCase();
     var kt = svgEl("text", { x: 15, y: d.h / 2 + 4, fill: ink("faint"), "font-size": 10.5 });
     kt.textContent = kind;
     inner.appendChild(kt);
@@ -7793,7 +8513,14 @@ function dims(n) {
     if (!cvSvg) return;
     var b = openBoard();
     if (!b) { cvSvg = null; return; }
-    if (b.nodes.some(function (n) { return typeof n.x !== "number"; })) { autoLayout(b); save(); }
+    if (b.derived) {
+      // Rebuilt every render, so it is laid out every render — and laying out
+      // a throwaway is not a change to the book, so nothing is saved. A tree
+      // needs a tree layout; see mapLayout.
+      mapLayout(b);
+    } else if (b.nodes.some(function (n) { return typeof n.x !== "number"; })) {
+      autoLayout(b); save();
+    }
     drawBoard(b, cvSvg);
     fitBoard(b);
     mountKeys(b);
@@ -7802,8 +8529,9 @@ function dims(n) {
       var g = ev.target.closest ? ev.target.closest("g[data-id]") : null;
       var onHandle = ev.target.closest ? ev.target.closest("[data-handle]") : null;
       var p = toSvg(ev);
-      if (g && onHandle) {
-        // Drawing a connection, not moving the node.
+      if (g && onHandle && !b.derived) {
+        // Drawing a connection, not moving the node. Never on a derived
+        // sheet: there is no edge there anybody authored.
         var from = nodeOf(b, g.getAttribute("data-id"));
         if (from) {
           wire = { from: from, x: p.x, y: p.y };
@@ -7863,7 +8591,12 @@ function dims(n) {
         clearWire();
         if (to) askConnect(b, from, to);
       }
-      if (drag && drag.moved) save();
+      if (drag && drag.moved && !b.derived) save();
+      /* On a real sheet a tap SELECTS, because everything you can do to a node
+         lives behind picking it. On the job map there is exactly one thing to
+         do with a node — open what it stands for — so picking it would be a
+         step to nowhere. */
+      if (drag && !drag.moved && b.derived) { mapTap(drag.n); return; }
       if (drag && !drag.moved) { sel = drag.n.id; paintSel(b); }
       if (pan && !pan.moved && sel) { sel = ""; paintSel(b); }
       drag = null; pan = null;
@@ -7878,7 +8611,24 @@ function dims(n) {
       var p = toSvg(ev);
       zoomBy(ev.deltaY < 0 ? 1.12 : 1 / 1.12, p.x, p.y);
     }, { passive: false });
-    mountDrop(b);
+    // A picture dropped on a derived sheet has nowhere to live: the node it
+    // landed on is thrown away on the next render.
+    if (!b.derived) mountDrop(b);
+  }
+
+  /* One tap, one destination. A node that stands for nothing openable (the
+     job itself, "on its own", "nothing running yet") says so rather than
+     doing nothing, because a tap that appears to fail reads as the app being
+     broken. */
+  function mapTap(n) {
+    if (n._open && byId(state.boards, n._open)) {
+      jobMap = null; openId = n._open; view = "boards"; unmaximize(); render(); return;
+    }
+    if (n._openProj && projOf(n._openProj)) {
+      jobMap = null; openProj = n._openProj; view = "jobs"; unmaximize(); render(); return;
+    }
+    toast(n._root ? "This is the job itself \u2014 tap a board to open it"
+                  : "Nothing to open here \u2014 the boards are the ones that open");
   }
 
   /* ================= writing a procedure as prose =================
@@ -8737,8 +9487,58 @@ function dims(n) {
     "cadence-done": function (id) {
       var cd = byId(state.cadences, id); if (!cd) return;
       var was = cd.lastDoneOn;
+      var tpl = cd.runsBoardId ? byId(state.boards, cd.runsBoardId) : null;
+      /* A DRILL starts its run and stamps the date in ONE act, and the undo
+         takes both back — a half-undone drill would leave a run nobody
+         started beside a date saying it was done. A cadence naming a
+         procedure that has since been deleted falls back to being ticked,
+         rather than refusing: the interval is still true. */
+      if (tpl && tpl.kind === "template") {
+        var made = null;
+        go(function () {
+          made = startRun(tpl, tpl.name + " \u2014 " + plainDate(today()));
+          cd.lastDoneOn = today();
+        });
+        toast(cd.label + " \u2014 the run is open, next in " + cd.everyDays + " days",
+          function () {
+            cd.lastDoneOn = was;
+            if (made) state.boards = state.boards.filter(function (b) { return b.id !== made.id; });
+          });
+        if (made) { jobMap = null; openId = made.id; view = "boards"; render(); }
+        return;
+      }
       go(function () { cd.lastDoneOn = today(); });
       toast(cd.label + " — next in " + cd.everyDays + " days", function () { cd.lastDoneOn = was; });
+    },
+
+    /* ---- tasks: the one thing that is typed ---- */
+    "task-add":  function () { taskDialog(null, {}); },
+    "task-edit": function (id) { taskDialog(taskOf(id), {}); },
+    /* Attached where it was written, so the question that makes a task worth
+       having here is answered without being asked. */
+    "task-add-job":   function (id) { taskDialog(null, { jobId: id }); },
+    "task-add-proj":  function (id) { taskDialog(null, { projId: id }); },
+    "task-add-board": function (id) { taskDialog(null, { boardId: id }); },
+    "task-done": function (id) {
+      var t = taskOf(id); if (!t) return;
+      var was = t.doneAt;
+      go(function () { t.doneAt = nowStamp(); });
+      toast("Done \u00b7 " + t.label, function () { t.doneAt = was; });
+    },
+    /* Every removal confirms, says what it touches and offers an undo. A task
+       touches nothing but itself, and the confirmation says so — otherwise a
+       reader has to wonder whether the board it named goes with it. */
+    "task-del": function (id) {
+      var t = taskOf(id); if (!t) return;
+      confirmAction({
+        title: "Remove \u201c" + t.label + "\u201d?",
+        message: "Only this line goes. Nothing it names \u2014 the job, the project, the board \u2014 is touched.",
+        danger: true, confirmLabel: "Remove"
+      }, function () {
+        var was = t.archived;
+        go(function () { state.forgotten[t.id] = t.label; t.archived = true; });
+        toast("Removed \u00b7 " + t.label, function () { t.archived = was; delete state.forgotten[t.id]; });
+      });
     },
     "cadence-del": function (id) {
       var cd = byId(state.cadences, id); if (!cd) return;
@@ -8749,6 +9549,10 @@ function dims(n) {
     "asset-add":  function () { assetDialog(null); },
     "asset-edit": function (id) { assetDialog(assetOf(id)); },
     "asset-open": function (id) { openAsset = id; view = "vocab"; openMode = ""; render(); },
+    "repo-page":  function (id) { repoTab = id; openAsset = ""; render(); },
+    /* Adding from the Repo lands in the section you were looking at, rather
+       than making you pick it again from a list you just tapped. */
+    "repo-add":   function (id) { assetDialog(null, id); },
     "asset-back": function () { openAsset = ""; render(); },
     "asset-copy": function (id) {
       var a = assetOf(id);
@@ -8999,9 +9803,21 @@ function dims(n) {
       });
     },
     /* ---- jobs ---- */
-    "job-open": function (id) { openJob = id; view = "jobs"; render(); },
-    "job-back": function () { openJob = ""; render(); },
+    "job-open": function (id) { jobMap = null; openJob = id; view = "jobs"; render(); },
+    "job-back": function () { jobMap = null; openJob = ""; render(); },
+    /* Rebuilt from state on every press rather than kept: the sheet is
+       derived, so a stale copy is the one thing it must never be. */
+    "job-map": function (id) {
+      var j = jobOf(id); if (!j) return;
+      jobMap = jobSheet(j); openJob = j.id; openProj = ""; view = "jobs"; render();
+    },
+    "job-map-close": function (id) { jobMap = null; openJob = id || openJob; unmaximize(); render(); },
     "tab-vocab": function () { view = "vocab"; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; render(); },
+    /* Settings is no longer a tab, so it needs a route — and the gear plus
+       the Repo's launcher note are both calling it. The data-act scan is what
+       caught this: the dispatcher ignores an unknown action without a word,
+       so a gear that did nothing would have shipped looking fine. */
+    "tab-settings": function () { view = "settings"; openAsset = ""; openMode = ""; openPerson = ""; render(); },
     "kit-page": function (id) {
       kitTab = id || "things"; openMode = ""; openAsset = ""; openPerson = ""; render();
     },
@@ -9614,6 +10430,11 @@ function dims(n) {
     var s = APP.blank();
     function mk(o) { o.id = uid(); return o; }
     function back(n) { return addDays(today(), -n); }
+    /* A date AHEAD, which the "nothing may be dated in the future" rule does
+       not forbid: that rule is about the record — a span, an entry, something
+       that happened. A due date is a plan, and the projects already carry
+       `endsOn` ahead of today for exactly this reason. */
+    function fwd(n) { return addDays(today(), n); }
 
     var kWork  = mk({ name: "Work", colour: "#8a9ac9" });
     var kTrain = mk({ name: "Trainings and workshops", colour: "#8fae6a" });
@@ -9796,7 +10617,20 @@ function dims(n) {
     var aRef = mk({ name: "Harbour reference photo", kind: "photo", notes: "",
                     path: "", url: "https://drive.google.com/file/d/EXAMPLE/view",
                     where: "", fromIds: [], archived: false });
-    s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud];
+    /* Two sites, because the Repo has four sections and a sample that leaves
+       one empty cannot show it. They also demonstrate the only handle that
+       opens with no companion installed — a `url` — beside ArcGIS Pro, whose
+       path cannot open from a browser at all. Both states on one screen is
+       the point: this is where the difference gets explained. */
+    var aDrv = mk({ name: "Drive \u2014 area 1", kind: "site", repo: "site",
+                    notes: "Where the full-size frames live.",
+                    path: "", url: "https://drive.google.com/drive/folders/EXAMPLE",
+                    where: "", fromIds: [], archived: false });
+    var aMail = mk({ name: "Mail: harbour brochure", kind: "site", repo: "site",
+                    notes: "The thread with Balamand, filtered.",
+                    path: "", url: "https://mail.google.com/mail/u/0/#search/brochure",
+                    where: "", fromIds: [], archived: false });
+    s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail];
 
     /* Two of the people the boards already name, said properly — so the
        People page has one row with an address and a role and one with nothing
@@ -9841,6 +10675,32 @@ function dims(n) {
     cadence("Haircut", 42, 40, "out");
     cadence("Update the phone", 30, 12, "away", { protectsAssetId: aPho.id });
     cadence("Clean the laptop fan", 180, 60, "desk", { protectsAssetId: aLap.id });
+    /* A DRILL — upkeep that names a procedure, so ticking it starts the run.
+       Past its interval on purpose, because the drill that has come round
+       again is the state worth being shown. */
+    cadence("Run the aerial-scan drill", 60, 71, "desk", { runsBoardId: lect.id });
+
+    /* The typed half. Three, because a task has three states worth seeing:
+       past its date, dated and fine, and undated (which is never called late,
+       the same rule as a wait with no chase interval). One on a job, one on a
+       project and one on a board, so every page that lists them has
+       something — and so the "only the narrowest attachment is kept" rule is
+       visible rather than only written down. */
+    function task(label, dueIn, o) {
+      s.tasks.push(mk(Object.assign({
+        label: label, doneAt: "", archived: false, note: "",
+        dueAt: dueIn === null ? "" : (dueIn < 0 ? back(-dueIn) : fwd(dueIn)),
+        jobId: "", projId: "", boardId: "", place: ""
+      }, o || {})));
+    }
+    /* Two on a board and one on a project. NOT one on a job: the job ids do
+       not exist yet — `ensureJobs()` derives them after the sample is
+       adopted, which is the same reason the projects here name a claimant and
+       let their `jobId` be filled in. The job page's own section still works;
+       it simply starts empty. */
+    task("Chase the print quote", -3, { boardId: spring.id, place: "desk" });
+    task("Ask about the 1962 plate numbers", 5, { boardId: gis.id, place: "desk" });
+    task("Renew the library card", null, { place: "out" });
 
     /* --- the week, so the standing has something to stand on --- */
     // Nothing may be dated in the future, so a day that has not happened yet is
