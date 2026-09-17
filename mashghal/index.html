@@ -8485,7 +8485,14 @@ function dims(n) {
      laptop fitting the board IS the point — a sheet nearly a thousand pixels
      wide draws eight cards perfectly legibly at 0.6 — so the floor there only
      catches a board so large that the fit would be a diagram of nothing. */
-  function minScale(w) { return w < 620 ? 0.7 : 0.45; }
+  /* Two floors, because the screens are two problems — and a THIRD case, the
+     derived sheet, which has neither. On a phone a forty-node procedure is
+     hopeless at any size, so the floor is high and the fit falls back to
+     opening on the step that matters and letting you pan. A job map is the
+     opposite: it is a handful of nodes and the WHOLE POINT is the shape, so
+     refusing to zoom out far enough left the job itself clipped off the top
+     of a phone with arrows arriving from nowhere. No floor for it. */
+  function minScale(w, b) { return (b && b.derived) ? 0.05 : (w < 620 ? 0.7 : 0.45); }
 
   /* Toggling is NOT a render. `render()` would rebuild the sheet and re-fit
      it, throwing away wherever the reader had panned to — the same reason
@@ -8550,8 +8557,8 @@ function dims(n) {
     // steps sits underneath them and cannot be read.
     var foot = (r.height && ar) ? (58 / r.height) * h : 0;
     if (foot) { h += foot; w = h / ar; }
-    if (r.width && w > r.width / minScale(r.width)) {
-      w = r.width / minScale(r.width); h = w * ar;
+    if (r.width && w > r.width / minScale(r.width, b)) {
+      w = r.width / minScale(r.width, b); h = w * ar;
       var f = focusNode(b);
       if (f) {
         var c = centre(f);

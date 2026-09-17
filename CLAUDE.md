@@ -1152,7 +1152,15 @@ target off to the right. "Tidy" re-runs it.
   under it. It refreshes `_pics` first: `dims()` reads what the **last** draw
   stamped, so a step that just gained its first picture measures 34px shorter
   than it is about to be drawn, which was exactly the overlap.
-- **The sheet stops zooming out before it stops being readable.** Two floors,
+- **A DERIVED SHEET HAS NO ZOOM FLOOR.** `minScale` takes the board now, not
+just the width: a phone's 0.7 floor is right for a forty-node procedure (the
+fit falls back to opening on the step that matters and letting you pan) and
+exactly wrong for a job map, whose entire point is the shape. Without the
+exception the job itself was clipped off the top of a 390px screen with arrows
+arriving from nowhere. There is a test that reads every node's position back
+against the viewBox and fails if one is outside it.
+
+**The sheet stops zooming out before it stops being readable.** Two floors,
   because the screens are two problems: on a phone (< 620px) the whole board is
   hopeless at any size, so it opens at 0.7 on the step that is **late**, then
   the one in hand, then the way in, and you pan; on a laptop fitting the board
