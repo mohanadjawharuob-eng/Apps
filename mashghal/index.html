@@ -4735,9 +4735,14 @@ function stateWord(b, n) {
         if (!full.length) {
           L.push("  No whole week in this period has an entry, so nothing here is measured against the " + amountWords(owed.owed, owed.unit) + " a week.");
         } else {
-          L.push("  Against " + amountWords(owed.owed, owed.unit) + " a week, the " + full.length +
-                 (full.length === 1 ? " whole week" : " whole weeks") + " with entries fall short by " +
-                 amountWords(behind, owed.unit) + " in total. Weeks with nothing recorded are left out of that figure rather than counted as noughts.");
+          /* "the 1 whole week with entries fall short" — the count was a
+             digit in prose and the verb did not follow it. The report is the
+             thing that goes to an accountant or a visa office, so it is the
+             last place a sentence should fail to agree with itself. */
+          L.push("  Against " + amountWords(owed.owed, owed.unit) + " a week, the " + numWord(full.length) +
+                 (full.length === 1 ? " whole week with entries falls" : " whole weeks with entries fall") +
+                 " short by " + amountWords(behind, owed.unit) +
+                 " in total. Weeks with nothing recorded are left out of that figure rather than counted as noughts.");
         }
       }
     }
@@ -4888,9 +4893,13 @@ function stateWord(b, n) {
 
   function renderReport() {
     var o = reportOn;
-    var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
     var text = buildReport(o);
-    var h = pageHead("Report", esc((c ? c.name : "Every claimant") + " · " + o.from + " to " + o.to),
+    /* The sub-line used to repeat what the report's own first line says —
+       "AUB Tripoli 21st C · 2026-05-01 to 2026-09-17" two lines above "AUB
+       Tripoli 21st C — May 1, 2026 to September 17, 2026". The same fact
+       twice in two formats. The page says what this page IS; the report says
+       what it covers. */
+    var h = pageHead("Report", "Written out as prose, for a meeting, an email or a funder. It is copied or saved, never edited here.",
       '<div class="tools">' +
       '<button class="btn" data-act="report-back">Back to the week</button>' +
       '<button class="btn" data-act="report-copy">Copy</button>' +
@@ -8005,7 +8014,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v55 · 17 Sep 2026";
+  var BUILD = "v56 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };

@@ -653,6 +653,13 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
   rows** above the two rows anybody wanted, so consecutive empty weeks collapse
   to one line that still says how many they were. A report nobody reads to the
   end is worse than a shorter one.
+  Two more from reading it again a round later: **"the 1 whole week with
+  entries fall short"** — a digit in prose and a verb that did not follow the
+  count, in the one document that goes to an accountant or a visa office. And
+  the page's own sub-line **repeated the report's first line** in a second
+  format two lines above it ("AUB Tripoli 21st C · 2026-05-01 to 2026-09-17"
+  over "AUB Tripoli 21st C — May 1, 2026 to September 17, 2026"); the page
+  says what the page IS, the report says what it covers.
 - **A cadence has no due date.** Every so often since it was last done, so
   arrears never compound: there is one of each, however far past. It carries a
   place, so the phone offers only what is doable where you are, and it can name
