@@ -1841,7 +1841,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -2129,9 +2129,14 @@ color-scheme: light;
   var navAt = null, navLock = false;
 
   function navSnap() {
+    /* Every strip that navigates is in here, because Back has to undo the
+       last thing you did and a strip press IS a navigation. `kitTab` was in
+       and `repoTab` and `projTab` were not, so Back from the Library left the
+       Repo altogether while Back from the workbench's Upkeep page went one
+       step. One rule for all three. */
     return { view: view, openId: openId, openJob: openJob, openProj: openProj,
              openMode: openMode, openAsset: openAsset, openPerson: openPerson,
-             kitTab: kitTab };
+             kitTab: kitTab, repoTab: repoTab, projTab: projTab };
   }
   function navTrack() {
     var at = navSnap(), key = JSON.stringify(at);
@@ -2151,6 +2156,7 @@ color-scheme: light;
     openProj = at.openProj || ""; openMode = at.openMode || "";
     openAsset = at.openAsset || ""; openPerson = at.openPerson || "";
     kitTab = at.kitTab || "things";
+    repoTab = at.repoTab || "device"; projTab = at.projTab || "over";
     foldOpen = false; sel = "";
     render();
     navLock = false;
@@ -2265,7 +2271,7 @@ color-scheme: light;
                  title: p.name, sub: projSays(p),
                  st: '<span class="st ' + st.tone + '"><i></i>' + st.word + "</span>",
                  k: st.tone === "late" ? 0 : 2,
-                 run: function () { findTab("jobs"); openProj = p.id; render(); } });
+                 run: function () { findTab("jobs"); openProj = p.id; projTab = "over"; render(); } });
     });
     live(state.jobs).forEach(function (j) {
       out.push({ g: "Jobs", key: j.name, tile: findTile("t-job", ICONS.jobs),
@@ -2707,7 +2713,12 @@ color-scheme: light;
       '<button class="btn" data-act="node-add" data-id="' + b.id + '">Add step</button>' +
       '<button class="btn" data-act="photo-add" data-id="' + b.id + '">Add a photo</button>' +
       '<button class="btn" data-act="thing-add" data-id="' + b.id + '">Add a person or thing</button>' +
-      (allThings().length ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">From another board</button>' : "") +
+      /* The gate has to test the WHOLE pool, not one third of it. It read
+         `allThings()`, which is only the things already on a board — so a
+         book with a full registry and a bare board vocabulary hid the one
+         button that would have brought any of it in. */
+      (allThings().length || live(state.assets).length || live(state.contacts).length
+        ? '<button class="btn" data-act="thing-borrow" data-id="' + b.id + '">Bring one in</button>' : "") +
       (b.nodes.length > 1 ? '<button class="btn" data-act="edge-add" data-id="' + b.id + '">Connect</button>' : "") +
       "</div>";
 
@@ -7419,21 +7430,12 @@ function stateWord(b, n) {
   }
   function projOutputs(id) { return filings(projBoards(id)); }
 
-  // Everyone named anywhere on the project, once each. A run freezes its own
-  // copy of a person, so the same name appears on several boards and the list
-  // has to fold them together or it reads as four different Patricias.
-  function projPeople(id) {
-    var seen = {}, out = [];
-    projBoards(id).forEach(function (b) {
-      b.nodes.forEach(function (n) {
-        if (n.t !== "step" && n.kind === "person" && n.label && !seen[n.label.toLowerCase()]) {
-          seen[n.label.toLowerCase()] = 1;
-          out.push({ label: n.label, board: b.name });
-        }
-      });
-    });
-    return out;
-  }
+  /* `projPeople()` was here and is gone: it assembled the project's people
+     from the board nodes itself, which is a second answer to a question
+     `people()` already answers — and the two would have disagreed the first
+     time somebody renamed a contact, since only `people()` folds on the
+     contact id. The project's People page is `people()` filtered to boards
+     with this project's id; see `projPeoplePage`. */
 
   function projOpts(jobId) {
     var ps = projects();
@@ -7460,6 +7462,77 @@ function stateWord(b, n) {
       (late ? '<div class="bigage"><b>' + late + "</b><span>late</span></div>" : "") + "</button>";
   }
 
+  /* THE PROJECT'S FIVE QUESTIONS, NOT EIGHT LISTS. The mockup's project
+     workspace carries a strip of eight — Overview · Tasks · Data · Maps ·
+     Workflows · Documents · Links · People — and eight on one strip is the
+     mistake this repo has already made and written down twice: Horizon's
+     eight sub-tabs put the last three off the edge of a phone and nobody
+     opened them, and the workbench stood 3,300 pixels tall before it became
+     four pages. So the eight are folded into five, and every fold has a
+     reason rather than being a shortening.
+
+     Data · Maps · Documents · Links are one page. They are four KINDS of the
+     same thing, and the registry already says which section an entry is in
+     (`repoOf`, stated rather than derived) — so splitting them per project
+     would be four lists of one item each, and a reader who typed a name would
+     have to guess which of four to look in. Grouped under the registry's own
+     headings, it is one list that still answers "what is the work made of".
+
+     Workflows is called Work, because on this project it is the boards —
+     running, their procedures, and what has closed.
+
+     And NOTHING ON THIS STRIP IS A NEW LIST TO MAINTAIN. A project's things
+     are derived from the boards in it and its people are `people()` narrowed
+     to those boards, so a thing cannot be on the project page and missing
+     from the Repo, and a person cannot read "two things are late" on one
+     screen and "clear" on the other. */
+  var PROJ_PAGES = [
+    { id: "over",   label: "Overview" },
+    { id: "work",   label: "Work" },
+    { id: "tasks",  label: "Tasks" },
+    { id: "things", label: "Things" },
+    { id: "people", label: "People" }
+  ];
+  var projTab = "over";   // view state, never saved — a project opens on its overview
+
+  /* What the project is made of, derived from its boards and never stored.
+     A board node carrying `fromAssetId` IS the registry entry — the same
+     "one name, one entry" rule the borrow pool and the finder live by — so
+     the registry entry is what gets listed, which is how it arrives with its
+     section, its state, its upkeep and something to open. A thing typed
+     straight onto a board has no registry entry and is listed as itself,
+     under its own heading, because offering to open it would be a button
+     that cannot do what it says. */
+  function projThings(id) {
+    var byAsset = {}, loose = {}, out = [];
+    /* The name is the fallback match, because a board copy written before
+       `fromAssetId` existed carries nothing pointing back — and without this
+       the project page filed the headphones under "Only on a board" while
+       the Repo had them on Devices with a state and a place. Third time this
+       exact fold has been needed (the borrow pool, the finder, and now here),
+       and it is the same rule every time: one name, one entry. */
+    var regByName = {};
+    live(state.assets).forEach(function (a) { regByName[String(a.name).toLowerCase()] = a; });
+    projBoards(id).forEach(function (b) {
+      (b.nodes || []).forEach(function (n) {
+        if (n.t !== "thing" || n.kind === "person" || !n.label) return;
+        var a = n.fromAssetId ? byId(state.assets, n.fromAssetId) : null;
+        if (!a || a.archived) a = regByName[String(n.label).toLowerCase()] || null;
+        if (a && !a.archived) {
+          if (byAsset[a.id]) { byAsset[a.id].on.push(b.name); return; }
+          byAsset[a.id] = { asset: a, on: [b.name] };
+          out.push(byAsset[a.id]);
+          return;
+        }
+        var k = String(n.label).toLowerCase();
+        if (loose[k]) { loose[k].on.push(b.name); return; }
+        loose[k] = { node: n, on: [b.name] };
+        out.push(loose[k]);
+      });
+    });
+    return out;
+  }
+
   function renderProj(p) {
     var st = projState(p);
     var bs = projBoards(p.id);
@@ -7468,14 +7541,17 @@ function stateWord(b, n) {
     var tpls = bs.filter(function (b) { return b.kind === "template"; });
     var d = projDues(p.id);
     var late = d.filter(function (x) { return x.st === "over"; }).length;
+    var pt = tasksFor("proj", p.id);
+    var things = projThings(p.id);
+    var pep = people().filter(function (x) {
+      return x.boards.some(function (b) { return b.projectId === p.id; });
+    });
 
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="proj-back">' + (p.jobId ? esc(jobName(p.jobId)) : "All projects") + "</button>" +
       '<button class="btn" data-act="proj-edit" data-id="' + p.id + '">Edit</button>' +
       '<button class="btn" data-act="proj-park" data-id="' + p.id + '">' +
       (p.parked ? "Pick it back up" : "Set it down") + "</button>" +
-      '<button class="btn" data-act="board-new" data-id="' + p.id + '">New board</button>' +
-      '<button class="btn" data-act="task-add-proj" data-id="' + p.id + '">Something to do</button>' +
       '<button class="btn danger" data-act="proj-del" data-id="' + p.id + '">Delete</button></div>';
 
     var h = '<div class="page-head"><div><h2>' + esc(p.name) + "</h2>" +
@@ -7486,15 +7562,73 @@ function stateWord(b, n) {
       (!d.length ? '<span class="sp muted">Nothing waiting</span>' : "") +
       "</div></div>" + tools + "</div>";
 
+    // A count each, so an empty page is visible without being opened — the
+    // same rule as the Repo's strip.
+    var counts = { over: 0, work: bs.length, tasks: pt.length,
+                   things: things.length, people: pep.length };
+    var page = PROJ_PAGES.filter(function (x) { return x.id === projTab; })[0] || PROJ_PAGES[0];
+    h += '<div class="subnav">' + PROJ_PAGES.map(function (x) {
+      return '<button class="btn' + (x.id === page.id ? " primary" : "") +
+        '" data-act="proj-page" data-id="' + x.id + '">' + x.label +
+        (counts[x.id] ? ' <span class="cnt">' + counts[x.id] + "</span>" : "") + "</button>";
+    }).join("") + "</div>";
+
+    if (page.id === "over")   return h + projOver(p, runs, tpls);
+    if (page.id === "work")   return h + projWork(p, runs, tpls, shut);
+    if (page.id === "tasks")  return h + projTasksPage(p, pt);
+    if (page.id === "things") return h + projThingsPage(p, things);
+    return h + projPeoplePage(p, pep);
+  }
+
+  /* WHERE IT STANDS, AND WHAT HAS LEFT THE BUILDING — the two ends of the
+     project, which is the shape the written report already has (it opens with
+     PROJECTS and closes with WHAT WAS FILED). The percentage and the bar's
+     width are the same figure out of `projPace`, so the two cannot
+     disagree. */
+  function projOver(p, runs, tpls) {
+    var pace = projPace(p);
+    var h = "";
     if (p.note) {
       h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
     }
 
-    var pt = tasksFor("proj", p.id);
-    if (pt.length) {
-      h += '<div class="sect">Written down for this project</div><div class="stack tight">' +
-        pt.map(taskRow).join("") + "</div>";
+    h += '<div class="sect">How far along</div>';
+    h += '<div class="panel calm"><div class="grow">' +
+      '<div class="nm sm">' + pace.done + " of " + pace.total + " steps done" +
+      (pace.runs ? "" : " \u2014 nothing has been started") + "</div>" +
+      '<div class="bar"><i style="width:' + pace.pct + '%"></i></div>' +
+      '<div class="says">' + pace.pct + "% \u00b7 " +
+      (pace.runs ? pace.runs + (pace.runs === 1 ? " run" : " runs") : "no runs") +
+      (tpls.length ? " \u00b7 " + tpls.length + (tpls.length === 1 ? " procedure" : " procedures") : "") +
+      "</div></div></div>";
+
+    if (p.endsOn && dayOk(p.endsOn)) {
+      var gone = p.endsOn < today();
+      h += '<div class="panel calm' + (gone ? " late" : "") + '"><div class="grow">' +
+        '<div class="nm sm">' + esc((gone ? "Was due " : "Due ") + niceDate(p.endsOn)) + "</div>" +
+        /* The full date with its year underneath, not `plainDate` — that
+           returns the same "Oct 5" the line above already says, so the card
+           printed one date twice and the second line was noise. A deadline is
+           exactly the figure worth spelling out unambiguously. */
+        '<div class="says">' + esc(wordDate(p.endsOn)) + "</div></div>" +
+        (gone ? '<span class="st late"><i></i>past its date</span>' : "") + "</div>";
     }
+
+    var outs = projOutputs(p.id);
+    h += '<div class="sect">What it has produced</div>';
+    h += outs.length ? '<div class="stack tight">' + outs.map(function (o) {
+      return '<div class="panel calm"><span class="itile sm t-out">' + ICONS.file + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(o.label) + "</div>" +
+        '<div class="says">' + esc(o.board + " \u00b7 filed " + agoWords(o.at) + (o.path ? " \u00b7 " + o.path : "")) +
+        "</div></div></div>";
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing filed yet. A filing step that is done is what lands here \u2014 the same steps the archive lock watches.</p>';
+    return h;
+  }
+
+  function projWork(p, runs, tpls, shut) {
+    var h = '<div class="tools" style="margin:0.9rem 0 0.2rem">' +
+      '<button class="btn primary" data-act="board-new" data-id="' + p.id + '">New board</button></div>';
 
     h += '<div class="sect">Running</div>';
     h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
@@ -7504,37 +7638,18 @@ function stateWord(b, n) {
       return '<button type="button" class="panel rowbtn calm' + (bl ? " late" : "") +
         '" data-act="board-open" data-id="' + b.id + '">' +
         '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
-        '<div class="says">' + (bl ? bl + " late · " : "") + bd.length + " waiting · " +
+        '<div class="says">' + (bl ? bl + " late \u00b7 " : "") + bd.length + " waiting \u00b7 " +
         pr.done + " of " + pr.total + " done</div></div></button>";
     }).join("") + "</div>" : '<p class="empty">Nothing running. Start a run from one of its procedures.</p>';
 
-    if (tpls.length) {
-      h += '<div class="sect">Procedures</div><div class="stack tight">' + tpls.map(function (b) {
-        return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
-          '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
-          '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
-          " steps</div></div></button>";
-      }).join("") + "</div>";
-    }
-
-    var outs = projOutputs(p.id);
-    h += '<div class="sect">What it has produced</div>';
-    h += outs.length ? '<div class="stack tight">' + outs.map(function (o) {
-      return '<div class="panel calm"><span class="itile sm t-out">' + ICONS.file + "</span>" +
-        '<div class="grow"><div class="nm sm">' + esc(o.label) + "</div>" +
-        '<div class="says">' + esc(o.board + " · filed " + agoWords(o.at) + (o.path ? " · " + o.path : "")) +
-        "</div></div></div>";
+    h += '<div class="sect">Procedures</div>';
+    h += tpls.length ? '<div class="stack tight">' + tpls.map(function (b) {
+      return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + b.id + '">' +
+        '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
+        '<div class="says">' + b.nodes.filter(function (n) { return n.t === "step"; }).length +
+        " steps</div></div></button>";
     }).join("") + "</div>"
-      : '<p class="empty">Nothing filed yet. A filing step that is done is what lands here — the same steps the archive lock watches.</p>';
-
-    var pep = projPeople(p.id);
-    if (pep.length) {
-      h += '<div class="sect">Who is on it</div><div class="stack tight">' + pep.map(function (x) {
-        return '<div class="panel calm"><span class="itile sm t-thing">' + ICONS.person + "</span>" +
-          '<div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
-          '<div class="says">' + esc("first named on " + x.board) + "</div></div></div>";
-      }).join("") + "</div>";
-    }
+      : '<p class="empty">No procedure of its own yet. Write one and every run of it starts from the same shape.</p>';
 
     if (shut.length) {
       h += '<div class="sect">Closed</div><div class="stack tight">' + shut.map(function (b) {
@@ -7544,6 +7659,65 @@ function stateWord(b, n) {
       }).join("") + "</div>";
     }
     return h;
+  }
+
+  /* A task is the one thing somebody types, so this page says so — the rest
+     of the project is derived and a screen mixing the two without saying
+     which is which is how a figure comes to disagree with its parts. */
+  function projTasksPage(p, pt) {
+    var h = '<div class="tools" style="margin:0.9rem 0 0.2rem">' +
+      '<button class="btn primary" data-act="task-add-proj" data-id="' + p.id + '">Something to do</button></div>';
+    h += pt.length ? '<div class="stack tight">' + pt.map(taskRow).join("") + "</div>"
+      : '<p class="empty">Nothing written down for it. Everything else on this project is derived from its boards \u2014 this is the one list you type.</p>';
+    return h;
+  }
+
+  /* Grouped under the registry's own headings, because which section an entry
+     is in is stated and not guessed — so the grouping is free and the words
+     are the same ones the Repo uses. The row is `repoRow`, verbatim: a thing
+     has to read the same here as it does there, state and open control
+     included, or one of the two screens is wrong. */
+  function projThingsPage(p, things) {
+    if (!things.length) {
+      return '<p class="empty">Nothing on its boards yet. A thing lands here by being on a board of this project \u2014 there is no list to keep, which is why it can never be out of date.</p>';
+    }
+    var h = '<p class="saynote">Derived from the boards in this project. Bring one in on a board and it appears here; there is nothing to maintain.</p>';
+    var groups = {};
+    things.forEach(function (t) {
+      var key = t.asset ? repoOf(t.asset) : "loose";
+      (groups[key] = groups[key] || []).push(t);
+    });
+    REPO_PAGES.forEach(function (sec) {
+      var g = groups[sec.id];
+      if (!g || !g.length) return;
+      h += '<div class="sect">' + esc(sec.label) + "</div><div class=\"stack tight\">" +
+        g.map(function (t) { return repoRow(t.asset); }).join("") + "</div>";
+    });
+    if (groups.loose) {
+      h += '<div class="sect">Only on a board</div>' +
+        '<p class="hint" style="margin:0 0 0.6rem">Typed straight onto a board and not in the registry, so there is nothing to open and no upkeep on it. Add it to the Repo if it is a thing you keep coming back to.</p>' +
+        '<div class="stack tight">' + groups.loose.map(function (t) {
+          return '<div class="panel calm"><span class="itile sm t-thing">' +
+            (ICONS[t.node.kind] || ICONS.thing) + "</span>" +
+            '<div class="grow"><div class="nm sm">' + esc(t.node.label) + "</div>" +
+            '<div class="says">' + esc(String(vocabLabel("things", t.node.kind) || t.node.kind).toLowerCase() +
+              " \u00b7 on " + t.on.slice(0, 2).join(", ") +
+              (t.on.length > 2 ? " and " + (t.on.length - 2) + " more" : "")) + "</div></div></div>";
+        }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  /* `people()` narrowed to this project's boards, and drawn with `personRow`
+     — so what is outstanding with somebody reads identically here and on
+     their own page. Assembling the list again from the board nodes would
+     eventually answer the same question two ways. */
+  function projPeoplePage(p, pep) {
+    if (!pep.length) {
+      return '<p class="empty">Nobody named on its boards yet. Link a person to a send or a wait and they appear here, with whatever is outstanding.</p>';
+    }
+    return '<p class="saynote">Everyone named on a board of this project, worst first \u2014 the same reading as their own page.</p>' +
+      '<div class="stack tight">' + pep.map(personRow).join("") + "</div>";
   }
 
   function projDialog(p) {
@@ -7578,7 +7752,7 @@ function stateWord(b, n) {
           if (!t) { t = { id: uid(), parked: false, archived: false }; state.projects.push(t); }
           t.name = v.name.trim(); t.jobId = v.jobId;
           t.endsOn = v.endsOn.trim(); t.note = v.note.trim();
-          if (mk) openProj = t.id;
+          if (mk) { openProj = t.id; projTab = "over"; }
         });
         toast(mk ? "Project created" : "Saved");
       }
@@ -7594,7 +7768,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v49 · 17 Sep 2026";
+  var BUILD = "v50 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -9340,7 +9514,7 @@ function dims(n) {
       jobMap = null; openId = n._open; view = "boards"; unmaximize(); render(); return;
     }
     if (n._openProj && projOf(n._openProj)) {
-      jobMap = null; openProj = n._openProj; view = "jobs"; unmaximize(); render(); return;
+      jobMap = null; openProj = n._openProj; projTab = "over"; view = "jobs"; unmaximize(); render(); return;
     }
     toast(n._root ? "This is the job itself \u2014 tap a board to open it"
                   : "Nothing to open here \u2014 the boards are the ones that open");
@@ -9725,7 +9899,12 @@ function dims(n) {
     "find-open": function () { findOpen(); },
 
     /* ---- projects ---- */
-    "proj-open": function (id) { openProj = id; view = "jobs"; render(); },
+    "proj-open": function (id) { openProj = id; projTab = "over"; view = "jobs"; render(); },
+    /* A project lands on its overview, every time. Opening on whichever page
+       you last looked at is the trap Horizon fell into: the screen shows
+       something different depending on what you did ten minutes ago, and
+       nobody can learn where anything is. */
+    "proj-page":  function (id) { projTab = id; render(); },
     // Back goes to the job it is for, or to the list when it has none — one
     // level up, never two, the same rule as every other Back in the app.
     "proj-back": function () {
@@ -10573,7 +10752,7 @@ function dims(n) {
        and not an action, so a handler for it would be dead code — the orphan
        scan's sibling caught exactly that. */
     "tab-waiting": function () { view = "waiting"; render(); },
-    "tab-jobs":    function () { view = "jobs"; openJob = ""; openProj = ""; jobMap = null; render(); },
+    "tab-jobs":    function () { view = "jobs"; openJob = ""; openProj = ""; projTab = "over"; jobMap = null; render(); },
     "tab-repo":    function () { view = "repo"; repoTab = "device"; libTopic = ""; openAsset = ""; render(); },
     "kit-page": function (id) {
       kitTab = id || "things"; openMode = ""; openAsset = ""; openPerson = ""; render();
@@ -10958,6 +11137,55 @@ function dims(n) {
     return out.sort(function (a, z) { return z.seen - a.seen; });
   }
 
+  /* The pool under headings, keeping every entry's position in `pool` as its
+     value so the lookup on confirm is untouched. A group is emitted only when
+     something is in it. */
+  function borrowGroups(pool) {
+    /* A registry entry is described in the REGISTRY'S words, not the board's.
+       The two vocabularies are different lists — ArcGIS Pro is "software" in
+       one and lands as "app" on a board — so under a heading reading
+       "Devices" the picker said "Lenovo Legion \u2014 kit" while the Repo
+       calls it a laptop, which is one thing described two ways in two places
+       a tap apart. The board kind still decides what gets drawn; it is only
+       the reading that changes. */
+    function line(t) {
+      var a = t.assetId ? byId(state.assets, t.assetId) : null;
+      var word = a ? assetKindLabel(a) : vocabLabel("things", t.kind);
+      return { value: String(pool.indexOf(t)),
+               label: t.label + " \u2014 " + String(word).toLowerCase() +
+                 (t.seen > 1 ? ", on " + t.seen + " boards" : "") };
+    }
+    var out = [], seen = [];
+    REPO_PAGES.forEach(function (sec) {
+      /* The Library is the same store read by subject, not a section a thing
+         is filed in — `repoOf` never returns it — so iterating it here would
+         be a heading that can never hold anything. Said out loud rather than
+         left as an empty group nobody notices. */
+      if (sec.id === "lib") return;
+      var g = pool.filter(function (t) {
+        return t.assetId && byId(state.assets, t.assetId) &&
+               repoOf(byId(state.assets, t.assetId)) === sec.id;
+      });
+      if (!g.length) return;
+      g.forEach(function (t) { seen.push(t); });
+      out.push({ group: sec.label + " (" + g.length + ")", options: g.map(line) });
+    });
+    var pp = pool.filter(function (t) { return t.contactId; });
+    if (pp.length) {
+      pp.forEach(function (t) { seen.push(t); });
+      out.push({ group: "Your people (" + pp.length + ")", options: pp.map(line) });
+    }
+    /* Whatever is left is a thing typed onto a board and never added to the
+       registry. It goes LAST and under its own heading rather than being
+       dropped: the pool is what you can bring in, and a picker that silently
+       omits part of it is worse than one with an awkward heading. */
+    var rest = pool.filter(function (t) { return seen.indexOf(t) < 0; });
+    if (rest.length) {
+      out.push({ group: "On another board (" + rest.length + ")", options: rest.map(line) });
+    }
+    return out;
+  }
+
   function borrowDialog(b) {
     if (!b) return;
     var here = {};
@@ -11024,23 +11252,40 @@ function dims(n) {
     pool = keep;
 
     if (!pool.length) {
-      toast("Nothing on another board or in the registry that is not already here.");
+      toast("Nothing in the registry, your people or another board that is not already here.");
       return;
     }
+    /* The default is the FIRST option of the FIRST group, not pool index 0.
+       `pool` is ordered by how often a thing has been used, so index 0 is
+       usually a board thing and lands at the bottom of the picker — the
+       select would then open on a row nowhere near the top of what is on
+       screen. Same shape as reading `.value` off a group: a grouped list
+       needs its first entry found, not assumed. */
+    var gs = borrowGroups(pool);
+    var firstV = gs.length && gs[0].options.length ? gs[0].options[0].value : "0";
     openModal({
       title: "Bring one in",
-      message: "From another board, or from the registry. A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
+      message: "From the registry, your people, or another board. A copy is taken, not a link. A run freezes its procedure when it starts, and a thing reaching back into a shared list would be a hole in that — renaming someone next year would rewrite a board you closed last year. What you are saving is the typing.",
       confirmLabel: "Bring it in",
       fields: [
-        // The value is the position in the list, not a composed key: a NUL
-        // separator does not survive a round trip through an option value, so
-        // the lookup found nothing and confirming quietly did nothing at all.
-        { key: "pick", label: "Which", type: "select", span: true, value: "0",
-          options: pool.map(function (t, i) {
-            return { value: String(i),
-                     label: t.label + " — " + String(vocabLabel("things", t.kind)).toLowerCase() +
-                       (t.seen > 1 ? ", on " + t.seen + " boards" : ", on " + t.from) };
-          }) }
+        /* GROUPED, AND THE GROUPS ARE THE ONES THE APP ALREADY HAS. The
+           mockup's palette is five hardcoded headings (Software · Web ·
+           Files · GIS Tools · Hardware) and two of those are not kinds at
+           all — "GIS Tools" is a topic, and the vocabulary here is
+           extensible by design, so a fixed five would be wrong the first
+           time somebody writes in a sixth. The headings are `REPO_PAGES`
+           for anything in the registry, plus your people and the other
+           boards: the same words, in the same order, as the Repo's own
+           strip, so a thing is filed under the heading you would go looking
+           for it under. Each says how many, because a heading with nothing
+           under it is worth seeing before you open it.
+
+           The value is the position in the list, not a composed key: a NUL
+           separator does not survive a round trip through an option value, so
+           the lookup found nothing and confirming quietly did nothing at
+           all. */
+        { key: "pick", label: "Which", type: "select", span: true, value: firstV,
+          options: gs }
       ],
       onConfirm: function (v) {
         var pick = pool[num(v.pick)];
@@ -11239,6 +11484,12 @@ function dims(n) {
 
     /* --- the brochure, mid-cycle and late --- */
     var p1 = thing("N. Haddad", "person"), p2 = thing("L. Mroueh", "person");
+    /* The headphones are deliberately a board copy with NO `fromAssetId`,
+       while the reference photo below carries one. That is what a real book
+       looks like — anything written before the registry existed has only a
+       name — and it is the case that folds by name in `projThings`, the
+       borrow pool and the finder. Seeded both ways so neither path can rot
+       unexercised. */
     var t1 = thing("Reference photo", "photo"), t2 = thing("Nothing headphones", "asset");
     var d1 = step("Design the brochure", "do", { doneAt: back(24), enteredAt: back(30) });
     var d2 = step("Send draft for review", "send", { chaseDays: 5, doneAt: back(12), enteredAt: back(24) });
@@ -11813,10 +12064,26 @@ function openModal(opts) {
     html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
       var id = "mf_" + f.key, inner;
       if (f.type === "select") {
-        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+        /* An option, or a GROUP of them: `{group, options}` becomes an
+           <optgroup>, so a picker over a hundred things can say which section
+           each one came from. Native, so on a phone it is the operating
+           system's own picker with the headings in it rather than a list this
+           app would have to build, scroll and trap focus in. A group carries
+           no value of its own — anything that needs a first entry to default
+           to has to flatten the list first, which is the lesson Coffer's
+           `accountOptions()` learned by defaulting a debt payment to
+           `undefined`. */
+        function optHtml(o) {
           var v = typeof o === "string" ? o : o.value;
           var l = typeof o === "string" ? o : o.label;
           return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? " selected" : "") + ">" + esc(l) + "</option>";
+        }
+        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+          if (o && o.group && o.options) {
+            return '<optgroup label="' + esc(o.group) + '">' +
+              o.options.map(optHtml).join("") + "</optgroup>";
+          }
+          return optHtml(o);
         }).join("") + "</select>";
       } else if (f.type === "textarea") {
         inner = '<textarea id="' + id + '" rows="' + (f.rows || 4) + '" spellcheck="false" placeholder="' +

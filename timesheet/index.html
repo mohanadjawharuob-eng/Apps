@@ -1921,10 +1921,26 @@ function openModal(opts) {
     html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
       var id = "mf_" + f.key, inner;
       if (f.type === "select") {
-        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+        /* An option, or a GROUP of them: `{group, options}` becomes an
+           <optgroup>, so a picker over a hundred things can say which section
+           each one came from. Native, so on a phone it is the operating
+           system's own picker with the headings in it rather than a list this
+           app would have to build, scroll and trap focus in. A group carries
+           no value of its own — anything that needs a first entry to default
+           to has to flatten the list first, which is the lesson Coffer's
+           `accountOptions()` learned by defaulting a debt payment to
+           `undefined`. */
+        function optHtml(o) {
           var v = typeof o === "string" ? o : o.value;
           var l = typeof o === "string" ? o : o.label;
           return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? " selected" : "") + ">" + esc(l) + "</option>";
+        }
+        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+          if (o && o.group && o.options) {
+            return '<optgroup label="' + esc(o.group) + '">' +
+              o.options.map(optHtml).join("") + "</optgroup>";
+          }
+          return optHtml(o);
         }).join("") + "</select>";
       } else if (f.type === "textarea") {
         inner = '<textarea id="' + id + '" rows="' + (f.rows || 4) + '" spellcheck="false" placeholder="' +

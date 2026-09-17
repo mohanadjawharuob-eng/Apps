@@ -961,18 +961,93 @@ It must be reachable with no keyboard: the rail hides `.railwork` and
 a forty-node board arrives by setting `sel` and nothing else, and the sheet has
 to centre on it.
 
-**Six tabs: Boards · Waiting · The week · Calendar · Jobs · Settings**, and a
-switch bar
-— and **Jobs is where the hierarchy is walked** (job → project → board), which
-is why Projects did not become a seventh tab. Coffer's rule applies here too:
-new work becomes a page inside an existing section rather than another slot on
-a bar that a phone cannot hold.
-pinned to the bottom of every screen showing where you are, since when, and the
-note you left. Boards lists procedures and runs; opening one shows the canvas
-over an editable list. Waiting is the only screen the phone really needs — dues
-worst-first, unfinished runs, and upkeep filtered by place. The week is the
-standing, suspense and repair, and holds the report. Kit is the vocabulary plus
-each mode's kit.
+**Jobs is where the hierarchy is walked** (job → project → board), which is why
+Projects never became a tab of its own. Coffer's rule applies here too: new
+work becomes a page inside an existing section rather than another slot on a
+bar a phone cannot hold. (The tab list is above, under *Mashghal's shape* —
+Home · Boards · Waiting · The week · Calendar · Jobs · Repo, with the gear.)
+Under every screen is the **switch bar**, pinned to the bottom, saying where
+you are, since when, and the note you left. Boards lists procedures and runs;
+opening one shows the canvas over an editable list. Waiting is the only screen
+the phone really needs — dues worst-first, unfinished runs, and upkeep filtered
+by place. The week is the standing, suspense and repair, and holds the report.
+
+**A PROJECT IS FIVE QUESTIONS, NOT EIGHT LISTS.** The mockup's project
+workspace carries eight on one strip — Overview · Tasks · Data · Maps ·
+Workflows · Documents · Links · People — and eight is the mistake this file
+already records twice: Horizon's eight sub-tabs put the last three off the
+edge of a phone and nobody opened them, and the workbench stood 3,300 pixels
+tall before it became four pages. `PROJ_PAGES` is **Overview · Work · Tasks ·
+Things · People**, and each fold has a reason rather than being a shortening:
+
+- **Data · Maps · Documents · Links are one page.** They are four *kinds* of
+  the same thing, and `repoOf()` already says which section an entry is in —
+  stated, not derived — so the grouping is free, uses the Repo's own words in
+  the Repo's own order, and a reader who typed a name has one place to look
+  instead of guessing between four lists of one item each.
+- **Nothing on the strip is a list to maintain.** A project's things are
+  derived from the boards in it (`projThings`) and its people are `people()`
+  narrowed to those boards, so a thing cannot be on the project page and
+  missing from the Repo, and a person cannot read "one thing is late" here and
+  "clear" on their own page. `projPeople()` was deleted for exactly this: it
+  assembled the list itself and, since only `people()` folds on the contact
+  id, the two would have disagreed the first time somebody was renamed. The
+  row is `repoRow()` and `personRow()` **verbatim** — same reading, or one of
+  the two screens is wrong.
+- **A registry entry is matched by `fromAssetId` and, failing that, by name.**
+  Third time this fold has been needed (the borrow pool, the finder, and now
+  the project page), and without it the headphones sat under "Only on a board"
+  while the Repo had them on Devices with a state and a place. A board copy
+  written before `fromAssetId` existed carries only a name, which is what a
+  real book looks like — the sample seeds one of each on purpose so neither
+  path rots unexercised.
+- **A thing with no registry entry is listed last, under its own heading.**
+  The pool is what the project is made of and a page that silently omits part
+  of it is worse than one with an awkward heading; it offers nothing to open,
+  because a button that cannot do what it says is the fault `openHandle()`
+  exists to prevent.
+- **The project lands on its Overview from every route** — the project row,
+  the finder, the job map, and creating one. Opening on whichever page you
+  last used is the trap Horizon fell into.
+- Overview is the two ends of the project, the shape the written report
+  already has: where it stands, and what has left the building. The bar's
+  width **is** the percentage string, both out of `projPace`, so the two
+  cannot disagree.
+
+**EVERY STRIP THAT NAVIGATES BELONGS IN `navSnap()`.** `kitTab` was in it and
+`repoTab` and `projTab` were not, so Back from the Library left the Repo
+altogether while Back from the workbench's Upkeep page went one step. A strip
+press is a navigation; one rule for all three.
+
+**A GROUPED PICKER, AND THE GROUPS ARE THE ONES THE APP ALREADY HAS.** The
+mockup's Add Node palette is five hardcoded headings (Software · Web · Files ·
+GIS Tools · Hardware) and two of those are not kinds at all — "GIS Tools" is a
+topic — so a fixed five would be wrong the first time somebody writes in a
+sixth, which every vocabulary in this app invites. `borrowGroups()` heads the
+pool with `REPO_PAGES`, then your people, then the other boards. Four details
+worth keeping:
+
+- The **Library is skipped**, because it is the same store read by subject and
+  `repoOf()` never returns it — iterating it would be a heading that can never
+  hold anything.
+- A registry entry is described in the **registry's** words, not the board's:
+  the two vocabularies are different lists, so under a heading reading
+  "Devices" the picker said "Lenovo Legion — kit" while the Repo calls it a
+  laptop. The board kind still decides what is drawn; only the reading changed.
+- The default is the **first option of the first group**, not pool index 0 —
+  `pool` is ordered by how often a thing has been used, so index 0 is usually
+  a board thing and the select opened on a row at the bottom. Same shape as
+  reading `.value` off a group in Coffer: a grouped list needs its first entry
+  found, not assumed.
+- **The gate has to test the whole pool.** The button read `allThings().length`
+  — one of three sources — so a book with a full registry and a bare board
+  vocabulary hid the one control that would have brought any of it in.
+
+`{group, options}` support is in the **shared runtime's** select, so it landed
+in all four apps at once and the md5 test is what proves it. Native
+`<optgroup>`, deliberately: on a phone it is the operating system's own picker
+with the headings in it, rather than a list this app would have to build,
+scroll and trap focus in.
 
 **Every tab always lands on its list.** Which board is open, which job or
 project is open, which week is shown, which report is built and which mode's kit
@@ -1685,6 +1760,13 @@ failure and sent me chasing a bug that was not there. `[1-9][0-9]* failed`.
 A sweep nobody trusts is a sweep nobody reads — the same rule as the suite
 itself, one level up.
 
+**And a sweep must read the EXIT CODE, not only the output.** Judged by its
+printed lines alone, a script that threw on a stale selector — a Playwright
+timeout, no `FAIL` line, exit 1 — was reported `OK`, which is the same fault
+as `if (!el) return` inside a test one level up: silence is not success. The
+sweep tests `[ "$rc" -ne 0 ]` as well, and prints the `Error`/`Timeout` line
+so the cause is visible without re-running.
+
 **A performance test must not charge the app for the harness's own cost.**
 `picperf.js` reported a 1279ms freeze on adding a photograph and the app was
 innocent: timestamping every long task against the moment the file was handed
@@ -1701,6 +1783,22 @@ The scripts drive the real UI, so **a reshaped screen breaks them and that is
 not a regression** — but a suite nobody trusts is a suite nobody runs, so fix
 them in the same change. Four traps account for almost every stale one.
 
+**NAME A TAB, NEVER COUNT ONE.** Home taking the first slot moved every tab
+along by one, and `#nav .tab:nth-child(2)` — Waiting when Boards was first —
+quietly became Boards, which has no `.finding h1`: still valid CSS, pointing
+at the wrong screen. `#nav .tab:last-child` was Settings and became the Repo
+the day Settings moved to the gear, which broke eleven scripts at once.
+`[data-tab="…"]` for a tab, `.gearbtn` for Settings, `[data-act="kit-page"]`
+or `[data-act="proj-page"]` for a page inside one — Mashghal's screens are
+four strips deep now and none of them is reachable by position.
+
+**And scope a selector the rail also matches.** The rail lists boards, and its
+rows come first in the document, so an unscoped `[data-act="board-open"] >>
+nth=0` picks a rail row — fine on a laptop, and invisible under 880px where
+`.railwork` is hidden, so the click waits thirty seconds for something that
+will never be shown. `.view [data-act="board-open"]` in any script that runs
+at phone width.
+
 - `innerText` reflects `text-transform`, so a heading uppercased in CSS reads
   `SALARY` and `.includes("Salary")` is false. Write the *verdict* and its
   failure message off the same comparison, too — one helper here tested
@@ -1708,6 +1806,11 @@ them in the same change. Four traps account for almost every stale one.
   printed `"Pending" missing` beside a `PASS` for a year.
 - The ledger and plan rows are `div.row` and `.card`, never `<tr>`, so
   `closest("tr")` returns null. Home's Pending rows are `.pend-row`.
+- **`selectOption` matches a VALUE, not a position.** Mashghal's borrow picker
+  numbers its options by their place in an unordered pool, which equalled the
+  DOM index only while the list was flat — the moment it was grouped, a test
+  passing the index it had just read selected a different entry and then
+  failed on the node it got. Read `o.value` and pass that.
 - **A Horizon page is opened with `[data-act="plan-tab"][data-id="…"]`**, not
   `.subnav button[data-id="…"]` — that selector belongs to Worth now. Matching
   a hub card by its label fails too: its `innerText` is the name *plus* a
