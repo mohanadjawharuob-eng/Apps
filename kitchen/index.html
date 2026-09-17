@@ -2104,10 +2104,21 @@ function closeModal() {
    straight through the scrim. Anything that writes overlay.innerHTML itself
    calls this. */
 function trapOverlay(onEscape) {
+  /* `offsetParent !== null` is NOT enough once a dialog can fold fields away.
+     Chrome keeps the children of a closed <details> in the layout tree
+     (content-visibility: hidden), so they have an offsetParent and Tab walked
+     straight into seven fields nobody could see — which is the same fault as
+     Tab walking out through the scrim, one level in. The closed-fold test is
+     explicit rather than relying on `checkVisibility`, whose options are not
+     the same everywhere. */
   var trap = function () {
     return Array.prototype.filter.call(
       overlay.querySelectorAll("button, input, select, textarea, a[href], label, [tabindex]:not([tabindex='-1'])"),
-      function (el) { return !el.disabled && el.offsetParent !== null; });
+      function (el) {
+        if (el.disabled || el.offsetParent === null) return false;
+        var fold = el.closest && el.closest("details:not([open])");
+        return !(fold && fold !== el && fold.querySelector("summary") !== el);
+      });
   };
   escHandler = function (e) {
     if (e.key === "Escape") { closeModal(); if (onEscape) onEscape(); return; }
@@ -2133,8 +2144,21 @@ function openModal(opts) {
     '<div class="modal-head"><h3>' + esc(opts.title) + "</h3>" +
     (opts.message ? "<p>" + opts.message + "</p>" : "") + "</div>";
 
+  /* `more: true` puts a field behind a fold. A dialog asking twelve questions
+     is a dialog people close, and the registry's asked for a name, a kind, a
+     write-in, which list, a path, a link, where it is kept, how it stands,
+     when it was last used, when it was made, what it is part of, what it is
+     about and a note — four of which are what anybody actually types. Same
+     reasoning as `showWhen`, one level up: a field needed one time in five
+     should not be on screen every time.
+
+     Native `<details>`, so a closed fold is out of the tab order for free
+     (its contents have no `offsetParent`, which is exactly what
+     `trapOverlay` filters on), and `collect()` reads by id, so a folded
+     field is still read and still saved. The summary says how many, because
+     a fold that does not is a fold nobody opens. */
   if (fields.length) {
-    html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
+    var fieldHtml = function (f) {
       var id = "mf_" + f.key, inner;
       if (f.type === "select") {
         /* An option, or a GROUP of them: `{group, options}` becomes an
@@ -2176,7 +2200,17 @@ function openModal(opts) {
         (f.showWhen ? ' data-when="' + esc(f.showWhen.key) + '" data-is="' + esc(f.showWhen.is) + '" hidden' : "") +
         '><label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
         (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
-    }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
+    };
+    var plain = fields.filter(function (f) { return !f.more; });
+    var extra = fields.filter(function (f) { return f.more; });
+    html += '<div class="modal-body"><div class="fields">' +
+      plain.map(fieldHtml).join("") + "</div>";
+    if (extra.length) {
+      html += '<details class="modal-more"><summary>' +
+        esc(opts.moreLabel || ("More \u2014 " + extra.length + (extra.length === 1 ? " field" : " fields"))) +
+        '</summary><div class="fields">' + extra.map(fieldHtml).join("") + "</div></details>";
+    }
+    html += (opts.extraBody || "") + "</div>";
   } else if (opts.extraBody) {
     html += '<div class="modal-body">' + opts.extraBody + "</div>";
   }

@@ -393,9 +393,12 @@ color-scheme: light;
   .card > h3 { margin: 0 0 0.2rem; font-size: 1.02rem; }
   .card-sub { margin: 0 0 0.8rem; color: var(--faint); font-size: 0.85rem; }
   .sect { margin: 1.9rem 0 0.7rem; font-size: 0.87rem; color: var(--faint); }
-  /* A few places still want the old legend treatment — a column heading over
-     genuinely machine-read data, never a sentence. */
-  .sect.tiny { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; }
+  /* `.sect.tiny` was here for "a few places that still want the old legend
+     treatment" and no place ever did — nothing in the app writes the class.
+     Gone rather than left as a rule that looks like it is doing something.
+     (The `p-*` pill tones below are different: that is a palette of tones a
+     state picks from, and an unused tone is a colour nobody has needed yet,
+     not a rule with no match.) */
   .sect:first-child { margin-top: 0; }
   .empty { color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.9rem; margin: 0.4rem 0; }
   .hint { color: var(--faint); font-size: 0.8rem; margin: 0.35rem 0 0; }
@@ -1246,9 +1249,36 @@ color-scheme: light;
   .modal-head h3 { margin: 0; font-size: 1.1rem; }
   .modal-head p { margin: 0.4rem 0 0; color: var(--dim); font-size: 0.86rem; line-height: 1.55; }
   .modal-body { padding: 0.8rem 1.1rem 0.2rem; }
+  /* ONE COLUMN ON A PHONE. Two columns of 175px, each under a label and over
+     four lines of hint, is not a form anybody fills in on a handset — and the
+     three sibling apps have had this rule since they were written. */
   .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+  @media (max-width: 620px) { .fields { grid-template-columns: 1fr; } }
+  /* The fold the shared runtime puts the rarely-needed fields behind. It sits
+     inside the dialog body, so it takes the rule vocabulary of a dialog
+     rather than the page's `.fold`. */
+  .modal-more { margin: 0.9rem 0 0; border-top: 1px solid var(--rule-soft); }
+  .modal-more summary {
+    cursor: pointer; list-style: none; padding: 0.55rem 0 0.2rem;
+    font-size: var(--fs-sm); color: var(--receded); letter-spacing: 0.01em;
+  }
+  .modal-more summary::-webkit-details-marker { display: none; }
+  .modal-more summary::before { content: "\25b8"; margin-right: 0.35em; color: var(--receded); }
+  .modal-more[open] summary::before { content: "\25be"; }
+  .modal-more summary:hover { color: var(--dim); }
+  .modal-more > .fields { padding: 0.3rem 0 0.2rem; }
   .field { display: flex; flex-direction: column; gap: 0.25rem; }
-  .field.span { grid-column: 1 / -1; }
+  /* `.wide` is the class the SHARED RUNTIME emits for `span: true`, and this
+     stylesheet defined `.field.span` — a name nothing in the app writes. So
+     `span: true` had never done anything here: every field declared to run
+     the full width, a name, a date, a note, a text area, sat in a half
+     column. The three older apps have always had `.field.wide`; copying the
+     runtime verbatim and then naming its hook something else is the same
+     class of fault as the `.tile` collision, inverted — a rule nothing
+     matches instead of two rules matching one thing. `.span` stays as an
+     alias so anything written against the old name keeps working. */
+  .field.wide, .field.span { grid-column: 1 / -1; }
+  @media (max-width: 620px) { .field.wide, .field.span { grid-column: span 1; } }
   .field label { font-size: 0.78rem; color: var(--dim); }
   .field input, .field select, .field textarea {
     background: var(--sheet); border: 1px solid var(--rule); color: var(--ink);
@@ -4789,8 +4819,8 @@ function stateWord(b, n) {
         { key: "to", label: "To", type: "text", value: reportOn ? reportOn.to : today(), hint: "YYYY-MM-DD" }
       ],
       validate: function (v) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.from.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(v.to.trim())) {
-          return "Both dates must be YYYY-MM-DD.";
+        if (!dayOk(v.from.trim()) || !dayOk(v.to.trim())) {
+          return "Both dates have to be real days, written YYYY-MM-DD.";
         }
         if (v.to.trim() < v.from.trim()) return "The end has to come after the start.";
         return null;
@@ -5377,26 +5407,31 @@ function stateWord(b, n) {
         { key: "url", label: "A link to it", type: "text", span: true,
           value: a ? (a.url || "") : "",
           hint: "A Google Drive share link, so the full-size copy opens on any device." },
+        /* Everything from here down is behind the fold. Four questions are
+           what anybody types when they add something — what it is called,
+           what it is, which list, and how to reach it. The other seven were
+           on screen every time, which made "New thing" a form of twelve
+           labelled boxes and, on a phone, a scroll before the Add button. */
         { key: "where", label: "Kept where", type: "text", value: a ? (a.where || "") : "",
-          placeholder: "field bag" },
+          placeholder: "field bag", more: true },
         /* Stated, because no derivation can tell a total station in the van
            from one on the bench. Blank is the honest default — "nobody has
            said" is a real answer and better than a guessed one. */
-        { key: "state", label: "How it stands", type: "select",
+        { key: "state", label: "How it stands", type: "select", more: true,
           value: a ? (a.state || "") : "",
           options: [{ value: "", label: "Nothing said" }].concat(
             Object.keys(THING_STATES).filter(function (k) { return !!k; })
               .map(function (k) { return { value: k, label: cap(THING_STATES[k].word) }; })) },
-        { key: "lastUsedOn", label: "Last used", type: "text",
+        { key: "lastUsedOn", label: "Last used", type: "text", more: true,
           value: a ? (a.lastUsedOn || "") : "", placeholder: "YYYY-MM-DD",
           hint: "Stated, not worked out: a board that named this in March says nothing about last week." },
-        { key: "onDate", label: "Made or acquired on", type: "text",
+        { key: "onDate", label: "Made or acquired on", type: "text", more: true,
           value: a ? (a.onDate || "") : "", placeholder: "YYYY-MM-DD" },
         /* Containment, offered as a plain picker over everything else in the
            registry. An entry cannot be inside itself, and the options drop
            anything that is already below it — picking one would make a loop
            and both pages would recurse. */
-        { key: "atId", label: "Part of / found at", type: "select", span: true,
+        { key: "atId", label: "Part of / found at", type: "select", span: true, more: true,
           value: a ? (a.atId || "") : "",
           options: [{ value: "", label: "Nothing \u2014 it stands on its own" }].concat(
             opts(live(state.assets).filter(function (x) {
@@ -5408,11 +5443,11 @@ function stateWord(b, n) {
               return true;
             }), function (x) { return x.name; })),
           hint: "A trench is part of a site, a photograph is of a trench. This is where it IS, not what it was made from." },
-        { key: "topics", label: "What it is about", type: "text", span: true,
+        { key: "topics", label: "What it is about", type: "text", span: true, more: true,
           value: a ? assetTopics(a).join(", ") : "",
           placeholder: "harbour surveying, photogrammetry",
           hint: "Comma-separated. The Library lists everything on a topic, whatever kind it is." },
-        { key: "notes", label: "Notes", type: "textarea", span: true, rows: 2,
+        { key: "notes", label: "Notes", type: "textarea", span: true, rows: 2, more: true,
           value: a ? (a.notes || "") : "" }
       ],
       validate: function (v) {
@@ -7860,7 +7895,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v51 · 17 Sep 2026";
+  var BUILD = "v52 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -10434,7 +10469,7 @@ function dims(n) {
           { key: "to", label: "Time", type: "text", value: "17:00", span: true, hint: "HH:MM" }
         ],
         validate: function (v) {
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(v.day.trim())) return "A day must be YYYY-MM-DD.";
+          if (!dayOk(v.day.trim())) return "A day must be a real date, written YYYY-MM-DD.";
           if (!timeOk(v.to)) return "A time must be HH:MM on the 24-hour clock.";
           if (v.day.trim() + "T" + v.to.trim() <= sp.startedAt) return "It has to end after it started.";
           return null;
@@ -11186,17 +11221,28 @@ function dims(n) {
       fields: [
         { key: "label", label: "Step", type: "text", value: n ? n.label : "", span: true, placeholder: "Send draft for review" },
         { key: "act", label: "Act", type: "select", value: n ? n.act : "do",
-          options: vocabOpts("acts") },
+          options: vocabOpts("acts"),
+          hint: "A Send goes to whoever is linked to it; a Decide gets its exits from the step row." },
         otherField("acts", "actOther"),
         { key: "chaseDays", label: "Chase after (days)", type: "number", min: 0, value: n ? (n.chaseDays || 0) : 0 },
         { key: "dueAt", label: "On a date (optional)", type: "text", span: true,
-          value: n ? (n.dueAt || "") : "", placeholder: "YYYY-MM-DD", hint: "Leave blank unless it is genuinely dated." },
-        { key: "note", label: "", type: "text", span: true, value: "",
-          hint: "A Send goes to whoever is linked to it; a Decide gets its exits from the step row." }
+          value: n ? (n.dueAt || "") : "", placeholder: "YYYY-MM-DD", hint: "Leave blank unless it is genuinely dated." }
+        /* There was a sixth field here with NO LABEL, always empty, which
+           `onConfirm` never read: a text box in the app's most-used dialog
+           that silently threw away whatever was typed into it, added only to
+           carry a sentence. "A control that quietly does nothing is worse
+           than no control" is this repo's own rule about file paths, and it
+           holds for a form field. The sentence it carried belongs to the Act
+           picker it is about, so that is where it is. */
       ],
       validate: function (v) {
         if (!v.label.trim()) return "Give the step a name.";
-        if (v.dueAt && !/^\d{4}-\d{2}-\d{2}$/.test(v.dueAt.trim())) return "A date must be YYYY-MM-DD, or blank.";
+        /* `dayOk`, not the shape regex: `2026-13-45` matches the pattern,
+           stores, parses to Invalid Date and appears on no screen. The rule
+           is already written down and this was the one date field still
+           breaking it. */
+        if (v.dueAt.trim() && !dayOk(v.dueAt.trim()))
+          return "A date has to be a real day, written YYYY-MM-DD \u2014 or blank.";
         return null;
       },
       onConfirm: function (v) {
@@ -12134,10 +12180,21 @@ function closeModal() {
    straight through the scrim. Anything that writes overlay.innerHTML itself
    calls this. */
 function trapOverlay(onEscape) {
+  /* `offsetParent !== null` is NOT enough once a dialog can fold fields away.
+     Chrome keeps the children of a closed <details> in the layout tree
+     (content-visibility: hidden), so they have an offsetParent and Tab walked
+     straight into seven fields nobody could see — which is the same fault as
+     Tab walking out through the scrim, one level in. The closed-fold test is
+     explicit rather than relying on `checkVisibility`, whose options are not
+     the same everywhere. */
   var trap = function () {
     return Array.prototype.filter.call(
       overlay.querySelectorAll("button, input, select, textarea, a[href], label, [tabindex]:not([tabindex='-1'])"),
-      function (el) { return !el.disabled && el.offsetParent !== null; });
+      function (el) {
+        if (el.disabled || el.offsetParent === null) return false;
+        var fold = el.closest && el.closest("details:not([open])");
+        return !(fold && fold !== el && fold.querySelector("summary") !== el);
+      });
   };
   escHandler = function (e) {
     if (e.key === "Escape") { closeModal(); if (onEscape) onEscape(); return; }
@@ -12163,8 +12220,21 @@ function openModal(opts) {
     '<div class="modal-head"><h3>' + esc(opts.title) + "</h3>" +
     (opts.message ? "<p>" + opts.message + "</p>" : "") + "</div>";
 
+  /* `more: true` puts a field behind a fold. A dialog asking twelve questions
+     is a dialog people close, and the registry's asked for a name, a kind, a
+     write-in, which list, a path, a link, where it is kept, how it stands,
+     when it was last used, when it was made, what it is part of, what it is
+     about and a note — four of which are what anybody actually types. Same
+     reasoning as `showWhen`, one level up: a field needed one time in five
+     should not be on screen every time.
+
+     Native `<details>`, so a closed fold is out of the tab order for free
+     (its contents have no `offsetParent`, which is exactly what
+     `trapOverlay` filters on), and `collect()` reads by id, so a folded
+     field is still read and still saved. The summary says how many, because
+     a fold that does not is a fold nobody opens. */
   if (fields.length) {
-    html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
+    var fieldHtml = function (f) {
       var id = "mf_" + f.key, inner;
       if (f.type === "select") {
         /* An option, or a GROUP of them: `{group, options}` becomes an
@@ -12206,7 +12276,17 @@ function openModal(opts) {
         (f.showWhen ? ' data-when="' + esc(f.showWhen.key) + '" data-is="' + esc(f.showWhen.is) + '" hidden' : "") +
         '><label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
         (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
-    }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
+    };
+    var plain = fields.filter(function (f) { return !f.more; });
+    var extra = fields.filter(function (f) { return f.more; });
+    html += '<div class="modal-body"><div class="fields">' +
+      plain.map(fieldHtml).join("") + "</div>";
+    if (extra.length) {
+      html += '<details class="modal-more"><summary>' +
+        esc(opts.moreLabel || ("More \u2014 " + extra.length + (extra.length === 1 ? " field" : " fields"))) +
+        '</summary><div class="fields">' + extra.map(fieldHtml).join("") + "</div></details>";
+    }
+    html += (opts.extraBody || "") + "</div>";
   } else if (opts.extraBody) {
     html += '<div class="modal-body">' + opts.extraBody + "</div>";
   }

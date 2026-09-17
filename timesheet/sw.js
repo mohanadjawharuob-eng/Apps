@@ -1,5 +1,5 @@
 /* Offline shell for Timesheet. Scope: /Apps/timesheet/ */
-var CACHE = 'pwa-timesheet-v7';
+var CACHE = 'pwa-timesheet-v8';
 var PRECACHE = [
   "./",
   "../icons/timesheet-192.png",

@@ -1375,6 +1375,41 @@ because each is a class.
 - An empty list's one job is to say **what to do**, so it names the button
   that does it rather than repeating what the section is.
 
+**AND THEN READ THE DIALOGS, WHICH ARE WHERE ANYBODY IS ASKED TO DECIDE
+ANYTHING.** The screens had been read; the dialogs had not. Four more:
+
+- **A field that is never read is a control that does nothing.** "New step" —
+  the app's most-used dialog — carried a sixth box with **no label at all**,
+  always empty, which `onConfirm` never read. It existed to hold one
+  explanatory sentence, and it silently threw away whatever was typed into
+  it. The sentence belongs to the picker it is about, so it is a `hint` on
+  Act. Same rule this file already states about a file path: a control that
+  quietly does nothing is worse than no control.
+- **A date has to exist, everywhere.** Three validators were still the shape
+  regex rather than `dayOk()` — a step's due date, the report's range, and
+  closing an open stretch — so `2026-13-45` would store, parse to
+  `Invalid Date` and appear on no screen. The rule was already written down;
+  what it needed was `grep '^.d{4}-.d{2}-.d{2}\$'`, which should now match
+  `dayOk` itself and nothing else.
+- **A dialog of twelve boxes is a dialog people close.** The registry's asked
+  for a name, a kind, a write-in, which list, a path, a link, where it is
+  kept, how it stands, when it was last used, when it was made, what it is
+  part of, what it is about and a note — four of which are what anybody
+  types when adding something. `more: true` on a field puts it behind a
+  native `<details>` in the **shared runtime**, so all four apps have it and
+  the md5 test proves it; the summary says how many, because a fold that does
+  not is a fold nobody opens. `collect()` reads by id, so a folded field is
+  still read and still saved — asserted, because a fold that silently dropped
+  what you typed into it would be worse than the long form.
+- **`offsetParent !== null` is not a visibility test once fields can fold.**
+  Chrome keeps the children of a closed `<details>` in the layout tree
+  (`content-visibility: hidden`), so they have an offsetParent and
+  `trapOverlay`'s filter let Tab walk into seven fields nobody could see —
+  the same fault as Tab walking out through the scrim, one level in. The trap
+  excludes anything inside a closed fold, and the test presses Tab all the
+  way round and asserts where the focus actually went rather than reading a
+  property that lies.
+
 `words.js` is the test, and it is the shape to copy for this kind of fault:
 it walks every screen and every strip page in both states, collects the text,
 and asserts on the *words* — no screen names Kit, no screen says cadence,
@@ -1593,6 +1628,38 @@ for ln in c.split(chr(10)):
 sel=re.findall(r"^\s*(\.[A-Za-z][\w-]*)\s*\{",chr(10).join(keep),re.M)
 print([k for k,v in collections.Counter(sel).items() if v>1] or "no collisions")'
 ```
+
+**And the inverse: a CSS rule nothing writes.** The collision scan looks for
+one name declared twice; this looks for a name declared and never emitted,
+which is how `span: true` came to do nothing in this app for its whole life.
+The **shared runtime** emits `class="field wide"` for a spanning field and
+this stylesheet defined `.field.span` — a name nothing in the app writes —
+so every field declared to run the full width (a name, a date, a note, a text
+area) sat in a half column, and on a phone the form was two 175px columns
+each under a label and over four lines of hint. Copying the runtime verbatim
+and then naming its hook something else is the same class of fault as the
+`.tile` collision, inverted. The three older apps have always had
+`.field.wide`; comparing their stylesheets against this one for the runtime's
+own class names is worth doing after any change to the field spec.
+
+```
+python3 -c 'import re,sys
+s=open("mashghal/index.html").read()
+css=s[s.index("<style>"):s.index("</style>")];body=s[s.index("</style>"):]
+sel=set()
+for m in re.finditer(r"^\s*([.#][A-Za-z][\w-]*(?:[.:>#\[\]\w=\"\x27-]+)*)\s*(?:,|\{)",css,re.M):
+  for part in re.findall(r"\.([A-Za-z][\w-]*)",m.group(1)): sel.add(part)
+print([c for c in sorted(sel) if not re.search(r"[\s\"\x27.]"+re.escape(c)+r"[\s\"\x27.]",body)] or "all matched")'
+```
+
+It has the **same interpolation blind spot** as the `data-act` scan, so read
+its output rather than acting on it: `t-late`, `t-dated` and `t-due` are built
+as `'cal-m t-' + m.tone`, and `ic-send`, `ic-ask`, `ic-file` as
+`'ic-' + n.act`. And a family of tones is not a family of dead rules — the
+`p-*` pills are a palette a state picks from, so an unmatched one is a colour
+nobody has needed yet. What it caught for real was `.field.wide` and one
+`.sect.tiny` that had been waiting since it was written for "a few places
+that still want the old legend treatment", and no place ever did.
 
 That scan only sees *bare* class rules, and the other half of the same fault is
 a **compound** one: `.panel.late` was rebuilt to the channel rule (a neutral
