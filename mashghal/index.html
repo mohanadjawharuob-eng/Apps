@@ -929,6 +929,30 @@ color-scheme: light;
     .repo-acts { padding: 0 0.6rem 0.55rem; justify-content: flex-end; }
     .repo-open { display: none; }
   }
+  /* FIELD MODE: bigger targets and fewer of them. Nothing here is a new
+     colour or a new shape — it is the app's own panel and button at the size
+     a thumb needs in bright sun, and the bar at the top says plainly that you
+     are in it and how to leave, because a mode you cannot see you are in is
+     the app behaving strangely. */
+  .fieldbar {
+    display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem;
+    padding: 0.7rem 0.85rem; border: 1px solid var(--rule-mid);
+    border-radius: var(--r); background: var(--raised);
+  }
+  .fieldbar b { display: block; font-family: var(--display); font-weight: 500; font-size: 1rem; }
+  .fieldbar span { display: block; font-size: 0.78rem; color: var(--faint); }
+  .fieldgrid { display: grid; gap: 0.6rem; grid-template-columns: 1fr 1fr; margin-bottom: 0.4rem; }
+  @media (max-width: 560px) { .fieldgrid { grid-template-columns: 1fr; } }
+  .field-big {
+    display: block; text-align: left; padding: 1.1rem 1rem; min-height: 5.2rem;
+  }
+  .field-big b { display: block; font-family: var(--display); font-weight: 500;
+                 font-size: 1.15rem; letter-spacing: -0.012em; margin-bottom: 0.15rem; }
+  .field-big span { display: block; font-size: 0.8rem; color: var(--faint); }
+  /* Every act on a field row is a full-height target rather than a quiet
+     chip: one hand, and a 24px button is a miss. */
+  :root.field .panel .acts .btn { padding: 0.55rem 0.9rem; }
+
   /* The count on a strip button: a section with nothing in it is visible
      without being opened. */
   .subnav .cnt {
@@ -1655,7 +1679,14 @@ color-scheme: light;
            A board node is never a live reference into here (that would be a
            hole in the run freeze) but a copy carrying `fromAssetId`, so the
            registry can still answer "where is this used". */
-        assets: [],      // {id,name,kind,notes,path,url,thumb,where,onDate,fromIds[],archived}
+        /* `atId` is containment — part of / found at — and `fromIds` is
+           provenance — made from. Two different relations: a sherd is FOUND
+           AT a site and an orthophoto is MADE FROM three hundred frames, and
+           conflating them would put the site in the list of things the sherd
+           was manufactured out of. `topics` is what a thing is ABOUT, which
+           is the only thing the registry could not answer and the whole of
+           what the Library needed. */
+        assets: [],      // {id,name,kind,repo,notes,path,url,thumb,where,onDate,atId,topics[],fromIds[],archived}
         /* The stated half of a person. Everything about how a thread with
            them is GOING is derived from the sends they are linked to, so this
            holds only what no board could know: where they work, what they do,
@@ -1680,6 +1711,13 @@ color-scheme: light;
            Waiting lists them in their own section and says they were typed. */
         tasks: [],       // {id,label,doneAt,dueAt,jobId,projId,boardId,place,note,archived}
         settings: { showDone: true, companion: false,
+                    /* Field mode is a SETTING and not view state, against
+                       this app's usual rule, and deliberately: you turn it on
+                       at the site and off in the car, and surviving a reload
+                       is the entire point of it. Everything else mode-ish
+                       here resets on a tab press because a tab should land on
+                       its list; this one is a fact about where you are. */
+                    field: false,
                     // Set the first time jobs are derived from claimants, so
                     // deleting the last one is not silently undone on the next
                     // load. Inferring it from "jobs is empty" meant Delete
@@ -1705,6 +1743,7 @@ color-scheme: light;
       if (parsed.settings) {
         if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
         if (typeof parsed.settings.companion === "boolean") s.settings.companion = parsed.settings.companion;
+        if (typeof parsed.settings.field === "boolean") s.settings.field = parsed.settings.field;
         if (typeof parsed.settings.jobsDerived === "boolean") s.settings.jobsDerived = parsed.settings.jobsDerived;
         if (parsed.settings.sync && typeof parsed.settings.sync === "object") {
           ["mode", "gistId", "deviceName", "lastPulledAt"].forEach(function (k) {
@@ -1746,7 +1785,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; openJob = ""; openProj = ""; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; libTopic = ""; openJob = ""; openProj = ""; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -2968,6 +3007,10 @@ function stateWord(b, n) {
   }
 
   function renderWaiting() {
+    /* Waiting is already the screen the phone really needs, so field mode
+       takes it over rather than adding a seventh tab. Same tab, same place in
+       the bar, a different posture. */
+    if (fieldOn()) return renderField();
     var list = dues();
     var over = list.filter(function (d) { return d.st === "over"; });
     var calm = list.filter(function (d) { return d.st !== "over"; });
@@ -2980,7 +3023,9 @@ function stateWord(b, n) {
 
     var tk = openTasks(), tkLate = tasksLate();
 
-    h += '<div class="tools" style="margin:0 0 1rem"><button class="btn" data-act="task-add">Write something down</button></div>';
+    h += '<div class="tools" style="margin:0 0 1rem">' +
+      '<button class="btn" data-act="task-add">Write something down</button>' +
+      '<button class="btn" data-act="field-on">Field mode</button></div>';
 
     if (!list.length && !s.length && !tk.length && !live(state.cadences).length) {
       h += '<p class="empty">Nothing is waiting on you. Either everything is done, or nothing has been started.</p>';
@@ -4475,9 +4520,19 @@ function stateWord(b, n) {
     { id: "site",   label: "Sites",   one: "site",
       blurb: "What you log into. Drive, the library catalogue, a mail search you keep coming back to." },
     { id: "file",   label: "Files",   one: "file",
-      blurb: "What the work is made of. The orthophoto, the control file, the brochure." }
+      blurb: "What the work is made of. The orthophoto, the control file, the brochure." },
+    /* THE LIBRARY IS THE SAME STORE READ BY TOPIC INSTEAD OF BY KIND. It sits
+       on this strip rather than in a tab of its own because it is not a
+       different set of things — it is the fifth question you ask of the same
+       registry, and a second list would be a second thing to keep in step.
+       You do not create a topic either: you write one onto a thing, which is
+       what keeps the vocabulary a description of the work rather than a
+       taxonomy to maintain. */
+    { id: "lib",    label: "Library", one: "entry",
+      blurb: "Everything you know, by subject rather than by kind \u2014 the method note beside the dataset beside the paper." }
   ];
   var repoTab = "device";   // view state, never saved — a tab lands on its list
+  var libTopic = "";        // which subject is open; view state too
 
   /* The one place a kind decides its section, so the row, the strip's counts
      and the picker cannot disagree. Hardware is a device, software an app, a
@@ -4561,6 +4616,95 @@ function stateWord(b, n) {
   }
   function upkeepLate() {
     return upkeep().filter(function (x) { return x.st.never || x.st.over > 0; });
+  }
+
+  /* ================= field mode =================
+
+     FIELD MODE IS A POSTURE, NOT A NOUN. The spec asks for it and it would be
+     wrong to answer with a fifth kind of record: on site you are not creating
+     a new sort of thing, you are doing the same three things under worse
+     conditions — one hand, bright sun, no signal, and no patience for
+     navigating four levels to reach a camera.
+
+     So it composes what is already here and adds no state but a switch:
+
+       - `place` already exists on upkeep, and out of the house is already a
+         place, so "only what is doable where I am" is a filter this app has
+         had since upkeep shipped;
+       - a photograph already goes straight onto a board, and `pickPicture`
+         is already the one way in for every route;
+       - a task is already the one thing you type, and one written in a trench
+         is the clearest case there is for typing one.
+
+     What field mode changes is the SIZE and the NUMBER of choices. Nothing is
+     hidden that would otherwise be reachable — it is the same record, read
+     through a screen built for a thumb.
+
+     It is a setting rather than view state, deliberately and against this
+     app's usual rule: you turn it on at the site and off in the car, and
+     having it survive a reload is the entire point. Every other mode-ish
+     thing here (`openId`, `sel`, `repoTab`) resets because a tab should land
+     on its list; this one is a fact about where you are. */
+  function fieldOn() { return !!state.settings.field; }
+
+  function renderField() {
+    var late = dues().filter(function (d) { return d.st === "over"; });
+    var tk = openTasks();
+    var up = upkeep().filter(function (x) {
+      // Out of the house first, but never ONLY: a thing doable anywhere is
+      // doable here too, and hiding it would be the app deciding for you.
+      return x.st.over > 0 && (!x.cd.place || x.cd.place === "out" || x.cd.place === "away");
+    });
+    var runs = boards("run").filter(function (b) { return !b.closedOn; });
+
+    var h = '<div class="fieldbar"><div class="grow"><b>Field mode</b>' +
+      '<span>Big targets, few choices, nothing that needs two hands.</span></div>' +
+      '<button class="btn" data-act="field-off">Leave it</button></div>';
+
+    /* The camera first and biggest, because it is the thing you actually
+       came here to do and the thing a small button loses you. It picks the
+       board for you when there is only one run going, and asks when there is
+       more than one — never silently guessing which piece of work a
+       photograph belongs to. */
+    h += '<div class="fieldgrid">' +
+      '<button class="btn field-big" data-act="field-shot">' +
+        '<b>Take a photograph</b><span>' +
+        (runs.length === 1 ? esc("straight onto " + runs[0].name)
+         : runs.length ? "you choose which run" : "start a run first") +
+        "</span></button>" +
+      '<button class="btn field-big" data-act="task-add"><b>Write something down</b>' +
+        '<span>one line, for later</span></button>' +
+      "</div>";
+
+    if (late.length) {
+      h += '<div class="sect">Late, and chaseable from here</div><div class="stack tight">' +
+        late.slice(0, 5).map(function (d) {
+          return '<button type="button" class="panel rowbtn late" data-act="board-open" data-id="' +
+            d.board.id + '"><div class="grow"><div class="nm sm">' + esc(d.node.label) + "</div>" +
+            '<div class="says">' + esc(d.board.name) + "</div></div></button>";
+        }).join("") + "</div>";
+    }
+
+    if (up.length) {
+      h += '<div class="sect">Doable while you are out</div><div class="stack tight">' +
+        up.map(function (x) {
+          return '<div class="panel calm late"><div class="grow"><div class="nm sm">' + esc(x.cd.label) + "</div>" +
+            '<div class="says">' + esc(x.st.word) + "</div></div>" +
+            '<div class="acts"><button class="btn loud" data-act="cadence-done" data-id="' +
+            x.cd.id + '">Done</button></div></div>';
+        }).join("") + "</div>";
+    }
+
+    if (tk.length) {
+      h += '<div class="sect">Written down</div><div class="stack tight">' +
+        tk.slice(0, 8).map(taskRow).join("") + "</div>";
+    }
+
+    if (!late.length && !up.length && !tk.length) {
+      h += '<p class="empty">Nothing is waiting on you out here. The camera and the note are above.</p>';
+    }
+    h += '<p class="saynote foot">Everything is still where it was \u2014 this is the same record with bigger buttons. Nothing has been hidden that you could otherwise reach.</p>';
+    return h;
   }
 
   function upkeepCard() {
@@ -4719,6 +4863,80 @@ function stateWord(b, n) {
     }
     return out;
   }
+  /* ---------------- containment, and topics ----------------
+
+     THE ARCHAEOLOGICAL DATA MODEL, ANSWERED WITH ONE FIELD RATHER THAN FOUR
+     NOUNS. The spec asks for Site, Artifact, Feature and Survey. Hardcoding
+     those four would break this app's first rule — nothing is hardcoded, the
+     vocabulary is a floor and not a ceiling — and it would make the app
+     absurd for the thesis, the visa and the lecture, which are half of what
+     is actually in it. `assetKinds` already lets the reader add every one of
+     those words and have the registry, the finder, provenance, upkeep and the
+     boards all work on them.
+
+     What was genuinely missing is the relation those four nouns are FOR:
+     containment. An artifact is found in a feature, a feature is in a site, a
+     photograph is of a trench. `fromIds` is provenance — what this was made
+     FROM — and that is a different relation: an orthophoto is *made from*
+     three hundred frames, and a sherd is *found at* a site. Conflating them
+     would put the site in the list of things the sherd was manufactured out
+     of. So `atId` is one generic field, "part of / found at", and Site →
+     Feature → Artifact falls out of it for anybody, with archaeology named
+     nowhere in the code.
+
+     Same discipline as provenance: the forward link is stated, the reverse is
+     derived so the two cannot disagree, and a cycle is refused. */
+  function partOf(a) {
+    var x = a && a.atId ? assetOf(a.atId) : null;
+    return x && !x.archived ? x : null;
+  }
+  function partsIn(a) {
+    return live(state.assets).filter(function (x) { return x.atId === a.id; });
+  }
+  /* The whole chain upward, with a seen-set — a book that somehow already
+     holds a loop (a bad merge, a hand-edited backup) must not take the page
+     down with it, which is the same reason `madeFromAncestors` has one. */
+  function partAncestors(a) {
+    var seen = {}, out = [], x = partOf(a);
+    while (x && !seen[x.id]) { seen[x.id] = 1; out.push(x); x = partOf(x); }
+    return out;
+  }
+  function partTrail(a) {
+    return partAncestors(a).reverse().map(function (x) { return x.name; });
+  }
+
+  /* TOPICS ARE THE KNOWLEDGE LIBRARY, and they are not a new store either.
+     The spec asks for a library of what you have learned — methods,
+     references, reading that outlives one project. The registry already holds
+     exactly those objects: a document, a dataset, a PDF, with a link, a path,
+     notes, provenance and `assetUses()` answering where it was used. What it
+     could not do is answer "everything I have on harbour surveying", because
+     nothing said what a thing was ABOUT.
+
+     So a topic is a word from the extensible vocabulary, an entry carries any
+     number of them, and the Library is the registry read by topic instead of
+     by kind. One store, two questions — the same relationship the Repo has to
+     the workbench, and the reason there is no second list to keep in step. */
+  function assetTopics(a) {
+    return (a.topics || []).filter(function (t) { return !!t; });
+  }
+  function allTopics() {
+    var seen = {}, out = [];
+    live(state.assets).forEach(function (a) {
+      assetTopics(a).forEach(function (t) {
+        var k = String(t).toLowerCase();
+        if (!seen[k]) { seen[k] = 1; out.push(t); }
+      });
+    });
+    return out.sort(function (x, y) { return String(x).localeCompare(String(y)); });
+  }
+  function assetsOnTopic(t) {
+    var k = String(t).toLowerCase();
+    return live(state.assets).filter(function (a) {
+      return assetTopics(a).some(function (x) { return String(x).toLowerCase() === k; });
+    }).sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); });
+  }
+
   function assetUpkeep(a) {
     return live(state.cadences).filter(function (cd) { return cd.protectsAssetId === a.id; });
   }
@@ -4771,6 +4989,26 @@ function stateWord(b, n) {
           placeholder: "field bag" },
         { key: "onDate", label: "Made or acquired on", type: "text",
           value: a ? (a.onDate || "") : "", placeholder: "YYYY-MM-DD" },
+        /* Containment, offered as a plain picker over everything else in the
+           registry. An entry cannot be inside itself, and the options drop
+           anything that is already below it — picking one would make a loop
+           and both pages would recurse. */
+        { key: "atId", label: "Part of / found at", type: "select", span: true,
+          value: a ? (a.atId || "") : "",
+          options: [{ value: "", label: "Nothing \u2014 it stands on its own" }].concat(
+            opts(live(state.assets).filter(function (x) {
+              if (!a) return true;
+              if (x.id === a.id) return false;
+              // anything already under `a` would close a loop
+              var up = x, seen = {};
+              while (up && !seen[up.id]) { seen[up.id] = 1; if (up.id === a.id) return false; up = partOf(up); }
+              return true;
+            }), function (x) { return x.name; })),
+          hint: "A trench is part of a site, a photograph is of a trench. This is where it IS, not what it was made from." },
+        { key: "topics", label: "What it is about", type: "text", span: true,
+          value: a ? assetTopics(a).join(", ") : "",
+          placeholder: "harbour surveying, photogrammetry",
+          hint: "Comma-separated. The Library lists everything on a topic, whatever kind it is." },
         { key: "notes", label: "Notes", type: "textarea", span: true, rows: 2,
           value: a ? (a.notes || "") : "" }
       ],
@@ -4789,6 +5027,20 @@ function stateWord(b, n) {
           t.name = v.name.trim();
           t.kind = vocabTake("assetKinds", v.kind, v.kindOther, t.kind || "other");
           t.repo = v.repo;
+          t.atId = assetOf(v.atId) && v.atId !== t.id ? v.atId : "";
+          /* Split, trimmed, blanks dropped and de-duplicated case-insensitively
+             — "Harbour, harbour" is one topic typed twice, and two rows in the
+             Library for one word would be the "one name, one entry" fault in
+             the one screen built to pool things. */
+          (function () {
+            var seen = {}, out = [];
+            String(v.topics || "").split(",").forEach(function (x) {
+              var w = x.trim(); if (!w) return;
+              var k = w.toLowerCase();
+              if (!seen[k]) { seen[k] = 1; out.push(w); }
+            });
+            t.topics = out;
+          })();
           t.path = v.path.trim(); t.url = v.url.trim();
           t.where = v.where.trim(); t.onDate = v.onDate.trim();
           t.notes = v.notes.trim();
@@ -4871,10 +5123,52 @@ function stateWord(b, n) {
       '" title="What it is, where it is used, what it was made from">About</button></div></div>';
   }
 
+  /* The Library: subjects, then what is filed under the open one. A row here
+     NAVIGATES rather than opening the thing — the question on this page is
+     "what do I know about this", not "open it", which is the same reason the
+     workbench row navigates and the Repo row does not. */
+  function renderLibrary() {
+    var topics = allTopics();
+    var h = '<p class="hint" style="margin:0 0 0.8rem">Everything you know, by subject rather than by kind. A subject is written onto a thing \u2014 there is no list of topics to maintain, and nothing here is a second copy of anything.</p>';
+
+    if (!topics.length) {
+      return h + '<p class="empty">No subjects yet. Open anything in the Repo, press Edit, and write what it is about \u2014 "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
+    }
+
+    h += '<div class="tools" style="margin-bottom:0.9rem">' + topics.map(function (t) {
+      var n = assetsOnTopic(t).length;
+      return '<button class="btn' + (libTopic && libTopic.toLowerCase() === t.toLowerCase() ? " primary" : "") +
+        '" data-act="lib-topic" data-id="' + esc(t) + '">' + esc(t) +
+        ' <span class="cnt">' + n + "</span></button>";
+    }).join("") + "</div>";
+
+    if (!libTopic) {
+      return h + '<p class="empty">Pick a subject. ' + topics.length +
+        (topics.length === 1 ? " subject is" : " subjects are") + " written across " +
+        live(state.assets).filter(function (a) { return assetTopics(a).length; }).length +
+        " things.</p>";
+    }
+
+    var rows = assetsOnTopic(libTopic);
+    h += '<div class="sect">' + esc(libTopic) + "</div>";
+    h += rows.length ? '<div class="stack tight">' + rows.map(function (a) {
+      var look = assetLook(a), trail = partTrail(a);
+      var says = [assetKindLabel(a)];
+      if (trail.length) says.push("in " + trail[trail.length - 1]);
+      if (a.notes) says.push(a.notes);
+      return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + a.id + '">' +
+        '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
+        '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div></button>";
+    }).join("") + "</div>"
+      : '<p class="empty">Nothing under ' + esc(libTopic) + " any more.</p>";
+    return h;
+  }
+
   function renderRepo() {
     if (openAsset && byId(state.assets, openAsset)) return assetPage(byId(state.assets, openAsset));
     var page = REPO_PAGES.filter(function (p) { return p.id === repoTab; })[0] || REPO_PAGES[0];
-    var rows = repoIn(page.id);
+    var rows = page.id === "lib" ? [] : repoIn(page.id);
     var total = live(state.assets).length;
 
     var h = '<div class="finding"><h1>' +
@@ -4885,11 +5179,13 @@ function stateWord(b, n) {
     // The strip carries a count each, so an empty section is visible without
     // being opened.
     h += '<div class="subnav">' + REPO_PAGES.map(function (p) {
-      var n = repoIn(p.id).length;
+      var n = p.id === "lib" ? allTopics().length : repoIn(p.id).length;
       return '<button class="btn' + (p.id === repoTab ? " primary" : "") +
         '" data-act="repo-page" data-id="' + p.id + '">' + p.label +
         (n ? ' <span class="cnt">' + n + "</span>" : "") + "</button>";
     }).join("") + "</div>";
+
+    if (page.id === "lib") return h + renderLibrary();
 
     h += '<div class="tools" style="margin:0.9rem 0 0.5rem">' +
       '<button class="btn primary" data-act="repo-add" data-id="' + page.id + '">New ' + esc(page.one) + "</button>" +
@@ -4953,6 +5249,41 @@ function stateWord(b, n) {
 
     /* Provenance, both ways. The forward list is stated and the reverse is
        derived from it, so the two cannot disagree. */
+    /* Where it sits, both ways, above what it was made from — because "this
+       sherd is in trench 4 of the harbour site" is the first thing you want
+       to know about a thing, and what it was manufactured out of is the
+       second. The trail reads top-down (site, then trench) so it can be read
+       as an address rather than decoded backwards. */
+    var up = partTrail(a), inside = partsIn(a);
+    if (up.length || inside.length) {
+      h += '<div class="sect">Where it sits</div>';
+      if (up.length) {
+        h += '<div class="panel calm"><div class="grow"><div class="nm sm">' +
+          esc(up.concat([a.name]).join(" \u203a ")) + "</div>" +
+          '<div class="says">Part of ' + esc(up[up.length - 1]) + "</div></div>" +
+          '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' +
+          esc(partOf(a).id) + '">Look</button></div></div>';
+      }
+      if (inside.length) {
+        h += '<div class="stack tight">' + inside.map(function (x) {
+          var lk = assetLook(x);
+          return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
+            '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+            '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
+            '<div class="says">' + esc(assetKindLabel(x)) +
+            (partsIn(x).length ? " \u00b7 holds " + partsIn(x).length : "") + "</div></div></button>";
+        }).join("") + "</div>";
+      }
+    }
+
+    var tps = assetTopics(a);
+    if (tps.length) {
+      h += '<div class="sect">What it is about</div><div class="tools">' +
+        tps.map(function (t) {
+          return '<button class="btn" data-act="lib-topic" data-id="' + esc(t) + '">' + esc(t) + "</button>";
+        }).join("") + "</div>";
+    }
+
     var from = madeFrom(a), into = madeInto(a);
     h += '<div class="sect">What it was made from</div>';
     h += from.length ? '<div class="stack tight">' + from.map(function (x) {
@@ -6886,7 +7217,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v47 · 17 Sep 2026";
+  var BUILD = "v48 · 17 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -9511,6 +9842,29 @@ function dims(n) {
       toast(cd.label + " — next in " + cd.everyDays + " days", function () { cd.lastDoneOn = was; });
     },
 
+    /* ---- field mode ---- */
+    "field-on":  function () { go(function () { state.settings.field = true; }); toast("Field mode \u00b7 big targets, few choices"); },
+    "field-off": function () { go(function () { state.settings.field = false; }); toast("Back to the whole list"); },
+    /* One tap to a photograph, and it never guesses which run it belongs to:
+       one open run and it goes there, several and it asks, none and it says
+       so rather than opening a camera with nowhere to put the result. */
+    "field-shot": function () {
+      var runs = boards("run").filter(function (b) { return !b.closedOn; });
+      if (!runs.length) { toast("Start a run first \u2014 a photograph has to belong to something"); return; }
+      if (runs.length === 1) { pickPicture(runs[0], null, null, null); return; }
+      openModal({
+        title: "Which run is it for?",
+        confirmLabel: "Take it",
+        fields: [{ key: "id", label: "Run", type: "select", span: true,
+                   options: opts(runs, function (b) { return b.name; }),
+                   value: runs[0].id }],
+        onConfirm: function (v) {
+          var b = byId(state.boards, v.id);
+          if (b) setTimeout(function () { pickPicture(b, null, null, null); }, 0);
+        }
+      });
+    },
+
     /* ---- tasks: the one thing that is typed ---- */
     "task-add":  function () { taskDialog(null, {}); },
     "task-edit": function (id) { taskDialog(taskOf(id), {}); },
@@ -9549,7 +9903,12 @@ function dims(n) {
     "asset-add":  function () { assetDialog(null); },
     "asset-edit": function (id) { assetDialog(assetOf(id)); },
     "asset-open": function (id) { openAsset = id; view = "vocab"; openMode = ""; render(); },
-    "repo-page":  function (id) { repoTab = id; openAsset = ""; render(); },
+    "repo-page":  function (id) { repoTab = id; libTopic = ""; openAsset = ""; render(); },
+    /* Reached from the Library's own strip AND from a topic pill on a thing's
+       page, which is the route that makes writing a subject down worth it:
+       you are looking at one dataset and one tap shows everything else on
+       the same subject. */
+    "lib-topic":  function (id) { repoTab = "lib"; libTopic = id; openAsset = ""; view = "repo"; render(); },
     /* Adding from the Repo lands in the section you were looking at, rather
        than making you pick it again from a list you just tapped. */
     "repo-add":   function (id) { assetDialog(null, id); },
@@ -10630,7 +10989,53 @@ function dims(n) {
                     notes: "The thread with Balamand, filtered.",
                     path: "", url: "https://mail.google.com/mail/u/0/#search/brochure",
                     where: "", fromIds: [], archived: false });
-    s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail];
+    /* THE DOMAIN MODEL, AS READER-ADDED WORDS rather than hardcoded nouns.
+       The spec asks for Site, Artifact, Feature and Survey; the app's first
+       rule is that nothing is hardcoded, so these are exactly what a reader
+       would type into "Other — write it in", seeded here to prove the
+       registry, the finder, provenance, upkeep and the boards all work on
+       words the app has never heard of. `s.vocab` is the extensible half.
+
+       And they demonstrate CONTAINMENT, which is the relation those four
+       nouns are actually for: the trench is part of the site, the sherd was
+       found in the trench, the frame is of the trench. `atId` says where a
+       thing IS; `fromIds` says what it was made FROM, and the orthophoto
+       below is made from the aerials while sitting in no place at all. */
+    s.vocab = s.vocab || {};
+    s.vocab.assetKinds = { site: "Site", feature: "Feature",
+                           artifact: "Artifact", survey: "Survey" };
+
+    var aSite = mk({ name: "Anfeh harbour, area 1", kind: "site", repo: "file",
+                     notes: "Coastal, partly submerged. Permit through AUB.",
+                     path: "", url: "", where: "", onDate: back(300),
+                     topics: ["harbour surveying"], fromIds: [], archived: false });
+    var aTr = mk({ name: "Trench 4", kind: "feature", repo: "file",
+                   notes: "2 \u00d7 3m, cut into the quay bedding.",
+                   path: "", url: "", where: "", onDate: back(120), atId: aSite.id,
+                   topics: ["harbour surveying"], fromIds: [], archived: false });
+    var aSh = mk({ name: "Amphora sherd 4.12", kind: "artifact", repo: "file",
+                   notes: "Rim, combed. Drawn and photographed.",
+                   path: "", url: "", where: "crate 2", onDate: back(118), atId: aTr.id,
+                   topics: ["ceramics", "harbour surveying"], fromIds: [], archived: false });
+    var aSv = mk({ name: "Bathymetric survey, 2026", kind: "survey", repo: "file",
+                   notes: "Single-beam, 2m lines.",
+                   path: "D:\\anfeh\\bathy2026", url: "", where: "", onDate: back(95),
+                   atId: aSite.id, topics: ["photogrammetry", "harbour surveying"],
+                   fromIds: [], archived: false });
+
+    /* A few topics on the things that already existed, so the Library opens on
+       something real and so one subject genuinely crosses kinds — a dataset,
+       a survey and a piece of software under one word is the whole argument
+       for reading the registry by subject rather than by kind. */
+    aAer.topics = ["aerial photography", "photogrammetry"];
+    aOrt.topics = ["photogrammetry"];
+    aMap.topics = ["GIS"];
+    aArc.topics = ["GIS"];
+    aRef.topics = ["harbour surveying"];
+    aOrt.atId = aSite.id;
+
+    s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail,
+                aSite, aTr, aSh, aSv];
 
     /* Two of the people the boards already name, said properly — so the
        People page has one row with an address and a role and one with nothing

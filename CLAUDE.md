@@ -838,6 +838,64 @@ saying it was done. Only templates are offered, because starting a run *of* a
 run is not a thing, and a cadence whose procedure has since been deleted falls
 back to being ticked rather than refusing: the interval is still true.
 
+**THE KNOWLEDGE LIBRARY IS THE REGISTRY READ BY TOPIC INSTEAD OF BY KIND.**
+The spec asks for a library of what you have learned — methods, references,
+reading that outlives one project. The registry already holds exactly those
+objects: a document, a dataset, a PDF, with a link, a path, notes, provenance
+and `assetUses()` answering where each was used. The one thing it could not
+answer was *"everything I have on harbour surveying"*, because nothing said
+what a thing was **about**. So `a.topics` is a list of words the reader types,
+and the Library is the fifth section of the Repo strip — one store, five
+questions. A second list would be a second thing to keep in step, which is
+the fault this file already records twice. Topics are de-duplicated
+case-insensitively on save ("Harbour, harbour" is one word typed twice) and
+you never create a topic: you write one onto a thing, which keeps the
+vocabulary a description of the work rather than a taxonomy to maintain. The
+route that earns it is the pill on a thing's own page — you are looking at one
+dataset and one tap shows everything else on the same subject.
+
+**THE ARCHAEOLOGICAL DATA MODEL IS ONE FIELD, NOT FOUR NOUNS.** Site,
+Artifact, Feature and Survey are exactly what a reader types into "Other —
+write it in": `assetKinds` is a floor and not a ceiling, and hardcoding those
+four would break the app's first rule *and* make it absurd for the thesis, the
+visa and the lecture, which are half of what is actually in the book. There is
+a test that reads `ASSET_KINDS` and fails if any of the four appears in it,
+and the sample seeds them through `state.vocab` to prove the registry, the
+finder, provenance, upkeep and the boards all work on words the app has never
+heard of.
+
+What *was* missing is the relation those four nouns exist for: **containment.**
+`a.atId` is "part of / found at", and Site → Feature → Artifact falls out of it
+generically. It is deliberately **not** `fromIds`: a sherd is *found at* a site
+and an orthophoto is *made from* three hundred frames, and conflating them
+would list the site among the things the sherd was manufactured out of. Same
+discipline as provenance — the forward link is stated, the reverse (`partsIn`)
+is derived so the two cannot disagree, and the picker withholds anything
+already below the entry, because picking it would close a loop and both pages
+would recurse. The trail prints top-down (`site › trench › sherd`) so it reads
+as an address rather than having to be decoded backwards.
+
+**FIELD MODE IS A POSTURE, NOT A NOUN.** On site you are not creating a new
+sort of record; you are doing the same three things one-handed in bright sun
+with no patience for four levels of navigation. So it composes what was
+already there — `place` on upkeep (out of the house has been a place since
+upkeep shipped), `pickPicture` as the single way a photograph gets in, and a
+task as the one thing you type — and changes only the **size and the number**
+of choices. It takes over Waiting rather than adding a seventh tab, because
+Waiting is already the screen the phone really needs.
+
+Three things about it. **Nothing is hidden that would otherwise be
+reachable**, and the foot of the screen says so: a mode that quietly drops
+half the record is the app behaving strangely. Upkeep doable *anywhere* stays
+on the list beside upkeep doable out of the house — filtering to `out` alone
+would be the app deciding for you. And it is **a setting, not view state**,
+against this app's usual rule: you turn it on at the site and off in the car,
+so surviving a reload is the entire point, whereas everything else mode-ish
+resets because a tab should land on its list. The camera never guesses which
+run a photograph belongs to — one open run and it goes there, several and it
+asks, none and it says so rather than opening a camera with nowhere to put the
+result.
+
 **The finder is above the six tabs, because it reaches further than any of
 them.** Ctrl+K, `/` when you are not typing, or the box at the top of the rail.
 Nothing in the app could be reached by its name before it: six sections, boards
@@ -1522,6 +1580,12 @@ folded away and because that button renders only on a node that is already a
 photograph, printed `NO`, and **returned without failing** — so it sat in the
 suite for weeks testing nothing while reporting nothing. Any `if (!el) return`
 in a test is that bug; it exits non-zero or it is not a test.
+
+**A sweep's own pattern can cry wolf.** `grep -cE '^FAIL|[0-9]+ failed'`
+matches the string `0 failed`, so a clean 26-assertion run reported as a
+failure and sent me chasing a bug that was not there. `[1-9][0-9]* failed`.
+A sweep nobody trusts is a sweep nobody reads — the same rule as the suite
+itself, one level up.
 
 **A performance test must not charge the app for the harness's own cost.**
 `picperf.js` reported a 1279ms freeze on adding a photograph and the app was
