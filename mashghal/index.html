@@ -121,6 +121,19 @@
     --warn: #fbbf24;
     --line: #5d7590;
     --line-dim: #27395a;
+    /* A LINE ON THE SHEET IS NOT A HAIRLINE, and borrowing the hairline
+       tokens is what made the board unreadable in the dark. A flow edge out
+       of a step that has not started drew with --line-dim and an association
+       drew with --rule-mid; both are #27395a, which is 1.54:1 against the
+       sheet — and on a template board NOTHING has started, so that was every
+       edge on the screen. Measured, not guessed: these four are 3.9:1 to
+       8.2:1, and the dead edge stays visibly dimmer than the live one
+       without disappearing. --line-dim keeps its own job (a hairline, where
+       low contrast is right) and the sheet no longer reads it. */
+    --edge: #9db2cb;        /* 8.17:1 — sequence, live */
+    --edge-dead: #5f7899;   /* 3.92:1 — sequence out of a step not started */
+    --edge-assoc: #8fa5c9;  /* 7.10:1 — association, dashed, no order */
+    --edge-back: #7cb3fb;   /* 8.20:1 — a loop back, over the top */
     --grain: 0.04;
     --shade: #05090f;
     --veil: rgba(18,28,46,0.94);
@@ -189,6 +202,13 @@
     --warn: #955600;
     --line: #7c8ca0;
     --line-dim: #c1cfdf;
+    /* Same four, measured against the white sheet: 5.1:1, 3.1:1, 4.1:1,
+       6.7:1. The dead edge had to come DOWN from the obvious #93a3b5,
+       which is only 2.58:1 — dimmer is not the same as invisible. */
+    --edge: #5d6f86;
+    --edge-dead: #8494a9;
+    --edge-assoc: #6d7f9b;
+    --edge-back: #1d4ed8;
     --grain: 0.02;
     --shade: #b9c7d8;
     --veil: rgba(255,255,255,0.95);
@@ -250,6 +270,13 @@
     --warn: #955600;
     --line: #7c8ca0;
     --line-dim: #c1cfdf;
+    /* Same four, measured against the white sheet: 5.1:1, 3.1:1, 4.1:1,
+       6.7:1. The dead edge had to come DOWN from the obvious #93a3b5,
+       which is only 2.58:1 — dimmer is not the same as invisible. */
+    --edge: #5d6f86;
+    --edge-dead: #8494a9;
+    --edge-assoc: #6d7f9b;
+    --edge-back: #1d4ed8;
     --grain: 0.02;
     --shade: #b9c7d8;
     --veil: rgba(255,255,255,0.95);
@@ -483,6 +510,30 @@ color-scheme: light;
     height: clamp(300px, calc(100vh - 330px), 720px);
   }
   #cv.grabbing { cursor: grabbing; }
+  /* MAXIMIZED. The sheet inside a page is a letterbox: on a laptop it is about
+     420px tall against a board that is often three screens wide, so reading it
+     meant panning constantly and losing your place — which is why its owner
+     said moving around it "is not very nice".
+
+     Not the Fullscreen API: it is refused without a gesture in some contexts,
+     it takes the whole document (so a dialog opened from the sheet can render
+     behind it), and leaving it is a different key on every platform. A fixed
+     box is the same effect with none of that, and every dialog, toast and
+     storage alarm still lands on top — z-index 55 sits above the switch bar
+     (50) and below the alarm (70) and the overlay (90).
+
+     `--sbh` is not subtracted: the point is to cover the bar too. */
+  .cvbox.max {
+    position: fixed; inset: 0; z-index: 55; border-radius: 0; border: 0;
+    display: flex; flex-direction: column;
+  }
+  .cvbox.max #cv { height: auto; flex: 1 1 auto; min-height: 0; }
+  .cvbox.max .cvleg, .cvbox.max .tblock { bottom: calc(10px + env(safe-area-inset-bottom)); }
+  /* On a phone the title block is hidden at this width to save room, but
+     maximized there IS room, so it comes back — it is the only thing on the
+     sheet naming which board you are looking at. */
+  @media (max-width: 620px) { .cvbox.max .tblock { display: grid; } }
+  html.cvmax, html.cvmax body { overflow: hidden; }
   .tblock {
     position: absolute; right: 10px; bottom: 10px; z-index: 3; pointer-events: none;
     border: 1px solid var(--rule); background: var(--veil); border-radius: 10px;
@@ -1544,7 +1595,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; openJob = ""; openProj = ""; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -1598,6 +1649,10 @@ color-scheme: light;
   // Which board is open is where you are looking, not something you own, so
   // it lives here rather than in state and never reaches a backup.
   var openId = "";
+  /* Whether the sheet is filling the screen is where you are looking too, so
+     it is view state like `openId` and `sel`: it never reaches a backup, and a
+     tab press or a reload puts you back on the page. */
+  var cvMax = false;
   function openBoard() { return byId(state.boards, openId); }
 
   function nodeOf(b, id) { return byId(b.nodes, id); }
@@ -2170,6 +2225,14 @@ color-scheme: light;
       }
       if (e.key === "/" && !typing && !findIsOpen() && !(overlay && overlay.firstChild)) {
         e.preventDefault(); findOpen();
+      }
+      /* Escape out of the full screen from anywhere on it. The sheet has its
+         own Escape, but it only fires while the sheet itself has focus — and
+         pressing Fill, or any button on the bar, moves focus off it, so the
+         one key everybody reaches for did nothing. Guarded the same way as
+         Ctrl+K: a dialog and the finder own Escape while they are up. */
+      if (e.key === "Escape" && cvMax && !findIsOpen() && !(overlay && overlay.firstChild)) {
+        if (sheetEscape(openBoard())) e.preventDefault();
       }
     });
   }
@@ -6479,7 +6542,12 @@ function dims(n) {
   var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
 
   function canvasHtml(b, tools) {
-    return '<div class="cvbox">' +
+    /* The class is written into the markup as well as toggled by `setMax`,
+       because any render that rebuilds the sheet (marking a step done, adding
+       a node) builds a fresh box — and a box without it dropped out of the
+       full screen mid-edit while `html.cvmax` stayed on, leaving the page
+       unscrollable behind a sheet that was no longer covering it. */
+    return '<div class="cvbox' + (cvMax ? " max" : "") + '">' +
       '<div class="cvbar">' +
       (tools || "") +
       '<span class="sp"></span>' +
@@ -6487,6 +6555,10 @@ function dims(n) {
       '<button class="btn" data-act="cv-in">+</button>' +
       '<button class="btn" data-act="cv-fit">Fit</button>' +
       '<button class="btn" data-act="cv-tidy" data-id="' + b.id + '">Tidy</button>' +
+      '<button class="btn' + (cvMax ? " primary" : "") + '" data-act="cv-max"' +
+      ' title="' + (cvMax ? "Back to the page (Esc)" : "Fill the screen") + '"' +
+      ' aria-label="' + (cvMax ? "Back to the page" : "Fill the screen") + '">' +
+      (cvMax ? "\u2715 Close" : "\u2922 Fill") + "</button>" +
       "</div>" +
       '<div id="selHost">' + selPanel(b) + "</div>" +
       /* Focusable, and no longer role="img": an image cannot be walked, and the
@@ -6666,8 +6738,10 @@ function dims(n) {
     inkFlush();
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     var defs = svgEl("defs");
-    [["mar", ink("line")], ["mar-dim", ink("line-dim")],
-     ["mar-back", ink("brass")]].forEach(function (p) {
+    /* The head follows the line. Drawn from the old tokens, a line raised to
+       3.9:1 still ended in a tip at 1.54:1 — an arrow pointing at nothing. */
+    [["mar", ink("edge")], ["mar-dim", ink("edge-dead")],
+     ["mar-back", ink("edge-back")]].forEach(function (p) {
       var m = svgEl("marker", { id: p[0], viewBox: "0 0 10 8", refX: 9, refY: 4,
         markerWidth: 9, markerHeight: 7.5, orient: "auto-start-reverse" });
       m.appendChild(svgEl("polygon", { points: "0,0 10,4 0,8", fill: p[1] }));
@@ -6765,16 +6839,16 @@ function dims(n) {
         var ca = centre(A), cz = centre(Z);
         g.appendChild(svgEl("path", {
           d: "M" + ca.x + "," + ca.y + " L" + cz.x + "," + cz.y,
-          fill: "none", stroke: ink("rule-mid"), "stroke-width": on ? 1.6 : 1.3,
-          "stroke-dasharray": "1 6", "stroke-linecap": "round",
-          "stroke-opacity": on ? 1 : 0.85
+          fill: "none", stroke: ink("edge-assoc"), "stroke-width": on ? 1.8 : 1.5,
+          "stroke-dasharray": "1.5 5", "stroke-linecap": "round",
+          "stroke-opacity": on ? 1 : 0.9
         }));
         return;
       }
 
       var back = !!back$[e.id];
       var live = nodeState(b, A) !== "todo";
-      var col = back ? ink("brass") : live ? ink("line") : ink("line-dim");
+      var col = back ? ink("edge-back") : live ? ink("edge") : ink("edge-dead");
       var mk = back ? "url(#mar-back)" : live ? "url(#mar)" : "url(#mar-dim)";
       var lx, ly, d;
 
@@ -6802,7 +6876,7 @@ function dims(n) {
         var w = Math.min(150, 7 + String(words).length * 6.2);
         g.appendChild(svgEl("rect", { x: lx - w / 2, y: ly - 11, width: w, height: 15, rx: 4,
           fill: ink("sheet"), opacity: 0.96 }));
-        var t = svgEl("text", { x: lx, y: ly, fill: back ? ink("brass") : ink("dim"),
+        var t = svgEl("text", { x: lx, y: ly, fill: back ? ink("edge-back") : ink("dim"),
           "text-anchor": "middle", "font-size": 11 });
         t.textContent = words;
         g.appendChild(t);
@@ -7204,8 +7278,11 @@ function dims(n) {
         return;
       }
       if (ev.key === "Escape") {
-        ev.preventDefault();
-        if (sel) { sel = ""; paintSel(bd); }
+        /* Innermost first: one Escape lets go of the node, the next comes out
+           of the full screen. `stopPropagation` matters as much as the order
+           — without it the document-level handler below fires on the same
+           press and takes the second step too. */
+        if (sheetEscape(bd)) { ev.preventDefault(); ev.stopPropagation(); }
         return;
       }
     });
@@ -7282,6 +7359,57 @@ function dims(n) {
      wide draws eight cards perfectly legibly at 0.6 — so the floor there only
      catches a board so large that the fit would be a diagram of nothing. */
   function minScale(w) { return w < 620 ? 0.7 : 0.45; }
+
+  /* Toggling is NOT a render. `render()` would rebuild the sheet and re-fit
+     it, throwing away wherever the reader had panned to — the same reason
+     `paintSel()` exists. So the class goes on the box, the button relabels
+     itself, and `fitBoard` runs once because the box really did change shape:
+     the viewBox is in sheet coordinates and its aspect has to follow the
+     element's, or the board comes back stretched. */
+  function setMax(on) {
+    var box = document.querySelector(".cvbox");
+    if (!box) { cvMax = false; return; }
+    cvMax = !!on;
+    box.classList.toggle("max", cvMax);
+    document.documentElement.classList.toggle("cvmax", cvMax);
+    var btn = box.querySelector('[data-act="cv-max"]');
+    if (btn) {
+      btn.innerHTML = cvMax ? "\u2715 Close" : "\u2922 Fill";
+      btn.className = "btn" + (cvMax ? " primary" : "");
+      btn.title = cvMax ? "Back to the page (Esc)" : "Fill the screen";
+      btn.setAttribute("aria-label", cvMax ? "Back to the page" : "Fill the screen");
+    }
+    if (typeof mountBar === "function") mountBar();
+    var b = openBoard();
+    if (b) fitBoard(b);
+    if (cvSvg) cvSvg.focus();
+    // The only channel a screen reader hears; the sheet has no other.
+    toast(cvMax ? "Filling the screen \u00b7 Esc to come back" : "Back on the page");
+  }
+  /* Called from every route that leaves the board — a tab press, closing the
+     board, the finder navigating away. Leaving the class on `html` after the
+     box is gone would lock the page's scroll with nothing to unlock it, which
+     reads exactly like the app hanging. */
+  function unmaximize() {
+    cvMax = false;
+    document.documentElement.classList.remove("cvmax");
+  }
+
+  /* THE STACK LIVES HERE AND NOWHERE ELSE. It was written twice — once in the
+     sheet's own key handler and once in the document-level one — and both
+     listeners saw the same keypress, because the sheet's handler called
+     `preventDefault` but not `stopPropagation` and they sit on different
+     targets. So one Escape cleared the node AND left the full screen, which
+     is the opposite of stacking: the reader lost their place while trying to
+     deselect. Two copies of a rule is the same bug as no rule.
+
+     Returns true when it consumed the key, so a caller can leave Escape alone
+     when there was nothing to let go of. */
+  function sheetEscape(bd) {
+    if (sel) { sel = ""; if (bd) paintSel(bd); return true; }
+    if (cvMax) { setMax(false); return true; }
+    return false;
+  }
 
   function fitBoard(b) {
     if (!cvSvg) return;
@@ -8045,8 +8173,12 @@ function dims(n) {
 
   APP.actions = {
     /* ---- boards ---- */
-    "board-open": function (id) { openId = id; view = "boards"; render(); },
-    "board-back": function () { openId = ""; foldOpen = false; render(); },
+    /* Every route that leaves the board unmaximizes. `board-open` does it too:
+       arriving from the finder while the previous board was maximized would
+       otherwise open the new one full-screen with no box carrying the class,
+       so `html.cvmax` locked the scroll over an ordinary page. */
+    "board-open": function (id) { unmaximize(); openId = id; view = "boards"; render(); },
+    "board-back": function () { unmaximize(); openId = ""; foldOpen = false; render(); },
 
     /* ---- the finder ---- */
     "find-open": function () { findOpen(); },
@@ -8415,6 +8547,7 @@ function dims(n) {
     "cv-in":  function () { zoomBy(1.25, vb.x + vb.w / 2, vb.y + vb.h / 2); },
     "cv-out": function () { zoomBy(1 / 1.25, vb.x + vb.w / 2, vb.y + vb.h / 2); },
     "cv-fit": function () { var b = openBoard(); if (b) fitBoard(b); },
+    "cv-max": function () { setMax(!cvMax); },
     "cv-tidy": function (id) {
       var b = byId(state.boards, id); if (!b) return;
       go(function () { autoLayout(b); });
