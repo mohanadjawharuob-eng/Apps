@@ -1124,6 +1124,14 @@ color-scheme: light;
     font-size: 0.74rem; color: var(--faint);
   }
   .find-foot kbd { font-family: var(--mono); color: var(--dim); }
+  /* The list of shapes the box understands, in the box and in its dialog. */
+  .find-shapes {
+    margin: 0.5rem 0 0.7rem; padding: 0 0 0 1.1rem; list-style: none;
+    font-size: var(--fs-sm); color: var(--dim); line-height: 1.7;
+  }
+  .find-shapes li::before { content: "\203a"; color: var(--faint); margin-right: 0.45rem; }
+  .find-shapes li { font-family: var(--mono); font-size: 0.74rem; }
+
   .find-none { padding: 1.1rem 0.85rem; margin: 0; color: var(--dim); font-size: 0.86rem; }
 
   /* The identity channel. An itile is the only place a category colour
@@ -1570,10 +1578,11 @@ color-scheme: light;
 <div class="find" id="find" hidden>
   <div class="find-box" role="dialog" aria-modal="true" aria-label="Find anything">
     <input id="findQ" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-           placeholder="Find a board, a step, a person, a thing — or a section"
+           placeholder="Find anything — or ask: what is late, hours this week, where is…"
            aria-controls="findList" aria-autocomplete="list">
     <div class="find-list" id="findList" role="listbox" aria-label="Matches"></div>
-    <p class="find-foot"><kbd>↑↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</p>
+    <p class="find-foot"><kbd>↑↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close ·
+      <button type="button" class="btn quiet" data-act="ask-help">What can I ask?</button></p>
   </div>
 </div>
 
@@ -2309,6 +2318,373 @@ color-scheme: light;
     return '<span class="itile sm ' + cls + '">' + ico + "</span>";
   }
 
+  /* ================= being asked a question =================
+
+     The finder matches NAMES. It could not be asked anything — "what am I
+     waiting on from Rita", "how many hours for Balamand this week", "where
+     are the headphones" — and those are the questions this app exists to
+     answer, so answering them by typing a name and reading a screen was the
+     long way round every time.
+
+     THERE IS NO MODEL BEHIND THIS, AND THAT IS THE WHOLE DESIGN. A language
+     model here would need a key that can be spent, a network the app
+     otherwise does without, and — the disqualifying one — it would put a
+     thing that GUESSES between the reader and the record, in an app whose
+     first rule about figures is that a plausible wrong number is worse than a
+     visible failure. Every answer below is a function call: the same function
+     the screen it points at uses (`dues`, `people`, `standing`, `projState`,
+     `runProgress`, `thingState`, `filings`), so an answer can no more drift
+     from the app than Home's tiles can.
+
+     Four rules hold it:
+
+     IT SAYS WHAT IT READ THE QUESTION AS. Every answer carries the shape it
+     matched, so the reader can tell the app understood them rather than
+     guessing from a plausible-looking reply. That line is the only defence
+     against a pattern matching the wrong question.
+
+     IT NEVER HALF-ANSWERS. A query that looks like a question and matches no
+     shape says so, and lists what it CAN be asked — it does not quietly fall
+     through to a name search that finds nothing, which reads as being
+     ignored.
+
+     IT PROPOSES AND NEVER ACTS. Anything that would change the record is a
+     row that hands to `APP.actions` on a tap, exactly like the finder's
+     existing commands. Nothing moves because of what you typed.
+
+     AND THE TABLE IS THE HELP. `ASK_SHAPES` is data, so the list of what the
+     app understands cannot drift from what it does — the alternative is a
+     help text somebody has to remember to update, which is the "screen
+     explaining a colour it no longer uses" fault one level up. */
+
+  function askTile(cls, ico) { return findTile(cls, ico); }
+
+  // One row of an answer: the sentence, and underneath it the shape it was
+  // read as. Both are needed — the figure alone cannot be checked.
+  function askSaid(said, shape, run) {
+    return { g: "Answer", tile: askTile("t-cmd", ICONS.cmd), title: said,
+             sub: "read as: " + shape, run: run || function () { findClose(); } };
+  }
+
+  /* Names are matched against the record with the finder's own scorer, so
+     "balamand" finds "U. of Balamand" here exactly as it does in a search.
+     It returns the best match and how good it was, because a weak match on a
+     name is where a wrong answer would come from — the caller refuses rather
+     than answering about something the reader did not mean. */
+  /* "what am I waiting on FROM Haddad" captured "from haddad", and the whole
+     answer then read "Nobody in the book matches from haddad" — right in its
+     refusal and wrong about what was asked. A capture is the tail of a
+     sentence, so the joining words come off it. */
+  function askName(text) {
+    return String(text || "")
+      .replace(/^(?:from|with|for|about|on|of|to)\s+/i, "")
+      .replace(/^(?:the|my|a|an)\s+/i, "")
+      .replace(/[?.!,;:]+$/, "")
+      .trim();
+  }
+
+  function askPick(list, text, nameOf) {
+    var q = askName(text).toLowerCase();
+    if (!q) return null;
+    var best = null, bs = 0;
+    list.forEach(function (x) {
+      var s = findScore(nameOf ? nameOf(x) : x.name, q);
+      if (s > bs) { bs = s; best = x; }
+    });
+    return bs > 0 ? { it: best, score: bs } : null;
+  }
+
+  var ASK_SHAPES = [
+    {
+      name: "what is late",
+      hint: "what is late",
+      re: /^(?:what(?:'s| is| am i)?\s+)?(?:late|overdue|behind)\b|^what am i late on/,
+      run: function () {
+        var over = dues().filter(function (d) { return d.st === "over"; });
+        var tk = tasksLate();
+        var rows = [askSaid(waitingHeadline(over.length, stuck().length, upkeepLate().length, tk.length),
+                            "what is late", function () { findClose(); findTab("waiting"); })];
+        over.slice(0, 6).forEach(function (d) {
+          rows.push({ g: "Late", tile: askTile("t-step", actIcon(d.node.act)),
+                      title: d.node.label, sub: d.board.name,
+                      st: '<span class="st late"><i></i>' + d.over + "d over</span>",
+                      run: function () { findBoard(d.board.id, d.node.id); } });
+        });
+        tk.slice(0, 4).forEach(function (t) {
+          rows.push({ g: "Late", tile: askTile("t-cmd", ICONS.note), title: t.label,
+                      sub: taskSays(t),
+                      st: '<span class="st late"><i></i>typed</span>',
+                      run: function () { findClose(); findTab("waiting"); } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "what is outstanding with somebody",
+      hint: "what is outstanding with <person>  ·  waiting on <person>",
+      re: /(?:outstanding with|waiting (?:on|for)|hear back from|owes? me)\s+(.+?)\??$/,
+      run: function (m) {
+        var hit = askPick(people(), m[1]);
+        if (!hit) return [askSaid("Nobody in the book matches “" + askName(m[1]) + "”.",
+                                  "what is outstanding with a person")];
+        var p = hit.it;
+        var rows = [askSaid(p.name + " — " + personSays(p),
+                            "what is outstanding with a person",
+                            function () { findClose(); findTab("vocab"); kitTab = "people"; openPerson = p.key; render(); })];
+        p.waits.slice(0, 6).forEach(function (w) {
+          rows.push({ g: "With " + p.name, tile: askTile("t-step", actIcon(w.node.act)),
+                      title: w.node.label, sub: w.board.name + " · " + w.days + "d",
+                      st: w.over > 0 ? '<span class="st late"><i></i>' + w.over + "d over</span>" : "",
+                      run: function () { findBoard(w.board.id, w.node.id); } });
+        });
+        /* PROPOSES, NEVER ACTS: marking a chase is a tap on the row, not a
+           consequence of having typed the question. */
+        p.waits.filter(function (w) { return w.over > 0; }).slice(0, 3).forEach(function (w) {
+          rows.push({ g: "Do", tile: askTile("t-cmd", ICONS.send),
+                      title: "I chased today — " + w.node.label, sub: w.board.name,
+                      run: function () { findClose(); APP.actions["step-chased"](w.board.id + ":" + w.node.id); } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "where was I",
+      hint: "where was i",
+      re: /^(?:where was i|what was i (?:doing|on|working on))\b/,
+      run: function () {
+        var rec = recentlyTouched({ boards: true }, 5);
+        if (!rec.length) return [askSaid("Nothing has been touched yet.", "where was I")];
+        var rows = [askSaid("Last on " + rec[0].name + " — " + agoWords(rec[0].at),
+                            "where was I", function () { findBoard(rec[0].id, ""); })];
+        rec.slice(1).forEach(function (r) {
+          rows.push({ g: "Before that", tile: askTile("t-run", ICONS.run), title: r.name,
+                      sub: r.says + " · " + agoWords(r.at),
+                      run: function () { findBoard(r.id, ""); } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "hours, this week or for somebody",
+      hint: "hours  ·  hours for <claimant>  ·  hours last week",
+      re: /^(?:how many\s+)?hours\b\s*(?:for\s+)?(.*?)\??$/,
+      run: function (m) {
+        var rest = String(m[1] || "").trim().toLowerCase();
+        var last = /\blast week\b/.test(rest);
+        var who = rest.replace(/\b(this|last) week\b/g, "").trim();
+        var wk = last ? addDays(weekStart(today()), -7) : weekStart(today());
+        var span = last ? "last week" : "this week";
+        var rowsIn = standing(wk);
+        if (who) {
+          var hit = askPick(rowsIn, who, function (r) { return r.c.name; });
+          if (!hit) return [askSaid("No claimant matches “" + who + "”.", "hours for a claimant")];
+          var r = hit.it;
+          var said = r.c.name + " — " + amountWords(r.got, r.unit) + " " + span +
+            (r.owed ? " of " + amountWords(r.owed, r.unit) : ", nothing owed") +
+            (r.short ? ", short by " + amountWords(r.short, r.unit) : "");
+          return [askSaid(said, "hours for a claimant",
+                          function () { findClose(); weekOf = wk; findTab("week"); })];
+        }
+        /* THE WEEK'S OWN FIGURE. Its COUNTED tile sums every span in the
+           range, whatever unit its claimant is owed in; adding up
+           `standing()`'s `got` instead dropped the claimant measured in DAYS
+           and answered 9h 30m against the 16h on the screen. A figure that
+           came from somewhere else is exactly what "it computes nothing of
+           its own" forbids — and this one disagreed on the sample. */
+        var wkTo = addDays(wk, 6);
+        var mins = state.spans.reduce(function (t, sp) { return t + minsIn(sp, wk, wkTo); }, 0);
+        var rows = [askSaid(fmtMins(mins) + " " + span + " across " +
+                            numWord(rowsIn.length) + (rowsIn.length === 1 ? " claimant" : " claimants"),
+                            "hours " + span,
+                            function () { findClose(); weekOf = wk; findTab("week"); })];
+        rowsIn.forEach(function (x) {
+          rows.push({ g: cap(span), tile: askTile("t-bench", ICONS.bench), title: x.c.name,
+                      sub: amountWords(x.got, x.unit) + (x.owed ? " of " + amountWords(x.owed, x.unit) : " · nothing owed"),
+                      st: x.short ? '<span class="st watch"><i></i>short</span>' : "",
+                      run: function () { findClose(); weekOf = wk; findTab("week"); } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "how a project or a board is going",
+      hint: "how is <project> going  ·  what is on <project>",
+      re: /^(?:how(?:'s| is)\s+(.+?)\s+going|what(?:'s| is)\s+on\s+(.+?))\??$/,
+      run: function (m) {
+        var q = (m[1] || m[2] || "").trim();
+        var pj = askPick(projects(), q);
+        if (pj && pj.score >= 2) {
+          var p = pj.it, st = projState(p), pace = projPace(p), d = projDues(p.id);
+          var rows = [askSaid(p.name + " — " + projSays(p), "how a project is going",
+                              function () { findClose(); openProj = p.id; projTab = "over"; findTab("jobs"); })];
+          projBoards(p.id).slice(0, 6).forEach(function (b) {
+            rows.push({ g: "On " + p.name, tile: askTile("t-run", ICONS.run), title: b.name,
+                        sub: boardStand ? b.kind === "run" ? runProgress(b).done + " of " + runProgress(b).total + " done" : "a procedure" : "",
+                        run: function () { findBoard(b.id, ""); } });
+          });
+          return rows;
+        }
+        var bd = askPick(boards(), q);
+        if (bd && bd.score >= 2) {
+          var b2 = bd.it, pr = runProgress(b2);
+          return [askSaid(b2.name + " — " + boardRecentSays(b2), "what is on a board",
+                          function () { findBoard(b2.id, ""); })];
+        }
+        /* A subject is the other thing you can ask "what is on" about, and
+           the Library is where it lives. Tried after a project and a board
+           because those are named things and a subject is a word. */
+        var tp = allTopics().filter(function (t) { return findScore(t, q.toLowerCase()) > 0; })[0];
+        if (tp) {
+          var on = assetsOnTopic(tp);
+          var rows2 = [askSaid(cap(numWord(on.length)) + (on.length === 1 ? " thing is" : " things are") +
+                               " about " + tp, "what is on a subject",
+                               function () { findClose(); repoTab = "lib"; libTopic = tp; libKind = ""; findTab("repo"); })];
+          on.slice(0, 8).forEach(function (a) {
+            rows2.push({ g: tp, tile: askTile("t-thing", ICONS.file), title: a.name,
+                         sub: assetKindLabel(a),
+                         run: function () { findClose(); openAsset = a.id; findTab("repo"); } });
+          });
+          return rows2;
+        }
+        return [askSaid("No project, board or subject matches “" + q + "”.",
+                        "how something is going")];
+      }
+    },
+    {
+      name: "where a thing is",
+      hint: "where is <thing>  ·  who has <thing>",
+      re: /^(?:where(?:'s| is| are)|who has)\s+(?:the\s+|my\s+)?(.+?)\??$/,
+      run: function (m) {
+        var hit = askPick(live(state.assets), m[1]);
+        if (!hit) return [askSaid("Nothing in the Repo matches “" + askName(m[1]) + "”.",
+                                  "where a thing is")];
+        var a = hit.it, stt = thingState(a), bits = [];
+        /* Stated or nothing: the record cannot know where a thing is, so a
+           thing nobody has said anything about says exactly that rather than
+           being placed somewhere plausible. */
+        if (stt.word) bits.push(stt.word);
+        if (a.where) bits.push("kept in " + a.where);
+        if (lastUsedWords(a)) bits.push(lastUsedWords(a));
+        var rows = [askSaid(a.name + " — " + (bits.length ? bits.join(" · ")
+                              : "nothing has been said about where it is"),
+                            "where a thing is",
+                            function () { findClose(); openAsset = a.id; findTab("repo"); })];
+        var hd = openHandle(a);
+        if (hd && hd.kind !== "copy") {
+          rows.push({ g: "Do", tile: askTile("t-cmd", ICONS.cmd), title: hd.label + " it",
+                      sub: hd.how,
+                      run: function () { findClose(); window.open(hd.href, hd.kind === "url" ? "_blank" : "_self"); } });
+        }
+        return rows;
+      }
+    },
+    {
+      name: "what has been filed",
+      hint: "what did i file",
+      re: /^(?:what (?:did i|have i) file|what(?:'s| is| was) filed|what has been filed)/,
+      run: function () {
+        var f = filings(boards());
+        if (!f.length) return [askSaid("Nothing has been filed yet — a done filing step is what lands here.",
+                                       "what has been filed")];
+        var rows = [askSaid(cap(numWord(f.length)) + (f.length === 1 ? " thing has" : " things have") +
+                            " been filed, the last " + agoWords(f[0].at), "what has been filed")];
+        f.slice(0, 8).forEach(function (x) {
+          rows.push({ g: "Filed", tile: askTile("t-out", ICONS.file), title: x.label,
+                      sub: x.board + " · " + agoWords(x.at),
+                      run: function () { findClose(); findTab("week"); } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "write something down",
+      hint: "remind me to <something>  ·  add a task <something>",
+      re: /^(?:remind me to|add a task|note to self|todo:?)\s+(.+?)\.?$/,
+      run: function (m) {
+        var text = m[1].trim();
+        /* The dialog opens with the words already in it and nothing is
+           written until Add is pressed — a task is the one thing in this app
+           somebody types, and typing it into a search box is not the same as
+           meaning to keep it. */
+        /* `taskDialog(t, at)` takes a record and an ATTACHMENT, not a
+           prefill — passing `{label}` as `at` put the words nowhere and the
+           dialog opened empty, which is worse than not offering it at all.
+           `askTaskDialog` hands it a fresh record carrying only the label, so
+           the words are in the box and nothing is written until Add. */
+        return [askSaid("Write down “" + text + "”", "write something down",
+                        function () { findClose(); askTaskDialog(text); })];
+      }
+    },
+    {
+      name: "start a run",
+      hint: "start <procedure>",
+      re: /^(?:start|run)\s+(?:a\s+|the\s+)?(.+?)\??$/,
+      run: function (m) {
+        var t = askPick(boards("template"), m[1]);
+        if (!t) return [askSaid("No procedure matches “" + askName(m[1]) + "”.", "start a run")];
+        var b = t.it;
+        return [askSaid("Start a run of " + b.name, "start a run",
+                        function () { findClose(); APP.actions["run-start"](b.id); })];
+      }
+    },
+    {
+      name: "open something",
+      hint: "open <app, site or file>",
+      re: /^open\s+(?:the\s+|my\s+)?(.+?)\??$/,
+      run: function (m) {
+        var hit = askPick(live(state.assets), m[1]);
+        if (!hit) return [askSaid("Nothing in the Repo matches “" + askName(m[1]) + "”.",
+                                  "open something")];
+        var a = hit.it, hd = openHandle(a);
+        if (!hd) return [askSaid(a.name + " has nothing to open — no path and no link on it.",
+                                 "open something",
+                                 function () { findClose(); openAsset = a.id; findTab("repo"); })];
+        /* `openHandle` is the one place that decides what "open" means, and
+           a path with the launcher off is copy-only — so this says so
+           instead of offering a control that would do nothing. */
+        if (hd.kind === "copy") {
+          return [askSaid(a.name + " — " + hd.how, "open something",
+                          function () { findClose(); APP.actions["asset-copy"](a.id); })];
+        }
+        return [askSaid("Open " + a.name + " — " + hd.how, "open something",
+                        function () { findClose(); window.open(hd.href, hd.kind === "url" ? "_blank" : "_self"); })];
+      }
+    }
+  ];
+
+  /* Looks like a question? Only then is silence a failure. A bare name is a
+     search and always has been; "what is the ..." that matched nothing is the
+     app appearing to ignore somebody. */
+  function askShaped(q) {
+    return /\?$/.test(q) ||
+      /^(?:what|where|when|who|which|how|why|am i|is there|do i|did i|can i)\b/.test(q) ||
+      /^(?:remind me|add a task|start |run |open |chase )/.test(q);
+  }
+
+  /* A task that exists only in the dialog. `taskDialog` reads its first
+     argument for the field values and its `mk` flag off whether one was
+     given, so a half-record would open as "Edit it" and save over nothing —
+     hence `askTaskDialog` writes the record itself on confirm, the same way
+     `task-add` does, and the dialog is only ever the form. */
+  function askTaskDialog(label) {
+    taskDialog(null, {});
+    var el = document.getElementById("mf_label");
+    if (el) { el.value = label; el.focus(); el.setSelectionRange(label.length, label.length); }
+  }
+
+  function askRecord(raw) {
+    var q = String(raw).trim();
+    if (!q) return { rows: [], unread: false };
+    var low = q.toLowerCase();
+    for (var i = 0; i < ASK_SHAPES.length; i++) {
+      var m = low.match(ASK_SHAPES[i].re);
+      if (!m) continue;
+      var rows = ASK_SHAPES[i].run(m) || [];
+      if (rows.length) return { rows: rows, unread: false };
+    }
+    return { rows: [], unread: askShaped(low) };
+  }
+
   /* Every searchable thing in the book, as one flat list. Built fresh on each
      keystroke rather than cached: the book is a few hundred records, and a
      cache here is a cache that can disagree with the record. */
@@ -2493,6 +2869,16 @@ color-scheme: light;
      before it will tell you anything. */
   function findDefault() {
     var out = [];
+    /* The one thing the empty box did not say is that it can be ASKED
+       something. A capability nobody can discover is a capability nobody
+       has — the same reason the sheet's keys are written under it rather
+       than hidden in a tooltip. */
+    out.push({ g: "Ask it something", tile: findTile("t-cmd", ICONS.cmd),
+               title: "what is late", sub: "or: hours this week \u00b7 where is the headphones \u00b7 what is outstanding with \u2026",
+               run: function () {
+                 var input = document.getElementById("findQ");
+                 if (input) { input.value = "what is late"; findQ = input.value; findAt = 0; findPaint(); input.focus(); }
+               } });
     dues().filter(function (d) { return d.st === "over"; }).slice(0, 4).forEach(function (d) {
       out.push({ g: "Late", tile: findTile("t-step", actIcon(d.node.act)),
                  title: d.node.label, sub: d.board.name + " · " + vocabLabel("acts", d.node.act),
@@ -2516,22 +2902,39 @@ color-scheme: light;
     if (!el) return;
     var q = findQ.trim().toLowerCase();
 
+    var asked = { rows: [], unread: false };
     if (!q) findRows = findDefault();
     else {
-      findRows = findAll().map(function (r) {
+      /* AN ANSWER BEATS A LIST OF NAME MATCHES, so it goes first. The name
+         search still runs underneath: "balamand" is both a question shape's
+         object and a name, and dropping the names would make the box worse at
+         the thing it was already good at. */
+      asked = askRecord(q);
+      findRows = asked.rows.concat(findAll().map(function (r) {
         return { r: r, s: findScore(r.key, q) };
       }).filter(function (x) { return x.s > 0; }).sort(function (a, b) {
         if (a.s !== b.s) return b.s - a.s;
         if (a.r.k !== b.r.k) return a.r.k - b.r.k;
         return a.r.title.length - b.r.title.length;
-      }).slice(0, 40).map(function (x) { return x.r; });
+      }).slice(0, 40).map(function (x) { return x.r; }));
     }
 
     if (findAt >= findRows.length) findAt = 0;
 
     if (!findRows.length) {
-      el.innerHTML = '<p class="find-none">Nothing in the book matches that. ' +
-        "It searches boards, steps, people, things, jobs, benches and upkeep by name.</p>";
+      /* A QUESTION THAT MATCHED NOTHING SAYS SO, and says what it can be
+         asked. Falling through to "nothing matches that by name" reads as
+         the app ignoring the question, and the list of shapes is the table
+         itself, so it cannot go stale. */
+      el.innerHTML = asked.unread
+        ? '<p class="find-none"><b>I did not read that as a question I know.</b> ' +
+          "There is no language model in here \u2014 every answer is counted off the record, " +
+          "so it only understands these shapes:</p><ul class=\"find-shapes\">" +
+          ASK_SHAPES.map(function (x) { return "<li>" + esc(x.hint) + "</li>"; }).join("") +
+          "</ul><p class=\"find-none\">Anything else is searched for by name.</p>"
+        : '<p class="find-none">Nothing in the book matches that. ' +
+          "It searches boards, steps, people, things, jobs, benches and upkeep by name, " +
+          "and it can be asked a question \u2014 try <b>what is late</b>.</p>";
       return;
     }
     var last = "";
@@ -8028,7 +8431,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v57 · 17 Sep 2026";
+  var BUILD = "v58 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -11024,6 +11427,21 @@ function dims(n) {
        tap. Somewhere that points at a particular page of it should be able to
        say so; `tab-vocab` still lands on Things, which is the right default
        when nobody has said. */
+    /* THE TABLE IS THE HELP, so this reads `ASK_SHAPES` rather than a second
+       list somebody has to remember to update — the "screen explaining a
+       colour it no longer uses" fault, one level up. */
+    "ask-help": function () {
+      openModal({
+        title: "What it can be asked",
+        message: "There is no language model in here. Every answer is counted off your own record by the same function the screen it points at uses, so an answer cannot drift from the app and cannot invent a figure \u2014 and it works with no network. It understands these shapes, and searches by name for anything else.",
+        confirmLabel: "Right",
+        cancelLabel: "",
+        extraBody: '<ul class="find-shapes">' +
+          ASK_SHAPES.map(function (x) { return "<li>" + esc(x.hint) + "</li>"; }).join("") +
+          "</ul>",
+        onConfirm: function () {}
+      });
+    },
     "kit-words":  function () { view = "vocab"; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "words"; render(); },
     /* Settings is no longer a tab, so it needs a route — and the gear plus
        the Repo's launcher note are both calling it. The data-act scan is what

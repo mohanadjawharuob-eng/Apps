@@ -968,6 +968,49 @@ It must be reachable with no keyboard: the rail hides `.railwork` and
 a forty-node board arrives by setting `sel` and nothing else, and the sheet has
 to centre on it.
 
+**THE FINDER CAN BE ASKED A QUESTION, AND THERE IS NO MODEL BEHIND IT.** Asked
+for a chatbot "to perform tasks related to the app", the thing actually wanted
+is a box you type a sentence into and get an answer out of — and a language
+model is the one way to build that which this app cannot have. It needs a key
+(a secret in a public repo, which this file already refuses three times over),
+a network (the app is offline-first and fetches nothing), and it would sit
+**between the reader and their own record**, guessing — which is the fault
+every rule in this file is written against. So the answer is read off the
+record by pattern, deterministically, with the same helpers the screens use.
+`ASK_SHAPES` is a table of ten question shapes, each with a regex and a `run`;
+`askRecord(raw)` returns the first match's rows. Five rules hold it:
+
+- **It says what it read the question as.** Every answer carries
+  `sub: "read as: " + shape` — "read as: what is outstanding with a person" —
+  because a box that answers a sentence has to say which sentence it thought it
+  heard, or a wrong answer is indistinguishable from a wrong question. This is
+  the same discipline as a warning stating its cause.
+- **It never half-answers.** A question it cannot shape prints the **table** as
+  the help (`asked.unread`), rather than guessing at the nearest shape: the
+  ten things it can be asked, in the words it wants them in. A palette that
+  answers approximately is worse than one that says what it knows.
+- **It computes nothing of its own.** Every figure comes from the function the
+  screen it points at uses, so an answer cannot disagree with the screen — and
+  there is a test that compares three of them **character for character**
+  against Waiting's headline, the week's COUNTED tile and a project row's
+  `says`. That test found the one real defect: the hours answer summed
+  `standing()`'s `got`, which walks the claimants — so it **dropped the
+  claimant measured in days** and answered "9h 30m" against the week's own
+  "16h". It reads `state.spans.reduce(minsIn)`, the same walk the tile does.
+- **It proposes and never acts.** A shape's `run` navigates, or hands over to
+  `APP.actions` on a tap — the adviser's rule, and the finder's own second
+  rule, unchanged.
+- **The table is the discoverability.** A box nobody knows can be asked
+  anything is a box nobody asks: the placeholder names three of the shapes,
+  `findDefault()` carries an "Ask it something" row, and `.find-foot` has a
+  button that prints the whole table.
+
+One trap worth keeping: **a capture keeps its preposition.** `"from haddad"`
+matched the person shape and then looked up a person called *"from haddad"*,
+answering "Nobody in the book matches" about somebody who is in it. `askName()`
+strips the leading preposition and article and the trailing punctuation — the
+question is prose, and prose is what a reader types.
+
 **Jobs is where the hierarchy is walked** (job → project → board), which is why
 Projects never became a tab of its own. Coffer's rule applies here too: new
 work becomes a page inside an existing section rather than another slot on a
