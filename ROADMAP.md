@@ -1,3 +1,33 @@
+## Shipped: two figures that named the wrong basis
+
+Both reported from the phone, both the same fault — a number that is honest
+about one question printed under a label asking another.
+
+**"Expected in $933" under a heading reading THIS MONTH.** The figure was
+`monthlyIncomeExpected()`, the running rate: every contract that has not ended,
+whether or not it pays this month. In this book AUB pays on the 30th and
+Balamand's next payment is 31 October, so $600 was the whole of September and
+the card was a third out. `incomeDueIn(mk)` answers the month's question with
+the same liveness test `projectForward()` walks with, so the adviser and the
+chart cannot disagree about whether a contract pays in September.
+
+Both figures stay, because both are true and they answer different things. The
+card now leads with the month — *Due in September $600*, *What you usually
+spend −$369*, *Left this month $231* — then names the rate underneath ("A usual
+month brings $933; September is lighter because your contracts do not all pay
+in the same month"), and the verdict below the proposals reads *Short in a
+usual month*, because a goal is a promise that repeats and one lumpy month is
+no reason to move it. When the two agree the explanation is not printed.
+
+**The pace notice on Insights** projected `monthSummary().expense` and compared
+it against last month's, so a month holding a $290 refundable projected a
+figure nobody would ever pay and reported it as "$294 less than last month"
+off a $950 base — directly under a card headlined TRUE BURN $369. Both ends
+are `trueBurnFor()` now.
+
+`month.js` drives all three: a month lighter than the rate, a month equal to
+it, and a pace computed with a live refundable in the book.
+
 ## Shipped: the months ahead stop losing the rest of this month
 
 Found by checking my own arithmetic against the app's, after its owner said an

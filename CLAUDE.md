@@ -138,6 +138,28 @@ no package.json. What is in the repo is what runs.
   it down, because it is nearly a whole month on the 2nd and almost nothing on
   the 29th.
 
+- **A rate and a month are different questions, and a card headed "This month"
+  owes you the month.** `monthlyIncomeExpected()` sums every contract that has
+  not ended, whether or not it pays this month — a running rate, and the right
+  basis for a promise that repeats. The adviser's card printed it under the
+  heading THIS MONTH, so a book whose second contract next paid on 31 October
+  read "Expected in $933" in a September where $600 was the whole of it.
+  `incomeDueIn(mk)` answers the other question, using **the same liveness test
+  `projectForward()` walks with** (`startsOn <= monthEnd && until >= monthStart`)
+  so the adviser and the chart cannot disagree about whether a contract pays in
+  a given month. `monthlySurplus()` returns both — `due`/`dueSurplus` beside
+  `income`/`surplus` — and every row on the card names its own basis: *Due in
+  September*, *Left this month*, then *Short in a usual month* below the
+  proposals, which are still sized on the rate because one lumpy month is no
+  reason to move a goal. When the two agree (`lumpy` false) the explanation is
+  not printed at all.
+- **The pace notice is set against true burn, like the card above it.** It
+  projected `monthSummary().expense` and compared it with last month's, so a
+  month holding a refundable projected a figure nobody would ever pay, and said
+  it was "$294 less than last month" against an $950 base — directly beneath a
+  card headlined TRUE BURN $369, which is what the runway, the goals and the
+  adviser are all built from. Both ends are `trueBurnFor()` now.
+
 - **A contract ends on `r.until`, and its renewal ends on `r.renewUntil`.**
   (`endsOn` belongs to grants; writing it on a recurring record means the
   contract silently never ends, which is how the sample's headline cliff went
