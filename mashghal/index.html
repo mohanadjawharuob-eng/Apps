@@ -1107,6 +1107,19 @@ color-scheme: light;
     font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
     max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* A BODY WITH NO LANGUAGE IS PROSE AND WRAPS LIKE PROSE. Same card as the
+     code block — same fill, same rule, same head row — and one property
+     different: `pre-wrap` instead of `pre`, and the UI stack instead of mono.
+     A method set in the code box scrolled sideways at its first long
+     sentence, which made the one entry type written to be READ the hardest
+     thing in the app to read. It is capped the same way and for the same
+     reason, so a long method cannot push the rest of the page off screen. */
+  .wrote {
+    margin: 0 0 1rem; padding: 0.8rem 0.9rem; background: var(--sunken);
+    border: 1px solid var(--rule); border-radius: 10px;
+    font-size: 0.86rem; line-height: 1.62; color: var(--ink);
+    white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; max-height: 34em;
+  }
   /* One line of a snippet inside the row that names it: clipped, never
      wrapped, because two wrapped lines of code say less than one clean one. */
   .snipone {
@@ -1115,6 +1128,7 @@ color-scheme: light;
   }
   @media (max-width: 620px) {
     .snip { font-size: 0.72rem; max-height: 18em; }
+    .wrote { font-size: 0.82rem; max-height: 24em; padding: 0.7rem 0.75rem; }
     .lpill { max-width: 6.5rem; }
     .aface { gap: 0.7rem; }
     .iface { width: 56px; height: 56px; border-radius: 12px; }
@@ -1276,7 +1290,7 @@ color-scheme: light;
   .drow:hover { background: var(--raised); }
   .drow .grow { flex: 1 1 0; min-width: 0; }
   /* `display: block` on both, because these are spans (a row can be an <a>,
-     and an <a> may not contain a <div>) \u2014 inline they ran together and the
+     and an <a> may not contain a <div>) — inline they ran together and the
      screen read "ArcGIS Proon this machine only". */
   .drow .nm { display: block; font-size: 0.86rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .drow .says { display: block; font-size: 0.74rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1295,7 +1309,7 @@ color-scheme: light;
   /* A tag is a pill and clips: a project can be called anything. */
   .dtag { flex: 0 1 auto; min-width: 0; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dpct { flex: 0 0 auto; font-size: 0.78rem; color: var(--dim); font-family: var(--mono); min-width: 2.4rem; text-align: right; }
-  /* A round glyph on a launcher row, as drawn \u2014 identity, so it takes an
+  /* A round glyph on a launcher row, as drawn — identity, so it takes an
      --id-* tint behind a muted mark and never a state hue. */
   .dgl {
     flex: 0 0 auto; width: 26px; height: 26px; border-radius: 99px;
@@ -1305,7 +1319,7 @@ color-scheme: light;
   .dgl svg { width: 14px; height: 14px; }
   .dempty { margin: 0.5rem 0 0.4rem; color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.84rem; }
   /* Two cards side by side at 1000px are 300px wide, which is where a name
-     and a figure stop fitting on one line \u2014 so the grid folds to one column
+     and a figure stop fitting on one line — so the grid folds to one column
      before that rather than after it. */
   @media (max-width: 1040px) {
     .hgrid, .hgrid.two { grid-template-columns: repeat(2, 1fr); }
@@ -2102,7 +2116,7 @@ color-scheme: light;
     // not needed. `on` is the picker it belongs to; the callers all name
     // their select the same as the vocabulary they draw from.
     /* The map is the SELECT'S OWN KEY, not the vocabulary's name, and a
-       missing entry does not fall back to something sensible \u2014 `showWhen`
+       missing entry does not fall back to something sensible — `showWhen`
        looks the field up by id, so an unmatched key means no field, which
        means the box never appears at all. `assetKinds` was missing, so
        "Other \u2014 write it in" on the registry's kind picker silently did
@@ -2984,6 +2998,78 @@ color-scheme: light;
         return rows;
       }
     },
+    /* TWO QUESTIONS THE BRIEF NAMES AND THE BOX COULD NOT ANSWER. Both are
+       pure reads through the function the screen that answers them in full
+       already uses — `projThings` for the first, `assetUses` for the
+       second — so neither can disagree with that screen, which is the rule
+       every answer in this table lives by. */
+    {
+      name: "what a project is made of",
+      hint: "what belongs to <project>  ·  what files belong to <project>",
+      re: /^what\s+(?:files\s+|things\s+|assets\s+)?(?:belongs?|belong)\s+to\s+(.+?)\??$/,
+      run: function (m) {
+        var hit = askPick(projects(), m[1], function (p) { return p.name; });
+        if (!hit) return [askSaid("No project matches \u201c" + askName(m[1]) + "\u201d.",
+                                  "what a project is made of")];
+        var p = hit.it, ts = projThings(p.id);
+        if (!ts.length) {
+          return [askSaid("Nothing is filed under " + p.name + " yet — a thing arrives by being brought onto one of its boards.",
+                          "what a project is made of",
+                          function () { findClose(); openProj = p.id; projTab = "things"; findTab("jobs"); })];
+        }
+        var rows = [askSaid(cap(numWord(ts.length)) + (ts.length === 1 ? " thing is" : " things are") +
+                            " filed under " + p.name + ".", "what a project is made of",
+                            function () { findClose(); openProj = p.id; projTab = "things"; findTab("jobs"); })];
+        ts.slice(0, 8).forEach(function (x) {
+          var nm = x.asset ? x.asset.name : x.node.label;
+          var look = x.asset ? assetLook(x.asset) : { tile: "t-kit", ico: ICONS.thing };
+          rows.push({ g: "Filed under " + p.name, tile: askTile(look.tile, look.ico), title: nm,
+                      sub: (x.asset ? assetKindLabel(x.asset) : "only on a board") +
+                           " \u00b7 on " + x.on.slice(0, 2).join(", "),
+                      run: function () {
+                        findClose();
+                        if (x.asset) { openAsset = x.asset.id; findTab("vocab"); }
+                        else { openProj = p.id; projTab = "things"; findTab("jobs"); }
+                      } });
+        });
+        return rows;
+      }
+    },
+    {
+      name: "which boards use a thing",
+      hint: "which boards use <thing>  ·  which workflows use <thing>",
+      re: /^(?:which|what)\s+(?:boards?|workflows?|procedures?|runs?)\s+(?:use|uses|used|need|needs)\s+(.+?)\??$/,
+      run: function (m) {
+        var hit = askPick(live(state.assets), m[1], function (a) { return a.name; });
+        if (!hit) return [askSaid("Nothing under Assets matches \u201c" + askName(m[1]) + "\u201d.",
+                                  "which boards use a thing")];
+        var a = hit.it, uses = assetUses(a);
+        if (!uses.length) {
+          return [askSaid(a.name + " is not on any board yet — \u201cPut it on a board\u201d on its own page is the way in.",
+                          "which boards use a thing",
+                          function () { findClose(); openAsset = a.id; findTab("vocab"); })];
+        }
+        /* Folded by BOARD, because one board can name the same thing twice
+           and "two boards" would then read as four. */
+        var seen = {}, bs = [];
+        uses.forEach(function (u) {
+          if (seen[u.board.id]) return;
+          seen[u.board.id] = 1; bs.push(u);
+        });
+        var rows = [askSaid(a.name + " is on " + numWord(bs.length) +
+                            (bs.length === 1 ? " board." : " boards."),
+                            "which boards use a thing",
+                            function () { findClose(); openAsset = a.id; findTab("vocab"); })];
+        bs.slice(0, 8).forEach(function (u) {
+          rows.push({ g: "Uses " + a.name, tile: askTile("t-board", ICONS.boards),
+                      title: u.board.name,
+                      sub: (u.board.kind === "run" ? "a run" : "a procedure") +
+                           (u.proj ? " \u00b7 " + u.proj.name : ""),
+                      run: function () { findClose(); findBoard(u.board.id, u.node.id); } });
+        });
+        return rows;
+      }
+    },
     {
       name: "write something down",
       hint: "remind me to <something>  ·  add a task <something>",
@@ -3085,7 +3171,7 @@ color-scheme: light;
                  run: function () { findTab(t.id); } });
     });
     /* The section was renamed the workbench and the finder went on calling
-       it Kit, which is the one place the old name could still be read \u2014 and
+       it Kit, which is the one place the old name could still be read — and
        the finder is how somebody looks for a screen whose name they have
        forgotten. The old word stays in `key`, so typing "kit" still finds it;
        what it SAYS is the current name. */
@@ -3182,7 +3268,7 @@ color-scheme: light;
       /* The body is in the key, because the question six months later is
          "the thing that renames photos" and the name is the half you have
          forgotten. The topics are in it for the same reason. */
-      out.push({ g: isSnippet(a) ? "Snippets" : "Things",
+      out.push({ g: hasBody(a) ? "Library" : "Things",
                  key: a.name + " " + (a.notes || "") + " " + (a.path || "") + " " +
                       assetTopics(a).join(" ") + " " + snipLangLabel(a) + " " + (a.body || ""),
                  tile: findTile(look.tile, look.ico),
@@ -3225,6 +3311,9 @@ color-scheme: light;
     var cs = [
       { name: "New project", act: "proj-add", sub: "a bounded piece of work with a date on it" },
       { name: "Add a thing", act: "asset-add", sub: "a file, a photograph, a dataset, a laptop" },
+      { name: "Save something to the Library", act: "lib-add",
+        sub: "a method, a script, a formula, a reference, a template",
+        alias: "snippet script formula method reference template library reuse" },
       { name: "Add someone", act: "contact-add", sub: "where they work and how to reach them" },
       { name: "New procedure", act: "board-new", sub: "write one from a blank sheet", alias: "board workflow" },
       { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a procedure" },
@@ -4033,8 +4122,8 @@ function stateWord(b, n) {
     return out.filter(function (r) { return !!r.at; }).slice(0, n || 4);
   }
   /* A BRACE THAT WAS NEVER THERE MADE THIS RETURN ON ITS FIRST LINE. Written
-     `if (cond) var n = \u2026` with the return on the next line and no braces,
-     the return sat OUTSIDE the if \u2014 so every board on Home read
+     `if (cond) var n = …` with the return on the next line and no braces,
+     the return sat OUTSIDE the if — so every board on Home read
      "a procedure \u00b7 undefined steps", a run included, and the three lines
      below that describe a run were unreachable. It parses, it throws nothing,
      and every screen that printed it said the same wrong thing quietly. The
@@ -4086,7 +4175,7 @@ function stateWord(b, n) {
        2025 \u2014 past its date". A figure may never disagree with what is on
        the screen below it, and of the two readings the one to keep is
        obvious: a date you have missed does not stop mattering.
-       `projState().overdue` is not the test here \u2014 that is true for a
+       `projState().overdue` is not the test here — that is true for a
        chase as well, and this tile is about dates. A project already
        delivered is out: `endsOn` gone with every run closed and nothing left
        to file is a finished job, not a missed one. */
@@ -4124,11 +4213,11 @@ function stateWord(b, n) {
       h += "</div>";
     }
 
-    /* ROW ONE: what cannot wait \u00b7 what is moving \u00b7 what you open. */
+    /* ROW ONE: what cannot wait · what is moving · what you open. */
     h += '<div class="hgrid">';
 
     /* TODAY. Three rows of one shape, each a route to the screen that can do
-       something about it \u2014 a figure you cannot act on is worse than no
+       something about it — a figure you cannot act on is worse than no
        figure. The sub-line is the fact behind the figure, which is what stops
        "1 deadline" reading as a deadline that is still ahead of you. */
     h += dcard("Today", { label: "View all", act: "tab-waiting" },
@@ -4163,7 +4252,7 @@ function stateWord(b, n) {
       }).join("") : '<p class="dempty">Nothing is running. A project with a board under it appears here.</p>');
 
     /* QUICK RUN. Every row goes through `openHandle()`, so a row exists only
-       where there is really something to open \u2014 and a path with the
+       where there is really something to open — and a path with the
        companion off is a copy, which the row says rather than pretending. */
     var apps = repoIn("app").concat(repoIn("site")).filter(function (a) { return !!openHandle(a); }).slice(0, 5);
     h += dcard("Quick run", { label: "All of it", act: "tab-repo" },
@@ -4180,7 +4269,7 @@ function stateWord(b, n) {
 
     h += "</div>";
 
-    /* ROW TWO: WHERE WAS I \u2014 the second of the three forgettings, and the
+    /* ROW TWO: WHERE WAS I — the second of the three forgettings, and the
        whole reason `updatedAt` is read rather than a recents list stored. */
     var recentB = recentlyTouched({ boards: true }, 4);
     var recentA = recentlyTouched({ assets: true }, 5);
@@ -4188,7 +4277,7 @@ function stateWord(b, n) {
       h += '<div class="hgrid two">';
       h += dcard("Continue working", { label: "Workflows", act: "tab-boards" },
         recentB.length ? recentB.map(function (r) {
-          /* The mockup tags each of these rows with a short word \u2014 Maps,
+          /* The mockup tags each of these rows with a short word — Maps,
              Research, 3D \u2014 and the app already has that list: the board's
              KIND, which the reader writes themselves. A project name was the
              obvious choice and the wrong one: "Harbour festival 2026" in a
@@ -4227,7 +4316,7 @@ function stateWord(b, n) {
   /* A DASHBOARD CARD IS A HEADER AND ROWS, and the header's one action is the
      way into the screen that answers the same question in full. It is built
      here rather than written out five times, so every card on Home is the
-     same shape \u2014 a bigger or differently-dressed card reads as a more
+     same shape — a bigger or differently-dressed card reads as a more
      important question, and these are five equal ones. */
   function dcard(title, act, body) {
     return '<section class="dcard"><div class="dhead"><h3>' + esc(title) + "</h3>" +
@@ -4238,7 +4327,7 @@ function stateWord(b, n) {
 
   /* A Today row: a figure, what it counts, and the fact behind it. The dot
      carries the state and the figure takes the state's colour with it, so the
-     row says it twice \u2014 in a hue and in a word \u2014 for a reader who cannot
+     row says it twice — in a hue and in a word — for a reader who cannot
      separate the two. */
   function dRow(n, unit, says, tone, act) {
     return '<button type="button" class="drow' + (tone ? " " + tone : "") +
@@ -5707,11 +5796,11 @@ function stateWord(b, n) {
      book produced two of them in a row from a bar pinned to every screen.
      A dialog instead: it says what the missing thing IS, and its confirm
      button lands on the page that makes one. */
-  function needWords(title, message) {
+  function needWords(title, message, act) {
     openModal({
       title: title, message: message,
       confirmLabel: "Take me there", cancelLabel: "Not now",
-      onConfirm: function () { APP.actions["kit-words"](); }
+      onConfirm: function () { APP.actions[act || "kit-words"](); }
     });
   }
 
@@ -6073,9 +6162,16 @@ function stateWord(b, n) {
      holds what the work is made of as well as what it is made with. */
   var ASSET_KINDS = {
     file: "File", photo: "Photo", dataset: "Dataset", doc: "Document",
-    /* The one kind whose content the record holds rather than points at \u2014
-       see `snippetDialog`. It is a kind and not a fifth noun. */
+    /* THE TWO KINDS WHOSE CONTENT THE RECORD HOLDS rather than points at —
+       see `bodyDialog`. Both carry `a.body`; what separates them is `a.lang`,
+       and THE LANGUAGE IS WHAT SAYS WHETHER A BODY IS CODE. That one fact is
+       why the brief's five library types are three routes here: a Script and
+       a Formula are one record with a different language, a Method and a
+       Template are one record with none, and a Reference is a link with a
+       note, which the registry already held. Five kinds would have been five
+       doors onto three rooms, with nothing on screen saying so. */
     snippet: "Snippet or formula",
+    method:  "Method or template",
     software: "Software", site: "Website or service", laptop: "Laptop",
     phone: "Phone", audio: "Audio", gear: "Field kit", other: "Other"
   };
@@ -6119,7 +6215,7 @@ function stateWord(b, n) {
     /* CONNECTIONS IS THE SAME STORE ASKED A DIFFERENT QUESTION: what can this
        app actually open for me? The mockup draws it as Software / Web
        services / Hardware with a tick against each, and every part of that is
-       already in the record \u2014 `openHandle()` is the one place that decides
+       already in the record — `openHandle()` is the one place that decides
        what "open" means, so a tick here is not a stored flag but that
        function answering yes. A second list of "integrations" would be the
        one name, one entry mistake this file records twice. */
@@ -6138,7 +6234,7 @@ function stateWord(b, n) {
     var k = a.kind;
     /* THE LIBRARY IS A SECTION NOW, not only a lens. It was the same store
        read by subject and `repoOf` never returned it; a snippet has no other
-       home \u2014 it is not a device, an app, a site or a file on disk \u2014 so it
+       home — it is not a device, an app, a site or a file on disk — so it
        is filed here, and the Library goes on answering the subject question
        for everything else at the same time. */
     if (k === "snippet") return "lib";
@@ -6537,7 +6633,7 @@ function stateWord(b, n) {
   function assetTopics(a) {
     return (a.topics || []).filter(function (t) { return !!t; });
   }
-  /* Split, trimmed, blanks dropped and de-duplicated case-insensitively \u2014
+  /* Split, trimmed, blanks dropped and de-duplicated case-insensitively —
      "Harbour, harbour" is one topic typed twice, and two rows in the Library
      for one word would be the "one name, one entry" fault in the one screen
      built to pool things. Extracted from inside the registry dialog the day a
@@ -6553,7 +6649,7 @@ function stateWord(b, n) {
     return out;
   }
 
-  /* A SNIPPET IS A REGISTRY ENTRY WITH A BODY, and that is the whole of it \u2014
+  /* A SNIPPET IS A REGISTRY ENTRY WITH A BODY, and that is the whole of it —
      no fifth noun. Asked for a Library holding "formulas for excels" and
      "scripts I might use to extract certain photos in Python", the shape that
      does not unravel the model is the one already here: the registry holds
@@ -6566,24 +6662,64 @@ function stateWord(b, n) {
      The test is the record, not the kind: an entry carrying a body IS a
      snippet however its kind reads, which is what stops a body becoming
      unreachable the moment somebody changes the kind in the other dialog. */
-  function isSnippet(a) { return !!a && (a.kind === "snippet" || !!a.body); }
+  /* THE TEST IS THE BODY, NOT THE KIND, so an entry carrying one stays a
+     written entry however its kind reads — otherwise changing the kind in the
+     registry dialog would make the body unreachable while it sat in the
+     record. It was called `isSnippet`, which stopped being true the day a
+     method could be written out: a method is not a snippet, and the question
+     the code was always asking is whether there is a body. */
+  function hasBody(a) {
+    return !!a && (a.kind === "snippet" || a.kind === "method" || !!a.body);
+  }
+  /* And the language decides the READING. A body with a language is code, set
+     in mono and never wrapped; a body without one is prose and wraps like
+     prose. Setting a method in a monospace box that refuses to wrap would
+     make the one entry type meant to be READ the hardest one to read. */
+  function isCode(a) { return hasBody(a) && !!(a && a.lang); }
   function snipLangLabel(a) {
     return a && a.lang ? (vocabLabel("langs", a.lang) || a.lang) : "";
   }
   function snipLines(a) { return String((a && a.body) || "").split("\n"); }
-  function snippets() {
-    return live(state.assets).filter(isSnippet)
+  /* WHAT YOU REUSE IS THE LIBRARY'S OWN HALF, and it is decided the way every
+     section is: stated, not derived. `repoOf(a) === "lib"` means somebody
+     filed it there, which is what the five words of "What are you saving?"
+     all do.
+
+     It was `hasBody`, and that was wrong twice over the moment a Reference
+     could be saved. A reference has NO body — it points at a paper — so it
+     vanished out of the very section it had just been saved into, and the
+     only place it showed up was one subject row further down the page. The
+     other half of the same fault was a figure disagreeing with its own
+     parts: "All 5" stood above five rows while the language chips summed to
+     four, because a method has no language and so belonged to no chip. */
+  function libOwn() {
+    return live(state.assets).filter(function (a) { return repoOf(a) === "lib"; })
       .sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); });
   }
+  /* EXACTLY ONE CHIP PER ENTRY, so the chips partition the list and All is
+     their sum. Three kinds of facet, because there are three kinds of entry:
+     code is filed under its language, prose under "written out", and an
+     entry with no body at all under "referenced". */
+  var LIB_WROTE = "__wrote", LIB_REF = "__ref";
+  function libFacet(a) {
+    if (isCode(a)) return a.lang;
+    if (hasBody(a)) return LIB_WROTE;
+    return LIB_REF;
+  }
+  function libFacetLabel(k) {
+    if (k === LIB_WROTE) return "Written out";
+    if (k === LIB_REF) return "Referenced";
+    return vocabLabel("langs", k) || k;
+  }
   /* What the Library actually holds, in ONE unit: entries. A snippet is in it
-     whether or not a subject has been written on it \u2014 a formula with no
-     subject is still something you reuse and has nowhere else to be \u2014 and
+     whether or not a subject has been written on it — a formula with no
+     subject is still something you reuse and has nowhere else to be — and
      everything else joins the moment it is given one. The strip's count reads
      this rather than the number of subjects, because a count of subjects over
      a page listing entries is two units in one figure. */
   function libEntries() {
     return live(state.assets).filter(function (a) {
-      return isSnippet(a) || assetTopics(a).length;
+      return hasBody(a) || assetTopics(a).length;
     });
   }
 
@@ -6655,6 +6791,15 @@ function stateWord(b, n) {
                                       how: partsIn(a).length + " thing(s) are filed in this" });
     if (assetTopics(a).length) out.push({ label: "Everything on " + assetTopics(a)[0], act: "lib-topic",
                                           id: assetTopics(a)[0], how: "read the Library on this subject" });
+    /* PUT IT ON A BOARD — the relationship the brief puts at the centre of
+       the whole model: "a library method can explain a workflow step and be
+       reusable in another project". Borrowing has always worked the other way
+       round, from the sheet, which means it only occurred to you while you
+       were already on the board. From the entry you are reading, one tap. It
+       is offered for every kind, not only a written one, because the borrow
+       pool has always held the whole registry. */
+    if (boards().length) out.push({ label: "Put it on a board", act: "asset-to-board", id: a.id,
+                                    how: "a copy joins a procedure or a run, and this entry still answers where it is used" });
     if (!assetUpkeep(a).length) out.push({ label: "Add upkeep", act: "cadence-add", id: a.id,
                                            how: "something to do to it every so often" });
     return out;
@@ -6688,7 +6833,11 @@ function stateWord(b, n) {
      its kind falls back to — so saving an entry written before this field
      existed writes down what the app was already showing, rather than
      quietly moving it. */
-  function assetDialog(a, into) {
+  /* `kindPre` is the third argument and only "What are you saving?" passes
+     it: a Reference is this dialog with its kind and its section already
+     answered, so the reader is not asked twice for something they have just
+     said. */
+  function assetDialog(a, into, kindPre) {
     var mk = !a;
     openModal({
       title: mk ? "New thing" : "Edit " + a.name,
@@ -6700,8 +6849,8 @@ function stateWord(b, n) {
         { key: "name", label: "Name", type: "text", value: a ? a.name : "", span: true,
           placeholder: "Orthophoto, area 1" },
         { key: "kind", label: "What is it", type: "select",
-          value: a ? a.kind : (into === "device" ? "gear" : into === "app" ? "software"
-                               : into === "site" ? "site" : "file"),
+          value: a ? a.kind : (kindPre || (into === "device" ? "gear" : into === "app" ? "software"
+                               : into === "site" ? "site" : "file")),
           options: vocabOpts("assetKinds") },
         otherField("assetKinds", "kindOther"),
         { key: "repo", label: "Which list it shows in", type: "select",
@@ -6909,14 +7058,22 @@ function stateWord(b, n) {
      row rather than three taps down a menu. */
   function snipBlock(a) {
     if (!a.body) {
-      return '<p class="empty">Nothing pasted in yet — "Edit" above puts the formula or the script in.</p>';
+      return '<p class="empty">Nothing written in yet — "Edit" above is where it goes.</p>';
     }
-    var n = snipLines(a).length, lang = snipLangLabel(a);
-    return '<div class="sniphead">' +
-      (lang ? '<span class="lpill">' + esc(lang) + "</span>" : "") +
+    var n = snipLines(a).length;
+    var head = '<div class="sniphead">' +
+      '<span class="lpill">' + esc(snipLangLabel(a) || "written out") + "</span>" +
       '<span class="snipn">' + n + (n === 1 ? " line" : " lines") + "</span>" +
-      '<button class="btn quiet" data-act="snip-copy" data-id="' + a.id + '">Copy it</button></div>' +
-      '<pre class="snip"><code>' + esc(a.body) + "</code></pre>";
+      '<button class="btn quiet" data-act="snip-copy" data-id="' + a.id + '">Copy it</button></div>';
+    /* CODE IS SET IN MONO AND DOES NOT WRAP; PROSE WRAPS. A method is the one
+       entry type written to be read straight through, and putting it in the
+       code box — mono, `white-space: pre`, scrolling sideways at the first
+       long sentence — would make it the hardest thing in the app to read.
+       Same block, same head row, same Copy; one rule different, and the pill
+       says which reading you are being given. */
+    return head + (isCode(a)
+      ? '<pre class="snip"><code>' + esc(a.body) + "</code></pre>"
+      : '<div class="wrote">' + esc(a.body) + "</div>");
   }
 
   /* The row names it by what it DOES and shows the first line that is not
@@ -6924,62 +7081,107 @@ function stateWord(b, n) {
      apart. The row opens the entry and a small button beside it copies — the
      Repo's two-control shape, for the same reason: the row is the big target
      and the thing you usually want is one tap, not two. */
+  /* ONE ROW, THREE SHAPES. Code shows its first line in mono and offers
+     Copy; prose shows its first line as prose and offers Copy; a reference
+     has neither, so it shows what it POINTS at and offers whatever
+     `openHandle` really can do — the one place in the app that decides
+     what "open" means, so a reference can never grow a button that does
+     nothing. The pill is the FACET, so the row and the chip above it can
+     never disagree about which group the row is in. */
   function snipRow(a) {
+    var code = isCode(a), body = hasBody(a);
     var first = snipLines(a).filter(function (l) { return l.trim(); })[0] || "";
-    var lang = snipLangLabel(a);
+    var look = assetLook(a), hd = openHandle(a);
+    var sub = body
+      ? (first ? esc(first) : "nothing written in yet")
+      : (hd ? esc(hd.brief || hd.how) : esc(a.notes || "named, with nothing to open"));
     return '<div class="panel calm repo-row">' +
       '<button type="button" class="repo-hit" data-act="asset-open" data-id="' + a.id +
         '" title="' + esc(a.name) + '">' +
-        '<span class="itile t-know">' + ICONS.code + "</span>" +
+        '<span class="itile ' + (body ? "t-know" : look.tile) + '">' +
+        (code ? ICONS.code : body ? ICONS.book : look.ico) + "</span>" +
         '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
-        '<div class="snipone">' + (first ? esc(first) : "nothing pasted in yet") + "</div></div>" +
-        (lang ? '<div class="rmeta"><span class="lpill">' + esc(lang) + "</span></div>" : "") +
+        '<div class="' + (code ? "snipone" : "says") + '">' + sub + "</div></div>" +
+        '<div class="rmeta"><span class="lpill">' +
+        esc(libFacetLabel(libFacet(a))) + "</span></div>" +
       "</button>" +
       (a.body
         ? '<div class="repo-acts"><button class="btn quiet" data-act="snip-copy" data-id="' + a.id +
           '" title="Copy the whole thing to the clipboard">Copy</button></div>'
-        : '<span class="rchev" aria-hidden="true">›</span>') + "</div>";
+        : hd && hd.kind !== "copy"
+          ? '<div class="repo-acts"><a class="btn quiet" href="' + esc(hd.href) + '"' +
+            (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+            ' title="' + esc(hd.how) + '">' + esc(hd.label) + "</a></div>"
+          : '<span class="rchev" aria-hidden="true">›</span>') + "</div>";
   }
 
-  /* A SNIPPET GETS ITS OWN DIALOG, because the registry's is thirteen boxes
-     with a two-line note at the bottom and here the body IS the entry: a
-     twelve-row textarea belongs at the top of a form with five boxes, not
+  /* A WRITTEN ENTRY GETS ITS OWN DIALOG, because the registry's is thirteen
+     boxes with a two-line note at the bottom and here the body IS the entry:
+     a twelve-row textarea belongs at the top of a form with five boxes, not
      behind a fold in a form with thirteen. Both write the same record and the
-     edit route is chosen by the RECORD (`isSnippet`), so a snippet always
-     opens in the dialog built for it and the two can never offer the same
-     field in two shapes. */
-  function snippetDialog(a) {
+     edit route is chosen by the RECORD (`hasBody`), so an entry carrying a
+     body always opens in the dialog built for it and the two can never offer
+     one field in two shapes.
+
+     ONE DIALOG, TWO MODES, because the difference between a script and a
+     method is one field and one reading, not two forms. `mode` is "code",
+     "formula" or "prose"; on an EDIT it is left out and comes from the record
+     (`isCode`), so an entry always reopens in the shape it was written in and
+     the language box is absent rather than present-and-blank where it could
+     never apply. The picker cannot be hidden reactively here — `showWhen`
+     matches another field's value and this is settled before the dialog
+     opens — which is exactly why the mode is chosen first, by
+     `libAddDialog`. */
+  function bodyDialog(a, mode) {
     var mk = !a;
+    var code = mode ? (mode === "code" || mode === "formula") : isCode(a);
+    var lang0 = a && a.lang ? a.lang : (mode === "formula" ? "excel" : "python");
     openModal({
-      title: mk ? "New snippet" : "Edit " + a.name,
-      confirmLabel: mk ? "Add" : "Save",
+      title: mk ? (code ? "Save a script or formula" : "Write out a method")
+                : "Edit " + a.name,
+      confirmLabel: mk ? "Save it" : "Save",
       wide: true,
-      message: mk ? "A formula, a script, a command line — anything you worked out once and will want again. It is filed in the Library beside everything else on the same subject."
-                  : "",
+      message: mk
+        ? (code
+            ? "A formula, a script, a command line — anything you worked out once and will want again. It is filed in the Library beside everything else on the same subject."
+            : "How something is done, in your own words: how to georeference a 1916 aerial, the order a bathymetric survey goes in, a report skeleton. Written out here rather than pointed at, because the one thing a path cannot carry is the content itself.")
+        : "",
       fields: [
         { key: "name", label: "What it does", type: "text", span: true,
           value: a ? a.name : "",
-          placeholder: "Rename a folder of photos by the date they were taken",
-          hint: "Name it by what it DOES, not what it is — in six months that is the only half you will remember." },
+          placeholder: code ? "Rename a folder of photos by the date they were taken"
+                            : "Georeference a 1916 aerial against the modern sheet",
+          hint: "Name it by what it DOES, not what it is — in six months that is the only half you will remember." }
+      ].concat(code ? [
         { key: "lang", label: "Written in", type: "select",
-          value: a ? (a.lang || "python") : "python", options: vocabOpts("langs") },
-        otherField("langs", "langOther"),
-        { key: "body", label: "The snippet itself", type: "textarea", rows: 12, span: true,
+          value: lang0, options: vocabOpts("langs") },
+        otherField("langs", "langOther")
+      ] : []).concat([
+        { key: "body", label: code ? "The snippet itself" : "Written out",
+          type: "textarea", rows: 12, span: true,
           value: a ? (a.body || "") : "",
-          hint: "Pasted exactly as it is. Nothing is run and nothing is checked — this is text the app keeps for you." },
+          hint: code
+            ? "Pasted exactly as it is. Nothing is run and nothing is checked — this is text the app keeps for you."
+            : "Prose, in the order you would do it. It wraps and is read straight through, so it is not set in a code box." },
         { key: "topics", label: "What it is about", type: "text", span: true,
           value: a ? assetTopics(a).join(", ") : "",
           placeholder: "photogrammetry, file handling",
           hint: "Comma-separated. It appears under each of them in the Library, beside the datasets and papers on the same subject." },
-        { key: "notes", label: "What it assumes", type: "textarea", span: true, rows: 2,
+        { key: "notes", label: code ? "What it assumes" : "What to watch out for",
+          type: "textarea", span: true, rows: 2,
           value: a ? (a.notes || "") : "",
-          hint: "The columns it expects, the folder layout, the version it was written against — the half that is not in the code." },
+          hint: code
+            ? "The columns it expects, the folder layout, the version it was written against — the half that is not in the code."
+            : "The step people get wrong, the thing that has to be true before you start." },
         { key: "url", label: "Where it came from", type: "text", span: true, more: true,
           value: a ? (a.url || "") : "", placeholder: "https://…" }
-      ],
+      ]),
       validate: function (v) {
         if (!v.name.trim()) return "Say what it does.";
-        if (!v.body.trim()) return "A snippet with no body is a note — paste the formula or the script in.";
+        if (!v.body.trim()) {
+          return code ? "A snippet with no body is a note — paste the formula or the script in."
+                      : "Nothing is written out yet. A method with no body is a title.";
+        }
         return null;
       },
       onConfirm: function (v) {
@@ -6987,9 +7189,12 @@ function stateWord(b, n) {
           var t = a;
           if (!t) { t = { id: uid(), fromIds: [], archived: false }; state.assets.push(t); }
           t.name = v.name.trim();
-          t.kind = "snippet";
+          /* The kind and the language move together: prose has no language,
+             and a language sitting on a record whose kind says prose would
+             leave the record saying two things at once. */
+          t.kind = code ? "snippet" : "method";
           t.repo = "lib";
-          t.lang = vocabTake("langs", v.lang, v.langOther, t.lang || "other");
+          t.lang = code ? vocabTake("langs", v.lang, v.langOther, t.lang || "other") : "";
           /* Never trimmed at the front: leading whitespace is what a Python
              block MEANS. Only the trailing blank lines a textarea collects. */
           t.body = String(v.body).replace(/\s+$/, "");
@@ -7003,45 +7208,100 @@ function stateWord(b, n) {
     });
   }
 
+  /* THE BRIEF ASKS THE QUESTION AND NAMES THE FIVE ANSWERS, so the dialog
+     asks it in its words: "What are you saving?" over Method, Script,
+     Formula, Reference, Template. What it does NOT do is invent five records.
+     A Script and a Formula are one record with a different language; a Method
+     and a Template are one record with none; a Reference is a link with a
+     note, which the registry has always held. So five doors, three rooms
+     — and the rows SAY SO, because five choices that quietly land on
+     three forms would read as the app losing track of what you picked. Same
+     fold, and the same reason, as four archaeology nouns being one write-in
+     field. */
+  var SAVE_KINDS = [
+    { id: "method", word: "Method",
+      says: "How something is done, in your own words. Written out and read straight through." },
+    { id: "script", word: "Script",
+      says: "Python, ArcPy, GDAL, PowerShell, SQL. Kept as code, in mono, with a Copy button." },
+    { id: "formula", word: "Formula",
+      says: "A spreadsheet formula and what it assumes. The same record as a script, with Excel as its language." },
+    { id: "reference", word: "Reference",
+      says: "A paper, a manual, a standard, a link. Nothing is written out — it points at where it lives." },
+    { id: "template", word: "Template",
+      says: "A report skeleton, a metadata sheet, a naming convention. Written out, like a method." }
+  ];
+  function libAddDialog() {
+    openModal({
+      title: "What are you saving?",
+      confirmLabel: "Go on",
+      message: "Everything here lands in one registry and can carry the same subjects, the same provenance and the same route onto a board. What you pick decides the form you get, not a separate list.",
+      fields: [
+        { key: "what", label: "It is a", type: "select", span: true, value: "script",
+          options: SAVE_KINDS.map(function (k) { return { value: k.id, label: k.word }; }),
+          /* The hint carries all five readings at once rather than one at a
+             time: a picker whose description changes as you move through it
+             cannot be compared, and comparing is the whole reason there are
+             five words. `hint` is the runtime's own slot for a sentence about
+             the control it sits under; a new field type would have to land in
+             all four apps byte-identically for one dialog. */
+          hint: SAVE_KINDS.map(function (k) { return k.word + " — " + k.says; }).join("  ") }
+      ],
+      onConfirm: function (v) {
+        /* Handed on rather than done here: this dialog chooses a shape and
+           writes nothing, so there is still exactly one place each record is
+           written. A Reference is the registry's own dialog with its kind and
+           its section set — it has no body, and a body field on it would be
+           a box that never gets read. */
+        if (v.what === "reference") assetDialog(null, "lib", "doc");
+        else if (v.what === "script") bodyDialog(null, "code");
+        else if (v.what === "formula") bodyDialog(null, "formula");
+        else bodyDialog(null, "prose");
+      }
+    });
+  }
+
   function renderLibrary() {
     /* Inside a subject first, because that branch is a different screen and
        reading it after the landing's three sections is how the landing came
        to be built twice. */
     if (libTopic) return librarySubject();
 
-    var topics = allTopics(), snips = snippets();
+    var topics = allTopics(), own = libOwn();
     var h = '<div class="tools" style="margin:0.9rem 0 0.5rem">' +
-      '<button class="btn primary" data-act="snip-add">New snippet</button>' +
-      '<button class="btn" data-act="repo-add" data-id="lib">New entry</button>' +
+      '<button class="btn primary" data-act="lib-add">Save something</button>' +
       '<button class="btn" data-act="tab-vocab">The workbench</button></div>' +
-      '<p class="hint" style="margin:0 0 0.9rem">What you reuse, and what you know: a formula, a script, the method note, the paper it came out of. One store read by subject rather than by kind — a subject is written onto a thing, so there is no list of topics to maintain and nothing here is a second copy of anything.</p>';
+      '<p class="hint" style="margin:0 0 0.9rem">Two questions on one page. <b>What you reuse</b> is what you have saved here on purpose: a method, a script, a formula, a reference, a template. <b>By subject</b> is the whole registry read by what a thing is ABOUT rather than by what kind it is \u2014 a subject is written onto a thing, so there is no list of topics to maintain and nothing here is a second copy of anything.</p>';
 
-    if (!topics.length && !snips.length) {
-      return h + '<p class="empty">Nothing in the Library yet. “New snippet” puts in the formula or the script you keep re-deriving; anything else under Assets joins it the moment you write down what it is about.</p>';
+    if (!topics.length && !own.length) {
+      return h + '<p class="empty">Nothing in the Library yet. \u201cSave something\u201d above asks what it is \u2014 a method, a script, a formula, a reference, a template \u2014 and anything else under Assets joins the subject list the moment you write down what it is about.</p>';
     }
 
     /* WHAT YOU REUSE comes first, because it is the half you open the Library
        to fetch. The subjects below it answer the slower question. */
-    if (snips.length) {
-      var ls = {};
-      snips.forEach(function (a) { if (a.lang) ls[a.lang] = (ls[a.lang] || 0) + 1; });
-      var lk = Object.keys(ls).sort(function (x, y) {
-        return String(vocabLabel("langs", x)).localeCompare(String(vocabLabel("langs", y)));
+    if (own.length) {
+      /* THE CHIPS PARTITION THE LIST, so All is their sum. One facet per
+         entry \u2014 its language if it is code, "written out" if it is prose,
+         "referenced" if it has no body at all \u2014 because the first version
+         chipped only the languages and stood "All 5" above five rows whose
+         chips summed to four: the method had no language and belonged to no
+         chip. A figure may never disagree with its own parts. */
+      var fs = {};
+      own.forEach(function (x) { var k = libFacet(x); fs[k] = (fs[k] || 0) + 1; });
+      var fk = Object.keys(fs).sort(function (x, y) {
+        return String(libFacetLabel(x)).localeCompare(String(libFacetLabel(y)));
       });
       h += '<div class="sect">What you reuse</div>';
-      /* The chips are the languages actually present, counted, so no chip can
-         empty the list — the same rule the kind chips below already live by. */
-      if (lk.length > 1) {
+      if (fk.length > 1) {
         h += '<div class="tools" style="margin-bottom:0.7rem">' +
           '<button class="btn' + (libLang ? "" : " primary") + '" data-act="lib-lang" data-id="">All' +
-          ' <span class="cnt">' + snips.length + "</span></button>" +
-          lk.map(function (k) {
+          ' <span class="cnt">' + own.length + "</span></button>" +
+          fk.map(function (k) {
             return '<button class="btn' + (libLang === k ? " primary" : "") +
-              '" data-act="lib-lang" data-id="' + esc(k) + '">' + esc(vocabLabel("langs", k)) +
-              ' <span class="cnt">' + ls[k] + "</span></button>";
+              '" data-act="lib-lang" data-id="' + esc(k) + '">' + esc(libFacetLabel(k)) +
+              ' <span class="cnt">' + fs[k] + "</span></button>";
           }).join("") + "</div>";
       }
-      var sr = libLang ? snips.filter(function (a) { return a.lang === libLang; }) : snips;
+      var sr = libLang ? own.filter(function (x) { return libFacet(x) === libLang; }) : own;
       h += '<div class="stack tight">' + sr.map(snipRow).join("") + "</div>";
     }
 
@@ -7151,7 +7411,7 @@ function stateWord(b, n) {
     h += '<div class="sect">' + esc(libTopic) +
       (libKind ? " · " + esc(assetKindLabel({ kind: libKind })) : "") + "</div>";
     h += rows.length ? '<div class="stack tight">' + rows.map(function (a) {
-      if (isSnippet(a)) return snipRow(a);
+      if (hasBody(a)) return snipRow(a);
       var look = assetLook(a), trail = partTrail(a);
       var says = [assetKindLabel(a)];
       if (trail.length) says.push("in " + trail[trail.length - 1]);
@@ -7171,7 +7431,7 @@ function stateWord(b, n) {
      launcher and is a tick; a path with the companion OFF can only be copied,
      which is the browser refusing and not this app failing, so it reads as
      half a connection and says why. Hardware has nothing to open, ever, so
-     its rows carry where the thing is and how it stands instead \u2014 the
+     its rows carry where the thing is and how it stands instead — the
      question you actually ask of a total station. */
   function connGroups() {
     return [
@@ -7293,7 +7553,7 @@ function stateWord(b, n) {
       // fallback and not the point; the copy button stays either way, since a
       // managed laptop can block the scheme handler outright.
       (a.path && state.settings.companion ? launchLink(a.id, "Open it") : "") +
-      (isSnippet(a) && a.body ? '<button class="btn" data-act="snip-copy" data-id="' + a.id + '">Copy it</button>' : "") +
+      (hasBody(a) && a.body ? '<button class="btn" data-act="snip-copy" data-id="' + a.id + '">Copy it</button>' : "") +
       (a.path ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '">Copy the path</button>' : "") +
       (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
       '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
@@ -7324,9 +7584,11 @@ function stateWord(b, n) {
        would be a picture of nothing. */
     var facts = [];
     facts.push(["Kind", esc(assetKindLabel(a))]);
-    if (isSnippet(a)) {
-      facts.push(["Written in", snipLangLabel(a)
-        ? esc(snipLangLabel(a)) : '<span class="fnone">Not said</span>']);
+    if (hasBody(a)) {
+      /* "Written in — not said" under a method is a gap the table invented:
+         a method is not written in a language and never will be. The row is
+         printed only where it is a question. */
+      if (isCode(a)) facts.push(["Written in", esc(snipLangLabel(a))]);
       facts.push(["How long", snipLines(a).length + (snipLines(a).length === 1 ? " line" : " lines")]);
     }
     facts.push(["How it stands", stt.word
@@ -7346,7 +7608,7 @@ function stateWord(b, n) {
        headphones and plainly false three inches under a snippet's own body,
        which is the content and is right there. */
     facts.push(["Opening it", hdl ? esc(hdl.how)
-      : isSnippet(a)
+      : hasBody(a)
         ? '<span class="fnone">The snippet itself is above — “Copy it” puts it on the clipboard</span>'
         : '<span class="fnone">Nothing to open — this is a thing, not a file</span>']);
 
@@ -7354,7 +7616,7 @@ function stateWord(b, n) {
        what the page is for; for a snippet they are context and the text is
        the answer, so five rows of table above it would put the one thing the
        reader came for below the fold on a phone. */
-    if (isSnippet(a)) h += snipBlock(a);
+    if (hasBody(a)) h += snipBlock(a);
 
     var look = assetLook(a);
     h += '<div class="aface"><span class="iface ' + look.tile + '">' + look.ico + "</span>" +
@@ -7462,7 +7724,7 @@ function stateWord(b, n) {
         '<div class="says">' + esc("as “" + u.node.label + "”" +
           (u.proj ? " · " + u.proj.name : "")) + "</div></div></button>";
     }).join("") + "</div>"
-      : '<p class="empty">Not on any board yet. Bring it onto one with “Bring one in” on the sheet — a copy is taken, so the board keeps working even if this entry changes.</p>';
+      : '<p class="empty">Not on any board yet. “Put it on a board” on the right does it from here — a copy is taken, so the board keeps working even if this entry changes.</p>';
 
     var up = assetUpkeep(a);
     if (up.length) {
@@ -9632,7 +9894,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v64 · 18 Sep 2026";
+  var BUILD = "v65 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -11505,7 +11767,7 @@ function dims(n) {
       .map(function (x) { return x.trim().replace(/[.;:]+$/, ""); })
       .filter(function (x) {
         // A name, not the rest of the sentence: short, and starting upper case.
-        return x && x.length <= 34 && /^[A-Z\u0600-\u06FF]/.test(x) && x.split(/\s+/).length <= 4;
+        return x && x.length <= 34 && /^[A-Z؀-ۿ]/.test(x) && x.split(/\s+/).length <= 4;
       });
   }
 
@@ -12434,9 +12696,52 @@ function dims(n) {
        cannot edit half the entry is worse than no form. */
     "asset-edit": function (id) {
       var a = assetOf(id);
-      if (isSnippet(a)) snippetDialog(a); else assetDialog(a);
+      if (hasBody(a)) bodyDialog(a); else assetDialog(a);
     },
-    "snip-add":   function () { snippetDialog(null); },
+    "lib-add":    function () { libAddDialog(); },
+    /* The reverse of "Bring one in", and it writes through the same
+       `borrowInto` — two copies of that would drift the first time a kind
+       was added. The boards are GROUPED into procedures and open runs,
+       because putting a thing on a template and putting it on a run in
+       progress are different acts: the template is edited for next time, the
+       run is only this pass. A closed run is not offered at all; its
+       procedure is history. */
+    "asset-to-board": function (id) {
+      var a = assetOf(id); if (!a) return;
+      var tpl = boards().filter(function (b) { return b.kind !== "run"; });
+      var run = boards().filter(function (b) { return b.kind === "run" && !b.closedAt; });
+      if (!tpl.length && !run.length) {
+        needWords("Nothing to put it on yet",
+                  "A thing joins a procedure, or a run of one. Write a procedure and it can carry this entry, its path and its link.",
+                  "board-new");
+        return;
+      }
+      var gs = [];
+      if (tpl.length) gs.push({ group: "Procedures (" + tpl.length + ")",
+                                options: tpl.map(function (b) { return { value: b.id, label: b.name }; }) });
+      if (run.length) gs.push({ group: "Runs under way (" + run.length + ")",
+                                options: run.map(function (b) { return { value: b.id, label: b.name }; }) });
+      openModal({
+        title: "Put " + a.name + " on a board",
+        confirmLabel: "Put it on",
+        message: "A COPY is taken, not a link: a run freezes its procedure when it starts, and a node reaching back into the registry would be a hole in that freeze — renaming this entry next year would rewrite a board you closed last year. What travels is the name, the path, the link and the thumbnail, plus a pointer home so this page can still answer where it is used.",
+        fields: [
+          { key: "board", label: "Which board", type: "select", span: true,
+            value: gs[0].options[0].value, options: gs,
+            hint: "It lands unlinked. Draw a line from it to the step it belongs with — that is the association edge, and it carries no ordering meaning." }
+        ],
+        onConfirm: function (v) {
+          var b = byId(state.boards, v.board); if (!b) return;
+          var already = (b.nodes || []).some(function (n) {
+            return n.fromAssetId === a.id ||
+                   String(n.label).toLowerCase() === String(a.name).toLowerCase();
+          });
+          if (already) { toast(a.name + " is already on " + b.name); return; }
+          go(function () { borrowInto(b, borrowLine(a)); });
+          toast("On " + b.name + " — link it to a step to say where it belongs");
+        }
+      });
+    },
     "snip-copy":  function (id) {
       var a = assetOf(id);
       if (!a || !a.body) { toast("Nothing to copy — this one has no body yet"); return; }
@@ -13239,6 +13544,43 @@ function dims(n) {
     return out;
   }
 
+  /* ONE PLACE TURNS A REGISTRY ENTRY INTO A BOARD NODE, because there are two
+     routes into it now — "Bring one in" from the sheet, and "Put it on a
+     board" from the entry's own page, which is the relationship the brief
+     puts at the centre of the whole model ("a library method can explain a
+     workflow step"). Two copies of this mapping would drift the first time a
+     kind was added, and the mapping is the fiddly half: the board's
+     vocabulary and the registry's are different lists, so the kind is MAPPED
+     rather than passed through — a node whose kind read "dataset" would
+     draw as the fallback circle. A written entry lands as a file (it is
+     content) or a note (it is prose); a reader who wants a Script node of its
+     own writes one in, the way every vocabulary in this app invites. */
+  function borrowKind(a) {
+    var k = a.kind;
+    if (k === "photo") return "photo";
+    if (k === "file" || k === "doc" || k === "dataset" || k === "snippet") return "file";
+    if (k === "method") return "note";
+    if (k === "software") return "device";
+    return "asset";
+  }
+  function borrowLine(a) {
+    return { kind: borrowKind(a), label: a.name, path: a.path || "", url: a.url || "",
+             pic: "", thumb: a.thumb || "", seen: 1,
+             from: "the registry", assetId: a.id };
+  }
+  /* And one place writes it: `borrowDialog` picks from a pool and hands the
+     pick over, the entry page hands `borrowLine(a)` straight in. A COPY is
+     taken either way — a run freezes its procedure at the start, and a node
+     reaching back into the registry would be a hole in that freeze. */
+  function borrowInto(b, pick) {
+    b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
+                   path: pick.path, url: pick.url, pic: pick.pic,
+                   thumb: pick.thumb || "",
+                   fromAssetId: pick.assetId || "",
+                   fromContactId: pick.contactId || "" });
+    autoLayout(b);
+  }
+
   function borrowDialog(b) {
     if (!b) return;
     var here = {};
@@ -13267,13 +13609,8 @@ function dims(n) {
       if (n.fromAssetId) hereByAsset[n.fromAssetId] = 1;
     });
     live(state.assets).forEach(function (a) {
-      var kind = a.kind === "photo" ? "photo"
-               : a.kind === "file" || a.kind === "doc" || a.kind === "dataset" ? "file"
-               : a.kind === "software" ? "device" : "asset";
       if (hereByAsset[a.id] || hereByName[String(a.name).toLowerCase()]) return;
-      pool.push({ kind: kind, label: a.name, path: a.path || "", url: a.url || "",
-                  pic: "", thumb: a.thumb || "", seen: 1,
-                  from: "the registry", assetId: a.id });
+      pool.push(borrowLine(a));
     });
     // And the people list, which is what gets borrowed most: a send needs
     // somebody on it, and typing a name again is how two spellings of one
@@ -13343,14 +13680,7 @@ function dims(n) {
       onConfirm: function (v) {
         var pick = pool[num(v.pick)];
         if (!pick) return;
-        go(function () {
-          b.nodes.push({ id: uid(), t: "thing", kind: pick.kind, label: pick.label,
-                         path: pick.path, url: pick.url, pic: pick.pic,
-                         thumb: pick.thumb || "",
-                         fromAssetId: pick.assetId || "",
-                         fromContactId: pick.contactId || "" });
-          autoLayout(b);
-        });
+        go(function () { borrowInto(b, pick); });
         toast("Brought in — link it to a step to say where it belongs");
       }
     });
@@ -13814,6 +14144,39 @@ function dims(n) {
                    topics: ["GIS"],
                    path: "", url: "", where: "", fromIds: [], archived: false });
 
+    /* AND THE OTHER TWO ROUTES INTO THE LIBRARY, so all three are on screen in
+       the only book anybody is shown: a METHOD, which is a body with no
+       language and is read as prose, and a REFERENCE, which is a link with a
+       note and no body at all. Without these the "What are you saving?"
+       dialog offers five words and the page beneath it demonstrates two. */
+    var aMth = mk({ name: "Georeference a 1916 aerial against the modern sheet",
+                    kind: "method", repo: "lib",
+                    body: "1. Open the modern 1:20,000 sheet first and set the project CRS from it,\n" +
+                          "   not from the aerial. The aerial has no CRS and never did.\n" +
+                          "\n" +
+                          "2. Pick control points on things that do not move: the harbour mole,\n" +
+                          "   the church, a road junction that predates 1960. Not a shoreline,\n" +
+                          "   not a field boundary, not a tree.\n" +
+                          "\n" +
+                          "3. Six points minimum, spread to the corners. Three in a line will\n" +
+                          "   transform beautifully and be wrong everywhere else.\n" +
+                          "\n" +
+                          "4. Start with a first-order polynomial. Go higher ONLY if the residuals\n" +
+                          "   say so \u2014 a high order with few points bends the image to fit the\n" +
+                          "   points and throws the rest away.\n" +
+                          "\n" +
+                          "5. Write down the RMS before you export it. A georeference with no\n" +
+                          "   stated error is not a measurement, and in six months you will not\n" +
+                          "   remember whether it was two metres or twenty.",
+                    notes: "The 1916 plates are contact prints of a tilted frame \u2014 expect the error to be worst at the edges, and say so wherever the result is used.",
+                    topics: ["aerial photography", "GIS", "photogrammetry"],
+                    path: "", url: "", where: "", fromIds: [], archived: false });
+    var aRefDoc = mk({ name: "Anfeh harbour survey report, 2019", kind: "doc", repo: "lib",
+                    notes: "The bathymetry chapter is the one worth re-reading \u2014 it is where the 2m line spacing was settled and why.",
+                    path: "", url: "https://example.org/anfeh-2019",
+                    where: "", onDate: back(400),
+                    topics: ["harbour surveying"], fromIds: [], archived: false });
+
     /* A few topics on the things that already existed, so the Library opens on
        something real and so one subject genuinely crosses kinds — a dataset,
        a survey and a piece of software under one word is the whole argument
@@ -13837,7 +14200,7 @@ function dims(n) {
     aOrt.atId = aSite.id;
 
     s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail,
-                aSite, aTr, aSh, aSv, aFx, aPy, aGd, aAp];
+                aSite, aTr, aSh, aSv, aFx, aPy, aGd, aAp, aMth, aRefDoc];
 
     /* Two of the people the boards already name, said properly — so the
        People page has one row with an address and a role and one with nothing

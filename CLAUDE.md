@@ -863,75 +863,151 @@ vocabulary a description of the work rather than a taxonomy to maintain. The
 route that earns it is the pill on a thing's own page — you are looking at one
 dataset and one tap shows everything else on the same subject.
 
-**AND A SNIPPET IS A REGISTRY ENTRY WITH A BODY — no fifth noun.** Asked for
-a Library that holds "formulas for excels" and "scripts I might use to extract
-certain photos in Python", the shape that does not unravel the model was
-already there: the registry holds what the work is made of and made with, and
-the **one thing a path cannot carry is the content itself**. So `a.body` is the
-text and `a.lang` is what it is written in — two fields, not a
-`state.snippets` list, which would have been a second thing to keep in step and
-would have begun the day it shipped by losing the topics, the provenance,
-`assetUses()` and the finder. Seven rules hold it:
+**AND A LIBRARY ENTRY IS A REGISTRY ENTRY — no fifth noun.** Asked for a
+Library holding "formulas for excels" and "scripts I might use to extract
+certain photos in Python", and then handed a brief naming five entry types
+(Method · Script · Formula · Reference · Template) with per-type fields, the
+shape that does not unravel the model was already here: the registry holds
+what the work is made of and made with, and the **one thing a path cannot
+carry is the content itself**. So `a.body` is the text and `a.lang` is what it
+is written in — two fields, not a `state.snippets` list, which would have
+begun the day it shipped by losing the topics, the provenance, `assetUses()`
+and the finder.
 
-- **The test is the record, not the kind.** `isSnippet(a)` is
-  `kind === "snippet" || !!a.body`, so an entry carrying a body stays a snippet
-  however its kind reads — otherwise changing the kind in the other dialog
-  would make the body unreachable while it sat in the record.
-- **`repoOf()` returns `lib` for one**, which makes the Library a **section**
-  and not only a lens. It was the same store read by subject and `repoOf` never
-  returned it; a snippet is not a device, an app, a site or a file on disk and
-  has no other home. The Library answers both questions on one page now —
-  *what you reuse* first, because that is the half you open it to fetch, and
-  *by subject* below it. The strip's count is `libEntries()`, entries and not
-  subjects: a count of subjects over a page listing entries is two units in one
-  figure. And the borrow pool stops skipping the Library, because a script
-  really is a thing a step is done with, which is what the link edge carries.
-- **It gets its own dialog, and the edit route is chosen by the record.** The
-  registry's is thirteen boxes with a note at the bottom; here the body IS the
-  entry, and a twelve-row textarea belongs at the top of a form with five boxes
-  rather than behind a fold in a form with thirteen. `asset-edit` reads
-  `isSnippet` and hands over, so a snippet always opens in the dialog built for
-  it and the two can never offer one field in two shapes.
+**FIVE WORDS, THREE ROUTES, AND THE SCREEN SAYS SO.** `SAVE_KINDS` offers the
+brief's five in its own question ("What are you saving?"), and they land on
+three forms, because **the language is what says whether a body is code**:
+
+- a **Script** and a **Formula** are one record with a different language
+  (the Formula door opens the code form on Excel);
+- a **Method** and a **Template** are one record with none, read as prose;
+- a **Reference** is a link with a note and no body at all, which is the
+  registry's own dialog with its kind and its section pre-answered.
+
+Five doors onto three rooms is fine; five doors onto three rooms *with nothing
+saying so* would read as the app losing track of what you picked, so the
+picker's hint carries all five readings at once rather than one at a time —
+a description that changes as you move through a list cannot be compared, and
+comparing is the whole reason there are five words. Same fold, same reason, as
+four archaeology nouns being one write-in field. (`type: "note"` was the first
+draft of that hint and is **not a field type the shared runtime knows**; a new
+one would have to land in all four apps byte-identically for one dialog.
+`hint` is the runtime's own slot for a sentence about the control under it.)
+
+Seven rules hold the record:
+
+- **The test is the body, not the kind.** `hasBody(a)` is
+  `kind === "snippet" || kind === "method" || !!a.body`; `isCode(a)` adds
+  `!!a.lang`. It was called `isSnippet`, which stopped being true the day a
+  method could be written out — a method is not a snippet, and the question
+  the code was always asking is whether there is a body.
+- **Code does not wrap; prose does.** `.snip` is `white-space: pre` in mono
+  and scrolls; `.wrote` is `pre-wrap` in the UI stack and wraps. Same card,
+  same head row, same Copy, one property different. Wrapping code at forty
+  characters changes what it says; setting a method in the code box made the
+  one entry type written to be READ scroll sideways at its first long
+  sentence. The **line count is printed above** either way, so nothing is
+  hidden without being counted, and on the entry's page the block sits
+  **above** the facts table — for every other kind the facts are the point,
+  and here five rows of table over the body would put the answer below the
+  fold on a phone.
+- **`repoOf()` returns `lib` for a body**, which makes the Library a
+  **section** and not only a lens. The strip's count is `libEntries()`, and
+  the borrow pool stops skipping the Library, because a script really is a
+  thing a step is done with.
+- **WHAT YOU REUSE IS THE LIBRARY'S OWN HALF** — `libOwn()`, everything whose
+  section is `lib`, stated rather than derived like every other section. It
+  was `hasBody`, and that was wrong twice over the moment a Reference could
+  be saved: a reference has no body, so it **vanished out of the very section
+  it had just been saved into** and showed up only in one subject row further
+  down; and the language chips summed to four above five rows, because a
+  method has no language and belonged to no chip. `libFacet()` gives every
+  entry **exactly one** chip — its language, or "written out", or
+  "referenced" — so the chips partition the list and All is their sum. *A
+  figure may never disagree with its own parts*, and there is a test that adds
+  them up.
+- **One row, three shapes.** Code shows its first line in mono and offers
+  Copy; prose shows its first line as prose and offers Copy; a reference shows
+  what it POINTS at and offers whatever `openHandle()` really can do — so a
+  reference can never grow a button that does nothing. The pill is the facet,
+  so the row and the chip above it cannot disagree about which group it is in.
 - **The body is never trimmed at the front.** Leading whitespace is what a
   Python block MEANS. Only the trailing blank lines a textarea collects go.
-- **It scrolls; it does not wrap and it does not fold.** Wrapping code at forty
-  characters changes what it says, and a fold hides the one thing the reader
-  opened the page for. `.snip` is `white-space: pre` with `overflow: auto`
-  inside a capped height, and the **line count is printed above it**, so
-  nothing is hidden without being counted. On the entry's page the block sits
-  **above** the facts table — for every other kind the facts are what the page
-  is for, and for this one five rows of table above the body would put the
-  answer below the fold on a phone.
-- **A language is identity, not state**, so `.lpill` is a plain pill and never
-  sage, amber or rose — a green "Python" would be claiming a script is
-  healthy. `SNIP_LANGS` is a floor like every other vocabulary.
-- **The finder's key carries the body.** The question six months later is
-  *"the thing that renames photos"*, and the name is the half you have
-  forgotten; the topics and the language are in the key for the same reason.
+- **One dialog, two modes.** `bodyDialog(a, mode)`; on an EDIT the mode is
+  left out and comes from the record, so an entry reopens in the shape it was
+  written in and the language box is **absent** rather than present-and-blank
+  where it could never apply. A picker cannot be hidden reactively here —
+  `showWhen` matches another field's value and this is settled before the
+  dialog opens — which is exactly why the mode is chosen first.
 
-Three things reading the built page found, each a rule already in this file
+**AND THE RELATIONSHIP THE BRIEF PUTS AT THE CENTRE OF THE MODEL: "a library
+method can explain a workflow step".** Borrowing had always worked one way
+round, from the sheet, which means it only occurred to you once you were
+already on the board. `asset-to-board` is the other way: from the entry you
+are reading, one tap. Three things about it — it writes through
+**`borrowInto`/`borrowLine`**, the same pair `borrowDialog` uses, because two
+copies of that mapping would drift the first time a kind was added (and the
+mapping is the fiddly half: the board's vocabulary and the registry's are
+different lists, so `borrowKind()` maps rather than passes through, a written
+entry landing as a file or a note). The boards are **grouped into procedures
+and open runs**, because editing a template for next time and adding to a run
+in progress are different acts, and a closed run is not offered at all — its
+procedure is history. And putting the same entry on the same board twice
+refuses by name rather than making a second copy.
+
+`needWords(title, message, act)` took the route as a third argument for this:
+there are two ways out now (the workbench for a missing bench, Workflows for a
+missing procedure), and *a refusal has to carry the way out* means the way out
+has to be the right one.
+
+**TWO QUESTIONS THE BRIEF NAMES THAT THE BOX COULD NOT ANSWER.** Its
+command-bar section lists eight; six were answerable. `what belongs to
+<project>` reads `projThings()` and `which workflows use <thing>` reads
+`assetUses()` — the same functions the screens that answer them in full
+already use, so neither can disagree with its screen, which is the rule every
+answer in that table lives by. The second folds by BOARD, because one board
+can name the same thing twice and "two boards" would then read as four.
+
+Four things reading the built pages found, each a rule already in this file
 being broken somewhere:
 
 - **`showWhen` looks its field up by id, and a missing entry is not a
   fallback — it is no field at all.** `otherField`'s map from a vocabulary to
   the select that drives it had no row for `assetKinds`, so **"Other — write
-  it in" on the registry's kind picker silently did nothing**: you chose it, no
-  box appeared, and the entry saved under the fallback. It is the one
+  it in" on the registry's kind picker silently did nothing**: you chose it,
+  no box came, and the entry saved under the fallback. It is the one
   vocabulary this file calls a floor rather than a ceiling, and it went
   unnoticed because the sample seeds Site, Feature, Artifact and Survey
   straight into `state.vocab` rather than by typing them. A picker that cannot
-  be extended is a picker that will eventually be wrong; one whose escape hatch
-  is drawn and inert is worse.
+  be extended will eventually be wrong; one whose escape hatch is drawn and
+  inert is worse.
 - **A fact row may not say something the reader can see is untrue.** "Opening
   it — nothing to open, this is a thing, not a file" is right for a pair of
-  headphones and plainly false three inches under a snippet's own body.
-- **Say it once, and `assetSays` was saying the note twice.** The entry's page
-  printed it in the sub-line under the title and again in its own panel
-  twenty pixels below — on a snippet whose note runs three lines that was most
-  of the screen. `assetSays(a, brief)` drops it for that one caller; every
-  other caller is a ROW, where it is the only place the note is said at all.
-  And `topicList()` came out of the registry dialog the day a second dialog
-  started writing topics: two copies of a rule is the same bug as no rule.
+  headphones and plainly false three inches under a snippet's own body. Nor
+  may a table print a row that can never have a value: "Written in — not
+  said" under a method is a gap the table invented.
+- **Say it once, and `assetSays` was saying the note twice** — in the
+  sub-line under the title and again in its own panel twenty pixels below. On
+  a snippet whose note runs three lines that was most of the screen.
+  `assetSays(a, brief)` drops it for that one caller; every other caller is a
+  ROW, where it is the only place the note is said at all. (`topicList()` came
+  out of the registry dialog the same day, because a second dialog started
+  writing topics and two copies of a rule is the same bug as no rule.)
+- **A SCREEN MAY NOT SEND THE READER THE LONG WAY ROUND WHEN IT CARRIES THE
+  SHORT ONE.** "Where it is used" read *"Bring it onto one with “Bring one
+  in” on the sheet"* while "Put it on a board" sat in the right-hand column
+  of the same page. The milder sibling of naming a screen that has been
+  renamed.
+
+**Two traps for the next person patching this file with a script.** A batch of
+replacements that asserts halfway through and **writes at the end** leaves the
+file untouched and every earlier edit in the batch lost — which looked
+exactly like a rep that had applied, and produced a half-patched function that
+would not parse. Save after each replacement. And **an em dash in a comment is
+a real em dash while the same character inside a JS string may be `\u2014`**,
+so a match string built one way fails against the other; twenty-four comments
+in this file were carrying a literal `\u2014` from an earlier patch that used
+a Python raw string, and they read as escapes on screen.
 
 **THE ARCHAEOLOGICAL DATA MODEL IS ONE FIELD, NOT FOUR NOUNS.** Site,
 Artifact, Feature and Survey are exactly what a reader types into "Other —
@@ -1150,9 +1226,12 @@ sixth, which every vocabulary in this app invites. `borrowGroups()` heads the
 pool with `REPO_PAGES`, then your people, then the other boards. Four details
 worth keeping:
 
-- The **Library is skipped**, because it is the same store read by subject and
-  `repoOf()` never returns it — iterating it would be a heading that can never
-  hold anything.
+- The **Library was skipped** while it was only a lens — `repoOf()` never
+  returned it, so iterating it would have been a heading that could never hold
+  anything. It holds written entries now, so it is in: a script IS a thing a
+  step is done with, which is exactly what the link edge carries. The
+  empty-group guard does the job the skip was doing, and Connections still
+  drops out on its own the same way.
 - A registry entry is described in the **registry's** words, not the board's:
   the two vocabularies are different lists, so under a heading reading
   "Devices" the picker said "Lenovo Legion — kit" while the Repo calls it a
