@@ -1083,7 +1083,39 @@ color-scheme: light;
   .fbrk { font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
   /* A fact nobody has stated says so, in the app's voice for an absence. */
   .fnone { color: var(--faint); font-family: var(--serif); font-style: italic; }
+
+  /* A SNIPPET'S BODY SCROLLS; IT DOES NOT WRAP AND IT DOES NOT FOLD. Wrapping
+     a Python block at forty characters changes what it says, and a fold hides
+     the one thing the reader opened the page for. The height is capped so a
+     two-hundred-line script cannot push the rest of the page off the screen,
+     and the line count above it says how much is there — so nothing is
+     hidden without being counted. */
+  .snip {
+    margin: 0 0 1rem; padding: 0.7rem 0.8rem; background: var(--sunken);
+    border: 1px solid var(--rule); border-radius: 10px;
+    font-family: var(--mono); font-size: 0.78rem; line-height: 1.55; color: var(--ink);
+    white-space: pre; overflow: auto; max-height: 26em; tab-size: 2;
+  }
+  .sniphead { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.45rem; }
+  .snipn { font-family: var(--mono); font-size: 0.73rem; color: var(--faint); }
+  /* A LANGUAGE IS IDENTITY, NOT STATE, so it is a plain pill and never sage,
+     amber or rose — those three say how a thing is going, everywhere else in
+     the app, and a green "Python" would be claiming a script is healthy. */
+  .lpill {
+    display: inline-flex; align-items: center; padding: 0.12rem 0.45rem;
+    background: var(--sunken); border: 1px solid var(--rule); border-radius: 999px;
+    font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
+    max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* One line of a snippet inside the row that names it: clipped, never
+     wrapped, because two wrapped lines of code say less than one clean one. */
+  .snipone {
+    font-family: var(--mono); font-size: 0.74rem; color: var(--faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   @media (max-width: 620px) {
+    .snip { font-size: 0.72rem; max-height: 18em; }
+    .lpill { max-width: 6.5rem; }
     .aface { gap: 0.7rem; }
     .iface { width: 56px; height: 56px; border-radius: 12px; }
     .iface svg { width: 26px; height: 26px; }
@@ -1922,6 +1954,7 @@ color-scheme: light;
     // a project: a bounded body of work with a date on it
     out:    svgIcon('<path d="M3.4 12.4v2.8a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-2.8"/><path d="M10 3v9.2"/><path d="M6.6 8.6 10 12l3.4-3.4"/>'),
         book:   svgIcon('<path d="M3.4 4.6a1.4 1.4 0 0 1 1.4-1.4h3.4A2 2 0 0 1 10 5v10.6a1.8 1.8 0 0 0-1.4-.8H3.4z"/><path d="M16.6 4.6a1.4 1.4 0 0 0-1.4-1.4h-3.4A2 2 0 0 0 10 5v10.6a1.8 1.8 0 0 1 1.4-.8h5.2z"/>'),
+        code:   svgIcon('<path d="M7.2 6.2 3.6 10l3.6 3.8"/><path d="M12.8 6.2 16.4 10l-3.6 3.8"/><path d="M11.3 4.3 8.7 15.7"/>'),
     plug:   svgIcon('<path d="M7.6 2.8v3.4M12.4 2.8v3.4"/><path d="M5.4 6.2h9.2v2.4A4.6 4.6 0 0 1 10 13.2a4.6 4.6 0 0 1-4.6-4.6z"/><path d="M10 13.2v4"/>'),
         proj:   svgIcon('<path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M7 11.4h6"/>')
   };
@@ -1975,6 +2008,25 @@ color-scheme: light;
      The rule is systemic on purpose: a picker that cannot be extended is a
      picker that will eventually be wrong, and adding the escape hatch to one
      dialog at a time is how half of them end up without it. */
+  /* A SNIPPET'S LANGUAGE IS A VOCABULARY LIKE EVERY OTHER. The floor is what
+     this book's owner actually reuses; "Other \u2014 write it in" is what stops
+     the list being wrong the first time somebody pastes VBA or a Praat
+     script. Hardcoding five would be the app's first rule broken in the one
+     screen most likely to grow a word. */
+  var SNIP_LANGS = {
+    excel:      "Excel formula",
+    python:     "Python",
+    arcpy:      "ArcPy",
+    gdal:       "GDAL / OGR",
+    powershell: "PowerShell",
+    bash:       "Shell",
+    sql:        "SQL",
+    js:         "JavaScript",
+    r:          "R",
+    regex:      "Regular expression",
+    other:      "Other"
+  };
+
   var VOCABS = {
     acts:       { of: function () { return ACTS; },        word: "act",
                   make: function (label) { return { label: label, word: label.toLowerCase(), tone: "blue" }; } },
@@ -1994,6 +2046,8 @@ color-scheme: light;
        through `vocabLabel("assetKinds", …)` everywhere — `ASSET_KINDS[k]`
        printed the raw key for anything the reader added. */
     assetKinds: { of: function () { return ASSET_KINDS; }, word: "kind of thing",
+                  make: function (label) { return label; } },
+    langs:      { of: function () { return SNIP_LANGS; },  word: "language",
                   make: function (label) { return label; } }
   };
   var OTHER = "__other";
@@ -2047,7 +2101,17 @@ color-scheme: light;
     // it used to stand in every one of these dialogs saying it was probably
     // not needed. `on` is the picker it belongs to; the callers all name
     // their select the same as the vocabulary they draw from.
-    var on = { acts: "act", things: "kind", places: "place", claimKinds: "kind" }[which] || which;
+    /* The map is the SELECT'S OWN KEY, not the vocabulary's name, and a
+       missing entry does not fall back to something sensible \u2014 `showWhen`
+       looks the field up by id, so an unmatched key means no field, which
+       means the box never appears at all. `assetKinds` was missing, so
+       "Other \u2014 write it in" on the registry's kind picker silently did
+       nothing: you chose it, no box came, and the entry saved under whatever
+       the fallback was. It went unnoticed because the sample seeds Site,
+       Feature, Artifact and Survey straight into `state.vocab` rather than
+       by typing them. */
+    var on = { acts: "act", things: "kind", places: "place", claimKinds: "kind",
+               assetKinds: "kind", langs: "lang" }[which] || which;
     return { key: key || "other", label: "Call it what?",
              type: "text", span: true, value: "",
              showWhen: { key: on, is: OTHER },
@@ -2274,7 +2338,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "file"; outTab = "filed"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; projList = "projects"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "file"; outTab = "filed"; libTopic = ""; libKind = ""; libLang = ""; openJob = ""; openProj = ""; projTab = "over"; projList = "projects"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -3115,7 +3179,12 @@ color-scheme: light;
     });
     live(state.assets).forEach(function (a) {
       var look = assetLook(a);
-      out.push({ g: "Things", key: a.name + " " + (a.notes || "") + " " + (a.path || ""),
+      /* The body is in the key, because the question six months later is
+         "the thing that renames photos" and the name is the half you have
+         forgotten. The topics are in it for the same reason. */
+      out.push({ g: isSnippet(a) ? "Snippets" : "Things",
+                 key: a.name + " " + (a.notes || "") + " " + (a.path || "") + " " +
+                      assetTopics(a).join(" ") + " " + snipLangLabel(a) + " " + (a.body || ""),
                  tile: findTile(look.tile, look.ico),
                  title: a.name, sub: assetSays(a), k: 4,
                  run: function () { findTab("vocab"); openAsset = a.id; render(); } });
@@ -6004,6 +6073,9 @@ function stateWord(b, n) {
      holds what the work is made of as well as what it is made with. */
   var ASSET_KINDS = {
     file: "File", photo: "Photo", dataset: "Dataset", doc: "Document",
+    /* The one kind whose content the record holds rather than points at \u2014
+       see `snippetDialog`. It is a kind and not a fifth noun. */
+    snippet: "Snippet or formula",
     software: "Software", site: "Website or service", laptop: "Laptop",
     phone: "Phone", audio: "Audio", gear: "Field kit", other: "Other"
   };
@@ -6064,6 +6136,12 @@ function stateWord(b, n) {
   function repoOf(a) {
     if (a.repo && REPO_PAGES.some(function (p) { return p.id === a.repo; })) return a.repo;
     var k = a.kind;
+    /* THE LIBRARY IS A SECTION NOW, not only a lens. It was the same store
+       read by subject and `repoOf` never returned it; a snippet has no other
+       home \u2014 it is not a device, an app, a site or a file on disk \u2014 so it
+       is filed here, and the Library goes on answering the subject question
+       for everything else at the same time. */
+    if (k === "snippet") return "lib";
     if (k === "laptop" || k === "phone" || k === "audio" || k === "gear") return "device";
     if (k === "software") return "app";
     if (k === "site") return "site";
@@ -6459,6 +6537,56 @@ function stateWord(b, n) {
   function assetTopics(a) {
     return (a.topics || []).filter(function (t) { return !!t; });
   }
+  /* Split, trimmed, blanks dropped and de-duplicated case-insensitively \u2014
+     "Harbour, harbour" is one topic typed twice, and two rows in the Library
+     for one word would be the "one name, one entry" fault in the one screen
+     built to pool things. Extracted from inside the registry dialog the day a
+     second dialog started writing topics: two copies of a rule is the same
+     bug as no rule. */
+  function topicList(raw) {
+    var seen = {}, out = [];
+    String(raw || "").split(",").forEach(function (x) {
+      var w = x.trim(); if (!w) return;
+      var k = w.toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(w); }
+    });
+    return out;
+  }
+
+  /* A SNIPPET IS A REGISTRY ENTRY WITH A BODY, and that is the whole of it \u2014
+     no fifth noun. Asked for a Library holding "formulas for excels" and
+     "scripts I might use to extract certain photos in Python", the shape that
+     does not unravel the model is the one already here: the registry holds
+     what the work is made of and made with, and the ONE thing a path cannot
+     carry is the content itself. So `a.body` is the text and `a.lang` is what
+     it is written in. A separate `state.snippets` would have been a second
+     list to keep in step, and it would have started the day it shipped by
+     losing the topics, the provenance, `assetUses()` and the finder.
+
+     The test is the record, not the kind: an entry carrying a body IS a
+     snippet however its kind reads, which is what stops a body becoming
+     unreachable the moment somebody changes the kind in the other dialog. */
+  function isSnippet(a) { return !!a && (a.kind === "snippet" || !!a.body); }
+  function snipLangLabel(a) {
+    return a && a.lang ? (vocabLabel("langs", a.lang) || a.lang) : "";
+  }
+  function snipLines(a) { return String((a && a.body) || "").split("\n"); }
+  function snippets() {
+    return live(state.assets).filter(isSnippet)
+      .sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); });
+  }
+  /* What the Library actually holds, in ONE unit: entries. A snippet is in it
+     whether or not a subject has been written on it \u2014 a formula with no
+     subject is still something you reuse and has nowhere else to be \u2014 and
+     everything else joins the moment it is given one. The strip's count reads
+     this rather than the number of subjects, because a count of subjects over
+     a page listing entries is two units in one figure. */
+  function libEntries() {
+    return live(state.assets).filter(function (a) {
+      return isSnippet(a) || assetTopics(a).length;
+    });
+  }
+
   function allTopics() {
     var seen = {}, out = [];
     live(state.assets).forEach(function (a) {
@@ -6535,7 +6663,13 @@ function stateWord(b, n) {
   function assetUpkeep(a) {
     return live(state.cadences).filter(function (cd) { return cd.protectsAssetId === a.id; });
   }
-  function assetSays(a) {
+  /* `brief` drops the note, for the one caller that prints the note in full
+     twenty pixels below: the entry's own page had the whole of it twice, in
+     the sub-line under the title and again in its own panel — "say it once",
+     and on a snippet whose note is three lines that was most of the screen.
+     Every other caller is a ROW, where this is the only place the note gets
+     said at all. */
+  function assetSays(a, brief) {
     var bits = [assetKindLabel(a)];
     if (a.where) bits.push(a.where);
     var n = assetUses(a).length;
@@ -6544,7 +6678,7 @@ function stateWord(b, n) {
     // "made from 2" is a count with nothing attached; a row has to read as a
     // sentence, the same rule the warnings live by.
     if (from) bits.push("made from " + from + (from === 1 ? " thing" : " things"));
-    if (a.notes) bits.push(a.notes);
+    if (a.notes && !brief) bits.push(a.notes);
     return bits.join(" · ");
   }
 
@@ -6643,19 +6777,7 @@ function stateWord(b, n) {
           t.kind = vocabTake("assetKinds", v.kind, v.kindOther, t.kind || "other");
           t.repo = v.repo;
           t.atId = assetOf(v.atId) && v.atId !== t.id ? v.atId : "";
-          /* Split, trimmed, blanks dropped and de-duplicated case-insensitively
-             — "Harbour, harbour" is one topic typed twice, and two rows in the
-             Library for one word would be the "one name, one entry" fault in
-             the one screen built to pool things. */
-          (function () {
-            var seen = {}, out = [];
-            String(v.topics || "").split(",").forEach(function (x) {
-              var w = x.trim(); if (!w) return;
-              var k = w.toLowerCase();
-              if (!seen[k]) { seen[k] = 1; out.push(w); }
-            });
-            t.topics = out;
-          })();
+          t.topics = topicList(v.topics);
           t.path = v.path.trim(); t.url = v.url.trim();
           t.where = v.where.trim(); t.onDate = v.onDate.trim();
           t.state = v.state; t.lastUsedOn = v.lastUsedOn.trim();
@@ -6673,6 +6795,7 @@ function stateWord(b, n) {
      reader invented falls through to the kit glyph rather than to nothing. */
   function assetLook(a) {
     var k = a.kind;
+    if (k === "snippet") return { tile: "t-know", ico: ICONS.code };
     if (k === "photo") return { tile: "t-photo", ico: ICONS.photo };
     if (k === "software") return { tile: "t-soft", ico: ICONS.device };
     if (k === "file" || k === "doc" || k === "dataset") return { tile: "t-doc", ico: ICONS.doc };
@@ -6774,88 +6897,236 @@ function stateWord(b, n) {
      "nothing is hardcoded" rule broken in the one screen most likely to grow
      a vocabulary. */
   var libKind = "";   // view state, like libTopic
+  var libLang = "";   // which language's snippets are showing; view state too
+
+  /* THE BODY IS THE ENTRY, SO IT IS SHOWN AND NEVER SUMMARISED. A fold would
+     hide the one thing the reader came for, and wrapping a Python script at
+     forty characters changes what it says — so the block scrolls in both
+     directions inside a capped height, and the line count is printed above
+     it. Nothing is hidden silently: the figure says how much is there.
+
+     Copy is the one thing anybody does with a snippet, so it is on the head
+     row rather than three taps down a menu. */
+  function snipBlock(a) {
+    if (!a.body) {
+      return '<p class="empty">Nothing pasted in yet — "Edit" above puts the formula or the script in.</p>';
+    }
+    var n = snipLines(a).length, lang = snipLangLabel(a);
+    return '<div class="sniphead">' +
+      (lang ? '<span class="lpill">' + esc(lang) + "</span>" : "") +
+      '<span class="snipn">' + n + (n === 1 ? " line" : " lines") + "</span>" +
+      '<button class="btn quiet" data-act="snip-copy" data-id="' + a.id + '">Copy it</button></div>' +
+      '<pre class="snip"><code>' + esc(a.body) + "</code></pre>";
+  }
+
+  /* The row names it by what it DOES and shows the first line that is not
+     blank, because a name and a language alone do not tell two ArcPy scripts
+     apart. The row opens the entry and a small button beside it copies — the
+     Repo's two-control shape, for the same reason: the row is the big target
+     and the thing you usually want is one tap, not two. */
+  function snipRow(a) {
+    var first = snipLines(a).filter(function (l) { return l.trim(); })[0] || "";
+    var lang = snipLangLabel(a);
+    return '<div class="panel calm repo-row">' +
+      '<button type="button" class="repo-hit" data-act="asset-open" data-id="' + a.id +
+        '" title="' + esc(a.name) + '">' +
+        '<span class="itile t-know">' + ICONS.code + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
+        '<div class="snipone">' + (first ? esc(first) : "nothing pasted in yet") + "</div></div>" +
+        (lang ? '<div class="rmeta"><span class="lpill">' + esc(lang) + "</span></div>" : "") +
+      "</button>" +
+      (a.body
+        ? '<div class="repo-acts"><button class="btn quiet" data-act="snip-copy" data-id="' + a.id +
+          '" title="Copy the whole thing to the clipboard">Copy</button></div>'
+        : '<span class="rchev" aria-hidden="true">›</span>') + "</div>";
+  }
+
+  /* A SNIPPET GETS ITS OWN DIALOG, because the registry's is thirteen boxes
+     with a two-line note at the bottom and here the body IS the entry: a
+     twelve-row textarea belongs at the top of a form with five boxes, not
+     behind a fold in a form with thirteen. Both write the same record and the
+     edit route is chosen by the RECORD (`isSnippet`), so a snippet always
+     opens in the dialog built for it and the two can never offer the same
+     field in two shapes. */
+  function snippetDialog(a) {
+    var mk = !a;
+    openModal({
+      title: mk ? "New snippet" : "Edit " + a.name,
+      confirmLabel: mk ? "Add" : "Save",
+      wide: true,
+      message: mk ? "A formula, a script, a command line — anything you worked out once and will want again. It is filed in the Library beside everything else on the same subject."
+                  : "",
+      fields: [
+        { key: "name", label: "What it does", type: "text", span: true,
+          value: a ? a.name : "",
+          placeholder: "Rename a folder of photos by the date they were taken",
+          hint: "Name it by what it DOES, not what it is — in six months that is the only half you will remember." },
+        { key: "lang", label: "Written in", type: "select",
+          value: a ? (a.lang || "python") : "python", options: vocabOpts("langs") },
+        otherField("langs", "langOther"),
+        { key: "body", label: "The snippet itself", type: "textarea", rows: 12, span: true,
+          value: a ? (a.body || "") : "",
+          hint: "Pasted exactly as it is. Nothing is run and nothing is checked — this is text the app keeps for you." },
+        { key: "topics", label: "What it is about", type: "text", span: true,
+          value: a ? assetTopics(a).join(", ") : "",
+          placeholder: "photogrammetry, file handling",
+          hint: "Comma-separated. It appears under each of them in the Library, beside the datasets and papers on the same subject." },
+        { key: "notes", label: "What it assumes", type: "textarea", span: true, rows: 2,
+          value: a ? (a.notes || "") : "",
+          hint: "The columns it expects, the folder layout, the version it was written against — the half that is not in the code." },
+        { key: "url", label: "Where it came from", type: "text", span: true, more: true,
+          value: a ? (a.url || "") : "", placeholder: "https://…" }
+      ],
+      validate: function (v) {
+        if (!v.name.trim()) return "Say what it does.";
+        if (!v.body.trim()) return "A snippet with no body is a note — paste the formula or the script in.";
+        return null;
+      },
+      onConfirm: function (v) {
+        go(function () {
+          var t = a;
+          if (!t) { t = { id: uid(), fromIds: [], archived: false }; state.assets.push(t); }
+          t.name = v.name.trim();
+          t.kind = "snippet";
+          t.repo = "lib";
+          t.lang = vocabTake("langs", v.lang, v.langOther, t.lang || "other");
+          /* Never trimmed at the front: leading whitespace is what a Python
+             block MEANS. Only the trailing blank lines a textarea collects. */
+          t.body = String(v.body).replace(/\s+$/, "");
+          t.topics = topicList(v.topics);
+          t.notes = v.notes.trim();
+          t.url = v.url.trim();
+          if (mk) openAsset = t.id;
+        });
+        toast(mk ? "Added" : "Saved");
+      }
+    });
+  }
 
   function renderLibrary() {
-    var topics = allTopics();
-    var h = '<p class="hint" style="margin:0 0 0.8rem">Everything you know, by subject rather than by kind. A subject is written onto a thing \u2014 there is no list of topics to maintain, and nothing here is a second copy of anything.</p>';
+    /* Inside a subject first, because that branch is a different screen and
+       reading it after the landing's three sections is how the landing came
+       to be built twice. */
+    if (libTopic) return librarySubject();
+
+    var topics = allTopics(), snips = snippets();
+    var h = '<div class="tools" style="margin:0.9rem 0 0.5rem">' +
+      '<button class="btn primary" data-act="snip-add">New snippet</button>' +
+      '<button class="btn" data-act="repo-add" data-id="lib">New entry</button>' +
+      '<button class="btn" data-act="tab-vocab">The workbench</button></div>' +
+      '<p class="hint" style="margin:0 0 0.9rem">What you reuse, and what you know: a formula, a script, the method note, the paper it came out of. One store read by subject rather than by kind — a subject is written onto a thing, so there is no list of topics to maintain and nothing here is a second copy of anything.</p>';
+
+    if (!topics.length && !snips.length) {
+      return h + '<p class="empty">Nothing in the Library yet. “New snippet” puts in the formula or the script you keep re-deriving; anything else under Assets joins it the moment you write down what it is about.</p>';
+    }
+
+    /* WHAT YOU REUSE comes first, because it is the half you open the Library
+       to fetch. The subjects below it answer the slower question. */
+    if (snips.length) {
+      var ls = {};
+      snips.forEach(function (a) { if (a.lang) ls[a.lang] = (ls[a.lang] || 0) + 1; });
+      var lk = Object.keys(ls).sort(function (x, y) {
+        return String(vocabLabel("langs", x)).localeCompare(String(vocabLabel("langs", y)));
+      });
+      h += '<div class="sect">What you reuse</div>';
+      /* The chips are the languages actually present, counted, so no chip can
+         empty the list — the same rule the kind chips below already live by. */
+      if (lk.length > 1) {
+        h += '<div class="tools" style="margin-bottom:0.7rem">' +
+          '<button class="btn' + (libLang ? "" : " primary") + '" data-act="lib-lang" data-id="">All' +
+          ' <span class="cnt">' + snips.length + "</span></button>" +
+          lk.map(function (k) {
+            return '<button class="btn' + (libLang === k ? " primary" : "") +
+              '" data-act="lib-lang" data-id="' + esc(k) + '">' + esc(vocabLabel("langs", k)) +
+              ' <span class="cnt">' + ls[k] + "</span></button>";
+          }).join("") + "</div>";
+      }
+      var sr = libLang ? snips.filter(function (a) { return a.lang === libLang; }) : snips;
+      h += '<div class="stack tight">' + sr.map(snipRow).join("") + "</div>";
+    }
 
     if (!topics.length) {
-      return h + '<p class="empty">No subjects yet. Open anything under Assets, press Edit, and write what it is about \u2014 "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
+      return h + '<div class="sect">By subject</div><p class="empty">Nothing carries a subject yet. Open anything under Assets, press Edit, and write what it is about — "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
     }
 
     /* A SUBJECT IS A ROW, NOT A CHIP OVER AN EMPTY SCREEN. The landing used to
-       be a strip of subject chips above "Pick a subject" \u2014 a screen whose
+       be a strip of subject chips above "Pick a subject" — a screen whose
        whole content was an instruction to press something, which is the
        "an empty list's one job is to say what to do" rule applied to a list
        that was not empty at all. The mockup draws what it should have been:
        one row per subject, what it holds, and the first few things in it, so
        the page answers "what do I know about" without a tap. */
-    if (!libTopic) {
-      var pool = live(state.assets).filter(function (a) { return assetTopics(a).length; });
-      /* The chips are the kinds actually present across the library, counted,
-         so no chip can empty the list \u2014 and selecting one re-counts every
-         subject row beneath it rather than filtering a list that is not
-         there. A subject holding none of the chosen kind drops out, which is
-         the honest reading of "Papers" and not a row saying nought. */
-      var ks = {};
-      pool.forEach(function (a) { ks[a.kind] = (ks[a.kind] || 0) + 1; });
-      var kk = Object.keys(ks).sort(function (x, y) {
-        return String(assetKindLabel({ kind: x })).localeCompare(String(assetKindLabel({ kind: y })));
-      });
-      if (kk.length > 1) {
-        h += '<div class="tools" style="margin-bottom:0.9rem">' +
-          '<button class="btn' + (libKind ? "" : " primary") + '" data-act="lib-kind" data-id="">All' +
-          ' <span class="cnt">' + pool.length + "</span></button>" +
-          kk.map(function (k) {
-            return '<button class="btn' + (libKind === k ? " primary" : "") +
-              '" data-act="lib-kind" data-id="' + esc(k) + '">' + esc(assetKindLabel({ kind: k })) +
-              ' <span class="cnt">' + ks[k] + "</span></button>";
-          }).join("") + "</div>";
-      }
-
-      var subj = topics.map(function (t) {
-        var things = assetsOnTopic(t).filter(function (a) { return !libKind || a.kind === libKind; });
-        return { t: t, things: things };
-      }).filter(function (x) { return x.things.length; });
-
-      if (!subj.length) {
-        return h + '<p class="empty">Nothing under ' + esc(assetKindLabel({ kind: libKind })) +
-          " carries a subject yet.</p>";
-      }
-
-      h += '<div class="stack tight">' + subj.map(function (x) {
-        var n = x.things.length;
-        return '<button type="button" class="panel rowbtn calm" data-act="lib-topic" data-id="' + esc(x.t) +
-          '" title="' + esc(x.t) + '">' +
-          '<span class="itile t-know">' + ICONS.book + "</span>" +
-          '<div class="grow"><div class="nm sm">' + esc(x.t) + "</div>" +
-          '<div class="says">' + esc(x.things.slice(0, 3).map(function (a) { return a.name; }).join(", ")) +
-          (n > 3 ? "\u2026" : "") + "</div></div>" +
-          '<div class="dmeta">' + n + (n === 1 ? " thing" : " things") + "</div></button>";
-      }).join("") + "</div>";
-
-      /* QUICK ACCESS, as drawn \u2014 and derived rather than a list to keep: the
-         library entries you have actually leaned on most, which is what
-         `assetUses()` counts, and only the ones there is really something to
-         open. A button that cannot do what it names is the fault
-         `openHandle()` exists to prevent. */
-      var quick = pool.map(function (a) { return { a: a, n: assetUses(a).length, h: openHandle(a) }; })
-        .filter(function (x) { return x.h && x.n; })
-        .sort(function (x, y) { return y.n - x.n; }).slice(0, 3);
-      if (quick.length) {
-        h += '<div class="sect">Quick access</div><div class="tools">' + quick.map(function (x) {
-          return x.h.kind === "copy"
-            ? '<button class="btn" data-act="asset-copy" data-id="' + x.a.id + '" title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</button>"
-            : '<a class="btn" href="' + esc(x.h.href) + '"' + (x.h.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
-              ' title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</a>";
+    var pool = live(state.assets).filter(function (a) { return assetTopics(a).length; });
+    /* The chips are the kinds actually present across the library, counted,
+       so no chip can empty the list — and selecting one re-counts every
+       subject row beneath it rather than filtering a list that is not
+       there. A subject holding none of the chosen kind drops out, which is
+       the honest reading of "Papers" and not a row saying nought. */
+    var ks = {};
+    pool.forEach(function (a) { ks[a.kind] = (ks[a.kind] || 0) + 1; });
+    var kk = Object.keys(ks).sort(function (x, y) {
+      return String(assetKindLabel({ kind: x })).localeCompare(String(assetKindLabel({ kind: y })));
+    });
+    h += '<div class="sect">By subject</div>';
+    if (kk.length > 1) {
+      h += '<div class="tools" style="margin-bottom:0.9rem">' +
+        '<button class="btn' + (libKind ? "" : " primary") + '" data-act="lib-kind" data-id="">All' +
+        ' <span class="cnt">' + pool.length + "</span></button>" +
+        kk.map(function (k) {
+          return '<button class="btn' + (libKind === k ? " primary" : "") +
+            '" data-act="lib-kind" data-id="' + esc(k) + '">' + esc(assetKindLabel({ kind: k })) +
+            ' <span class="cnt">' + ks[k] + "</span></button>";
         }).join("") + "</div>";
-      }
+    }
+
+    var subj = topics.map(function (t) {
+      var things = assetsOnTopic(t).filter(function (a) { return !libKind || a.kind === libKind; });
+      return { t: t, things: things };
+    }).filter(function (x) { return x.things.length; });
+
+    if (!subj.length) {
+      h += '<p class="empty">Nothing under ' + esc(assetKindLabel({ kind: libKind })) +
+        " carries a subject yet.</p>";
       return h;
     }
 
-    /* Inside a subject: the way back, then its own kinds. */
-    h += '<div class="tools" style="margin-bottom:0.9rem">' +
-      '<button class="btn" data-act="lib-topic" data-id="">\u2190 All subjects</button>' + "</div>";
+    h += '<div class="stack tight">' + subj.map(function (x) {
+      var n = x.things.length;
+      return '<button type="button" class="panel rowbtn calm" data-act="lib-topic" data-id="' + esc(x.t) +
+        '" title="' + esc(x.t) + '">' +
+        '<span class="itile t-know">' + ICONS.book + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(x.t) + "</div>" +
+        '<div class="says">' + esc(x.things.slice(0, 3).map(function (a) { return a.name; }).join(", ")) +
+        (n > 3 ? "…" : "") + "</div></div>" +
+        '<div class="dmeta">' + n + (n === 1 ? " thing" : " things") + "</div></button>";
+    }).join("") + "</div>";
+
+    /* QUICK ACCESS, as drawn — and derived rather than a list to keep: the
+       library entries you have actually leaned on most, which is what
+       `assetUses()` counts, and only the ones there is really something to
+       open. A button that cannot do what it names is the fault
+       `openHandle()` exists to prevent. */
+    var quick = pool.map(function (a) { return { a: a, n: assetUses(a).length, h: openHandle(a) }; })
+      .filter(function (x) { return x.h && x.n; })
+      .sort(function (x, y) { return y.n - x.n; }).slice(0, 3);
+    if (quick.length) {
+      h += '<div class="sect">Quick access</div><div class="tools">' + quick.map(function (x) {
+        return x.h.kind === "copy"
+          ? '<button class="btn" data-act="asset-copy" data-id="' + x.a.id + '" title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</button>"
+          : '<a class="btn" href="' + esc(x.h.href) + '"' + (x.h.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+            ' title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</a>";
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+
+  /* One subject: the way back, then its own kinds, then everything filed
+     under it whatever kind it is. A snippet is drawn as a snippet here too,
+     because a row saying "Snippet or formula" and nothing else would be the
+     one row on the page that says least about itself. */
+  function librarySubject() {
+    var h = '<div class="tools" style="margin:0.9rem 0 0.9rem">' +
+      '<button class="btn" data-act="lib-topic" data-id="">← All subjects</button></div>';
 
     var all = assetsOnTopic(libTopic);
     /* The chips are the kinds present UNDER THIS SUBJECT, with a count each,
@@ -6878,8 +7149,9 @@ function stateWord(b, n) {
     }
     var rows = libKind ? all.filter(function (a) { return a.kind === libKind; }) : all;
     h += '<div class="sect">' + esc(libTopic) +
-      (libKind ? " \u00b7 " + esc(assetKindLabel({ kind: libKind })) : "") + "</div>";
+      (libKind ? " · " + esc(assetKindLabel({ kind: libKind })) : "") + "</div>";
     h += rows.length ? '<div class="stack tight">' + rows.map(function (a) {
+      if (isSnippet(a)) return snipRow(a);
       var look = assetLook(a), trail = partTrail(a);
       var says = [assetKindLabel(a)];
       if (trail.length) says.push("in " + trail[trail.length - 1]);
@@ -6887,7 +7159,7 @@ function stateWord(b, n) {
       return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + a.id + '">' +
         '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
         '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
-        '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div></button>";
+        '<div class="says">' + esc(says.join(" · ")) + "</div></div></button>";
     }).join("") + "</div>"
       : '<p class="empty">Nothing under ' + esc(libTopic) + " any more.</p>";
     return h;
@@ -6962,7 +7234,10 @@ function stateWord(b, n) {
       /* Connections counts what can be REACHED rather than what is filed:
          the question that section asks. A count of things you have written
          down would be the Repo's own total said twice. */
-      var n = p.id === "lib" ? allTopics().length
+      /* Entries, not subjects: the Library lists snippets and subject-carrying
+         things, and a count of subjects over a page listing entries is two
+         units in one figure. */
+      var n = p.id === "lib" ? libEntries().length
             : p.id === "conn" ? connGroups().reduce(function (t, g) {
                 return t + g.rows.filter(function (a) { return !!openHandle(a); }).length; }, 0)
             : repoIn(p.id).length;
@@ -7018,6 +7293,7 @@ function stateWord(b, n) {
       // fallback and not the point; the copy button stays either way, since a
       // managed laptop can block the scheme handler outright.
       (a.path && state.settings.companion ? launchLink(a.id, "Open it") : "") +
+      (isSnippet(a) && a.body ? '<button class="btn" data-act="snip-copy" data-id="' + a.id + '">Copy it</button>' : "") +
       (a.path ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '">Copy the path</button>' : "") +
       (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
       '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
@@ -7026,7 +7302,7 @@ function stateWord(b, n) {
 
     var stt = thingState(a);
     var h = '<div class="page-head"><div><h2>' + esc(a.name) + "</h2>" +
-      "<p>" + esc(assetSays(a)) + "</p>" +
+      "<p>" + esc(assetSays(a, true)) + "</p>" +
       /* The pill and the last-used date were repeated here, directly above the
          facts table that now carries both. Said once. */
       "</div>" + tools + "</div>";
@@ -7048,6 +7324,11 @@ function stateWord(b, n) {
        would be a picture of nothing. */
     var facts = [];
     facts.push(["Kind", esc(assetKindLabel(a))]);
+    if (isSnippet(a)) {
+      facts.push(["Written in", snipLangLabel(a)
+        ? esc(snipLangLabel(a)) : '<span class="fnone">Not said</span>']);
+      facts.push(["How long", snipLines(a).length + (snipLines(a).length === 1 ? " line" : " lines")]);
+    }
     facts.push(["How it stands", stt.word
       ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>"
       : '<span class="fnone">Nothing said</span>']);
@@ -7060,8 +7341,20 @@ function stateWord(b, n) {
     if (a.path) facts.push(["Path", '<span class="fbrk">' + esc(a.path) + "</span>"]);
     if (a.url) facts.push(["Link", '<a class="fbrk" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.url) + "</a>"]);
     var hdl = openHandle(a);
+    /* A FACT ROW MAY NOT SAY SOMETHING THE READER CAN SEE IS UNTRUE. "Nothing
+       to open — this is a thing, not a file" is right for a pair of
+       headphones and plainly false three inches under a snippet's own body,
+       which is the content and is right there. */
     facts.push(["Opening it", hdl ? esc(hdl.how)
-      : '<span class="fnone">Nothing to open — this is a thing, not a file</span>']);
+      : isSnippet(a)
+        ? '<span class="fnone">The snippet itself is above — “Copy it” puts it on the clipboard</span>'
+        : '<span class="fnone">Nothing to open — this is a thing, not a file</span>']);
+
+    /* THE BODY FIRST, ABOVE THE FACTS. For every other entry the facts are
+       what the page is for; for a snippet they are context and the text is
+       the answer, so five rows of table above it would put the one thing the
+       reader came for below the fold on a phone. */
+    if (isSnippet(a)) h += snipBlock(a);
 
     var look = assetLook(a);
     h += '<div class="aface"><span class="iface ' + look.tile + '">' + look.ico + "</span>" +
@@ -9339,7 +9632,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v63 · 18 Sep 2026";
+  var BUILD = "v64 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -12135,16 +12428,34 @@ function dims(n) {
       });
     },
     "asset-add":  function () { assetDialog(null); },
-    "asset-edit": function (id) { assetDialog(assetOf(id)); },
+    /* The EDIT ROUTE IS CHOSEN BY THE RECORD, so a snippet always opens in
+       the dialog built for it however it was reached — the registry's
+       thirteen boxes have no field for a body, and a form that silently
+       cannot edit half the entry is worse than no form. */
+    "asset-edit": function (id) {
+      var a = assetOf(id);
+      if (isSnippet(a)) snippetDialog(a); else assetDialog(a);
+    },
+    "snip-add":   function () { snippetDialog(null); },
+    "snip-copy":  function (id) {
+      var a = assetOf(id);
+      if (!a || !a.body) { toast("Nothing to copy — this one has no body yet"); return; }
+      var n = snipLines(a).length;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(a.body).then(
+          function () { toast("Copied " + n + (n === 1 ? " line" : " lines")); },
+          function () { toast("The browser would not let the app reach the clipboard"); });
+      } else { toast("This browser gives the app no clipboard"); }
+    },
     "asset-open": function (id) { openAsset = id; view = "vocab"; openMode = ""; render(); },
     /* A rail row opens the Assets tab on its own section. `view` is set here
        as well as `repoTab`, because these rows fire from every screen. */
-    "repo-sect":  function (id) { view = "repo"; repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
+    "repo-sect":  function (id) { view = "repo"; repoTab = id; libTopic = ""; libKind = ""; libLang = ""; openAsset = ""; render(); },
 
     "out-page":   function (id) { outTab = id; reportOn = null; render(); },
     "proj-list":  function (id) { projList = id; openJob = ""; openProj = ""; jobMap = null; render(); },
 
-    "repo-page":  function (id) { repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
+    "repo-page":  function (id) { repoTab = id; libTopic = ""; libKind = ""; libLang = ""; openAsset = ""; render(); },
     /* Reached from the Library's own strip AND from a topic pill on a thing's
        page, which is the route that makes writing a subject down worth it:
        you are looking at one dataset and one tap shows everything else on
@@ -12154,6 +12465,7 @@ function dims(n) {
        it would land the reader on an empty list they did not ask for. */
     "lib-topic":  function (id) { repoTab = "lib"; libTopic = id; libKind = ""; openAsset = ""; view = "repo"; render(); },
     "lib-kind":   function (id) { libKind = id || ""; render(); },
+    "lib-lang":   function (id) { libLang = id || ""; render(); },
     /* Adding from the Repo lands in the section you were looking at, rather
        than making you pick it again from a list you just tapped. */
     "repo-add":   function (id) { assetDialog(null, id); },
@@ -12896,11 +13208,13 @@ function dims(n) {
     }
     var out = [], seen = [];
     REPO_PAGES.forEach(function (sec) {
-      /* The Library is the same store read by subject, not a section a thing
-         is filed in — `repoOf` never returns it — so iterating it here would
-         be a heading that can never hold anything. Said out loud rather than
-         left as an empty group nobody notices. */
-      if (sec.id === "lib") return;
+      /* The Library used to be skipped here, because it was the same store
+         read by subject and `repoOf` never returned it — a heading that could
+         never hold anything. It holds snippets now, and a script IS a thing a
+         step is done with, which is exactly what the link edge carries. The
+         empty-group guard below already does the job the skip was doing.
+         Connections is still never returned by `repoOf`, so it drops out on
+         its own the same way. */
       var g = pool.filter(function (t) {
         return t.assetId && byId(state.assets, t.assetId) &&
                repoOf(byId(state.assets, t.assetId)) === sec.id;
@@ -13435,6 +13749,71 @@ function dims(n) {
                    atId: aSite.id, topics: ["photogrammetry", "harbour surveying"],
                    fromIds: [], archived: false });
 
+
+    /* THE LIBRARY'S OWN HALF: four things worked out once and wanted again,
+       in four languages, so the language chips exist and the section is not
+       one row. Two of them carry subjects the datasets already carry, which
+       is the whole argument for reading the registry by subject: under
+       "photogrammetry" a script sits beside the orthophoto it was written
+       for. A feature with no representation here is a feature nobody can be
+       shown. */
+    var aFx = mk({ name: "Reshape a total-station export into one row per point",
+                   kind: "snippet", repo: "lib", lang: "excel",
+                   body: '=LET(raw, A2:D5000,\n' +
+                         '     kept, FILTER(raw, (INDEX(raw,,4)<>"")*(INDEX(raw,,1)<>"")),\n' +
+                         '     SORT(kept, 2, 1))',
+                   notes: "Expects the four columns in the order the instrument writes them: point, easting, northing, code. Drops any row with no code rather than guessing one.",
+                   topics: ["harbour surveying", "spreadsheets"],
+                   path: "", url: "", where: "", fromIds: [], archived: false });
+    var aPy = mk({ name: "Rename a folder of photos by the date they were taken",
+                   kind: "snippet", repo: "lib", lang: "python",
+                   body: 'import os, sys\n' +
+                         'from datetime import datetime\n' +
+                         'from PIL import Image, ExifTags\n' +
+                         '\n' +
+                         'TAG = {v: k for k, v in ExifTags.TAGS.items()}["DateTimeOriginal"]\n' +
+                         'folder = sys.argv[1]\n' +
+                         '\n' +
+                         'for name in sorted(os.listdir(folder)):\n' +
+                         '    if not name.lower().endswith((".jpg", ".jpeg")):\n' +
+                         '        continue\n' +
+                         '    src = os.path.join(folder, name)\n' +
+                         '    shot = (Image.open(src)._getexif() or {}).get(TAG)\n' +
+                         '    if not shot:\n' +
+                         '        print("no date, left alone:", name)\n' +
+                         '        continue\n' +
+                         '    stamp = datetime.strptime(shot, "%Y:%m:%d %H:%M:%S")\n' +
+                         '    dst = os.path.join(folder, stamp.strftime("%Y%m%d_%H%M%S") + ".jpg")\n' +
+                         '    if os.path.exists(dst):\n' +
+                         '        print("would overwrite, left alone:", dst)\n' +
+                         '        continue\n' +
+                         '    os.rename(src, dst)',
+                   notes: "Needs Pillow. It prints and skips rather than overwriting, but run it on a copy the first time \u2014 a rename cannot be undone.",
+                   topics: ["photogrammetry", "file handling"],
+                   path: "", url: "", where: "", fromIds: [], archived: false });
+    var aGd = mk({ name: "Reproject and compress an orthophoto for the field laptop",
+                   kind: "snippet", repo: "lib", lang: "gdal",
+                   body: 'gdalwarp -t_srs EPSG:22770 -r cubic ^\n' +
+                         '  -co COMPRESS=DEFLATE -co PREDICTOR=2 -co TILED=YES ^\n' +
+                         '  ortho_area1.tif ortho_area1_22770.tif\n' +
+                         '\n' +
+                         'gdaladdo -r average ortho_area1_22770.tif 2 4 8 16',
+                   notes: "Lebanon Stereographic 1970 is EPSG:22770. The carets are cmd.exe line breaks. The overviews are what make it usable on a laptop in the sun.",
+                   topics: ["photogrammetry", "GIS"],
+                   path: "", url: "", where: "", fromIds: [], archived: false });
+    var aAp = mk({ name: "List every layer in an .aprx and where its source points",
+                   kind: "snippet", repo: "lib", lang: "arcpy",
+                   body: 'import arcpy\n' +
+                         '\n' +
+                         'p = arcpy.mp.ArcGISProject(r"D:\\aub21\\area1\\area1.aprx")\n' +
+                         'for m in p.listMaps():\n' +
+                         '    for lyr in m.listLayers():\n' +
+                         '        if lyr.supports("DATASOURCE"):\n' +
+                         '            print(m.name, "|", lyr.name, "|", lyr.dataSource)',
+                   notes: "Run it in the Pro python window. The only quick way to find which layer went red after a folder moved.",
+                   topics: ["GIS"],
+                   path: "", url: "", where: "", fromIds: [], archived: false });
+
     /* A few topics on the things that already existed, so the Library opens on
        something real and so one subject genuinely crosses kinds — a dataset,
        a survey and a piece of software under one word is the whole argument
@@ -13458,7 +13837,7 @@ function dims(n) {
     aOrt.atId = aSite.id;
 
     s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail,
-                aSite, aTr, aSh, aSv];
+                aSite, aTr, aSh, aSv, aFx, aPy, aGd, aAp];
 
     /* Two of the people the boards already name, said properly — so the
        People page has one row with an address and a role and one with nothing

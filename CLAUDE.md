@@ -863,6 +863,76 @@ vocabulary a description of the work rather than a taxonomy to maintain. The
 route that earns it is the pill on a thing's own page — you are looking at one
 dataset and one tap shows everything else on the same subject.
 
+**AND A SNIPPET IS A REGISTRY ENTRY WITH A BODY — no fifth noun.** Asked for
+a Library that holds "formulas for excels" and "scripts I might use to extract
+certain photos in Python", the shape that does not unravel the model was
+already there: the registry holds what the work is made of and made with, and
+the **one thing a path cannot carry is the content itself**. So `a.body` is the
+text and `a.lang` is what it is written in — two fields, not a
+`state.snippets` list, which would have been a second thing to keep in step and
+would have begun the day it shipped by losing the topics, the provenance,
+`assetUses()` and the finder. Seven rules hold it:
+
+- **The test is the record, not the kind.** `isSnippet(a)` is
+  `kind === "snippet" || !!a.body`, so an entry carrying a body stays a snippet
+  however its kind reads — otherwise changing the kind in the other dialog
+  would make the body unreachable while it sat in the record.
+- **`repoOf()` returns `lib` for one**, which makes the Library a **section**
+  and not only a lens. It was the same store read by subject and `repoOf` never
+  returned it; a snippet is not a device, an app, a site or a file on disk and
+  has no other home. The Library answers both questions on one page now —
+  *what you reuse* first, because that is the half you open it to fetch, and
+  *by subject* below it. The strip's count is `libEntries()`, entries and not
+  subjects: a count of subjects over a page listing entries is two units in one
+  figure. And the borrow pool stops skipping the Library, because a script
+  really is a thing a step is done with, which is what the link edge carries.
+- **It gets its own dialog, and the edit route is chosen by the record.** The
+  registry's is thirteen boxes with a note at the bottom; here the body IS the
+  entry, and a twelve-row textarea belongs at the top of a form with five boxes
+  rather than behind a fold in a form with thirteen. `asset-edit` reads
+  `isSnippet` and hands over, so a snippet always opens in the dialog built for
+  it and the two can never offer one field in two shapes.
+- **The body is never trimmed at the front.** Leading whitespace is what a
+  Python block MEANS. Only the trailing blank lines a textarea collects go.
+- **It scrolls; it does not wrap and it does not fold.** Wrapping code at forty
+  characters changes what it says, and a fold hides the one thing the reader
+  opened the page for. `.snip` is `white-space: pre` with `overflow: auto`
+  inside a capped height, and the **line count is printed above it**, so
+  nothing is hidden without being counted. On the entry's page the block sits
+  **above** the facts table — for every other kind the facts are what the page
+  is for, and for this one five rows of table above the body would put the
+  answer below the fold on a phone.
+- **A language is identity, not state**, so `.lpill` is a plain pill and never
+  sage, amber or rose — a green "Python" would be claiming a script is
+  healthy. `SNIP_LANGS` is a floor like every other vocabulary.
+- **The finder's key carries the body.** The question six months later is
+  *"the thing that renames photos"*, and the name is the half you have
+  forgotten; the topics and the language are in the key for the same reason.
+
+Three things reading the built page found, each a rule already in this file
+being broken somewhere:
+
+- **`showWhen` looks its field up by id, and a missing entry is not a
+  fallback — it is no field at all.** `otherField`'s map from a vocabulary to
+  the select that drives it had no row for `assetKinds`, so **"Other — write
+  it in" on the registry's kind picker silently did nothing**: you chose it, no
+  box appeared, and the entry saved under the fallback. It is the one
+  vocabulary this file calls a floor rather than a ceiling, and it went
+  unnoticed because the sample seeds Site, Feature, Artifact and Survey
+  straight into `state.vocab` rather than by typing them. A picker that cannot
+  be extended is a picker that will eventually be wrong; one whose escape hatch
+  is drawn and inert is worse.
+- **A fact row may not say something the reader can see is untrue.** "Opening
+  it — nothing to open, this is a thing, not a file" is right for a pair of
+  headphones and plainly false three inches under a snippet's own body.
+- **Say it once, and `assetSays` was saying the note twice.** The entry's page
+  printed it in the sub-line under the title and again in its own panel
+  twenty pixels below — on a snippet whose note runs three lines that was most
+  of the screen. `assetSays(a, brief)` drops it for that one caller; every
+  other caller is a ROW, where it is the only place the note is said at all.
+  And `topicList()` came out of the registry dialog the day a second dialog
+  started writing topics: two copies of a rule is the same bug as no rule.
+
 **THE ARCHAEOLOGICAL DATA MODEL IS ONE FIELD, NOT FOUR NOUNS.** Site,
 Artifact, Feature and Survey are exactly what a reader types into "Other —
 write it in": `assetKinds` is a floor and not a ceiling, and hardcoding those
