@@ -1,3 +1,44 @@
+## Shipped: the allowance asks the right month, and keeps what you said
+
+Three faults in one feature, all reported from the phone.
+
+**It asked about a month the contract did not exist in.** `allowancesAwaiting()`
+walked last month and this month unconditionally — nothing consulted the
+contract's own `startedOn` or `until`. A contract that began in September was
+asked how many days were worked in August.
+
+**The answer could not be put anywhere else.** The dialog took its month from
+the notice and offered no alternative, so thirteen days meant for September had
+nowhere to go but August, and no way to be moved once saved. The month is a
+field now: `allowanceMonths(r)` offers every month the contract has run,
+newest first, with what each already holds in its label, and an `onChange` that
+reloads the days box — otherwise the figure prefilled for one month gets saved
+against another. Nought clears a month, so a wrong answer can be taken back,
+and every save hands back an undo.
+
+**Nothing showed what had been entered.** `state.allowanceDays` was written by
+the dialog and read by the budget arithmetic, and rendered on no screen at all.
+`allowanceLog(r)` puts it on the contract that owns it: month, days, what they
+came to, an edit button per row.
+
+They are deliberately not ledger entries, which is what was asked for. The pay
+already arrived as income and the taxis are already logged as spending; a third
+record of the same money would count it twice, the way an adjustment
+transaction would have done for the account opening. The rule the request is
+really about is that anything a person typed has to be findable and
+changeable — and now it is, on the card where it belongs.
+
+`allowmonth.js` drives all four: the question that should not be asked, the
+month that can be changed, the record on the card, and answering for a month
+other than the one you were asked about.
+
+Two stale assertions fixed in the same change. `income.js` case 4 expected the
+money to run out inside the horizon, which stopped being true once the
+projection began folding in income due later this month — the contract pays in
+six days. A thinner wallet puts the cliff back in view. And a new assertion of
+mine walked into the repo's own documented trap: `.label` is uppercased in CSS,
+so `innerText` reads DAYS YOU WENT IN and a case-sensitive match fails.
+
 ## Shipped: two figures that named the wrong basis
 
 Both reported from the phone, both the same fault — a number that is honest

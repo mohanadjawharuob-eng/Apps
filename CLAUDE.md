@@ -227,6 +227,28 @@ effect of a Coffer change.
   flatters every figure built on it. The second date is how far a renewal is
   expected to run; past it the line stops. Left empty it still runs on, because
   that is what was said, and `renewUntil` is dropped when `renews` is.
+- **An allowance is asked about the months the contract actually ran, and the
+  month is a FIELD.** `allowancesAwaiting()` walked last month and this month
+  with nothing consulting `startedOn` or `until`, so a contract that began in
+  September was asked how many days were worked in AUGUST — and the dialog took
+  its month from the notice and offered no other, so an answer meant for
+  September had nowhere to go but August and could not be moved afterwards.
+  `allowanceLiveIn(r, mk)` gates the question; `allowanceMonths(r)` builds the
+  picker, newest first, and includes any month already recorded even if it
+  falls outside the contract's dates, or a mistake could not be reached to be
+  corrected. The picker's labels carry what each month already holds and its
+  `onChange` reloads the days box, or the figure prefilled for one month is
+  saved against another. Nought clears a month, which is how a wrong answer is
+  taken back.
+- **What someone typed has to be findable and changeable, even when it is not a
+  transaction.** The allowance days were an answer to a notice and nothing
+  else: entered once, then rendered on no screen in the app. `allowanceLog(r)`
+  puts them on the contract that owns them — month, days, what they came to,
+  and an edit button per row. They are deliberately **not** ledger entries: the
+  pay already arrived as income and the taxis are already logged as spending,
+  so a third record of the same money would count it twice. The rule is that
+  the record must be visible and editable, not that everything must be a
+  transaction.
 - **An allowance inside a salary is not a fourth kind of restricted money.**
   A travel allowance paid at so much a day is yours either way, so it counts as
   income and net worth on arrival and its spending stays in `trueBurnFor()` and
