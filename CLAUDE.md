@@ -1703,6 +1703,51 @@ it. Measured: seven tabs, all 48px, one row.
 Haddad and L. Mroueh six days." — the names ran straight into the count with
 nothing between them, which reads as a sentence that lost a word.
 
+### And then I used it
+
+Walking the screens is not using the app. `flows.js` makes a project on the
+screen the tab now lands on, starts a run, drives it to its end, closes it,
+and checks each thing turns up where the app said it would — and it found the
+one defect the reorganization made unmissable:
+
+**IN YOUR HANDS IS NOT WAITING.** Everything on Actions that was not late went
+under one heading, "Waiting, and that is fine" — including every step nobody
+else is holding up. Start a run and its first step landed there: the screen
+that exists to answer *what happens next* filed the one thing you could get on
+with under a sentence telling you it was fine to do nothing. Two sections now,
+and the yours-to-do one comes first, beside the other things that are yours
+(the unfiled runs above it, the typed lines below). `calmRow` had been writing
+"In your hands. Waiting on nobody but you" the whole time — under a heading
+that contradicted it.
+
+**AND THAT ROW NEVER SAID WHICH WORK IT WAS.** Its whole sub-line was that
+sentence, so a screen listing steps from five runs printed "Digitise the
+layers" with nothing naming the board — the one row you could act on said the
+least about itself. Both calm branches name the work now, and the heading
+carries the meaning the sentence used to.
+
+**A pre-escaped sub-line is a trap for the next branch.** `calmRow` builds
+`says` in three branches and the caller does not escape it, so the branch that
+gained a bench label gained an unescaped one — a craft and a claimant, both
+typed by the reader. Escape at the branch or escape at the caller, but the two
+halves of one function may not disagree about which.
+
+**A REPORT MAY NOT POINT AT LINES IT DID NOT PRINT.** "Nothing. Either nothing
+finished, or it finished and was never archived — *the unfiled lines above say
+which*" was printed whenever a period had no filings, including the many
+reports whose work carries no undone filing step at all. It says the second
+half only when THE WORK really printed one.
+
+Two traps for the next person driving the app rather than reading it:
+
+- **`innerText` cannot see inside a closed `<details>`.** What is waiting and
+  not late sits behind a fold, so a test reading the screen reported a step
+  missing when it was merely folded. Open what a reader would open.
+- **A stop word breaks an alias.** The finder now needs every term of a query
+  to hit, so the alias has to carry the old name IN FULL: "week" was there and
+  somebody typing the section's actual former name, "the week", matched
+  nothing. Half an old name is not the old name.
+
 ## What READING every screen found
 
 Eleven faults from driving the interface; these came from **reading** it —

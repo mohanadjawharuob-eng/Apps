@@ -2111,7 +2111,12 @@ color-scheme: light;
          the week. The week itself is now a page in here, because hours are
          not a section of a workspace: they are one of the things the work
          produces, and the report is built out of them. */
-      { id: "out",     label: "Outputs",   ico: ICONS.out,   alias: "week hours report filed results claimants standing" }
+      { id: "out",     label: "Outputs",   ico: ICONS.out,   /* The old name in full, not just its distinctive word: the finder's
+            score needs every term of a query to hit, so somebody typing the
+            section's former name "the week" matched nothing at all. An alias
+            is a promise that the old word still finds it, and half the old
+            word is not the old word. */
+        alias: "the week hours report filed results claimants standing" }
     ],
 
     blank: function () {
@@ -4246,9 +4251,26 @@ function stateWord(b, n) {
         tkLate.map(taskRow).join("") + "</div>";
     }
 
-    if (calm.length) {
+    /* IN YOUR HANDS IS NOT WAITING, and this screen is the one that answers
+       "what happens next". Everything that was not late went under one
+       heading reading "Waiting, and that is fine" — including every step
+       nobody else is holding up, which is the opposite of what it says.
+       Start a run and its first step landed there: the app filed the one
+       thing you could actually get on with under a sentence telling you it
+       was fine to do nothing. Two sections, and the yours-to-do one comes
+       first, beside the other two things that are yours (the unfiled runs
+       above it and the typed lines below). `calmRow` already wrote the right
+       words for both cases — "In your hands. Waiting on nobody but you"
+       was being printed under a heading that contradicted it. */
+    var mine = calm.filter(function (d) { return d.st !== "waiting"; });
+    var theirs = calm.filter(function (d) { return d.st === "waiting"; });
+    if (mine.length) {
+      h += '<div class="sect">In your hands</div><div class="stack tight">' +
+        mine.map(calmRow).join("") + "</div>";
+    }
+    if (theirs.length) {
       h += '<div class="sect">Waiting, and that is fine</div><div class="stack tight">' +
-        calm.map(calmRow).join("") + "</div>";
+        theirs.map(calmRow).join("") + "</div>";
     }
 
     var tkCalm = tk.filter(function (t) { return !taskLate(t); });
@@ -4350,12 +4372,21 @@ function stateWord(b, n) {
       says = esc(b.name);
       right = esc(niceDate(n.dueAt) + (away > 0 ? ", in " + away + (away === 1 ? " day" : " days") : ""));
     } else if (d.st === "waiting") {
-      says = n.chaseDays
-        ? "You will chase this after " + n.chaseDays + (num(n.chaseDays) === 1 ? " day" : " days")
-        : "You never set a reminder for this one, so it can wait for ever";
+      /* Which run it is on, then why it is waiting. The board's name was
+         missing from both of these branches, so a screen listing steps from
+         five runs printed "Digitise the layers" with nothing saying which
+         piece of work it belonged to — and the one row you could act on
+         was the one that said least about itself. */
+      says = esc(b.name) + " · " + (n.chaseDays
+        ? "you will chase this after " + n.chaseDays + (num(n.chaseDays) === 1 ? " day" : " days")
+        : "no reminder set, so it can wait for ever");
       right = "waiting " + d.days + "d";
     } else {
-      says = "In your hands. Waiting on nobody but you";
+      /* "In your hands. Waiting on nobody but you" was the whole line, which
+         under a heading now reading "In your hands" says the same thing
+         twice and still never names the work. The heading carries the
+         meaning; the row carries the fact. */
+      says = esc(b.name) + (b.benchId ? " · " + esc(benchLabel(b.benchId)) : "");
       right = d.days ? "in hand " + d.days + "d" : "started today";
     }
 
@@ -5673,6 +5704,7 @@ function stateWord(b, n) {
   }
 
   function buildReport(o) {
+    var saidUnfiled = false;   // true once THE WORK has really printed one
     var c = o.claimantId ? byId(state.claimants, o.claimantId) : null;
     var from = o.from, to = o.to;
     var L = [];
@@ -5825,6 +5857,7 @@ function stateWord(b, n) {
         var uf = unfiled(b);
         if (!b.closedOn && !act.length && uf.length) {
           L.push("      not filed: " + uf.map(function (n) { return n.label; }).join(", "));
+          saidUnfiled = true;
         }
       });
     }
@@ -5840,7 +5873,15 @@ function stateWord(b, n) {
     var filed = filings(bs, from, to);
     L.push("WHAT WAS FILED IN THIS PERIOD");
     if (!filed.length) {
-      L.push("  Nothing. Either nothing finished, or it finished and was never archived — the unfiled lines above say which.");
+      /* "the unfiled lines above say which" pointed at lines that are often
+         not there: a report whose work carries no undone filing step prints
+         none, and the sentence sent the reader up the page looking for
+         something it does not contain. Said only when the report really did
+         print one — the same rule as a screen never naming a place that
+         does not exist. */
+      L.push(saidUnfiled
+        ? "  Nothing. Either nothing finished, or it finished and was never archived — the unfiled lines above say which."
+        : "  Nothing was archived in this period.");
     } else {
       filed.forEach(function (f) {
         L.push("  " + pad(plainDate(stampDay(f.at)), 14) + pad(f.label, 34) + f.board);
@@ -9298,7 +9339,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v62 · 18 Sep 2026";
+  var BUILD = "v63 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
