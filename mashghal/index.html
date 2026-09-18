@@ -355,6 +355,12 @@ color-scheme: light;
   .tab[aria-current="page"] .tabn { color: var(--nav-on-ink); opacity: 0.85; }
   .tab .ico { width: 1.1rem; text-align: center; opacity: 0.9; }
 
+  /* The three registry sections the poster lists beside the others. Slightly
+     inset, because they are sections of the row above them rather than
+     siblings of it, and rail-only: the phone's bar carries seven. */
+  .tab.sect-row { padding-left: 1.5rem; font-size: 0.86rem; }
+  @media (max-width: 760px) { .tab.sect-row { display: none; } }
+
   /* QUICK ACTIONS — the four things you start rather than open. */
   .railquick { padding: 0.9rem 0.55rem 0; display: flex; flex-direction: column; gap: 1px; }
   .rwico { display: inline-flex; width: 1.1rem; justify-content: center; color: var(--faint); flex: 0 0 auto; }
@@ -1791,7 +1797,7 @@ color-scheme: light;
       <div class="rwhead">Quick Actions</div>
       <button class="rwrow" data-act="run-start"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M8.4 7l4.4 3-4.4 3z"/></svg></span><span class="rwname">Run workflow</span></button>
       <button class="rwrow" data-act="proj-add"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M10 9.6v4M8 11.6h4"/></svg></span><span class="rwname">New project</span></button>
-      <button class="rwrow" data-act="board-new"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="6" height="5" rx="1.5"/><path d="M8.5 6.5h3a2 2 0 0 1 2 2v1"/><path d="M14.5 11v5M12 13.5h5"/></svg></span><span class="rwname">New workflow</span></button>
+      <button class="rwrow" data-act="board-new"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="6" height="5" rx="1.5"/><path d="M8.5 6.5h3a2 2 0 0 1 2 2v1"/><path d="M14.5 11v5M12 13.5h5"/></svg></span><span class="rwname">New procedure</span></button>
       <button class="rwrow" data-act="find-open"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span><span class="rwname">Find anything</span></button>
     </div>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
@@ -2052,14 +2058,33 @@ color-scheme: light;
        bar still holds them: measured at 390px and 360px with nothing wrapping
        and nothing off the edge. Settings stays on the gear, which is what
        paid for the seventh. */
+    /* THE POSTER'S OWN WORDS, IN THE POSTER'S OWN ORDER. Its sidebar reads
+       Projects — Workflows — Assets — Equipment — Knowledge —
+       Schedule — Connections, and every one of those already existed here
+       under a word its owner had to learn: Jobs walked job — project —
+       board, Boards held procedures and runs, the Repo held everything you
+       own and open. THE RECORD IS UNTOUCHED — `state.boards` is still
+       boards and the view ids are unchanged — because renaming a state
+       key migrates nothing and risks everything, which is the same trade
+       already made when "mode" became "craft" on every screen.
+
+       `alias` keeps the old word searchable: somebody who learned "Repo" types
+       it into the finder and lands on Assets, the same way "kit" still finds
+       the workbench. What the screen SAYS is the current name.
+
+       Waiting and The week are not on the poster and are not dropped: they
+       are the screen a phone really needs and the one that holds the hours,
+       and hiding a whole section to match a drawing would be the app deciding
+       for you. One order for the rail and the bar, so nothing is in a
+       different place depending on the screen you are on. */
     tabs: [
-      { id: "home",    label: "Home",     ico: ICONS.home },
-      { id: "boards",  label: "Boards",   ico: ICONS.boards },
-      { id: "waiting", label: "Waiting",  ico: ICONS.waiting },
-      { id: "week",    label: "The week", ico: ICONS.week },
-      { id: "cal",     label: "Calendar", ico: ICONS.cal },
-      { id: "jobs",    label: "Jobs",     ico: ICONS.jobs },
-      { id: "repo",    label: "Repo",     ico: ICONS.kit }
+      { id: "home",    label: "Home",      ico: ICONS.home },
+      { id: "jobs",    label: "Projects",  ico: ICONS.proj,  alias: "jobs employers clients" },
+      { id: "boards",  label: "Workflows", ico: ICONS.boards, alias: "boards procedures runs" },
+      { id: "waiting", label: "Waiting",   ico: ICONS.waiting },
+      { id: "repo",    label: "Assets",    ico: ICONS.kit,   alias: "repo registry files things" },
+      { id: "cal",     label: "Schedule",  ico: ICONS.cal,   alias: "calendar month dates" },
+      { id: "week",    label: "The week",  ico: ICONS.week }
     ],
 
     blank: function () {
@@ -2212,12 +2237,12 @@ color-scheme: light;
     // The switch bar lives outside the view, so render() never touches it.
     beforeRender: function () { if (ensureJobs()) save(); },
 
-    afterRender: function () { navTrack(); mountFind(); mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
+    afterRender: function () { navTrack(); navSects(); mountFind(); mountCanvas(); mountFold(); mountBar(); railFoot(); railWork(); mountProse(); mountBackups(); mountPics(); },
 
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "device"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "file"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -2559,13 +2584,26 @@ color-scheme: light;
   // A word-start match beats a match buried inside a word, and an exact
   // prefix beats both — otherwise "pat" put every board with "update" in its
   // name above the person called Patricia.
+  /* EVERY WORD SOMEWHERE BEATS NOTHING AT ALL. The score was the position of
+     the whole query as one substring, so a two-word search only ever matched
+     a name that carried both words together in that order — and the
+     renamed sections made that visible: "new board" scored nought against a
+     command called "New procedure" whose key carries "board" as an alias,
+     because the phrase "new board" appears nowhere in it. Anything that
+     matches the phrase still ranks above anything that only matches the
+     words, so the order this file already describes is unchanged: an exact
+     prefix beats a word start, which beats a match buried inside a word. All
+     the terms have to hit, or typing two words would widen the search instead
+     of narrowing it. */
   function findScore(text, q) {
     if (!text) return 0;
     var t = String(text).toLowerCase();
     var i = t.indexOf(q);
-    if (i < 0) return 0;
-    if (i === 0) return 3;
-    return /[\s·—\-\/(]/.test(t.charAt(i - 1)) ? 2 : 1;
+    if (i >= 0) return i === 0 ? 3 : /[\s·—\-\/(]/.test(t.charAt(i - 1)) ? 2 : 1;
+    var terms = q.split(/\s+/).filter(Boolean);
+    if (terms.length < 2) return 0;
+    for (var k = 0; k < terms.length; k++) { if (t.indexOf(terms[k]) < 0) return 0; }
+    return 0.5;
   }
 
   function findTile(cls, ico) {
@@ -2810,7 +2848,7 @@ color-scheme: light;
       re: /^(?:where(?:'s| is| are)|who has)\s+(?:the\s+|my\s+)?(.+?)\??$/,
       run: function (m) {
         var hit = askPick(live(state.assets), m[1]);
-        if (!hit) return [askSaid("Nothing in the Repo matches “" + askName(m[1]) + "”.",
+        if (!hit) return [askSaid("Nothing under Assets matches “" + askName(m[1]) + "”.",
                                   "where a thing is")];
         var a = hit.it, stt = thingState(a), bits = [];
         /* Stated or nothing: the record cannot know where a thing is, so a
@@ -2887,7 +2925,7 @@ color-scheme: light;
       re: /^open\s+(?:the\s+|my\s+)?(.+?)\??$/,
       run: function (m) {
         var hit = askPick(live(state.assets), m[1]);
-        if (!hit) return [askSaid("Nothing in the Repo matches “" + askName(m[1]) + "”.",
+        if (!hit) return [askSaid("Nothing under Assets matches “" + askName(m[1]) + "”.",
                                   "open something")];
         var a = hit.it, hd = openHandle(a);
         if (!hd) return [askSaid(a.name + " has nothing to open — no path and no link on it.",
@@ -2946,7 +2984,7 @@ color-scheme: light;
     var out = [];
 
     APP.tabs.forEach(function (t) {
-      out.push({ g: "Sections", key: t.label, tile: findTile("t-go", t.ico),
+      out.push({ g: "Sections", key: t.label + " " + (t.alias || ""), tile: findTile("t-go", t.ico),
                  title: t.label, sub: "section", k: 7,
                  run: function () { findTab(t.id); } });
     });
@@ -3087,15 +3125,18 @@ color-scheme: light;
       { name: "New project", act: "proj-add", sub: "a bounded piece of work with a date on it" },
       { name: "Add a thing", act: "asset-add", sub: "a file, a photograph, a dataset, a laptop" },
       { name: "Add someone", act: "contact-add", sub: "where they work and how to reach them" },
-      { name: "New board", act: "board-new", sub: "write a procedure from a blank sheet" },
-      { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a board" },
+      { name: "New procedure", act: "board-new", sub: "write one from a blank sheet", alias: "board workflow" },
+      { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a procedure" },
       { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
       { name: "Back up now", act: "bk-now", sub: "a snapshot on this device" },
       { name: "Switch bench", act: "span-switch", sub: "end the stretch you are in and start another" }
     ];
     if (syncOn()) cs.push({ name: "Sync now", act: "sync-now", sub: "pull, merge, push" });
     return cs.map(function (c) {
-      return { g: "Do", key: c.name, tile: findTile("t-cmd", ICONS.cmd),
+      /* `alias` for the same reason the sections carry one: somebody who
+         learned "new board" should not have to learn the new word to find the
+         thing it renamed. */
+      return { g: "Do", key: c.name + " " + (c.alias || ""), tile: findTile("t-cmd", ICONS.cmd),
                title: c.name, sub: c.sub, k: 8,
                run: function () {
                  findClose();
@@ -3315,9 +3356,9 @@ color-scheme: light;
     var closed = boards("run").filter(function (r) { return r.closedOn; });
     var tpls = boards("template");
 
-    var h = pageHead("Boards", "A procedure is written once. A run is one pass through it.",
+    var h = pageHead("Workflows", "A procedure is written once. A run is one pass through it.",
       emptyBook() ? "" : '<div class="tools">' +
-      '<button class="btn" data-act="board-new">New board</button>' +
+      '<button class="btn" data-act="board-new">New procedure</button>' +
       '<button class="btn" data-act="prose-open">Write one in prose</button>' +
       (tpls.length ? '<button class="btn primary" data-act="run-start">Start a run</button>' : "") +
       "</div>");
@@ -4034,7 +4075,7 @@ function stateWord(b, n) {
           ? '<button type="button" class="drow" data-act="asset-copy" data-id="' + a.id + '" title="' + esc(a.name + " \u2014 " + hd.how) + '">' + inner + "</button>"
           : '<a class="drow" href="' + esc(hd.href) + '"' + (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
             ' title="' + esc(a.name + " \u2014 " + hd.how) + '">' + inner + "</a>";
-      }).join("") : '<p class="dempty">Nothing to open yet. Put the apps and sites you use into the Repo and they appear here, one tap each.</p>');
+      }).join("") : '<p class="dempty">Nothing to open yet. Put the apps and sites you use into Assets and they appear here, one tap each.</p>');
 
     h += "</div>";
 
@@ -4044,7 +4085,7 @@ function stateWord(b, n) {
     var recentA = recentlyTouched({ assets: true }, 5);
     if (recentB.length || recentA.length) {
       h += '<div class="hgrid two">';
-      h += dcard("Continue working", { label: "All boards", act: "tab-boards" },
+      h += dcard("Continue working", { label: "All of them", act: "tab-boards" },
         recentB.length ? recentB.map(function (r) {
           /* The mockup tags each of these rows with a short word \u2014 Maps,
              Research, 3D \u2014 and the app already has that list: the board's
@@ -6518,7 +6559,7 @@ function stateWord(b, n) {
     var h = '<p class="hint" style="margin:0 0 0.8rem">Everything you know, by subject rather than by kind. A subject is written onto a thing \u2014 there is no list of topics to maintain, and nothing here is a second copy of anything.</p>';
 
     if (!topics.length) {
-      return h + '<p class="empty">No subjects yet. Open anything in the Repo, press Edit, and write what it is about \u2014 "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
+      return h + '<p class="empty">No subjects yet. Open anything under Assets, press Edit, and write what it is about \u2014 "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
     }
 
     /* A SUBJECT IS A ROW, NOT A CHIP OVER AN EMPTY SCREEN. The landing used to
@@ -6655,7 +6696,7 @@ function stateWord(b, n) {
     var any = gs.some(function (g) { return g.rows.length; });
     var h = '<p class="hint" style="margin:0 0 0.9rem">Nothing is set up here and nothing is signed in. A tick means this app can really open that one \u2014 read off the same function every Open button in the app goes through, so a tick can never be a promise it cannot keep.</p>';
     if (!any) {
-      return h + '<p class="empty">Nothing to reach yet. Add an app, a site or a device in the Repo and it appears here with what this app can do about it.</p>';
+      return h + '<p class="empty">Nothing to reach yet. Add an app, a site or a device under Assets and it appears here with what this app can do about it.</p>';
     }
     gs.forEach(function (g) {
       h += '<div class="sect">' + esc(g.label) + "</div>";
@@ -8926,7 +8967,7 @@ function stateWord(b, n) {
 
   function projWork(p, runs, tpls, shut) {
     var h = '<div class="tools" style="margin:0.9rem 0 0.2rem">' +
-      '<button class="btn primary" data-act="board-new" data-id="' + p.id + '">New board</button></div>';
+      '<button class="btn primary" data-act="board-new" data-id="' + p.id + '">New procedure</button></div>';
 
     h += '<div class="sect">Running</div>';
     h += runs.length ? '<div class="stack tight">' + runs.map(function (b) {
@@ -8993,7 +9034,7 @@ function stateWord(b, n) {
     });
     if (groups.loose) {
       h += '<div class="sect">Only on a board</div>' +
-        '<p class="hint" style="margin:0 0 0.6rem">Typed straight onto a board and not in the registry, so there is nothing to open and no upkeep on it. Add it to the Repo if it is a thing you keep coming back to.</p>' +
+        '<p class="hint" style="margin:0 0 0.6rem">Typed straight onto a board and not in the registry, so there is nothing to open and no upkeep on it. Add it under Assets if it is a thing you keep coming back to.</p>' +
         '<div class="stack tight">' + groups.loose.map(function (t) {
           return '<div class="panel calm"><span class="itile sm t-thing">' +
             (ICONS[t.node.kind] || ICONS.thing) + "</span>" +
@@ -9066,7 +9107,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v60 · 18 Sep 2026";
+  var BUILD = "v61 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -9183,6 +9224,46 @@ function stateWord(b, n) {
     if (!parts.length) return "";
     return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : "")).toUpperCase();
   }
+  /* THE POSTER'S THREE OTHER SECTIONS. Equipment, Knowledge and Connections
+     are not views — they are three of the six questions the one registry
+     answers — so they go on the rail as rows that open the Assets tab on
+     their own section. Written HERE and not in `renderNav()`, which belongs
+     to the shared runtime and has to stay byte-identical across four apps;
+     `railWork()` already fills the rail the same way and for the same reason.
+
+     They are rail-only: a phone's bar was measured at six and now carries
+     seven, and ten would be the mistake this repo has already refused twice.
+     Nothing is hidden by that — each one is a section of the Assets strip,
+     one tap in, on every screen. */
+  var NAV_SECTS = [
+    { id: "device", label: "Equipment",   ico: "device" },
+    { id: "lib",    label: "Knowledge",   ico: "book" },
+    { id: "conn",   label: "Connections", ico: "plug" }
+  ];
+  function navSects() {
+    var nav = document.getElementById("nav");
+    if (!nav) return;
+    var after = nav.querySelector('[data-tab="repo"]');
+    if (!after) return;
+    Array.prototype.slice.call(nav.querySelectorAll(".tab.sect-row")).forEach(function (el) { el.remove(); });
+    NAV_SECTS.slice().reverse().forEach(function (sc) {
+      var b = document.createElement("button");
+      b.className = "tab sect-row";
+      b.setAttribute("data-act", "repo-sect");
+      b.setAttribute("data-id", sc.id);
+      /* Current when the Assets tab is open ON THAT SECTION. The Assets row
+         itself reads current on the other three (Files, Apps, Sites), or two
+         rows would light up for one screen. */
+      if (view === "repo" && repoTab === sc.id && !openAsset) b.setAttribute("aria-current", "page");
+      b.innerHTML = '<span class="ico">' + ICONS[sc.ico] + "</span><span>" + esc(sc.label) + "</span>";
+      after.parentNode.insertBefore(b, after.nextSibling);
+    });
+    /* And the Assets row gives its mark up while one of them is showing. */
+    if (view === "repo" && NAV_SECTS.some(function (sc) { return sc.id === repoTab; }) && !openAsset) {
+      after.removeAttribute("aria-current");
+    }
+  }
+
   function railFoot() {
     var el = document.getElementById("railFoot");
     if (el) {
@@ -11315,7 +11396,7 @@ function dims(n) {
     "board-new": function (id) {
       var into = id && projOf(id) ? id : (openProj || "");
       openModal({
-        title: "New board", confirmLabel: "Create",
+        title: "New procedure", confirmLabel: "Create",
         message: "A board is a procedure you can run again and again. A bench is optional — a visa belongs to no employer.",
         fields: [
           { key: "name", label: "Name", type: "text", value: "", span: true, placeholder: "Brochure" },
@@ -11818,6 +11899,10 @@ function dims(n) {
     "asset-add":  function () { assetDialog(null); },
     "asset-edit": function (id) { assetDialog(assetOf(id)); },
     "asset-open": function (id) { openAsset = id; view = "vocab"; openMode = ""; render(); },
+    /* A rail row opens the Assets tab on its own section. `view` is set here
+       as well as `repoTab`, because these rows fire from every screen. */
+    "repo-sect":  function (id) { view = "repo"; repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
+
     "repo-page":  function (id) { repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
     /* Reached from the Library's own strip AND from a topic pill on a thing's
        page, which is the route that makes writing a subject down worth it:
@@ -12000,7 +12085,7 @@ function dims(n) {
         return t + (bn && bn.claimantId === id ? minsIn(sp, "0000-01-01", "9999-12-31") : 0);
       }, 0);
       var js = live(state.jobs).filter(function (j) { return j.claimantId === id; });
-      var bits = ["Boards already filed against it keep reading “" + esc(c.name) +
+      var bits = ["Workflows already filed against it keep reading “" + esc(c.name) +
                   " (removed)” rather than losing their history."];
       if (mins) bits.push(fmtMins(mins) + " is logged against it. Every stretch stays exactly as recorded and keeps appearing on the week — measured against nothing, because nothing is owed to somebody who is gone.");
       if (bens.length) bits.push("Its " + numWord(bens.length) + (bens.length === 1 ? " bench" : " benches") +

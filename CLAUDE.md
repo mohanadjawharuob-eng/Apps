@@ -744,8 +744,10 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 
 ## Mashghal's shape
 
-**Six tabs, and a gear: Boards · Waiting · The week · Calendar · Jobs ·
-Repo.** Settings gave up its slot and moved to a gear beside the finder —
+**Seven tabs, and a gear: Home · Projects · Workflows · Waiting · Assets ·
+Schedule · The week**, with Equipment, Knowledge and Connections as rail rows
+under Assets (the poster's words; the record still says boards, jobs and
+repo). Settings gave up its slot and moved to a gear beside the finder —
 exactly the trade Coffer made to pay for Horizon, and for the same reason: it
 is opened a few times a year and was holding a sixth of a bar a phone can only
 just carry six of. A seventh tab was the other option and it is the one this
@@ -1015,7 +1017,8 @@ question is prose, and prose is what a reader types.
 Projects never became a tab of its own. Coffer's rule applies here too: new
 work becomes a page inside an existing section rather than another slot on a
 bar a phone cannot hold. (The tab list is above, under *Mashghal's shape* —
-Home · Boards · Waiting · The week · Calendar · Jobs · Repo, with the gear.)
+Home · Projects · Workflows · Waiting · Assets · Schedule · The week, with
+Equipment, Knowledge and Connections as rail rows and Settings on the gear.)
 Under every screen is the **switch bar**, pinned to the bottom, saying where
 you are, since when, and the note you left. Boards lists procedures and runs;
 opening one shows the canvas over an editable list. Waiting is the only screen
@@ -1561,6 +1564,73 @@ done, or describe a step, in a way the rest of the app would not.
 broke the day Connections landed. It names the six ids it wants now, so the
 failure says which one is missing instead of only that the number moved — the
 same rule as naming a tab and naming a card, one level further in.
+
+### The poster's words, and the order it puts them in
+
+**SEVEN TABS AND THREE RAIL ROWS, NAMED THE WAY THE POSTER NAMES THEM.** Its
+sidebar reads Projects · Workflows · Assets · Equipment · Knowledge · Schedule
+· Connections, and every one of those already existed here under a word its
+owner had to learn: Jobs walked job → project → board, Boards held procedures
+and runs, the Repo held everything you own and open. The order is the
+poster's, and it is **one order for the rail and the bar**, so nothing sits in
+a different place depending on which screen you are looking at:
+
+```
+Home · Projects · Workflows · Waiting · Assets
+         (Equipment · Knowledge · Connections) · Schedule · The week
+```
+
+- **The record is untouched.** `state.boards` is still boards and every view
+  id is unchanged, because renaming a state key migrates nothing and risks
+  everything — the same trade already made when "mode" became "craft" on
+  every screen.
+- **`alias` keeps the old word searchable.** Somebody who learned "Repo" types
+  it and lands on Assets; "calendar" lands on Schedule; "new board" finds
+  "New procedure". What the screen SAYS is the current name — the rule the
+  finder already followed for "kit".
+- **Waiting and The week are not on the poster and are not dropped.** One is
+  the screen a phone really needs and the other holds the hours; hiding a
+  whole section to match a drawing would be the app deciding for you.
+- **Equipment, Knowledge and Connections are rows, not tabs.** They are three
+  of the six questions the one registry answers, so they open the Assets tab
+  on their own section. Written in `navSects()` rather than in `renderNav()`,
+  which belongs to the shared runtime and has to stay byte-identical across
+  four apps — the same reason `railWork()` fills the rail itself. They are
+  rail-only: the phone's bar was measured at six, carries seven, and ten is
+  the mistake this repo has already refused twice.
+- **Assets lands on Files.** With `repoTab` defaulting to Devices, the Assets
+  tab and the Equipment row were the same screen under two names. A section
+  row is current only when its own section is open, and Assets gives up its
+  mark while one of them is showing, or two rows light up for one screen.
+
+**EVERY WORD SOMEWHERE BEATS NOTHING AT ALL, in the finder's score.** It
+matched the whole query as one substring, so a two-word search only ever found
+a name carrying both words together in that order. The rename made it visible:
+"new board" scored nought against a command called "New procedure" whose key
+carries "board" as an alias. A phrase match still outranks a words-only match,
+so the order this file describes is unchanged (exact prefix, then word start,
+then buried) — and **all** the terms have to hit, or typing a second word
+would widen the search instead of narrowing it.
+
+**A third shape of the `data-act` blind spot: `setAttribute`.** The scan reads
+`data-act="literal"` and already misses an attribute built by concatenation;
+`navSects()` builds its rows with `b.setAttribute("data-act", "repo-sect")`,
+which is invisible to it in a third way. So `repo-sect` sits on the
+"unclickable" list beside `tab-jobs` and `tab-repo` while being clicked on
+every screen. `nav.js` is what actually proves those rows work: it reads the
+rail's words, asserts the three sections sit under Assets in the poster's
+order, clicks each one and checks it opens its own section and is **the only**
+row marked current, then measures the phone's bar at seven on one line.
+
+**What the rename did NOT do, deliberately: the noun "board" still stands.**
+The section is Workflows and what you make in it is a *procedure* or a *run* —
+the two words the app's model rests on, and the two its own sub-line has
+always used ("A procedure is written once. A run is one pass through it").
+"Board" survives in about twenty-five sentences where it means either the
+record or the canvas you draw it on, and those are two different things; the
+poster itself only uses "workflow" for the section and for the builder, never
+for a step. Sweeping the noun is a separate decision and belongs to its owner,
+not to a rename.
 
 ## What READING every screen found
 
