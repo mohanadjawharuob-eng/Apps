@@ -559,6 +559,16 @@ color-scheme: light;
   /* `--faint`, never `--receded`: this is the only line saying the chain
      goes further than the drawing, so it is text a reader has to read. */
   .pgcap { margin: 0 0 0.45rem; font-size: 0.78rem; line-height: 1.5; color: var(--faint); }
+  /* THE SITE PLAN. Ink on the sheet, no hue: a trench is not late or
+     healthy, and position is not a state. The subject is the heavier line —
+     the same "you are looking at this one" the provenance hub carries. */
+  .plbox { fill: color-mix(in srgb, var(--ink) 6%, transparent); stroke: var(--edge); stroke-width: 1.2; }
+  .plbox.plself { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .pldot { fill: var(--edge); }
+  .pldot.plself { fill: var(--ink); }
+  .pllab { fill: var(--faint); font-size: 10px; }
+  .plmask { fill: var(--page); }
+  .plrule { stroke: var(--edge); stroke-width: 1.2; }
   .pgn rect { fill: var(--sunken); stroke: var(--rule); stroke-width: 1; transition: var(--t); }
   .pgn[data-act]:hover rect, .pgn[data-act]:focus-visible rect { stroke: var(--brass); }
   .pgn[data-act] { cursor: pointer; }
@@ -6604,6 +6614,104 @@ function stateWord(b, n) {
     }
     return out;
   }
+  /* ---------------- where on earth ----------------
+
+     THE ONE FACT THE RECORD DID NOT HOLD, AND THE REASON THE EXTENT COULD NOT
+     BE DRAWN. The brief names a survey or site extent as a data-driven visual
+     beside the provenance chain, and provenance was buildable because
+     `fromIds` was already stated. A footprint was not: there was no
+     coordinate anywhere in the book, so anything drawn would have been
+     geometry the app invented — which is the fault every rule in this file is
+     written against. So the field comes first and the drawing comes off it.
+
+     `a.geo` is `{lat, lon}` for a point and `{lat, lon, lat2, lon2}` for an
+     extent, normalised to south-west and north-east corners on the way in.
+     Decimal degrees and nothing else: a parser that took 34°20'20"N would be
+     guessing about primes, hemispheres and which of three punctuation
+     conventions somebody typed, and this app refuses a plausible wrong answer
+     in favour of a visible failure. `geoParse` says what it wanted when it
+     will not take something. */
+  function geoParse(raw) {
+    var v = String(raw == null ? "" : raw).trim();
+    if (!v) return { geo: null };
+    var parts = v.split(/[,;\s]+/).filter(function (x) { return x !== ""; });
+    if (parts.length !== 2 && parts.length !== 4)
+      return { why: "A place is two numbers (north, east) or four for a box (two corners). Decimal degrees, like 34.3390, 35.7290." };
+    var n = [], i;
+    for (i = 0; i < parts.length; i++) {
+      if (!/^[+-]?\d+(\.\d+)?$/.test(parts[i]))
+        return { why: "“" + parts[i] + "” is not a decimal number. Degrees and minutes are not read here — write 34.3390, not 34°20′20″." };
+      n.push(parseFloat(parts[i]));
+    }
+    for (i = 0; i < n.length; i += 2) {
+      if (n[i] < -90 || n[i] > 90) return { why: "A latitude runs from −90 to 90. " + n[i] + " is not one." };
+      if (n[i + 1] < -180 || n[i + 1] > 180) return { why: "A longitude runs from −180 to 180. " + n[i + 1] + " is not one." };
+    }
+    if (n.length === 2) return { geo: { lat: n[0], lon: n[1] } };
+    /* Normalised to south-west then north-east, so nothing downstream has to
+       wonder which corner it was handed. Two identical corners is a POINT
+       typed as a box — the same fact either way, so it is taken rather than
+       refused. */
+    var s = Math.min(n[0], n[2]), w = Math.min(n[1], n[3]),
+        nn = Math.max(n[0], n[2]), e = Math.max(n[1], n[3]);
+    if (s === nn && w === e) return { geo: { lat: s, lon: w } };
+    return { geo: { lat: s, lon: w, lat2: nn, lon2: e } };
+  }
+  function geoOf(a) {
+    var g = a && a.geo;
+    if (!g || typeof g.lat !== "number" || typeof g.lon !== "number") return null;
+    return g;
+  }
+  function geoIsBox(g) { return !!g && typeof g.lat2 === "number" && typeof g.lon2 === "number"; }
+  // What was typed, given back exactly as it is stored — this is the string
+  // the copy button hands over, so it has to be the one a map will take.
+  function geoPlain(a) {
+    var g = geoOf(a); if (!g) return "";
+    /* `String`, not `toFixed`: this is the string the copy button hands to a
+       map and the string the dialog reopens with, so rounding it here would
+       hand out a coordinate nobody recorded — and pressing Save would write
+       the rounded one over the real one. */
+    return geoIsBox(g) ? [g.lat, g.lon, g.lat2, g.lon2].join(", ")
+                       : g.lat + ", " + g.lon;
+  }
+  // And the reading, with the hemispheres written out rather than left as a
+  // sign for the reader to decode.
+  function geoWords(a) {
+    var g = geoOf(a); if (!g) return "";
+    /* The hemispheres written out rather than left as a sign for the reader
+       to decode — and the figure itself unrounded, for the same reason
+       `geoPlain` is: four decimal places is eleven metres, which is coarser
+       than the figure somebody typed. */
+    function one(la, lo) {
+      return Math.abs(la) + "° " + (la < 0 ? "S" : "N") + ", " +
+             Math.abs(lo) + "° " + (lo < 0 ? "W" : "E");
+    }
+    return geoIsBox(g) ? one(g.lat, g.lon) + " to " + one(g.lat2, g.lon2) : one(g.lat, g.lon);
+  }
+  /* HOW BIG, AND THE FIGURE SAYS IT IS APPROXIMATE. A degree of latitude is
+     about 111,320 m and a degree of longitude that times the cosine of the
+     latitude — a spherical figure, right to well inside a percent at the
+     scale of a trench and wrong in the last digit by construction. Printed
+     bare it would be a plausible wrong number, so it is printed as "about",
+     and it is the only figure here that is derived rather than stated. */
+  var DEG_M = 111320;
+  function geoSpan(a) {
+    var g = geoOf(a);
+    if (!geoIsBox(g)) return null;
+    var mid = (g.lat + g.lat2) / 2;
+    return { ns: (g.lat2 - g.lat) * DEG_M,
+             ew: (g.lon2 - g.lon) * DEG_M * Math.cos(mid * Math.PI / 180) };
+  }
+  function metreWords(m) {
+    var x = Math.abs(m);
+    if (x < 1000) return Math.round(x) + " m";
+    return (Math.round(x / 100) / 10) + " km";
+  }
+  function geoSpanWords(a) {
+    var s = geoSpan(a);
+    return s ? "about " + metreWords(s.ew) + " east–west by " + metreWords(s.ns) + " north–south" : "";
+  }
+
   /* ---------------- containment, and topics ----------------
 
      THE ARCHAEOLOGICAL DATA MODEL, ANSWERED WITH ONE FIELD RATHER THAN FOUR
@@ -6930,6 +7038,13 @@ function stateWord(b, n) {
               return true;
             }), function (x) { return x.name; })),
           hint: "A trench is part of a site, a photograph is of a trench. This is where it IS, not what it was made from." },
+        /* BEHIND THE FOLD, because it is not one of the four things anybody
+           types when adding something — but it is validated on the way in
+           like every date in the app, and refused with a reason rather than
+           stored as a string shaped like a coordinate. */
+        { key: "geo", label: "Where on earth", type: "text", span: true, more: true,
+          value: a ? geoPlain(a) : "", placeholder: "34.3390, 35.7290",
+          hint: "Decimal degrees: north, east. Four numbers \u2014 two corners \u2014 make an extent instead of a point. Degrees and minutes are not read." },
         { key: "topics", label: "What it is about", type: "text", span: true, more: true,
           value: a ? assetTopics(a).join(", ") : "",
           placeholder: "harbour surveying, photogrammetry",
@@ -6947,6 +7062,8 @@ function stateWord(b, n) {
           return "\u201cLast used\u201d has to be a real day, written YYYY-MM-DD, or blank.";
         if (v.lastUsedOn.trim() > today())
           return "It cannot have been used in the future.";
+        var gp = geoParse(v.geo);
+        if (gp.why) return gp.why;
         return null;
       },
       onConfirm: function (v) {
@@ -6961,6 +7078,8 @@ function stateWord(b, n) {
           t.path = v.path.trim(); t.url = v.url.trim();
           t.where = v.where.trim(); t.onDate = v.onDate.trim();
           t.state = v.state; t.lastUsedOn = v.lastUsedOn.trim();
+          // Already validated above, so this cannot store a half-parsed one.
+          t.geo = geoParse(v.geo).geo;
           t.notes = v.notes.trim();
           if (mk) openAsset = t.id;
         });
@@ -7576,6 +7695,183 @@ function stateWord(b, n) {
       '<div class="says">' + esc(assetSays(a)) + "</div></div></button>";
   }
 
+  /* THE SITE PLAN — the brief's second data-driven visual, and the reason the
+     field above had to come first.
+
+     WHAT IT DELIBERATELY IS NOT: a map. A basemap is tiles off a network and
+     this app fetches nothing, so there is no aerial under this and there
+     never will be. What is left when you take the basemap away is not
+     nothing, though — it is the one thing a list of coordinates cannot say:
+     RELATIVE POSITION. A site with three trenches in it, each with a
+     coordinate, has a shape, and that shape is drawn here from stated
+     numbers with nothing invented. It is `atId` and `geo` composed, which is
+     why neither of them needed a new noun.
+
+     Four rules:
+
+     - **Two points or it is not drawn.** One coordinate has no geometry — a
+       lone dot in a frame is a picture of nothing, so an entry whose parts
+       have no coordinates gets the figures and no drawing.
+     - **It computes nothing but the projection.** Every position is `geoOf`
+       on an entry the containment relation already named; nothing is stored,
+       nothing is guessed, and an entry with no coordinate is LISTED as
+       unplaced rather than dropped, because a plan that silently omits half
+       a site is worse than one with an awkward line under it.
+     - **A plan without a scale is a picture**, so there is a scale bar in
+       metres and a north arrow. The projection is the same spherical
+       approximation `geoSpan` uses — right to well inside a percent across a
+       site, and stated as "about" wherever a figure is printed.
+     - **North is up and east is right**, which is the one convention a site
+       drawing may not get wrong. Longitude is scaled by cos(latitude) so a
+       square on the ground is a square on the sheet.
+
+     The frame is the subject's own extent when it has one; otherwise it is
+     the bounding box of everything placed, padded, so the drawing is never
+     tight against its own edge. */
+  function planPoints(a) {
+    var out = [], g = geoOf(a);
+    if (g) out.push({ a: a, g: g, self: true });
+    partsIn(a).forEach(function (x) {
+      var xg = geoOf(x);
+      if (xg) out.push({ a: x, g: xg, self: false });
+    });
+    return out;
+  }
+  function sitePlan(a) {
+    var pts = planPoints(a);
+    if (pts.length < 2) return "";
+    var W = 360, PAD = 26, LEGEND = 34;
+
+    // Everything in degrees first, then one projection to the sheet.
+    var lo = 1e9, la = 1e9, hi = -1e9, ha = -1e9;
+    pts.forEach(function (p) {
+      lo = Math.min(lo, p.g.lon, geoIsBox(p.g) ? p.g.lon2 : p.g.lon);
+      hi = Math.max(hi, p.g.lon, geoIsBox(p.g) ? p.g.lon2 : p.g.lon);
+      la = Math.min(la, p.g.lat, geoIsBox(p.g) ? p.g.lat2 : p.g.lat);
+      ha = Math.max(ha, p.g.lat, geoIsBox(p.g) ? p.g.lat2 : p.g.lat);
+    });
+    var midLat = (la + ha) / 2, kx = Math.cos(midLat * Math.PI / 180);
+    /* A single degree span of nought in either axis (a row of points on one
+       line) would divide by zero and put every mark on top of the others, so
+       the span has a floor — in METRES, so the floor means the same thing at
+       every latitude. */
+    var FLOOR = 20 / DEG_M;
+    var spanX = Math.max((hi - lo) * kx, FLOOR), spanY = Math.max(ha - la, FLOOR);
+    var inner = W - PAD * 2;
+    var scale = inner / Math.max(spanX, spanY);          // sheet units per degree-equivalent
+    var H = Math.round(spanY * scale) + PAD * 2 + LEGEND;
+    var cx0 = (lo + hi) / 2, cy0 = (la + ha) / 2;
+    var midY = (H - LEGEND) / 2;
+    function X(lon) { return W / 2 + (lon - cx0) * kx * scale; }
+    function Y(lat) { return midY - (lat - cy0) * scale; }   // north is UP
+
+    var g = "", unplaced = [], lab = [];
+    partsIn(a).forEach(function (x) { if (!geoOf(x)) unplaced.push(x.name); });
+
+    pts.forEach(function (p) {
+      /* The subject is not labelled: the page heading names it three inches
+         above, and the dashed frame is what says which mark is it. Printed
+         here too it was one of three names landing on the same line — and
+         the only one of the three that said nothing new. */
+      var nm = p.self ? "" : clip(p.a.name, 22);
+      if (geoIsBox(p.g)) {
+        var x1 = X(p.g.lon), x2 = X(p.g.lon2), y1 = Y(p.g.lat2), y2 = Y(p.g.lat);
+        g += '<rect class="plbox' + (p.self ? " plself" : "") + '" x="' + x1.toFixed(1) +
+          '" y="' + y1.toFixed(1) + '" width="' + Math.max(2, x2 - x1).toFixed(1) +
+          '" height="' + Math.max(2, y2 - y1).toFixed(1) + '"></rect>';
+        if (nm) lab.push({ x: (x1 + x2) / 2, y: y1 - 6, w: nm.length * 5.6, t: nm });
+      } else {
+        var px = X(p.g.lon), py = Y(p.g.lat);
+        g += '<circle class="pldot' + (p.self ? " plself" : "") + '" cx="' + px.toFixed(1) +
+          '" cy="' + py.toFixed(1) + '" r="' + (p.self ? 5 : 3.6) + '"></circle>';
+        if (nm) lab.push({ x: px, y: py - 10, w: nm.length * 5.6, t: nm });
+      }
+    });
+    /* A LABEL THAT WOULD LAND ON ANOTHER IS PUSHED DOWN, NOT DROPPED — the
+       sheet's `settleNode` rule in a smaller place. A sherd four metres from
+       its trench is a real pair of coordinates, and two names on top of each
+       other is a plan that reads as one illegible word. Only vertically:
+       sideways would move a label off the mark it belongs to.
+
+       IT MOVES A LABEL DOWN AND NEVER UP, WHICH IS WHAT MAKES IT TERMINATE.
+       The first version restarted the scan on every push (`j = -1`) and set
+       `L.y = K.y + 13` unconditionally — so a label could be moved UP onto an
+       earlier one, pushed back down onto a third, and round again for ever.
+       Five coordinates on one site FROZE THE PAGE: no error, no render, and
+       every Playwright click after it timed out at thirty seconds with
+       nothing intercepting anything, which is what that symptom actually
+       means. Sorted by y and only ever increasing, each placed label can
+       force at most one move past it; the guard is belt and braces. */
+    var marks = "";
+    lab.sort(function (p, q) { return p.y - q.y; });
+    lab.forEach(function (L, i) {
+      var moved = true, guard = 0;
+      while (moved && guard++ < 40) {
+        moved = false;
+        for (var j = 0; j < i; j++) {
+          var K = lab[j];
+          if (Math.abs(L.y - K.y) < 13 && Math.abs(L.x - K.x) < (L.w + K.w) / 2 &&
+              L.y <= K.y + 13) { L.y = K.y + 13; moved = true; }
+        }
+      }
+      /* A LABEL IS MASKED AGAINST WHAT IS BEHIND IT, which is what a real
+         drawing does and the only fix that holds in general: pushing a label
+         clear of another label does nothing about a label landing on a LINE,
+         and the orthophoto's north edge sits three metres under the site's,
+         so its name was written straight through the site's own frame. */
+      marks += '<rect class="plmask" x="' + (L.x - L.w / 2 - 3).toFixed(1) + '" y="' +
+        (L.y - 9).toFixed(1) + '" width="' + (L.w + 6).toFixed(1) + '" height="12" rx="3"></rect>' +
+        '<text class="pllab" x="' + L.x.toFixed(1) + '" y="' + L.y.toFixed(1) +
+        '" text-anchor="middle">' + esc(L.t) + "</text>";
+    });
+
+    /* THE SCALE BAR IS A ROUND NUMBER OF METRES, not whatever length happens
+       to fit — a bar reading "137 m" is a bar nobody can measure against. It
+       picks the largest 1·2·5 step that fits in a third of the sheet. */
+    var mPerUnit = DEG_M / scale;    // scale is units per DEGREE, not per metre
+    var want = inner / 3 * mPerUnit, step = 1;
+    while (step * 10 <= want) step *= 10;
+    var bar = step;
+    if (step * 5 <= want) bar = step * 5; else if (step * 2 <= want) bar = step * 2;
+    var barU = bar / mPerUnit;
+    var by = H - LEGEND + 18;
+    g += '<line class="plrule" x1="' + PAD + '" y1="' + by + '" x2="' + (PAD + barU).toFixed(1) +
+      '" y2="' + by + '"></line>' +
+      '<line class="plrule" x1="' + PAD + '" y1="' + (by - 4) + '" x2="' + PAD + '" y2="' + (by + 4) + '"></line>' +
+      '<line class="plrule" x1="' + (PAD + barU).toFixed(1) + '" y1="' + (by - 4) + '" x2="' +
+      (PAD + barU).toFixed(1) + '" y2="' + (by + 4) + '"></line>' +
+      '<text class="pllab" x="' + (PAD + barU + 8).toFixed(1) + '" y="' + (by + 4) + '">about ' +
+      esc(metreWords(bar)) + "</text>";
+    // North up, said with an arrow AND the letter, because an arrow alone is
+    // a convention and the letter is the fact.
+    g += '<line class="plrule" x1="' + (W - 16) + '" y1="' + (by + 5) + '" x2="' + (W - 16) +
+      '" y2="' + (by - 9) + '" marker-end="url(#plm)"></line>' +
+      '<text class="pllab" x="' + (W - 16) + '" y="' + (by + 16) + '" text-anchor="middle">N</text>';
+
+    var foot = unplaced.length
+      ? '<p class="pgcap">' + cap(numWord(unplaced.length)) +
+        (unplaced.length === 1 ? " thing in it has" : " things in it have") +
+        " no coordinate, so " + (unplaced.length === 1 ? "it is" : "they are") +
+        " not on the plan: " + esc(unplaced.slice(0, 4).join(", ")) +
+        (unplaced.length > 4 ? " and more" : "") + ".</p>"
+      : "";
+
+    return '<div class="pgraph" style="max-width:' + W + 'px">' +
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(planWords(a)) + '">' +
+      '<defs><marker id="plm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"' +
+      ' markerHeight="6" orient="auto-start-reverse">' +
+      '<path class="pghead" d="M0,1 L9,5 L0,9 z"></path></marker></defs>' +
+      g + marks + "</svg></div>" + foot;
+  }
+  // The plan's own sentence, for anybody who cannot see it — the same reason
+  // `provWords` exists.
+  function planWords(a) {
+    var pts = planPoints(a);
+    return "A plan of " + a.name + " and " + numWord(pts.length - (geoOf(a) ? 1 : 0)) +
+      " things in it, drawn from their stated coordinates. North is up." +
+      (geoSpan(a) ? " " + cap(geoSpanWords(a)) + "." : "");
+  }
+
   /* THE PROVENANCE GRAPH — the one data-driven visual the brief names that
      this app already holds the data for. (The other, a survey or site extent,
      it does NOT: there is no coordinate anywhere in the record, so drawing a
@@ -7739,6 +8035,8 @@ function stateWord(b, n) {
       (a.path && state.settings.companion ? launchLink(a.id, "Open it") : "") +
       (hasBody(a) && a.body ? '<button class="btn" data-act="snip-copy" data-id="' + a.id + '">Copy it</button>' : "") +
       (a.path ? '<button class="btn" data-act="asset-copy" data-id="' + a.id + '">Copy the path</button>' : "") +
+      (geoOf(a) ? '<button class="btn" data-act="asset-geo-copy" data-id="' + a.id +
+        '" title="Paste it into whatever map you use">Copy where it is</button>' : "") +
       (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
       '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
       '<button class="btn" data-act="cadence-add" data-id="' + a.id + '">Add upkeep</button>' +
@@ -7782,6 +8080,13 @@ function stateWord(b, n) {
        "Last used" says it twice. A table wants the value alone. */
     if (a.lastUsedOn && dayOk(a.lastUsedOn)) facts.push(["Last used", esc(fullDate(a.lastUsedOn))]);
     if (a.where) facts.push(["Where it is kept", esc(a.where)]);
+    /* WHERE ON EARTH, AND HOW BIG ARE TWO QUESTIONS, and only an extent can
+       answer the second — a point has no size, so the row is not printed
+       rather than reading nought. The figure says "about" because it is the
+       one derived number here (a spherical degree), and a figure that cannot
+       be exact may not be printed as though it were. */
+    if (geoOf(a)) facts.push(["Where on earth", esc(geoWords(a))]);
+    if (geoSpan(a)) facts.push(["How big", esc(geoSpanWords(a))]);
     if (partTrail(a).length) facts.push(["Part of", esc(partTrail(a).join(" › "))]);
     if (a.onDate) facts.push(["Dated", esc(fullDate(a.onDate))]);
     if (a.path) facts.push(["Path", '<span class="fbrk">' + esc(a.path) + "</span>"]);
@@ -7860,6 +8165,12 @@ function stateWord(b, n) {
           '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' +
           esc(partOf(a).id) + '">Look</button></div></div>';
       }
+      /* THE PLAN GOES UNDER THE ADDRESS, because it answers the same
+         question one level more precisely: "Trench 4 is in Anfeh harbour" is
+         the address, and where in it is the drawing. Below two points there
+         is no geometry to show and the facts table has already said the
+         coordinate, so nothing is drawn rather than a lone dot in a frame. */
+      left += sitePlan(a);
       if (inside.length) {
         left += '<div class="stack tight">' + inside.map(function (x) {
           var lk = assetLook(x);
@@ -10095,7 +10406,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v66 · 18 Sep 2026";
+  var BUILD = "v67 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -12986,6 +13297,22 @@ function dims(n) {
       } else { toast("This browser has no clipboard for pages."); }
     },
 
+    /* A COORDINATE IS COPY-ONLY, AND THE SCREEN SAYS WHY. Not a link to a
+       map: a basemap is tiles off a network, and this app fetches nothing —
+       so a "show it on a map" button would be a control that works at a desk
+       and does nothing on the site where the coordinate was taken, which is
+       exactly the fault `openHandle` exists to prevent. Copying it is what
+       the launcher-off path already does, for the same reason. */
+    "asset-geo-copy": function (id) {
+      var a = assetOf(id);
+      if (!a || !geoOf(a)) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(geoPlain(a)).then(
+          function () { toast("Copied \u2014 paste it into whatever map you use"); },
+          function () { toast("This browser would not let the page copy it."); });
+      } else { toast("This browser has no clipboard for pages."); }
+    },
+
     /* Provenance is stated, one source at a time, because it is the one fact
        about a derived file that cannot be reconstructed later. It refuses a
        cycle: A made from B made from A is not a history, and it would make
@@ -14222,9 +14549,13 @@ function dims(n) {
                     notes: "Scanned from the IFPO plates. Three epochs, area 1.",
                     path: "D:\\aub21\\area1\\aerials", url: "",
                     where: "", onDate: back(240), fromIds: [], archived: false });
+    /* An orthophoto HAS an extent — that is most of what makes it an
+       orthophoto rather than a photograph — so it carries one, and the plan
+       draws it as the frame the trench sits inside. */
     var aOrt = mk({ name: "Orthophoto, area 1", kind: "file",
                     notes: "Georeferenced against the 1970 sheet.",
                     path: "D:\\aub21\\area1\\ortho_area1.tif", url: "",
+                    geo: { lat: 34.33845, lon: 35.72825, lat2: 34.33918, lon2: 35.72945 },
                     where: "", onDate: back(40), fromIds: [aAer.id], archived: false });
     var aMap = mk({ name: "Area 1 building layer", kind: "dataset",
                     notes: "Digitised over the orthophoto.",
@@ -14262,21 +14593,41 @@ function dims(n) {
     s.vocab.assetKinds = { site: "Site", feature: "Feature",
                            artifact: "Artifact", survey: "Survey" };
 
+    /* AND THEY CARRY COORDINATES, which is what makes the site plan
+       something other than an empty state in the only book anybody is ever
+       shown. Anfeh, on the Lebanese coast: the site as an extent (about
+       120 m by 90 m), the quay face as a second extent inside it, and the
+       trench and the sherd as points — because a 2 x 3m trench drawn as a
+       box on a 120m plan is two pixels, and a point is the honest mark at
+       that scale. The sherd sits four metres from its trench, which is what
+       forced the labels to push rather than overlap. */
     var aSite = mk({ name: "Anfeh harbour, area 1", kind: "site", repo: "file",
                      notes: "Coastal, partly submerged. Permit through AUB.",
                      path: "", url: "", where: "", onDate: back(300),
+                     geo: { lat: 34.3384, lon: 35.7282, lat2: 34.33921, lon2: 35.7295 },
                      topics: ["harbour surveying"], fromIds: [], archived: false });
+    var aQy = mk({ name: "Quay face, north", kind: "feature", repo: "file",
+                   notes: "Ashlar, two courses standing. Surveyed with the total station.",
+                   path: "", url: "", where: "", onDate: back(130), atId: aSite.id,
+                   geo: { lat: 34.33905, lon: 35.7284, lat2: 34.3391, lon2: 35.7292 },
+                   topics: ["harbour surveying"], fromIds: [], archived: false });
     var aTr = mk({ name: "Trench 4", kind: "feature", repo: "file",
                    notes: "2 \u00d7 3m, cut into the quay bedding.",
                    path: "", url: "", where: "", onDate: back(120), atId: aSite.id,
+                   geo: { lat: 34.33878, lon: 35.72881 },
                    topics: ["harbour surveying"], fromIds: [], archived: false });
     var aSh = mk({ name: "Amphora sherd 4.12", kind: "artifact", repo: "file",
                    notes: "Rim, combed. Drawn and photographed.",
                    path: "", url: "", where: "crate 2", onDate: back(118), atId: aTr.id,
+                   geo: { lat: 34.33877, lon: 35.72886 },
                    topics: ["ceramics", "harbour surveying"], fromIds: [], archived: false });
     var aSv = mk({ name: "Bathymetric survey, 2026", kind: "survey", repo: "file",
                    notes: "Single-beam, 2m lines.",
                    path: "D:\\anfeh\\bathy2026", url: "", where: "", onDate: back(95),
+                   /* THE BRIEF'S OWN NOUN: a survey extent. Offshore of the
+                      site and overlapping it, which is what a bathymetric
+                      line plan actually covers. */
+                   geo: { lat: 34.33895, lon: 35.7276, lat2: 34.3396, lon2: 35.729 },
                    atId: aSite.id, topics: ["photogrammetry", "harbour surveying"],
                    fromIds: [], archived: false });
 
@@ -14401,7 +14752,7 @@ function dims(n) {
     aOrt.atId = aSite.id;
 
     s.assets = [aAer, aOrt, aMap, aRef, aArc, aLap, aPho, aHed, aBud, aDrv, aMail,
-                aSite, aTr, aSh, aSv, aFx, aPy, aGd, aAp, aMth, aRefDoc];
+                aSite, aQy, aTr, aSh, aSv, aFx, aPy, aGd, aAp, aMth, aRefDoc];
 
     /* Two of the people the boards already name, said properly — so the
        People page has one row with an address and a role and one with nothing

@@ -981,6 +981,120 @@ Seven rules hold the record:
   `showWhen` matches another field's value and this is settled before the
   dialog opens — which is exactly why the mode is chosen first.
 
+**THE EXTENT WAITED FOR A FIELD, AND THAT IS THE WHOLE ANSWER TO WHY
+PROVENANCE COULD BE DRAWN AND IT COULD NOT.** The round-3 brief names two
+data-driven visuals side by side; `fromIds` was already stated, so the chain
+was buildable, and there was **no coordinate anywhere in the book**, so a
+footprint would have been geometry the app invented. So `a.geo` came first:
+`{lat, lon}` for a point, `{lat, lon, lat2, lon2}` for an extent, normalised
+to south-west and north-east corners on the way in.
+
+- **Decimal degrees and nothing else.** A parser that took `34°20′20″N` would
+  be guessing about primes, hemispheres and three punctuation conventions —
+  so `geoParse` refuses and **says what it wanted**: *"34°20′20″N" is not a
+  decimal number. Degrees and minutes are not read here — write 34.3390.* A
+  latitude outside ±90 is refused by name, as is a longitude; one number is
+  refused with the shape it expected. Validated where it is typed, like every
+  date in the app.
+- **A COORDINATE IS NEVER ROUNDED ON ITS WAY BACK OUT.** `geoPlain` and
+  `geoWords` both printed `toFixed(4)`, which is about **eleven metres** —
+  coarser than the figure somebody typed. The copy button handed a map
+  34.3388 for a sherd recorded at 34.33877, and reopening the dialog and
+  pressing Save wrote the rounded one back over the real one. In the one
+  field where eleven metres is the difference between two trenches. Both
+  print the stored number.
+- **"How big" is derived and says so.** `geoSpan` is one spherical degree
+  (111,320 m, longitude times the cosine of the latitude) — right to well
+  inside a percent across a site and wrong in the last digit by
+  construction, so every figure built on it reads *"about 119 m east–west by
+  90 m north–south"*. It is the only derived number here; everything else is
+  stated. A point has no size, so the row is not printed rather than reading
+  nought.
+- **COPY-ONLY, and not a link to a map.** A basemap is tiles off a network
+  and this app fetches nothing, so a "show it on a map" button would work at
+  a desk and do nothing on the site where the coordinate was taken — exactly
+  the fault `openHandle()` exists to prevent, and the same reasoning as a
+  path with the launcher off. `asset-geo-copy` hands over the plain
+  coordinate for whatever map the reader uses.
+
+**AND THEN THE PLAN, WHICH IS WHAT IS LEFT WHEN YOU TAKE THE BASEMAP AWAY.**
+`sitePlan(a)` draws the subject's extent and everything filed inside it
+(`partsIn`) in their real relative positions. That is the one thing a column
+of coordinates cannot say, it needs no tiles, and it is `atId` and `geo`
+composed — which is why neither of them needed a new noun. Six rules:
+
+- **Two points or it is not drawn.** One coordinate has no geometry; a lone
+  dot in a frame is a picture of nothing, so the facts table says the
+  coordinate and nothing is drawn.
+- **North is up, east is right, and longitude is scaled by cos(latitude)** —
+  or a square on the ground is not a square on the sheet and every angle
+  measured off it is wrong by 17% at this latitude. There is a test that
+  sorts every mark by its stated latitude and fails if one further north is
+  drawn lower.
+- **A plan without a scale is a picture**, so there is a bar in metres and a
+  north arrow with the **letter** beside it, because an arrow alone is a
+  convention and the letter is the fact. The bar is the largest 1·2·5 step
+  that fits in a third of the sheet, so it is a length anybody can measure
+  against.
+- **An unplaced part is NAMED, not dropped.** A plan that silently omits half
+  a site is worse than one with an awkward line under it, and the line agrees
+  with itself at one ("One thing in it has no coordinate, so it is not on the
+  plan: …").
+- **The subject carries no label.** The page heading names it three inches
+  above and the dashed frame says which mark is it; printed here as well it
+  was one of three names landing on the same line, and the only one of the
+  three that said nothing new.
+- **A LABEL IS MASKED AGAINST WHAT IS BEHIND IT.** Pushing a label clear of
+  another label does nothing about a label landing on a LINE, and the
+  orthophoto's north edge sits three metres under the site's, so its name was
+  written straight through the site's own frame. A mask in `--page` behind
+  every label is what a real drawing does and the only fix that holds in
+  general.
+
+**A PUSH THAT CAN MOVE SOMETHING UP DOES NOT TERMINATE.** The label
+de-collision restarted its scan on every push (`j = -1`) and set
+`L.y = K.y + 13` unconditionally — so a label could be moved UP onto an
+earlier one, pushed back down onto a third, and round again for ever. **Five
+coordinates on one site froze the page.** And the symptom is worth
+remembering, because it looked like nothing of the kind: every Playwright
+click after it reported *"element is visible, enabled and stable … performing
+click action"* and then timed out at thirty seconds, with `elementFromPoint`
+confirming nothing was intercepting anything. That is what a spinning main
+thread looks like from outside the page, and it cost two speculative fixes
+to the harness before the app was suspected. Sorted by y and only ever
+increasing, each placed label can force at most one move past it.
+
+**And the de-collision is DRIVEN, not hoped for.** With the subject's label
+gone the sample's four marks sit fifteen pixels apart and never collide, so
+the loop would have been a path nobody drives — `geo.js` records an ashlar
+block a metre from the top of the quay face, which is a real thing to record,
+and asserts the cascade lands at exactly thirteen pixels with no pair
+overlapping.
+
+**Two ways a test can be wrong about geometry, both of which reported a fault
+that was not there.** It compared a BOX's label position against the box's
+stored `lat`, which is its SOUTH edge while the label is drawn above its
+north one — two different things. And it read `box[0]` for "the quay face",
+which became the orthophoto the moment the sample gained a second extent:
+*name a mark, never count one*, the same rule as naming a tab. It pairs marks
+with records by document order now, because the drawing emits them in
+`planPoints` order.
+
+**A scale bar can be round and absurd.** It read **"about 1 m" on a
+119-metre plan** — `scale` is sheet units per DEGREE, so metres per unit is
+`DEG_M / scale`, and the first version wrote `1 / (scale * DEG_M)`, out by
+the square of a degree in metres. The assertion that it was a round number
+passed the whole time, so the test now also measures the bar against the
+sheet it is drawn on.
+
+**The sample carries real coordinates**, because a feature with no
+representation there cannot be shown to anybody: Anfeh on the Lebanese coast
+as an extent about 120 m by 90 m, the orthophoto and the bathymetric survey
+as extents inside and offshore of it (a **survey extent** is the brief's own
+noun), and the trench and the sherd as points — a 2 × 3 m trench drawn as a
+box on a 120 m plan is two pixels, and a point is the honest mark at that
+scale.
+
 **PROVENANCE IS A SHAPE, AND TWO LISTS CANNOT SAY IT.** `provGraph(a)` draws
 what an entry was made from above it and what came of it below — the one
 data-driven visual the round-3 brief names that this app already holds the
