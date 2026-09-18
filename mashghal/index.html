@@ -1007,6 +1007,25 @@ color-scheme: light;
   /* The count rides the nav item, so "something is late" is visible from every
      screen rather than only from the one that says so. */
   .tabn { margin-left: auto; font-size: 0.76rem; color: var(--apricot); }
+  /* ON A PHONE THE COUNT MAY NOT ADD A LINE. The tab is an icon over a label
+     there, so "3 late" landed as a third line and made one tab taller than
+     the other six — the bar grew a row, which is exactly the chrome this
+     app measured its way out of. It is a figure on the icon instead: same
+     fact, no line, and still a word-free alarm anybody reads at a glance
+     (the screen it opens says "late" in as many words). */
+  @media (max-width: 760px) {
+    .tab { position: relative; }
+    .tabn {
+      position: absolute; top: 0.1rem; right: 50%; margin: 0;
+      transform: translateX(1.15rem);
+      font-size: 0.6rem; line-height: 1; font-family: var(--mono);
+      background: var(--apricot); color: var(--page);
+      border-radius: 99px; padding: 0.1rem 0.28rem;
+      /* The figure alone: the word "late" is what the wide rail has room for. */
+      font-size: 0; 
+    }
+    .tabn::after { content: attr(data-n); font-size: 0.6rem; }
+  }
   @media (max-width: 880px) { .railwork { display: none; } }
 
   /* ---------------- the finder ----------------
@@ -1901,7 +1920,8 @@ color-scheme: light;
     bench:  svgIcon('<path d="M3 8.2h14v2.2H3zM5 10.4v5.4M15 10.4v5.4M3 8.2l2-4h10l2 4"/>'),
     cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>'),
     // a project: a bounded body of work with a date on it
-    book:   svgIcon('<path d="M3.4 4.6a1.4 1.4 0 0 1 1.4-1.4h3.4A2 2 0 0 1 10 5v10.6a1.8 1.8 0 0 0-1.4-.8H3.4z"/><path d="M16.6 4.6a1.4 1.4 0 0 0-1.4-1.4h-3.4A2 2 0 0 0 10 5v10.6a1.8 1.8 0 0 1 1.4-.8h5.2z"/>'),
+    out:    svgIcon('<path d="M3.4 12.4v2.8a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-2.8"/><path d="M10 3v9.2"/><path d="M6.6 8.6 10 12l3.4-3.4"/>'),
+        book:   svgIcon('<path d="M3.4 4.6a1.4 1.4 0 0 1 1.4-1.4h3.4A2 2 0 0 1 10 5v10.6a1.8 1.8 0 0 0-1.4-.8H3.4z"/><path d="M16.6 4.6a1.4 1.4 0 0 0-1.4-1.4h-3.4A2 2 0 0 0 10 5v10.6a1.8 1.8 0 0 1 1.4-.8h5.2z"/>'),
     plug:   svgIcon('<path d="M7.6 2.8v3.4M12.4 2.8v3.4"/><path d="M5.4 6.2h9.2v2.4A4.6 4.6 0 0 1 10 13.2a4.6 4.6 0 0 1-4.6-4.6z"/><path d="M10 13.2v4"/>'),
         proj:   svgIcon('<path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M7 11.4h6"/>')
   };
@@ -2081,10 +2101,17 @@ color-scheme: light;
       { id: "home",    label: "Home",      ico: ICONS.home },
       { id: "jobs",    label: "Projects",  ico: ICONS.proj,  alias: "jobs employers clients" },
       { id: "boards",  label: "Workflows", ico: ICONS.boards, alias: "boards procedures runs" },
-      { id: "waiting", label: "Waiting",   ico: ICONS.waiting },
+      { id: "waiting", label: "Actions",   ico: ICONS.waiting, alias: "waiting late chases tasks due" },
       { id: "repo",    label: "Assets",    ico: ICONS.kit,   alias: "repo registry files things" },
       { id: "cal",     label: "Schedule",  ico: ICONS.cal,   alias: "calendar month dates" },
-      { id: "week",    label: "The week",  ico: ICONS.week }
+      /* OUTPUTS is the fifth box of the poster's Core Structure and the one
+         the app had nowhere for: results — what has actually left the
+         building. It was scattered — a filing step's `doneAt` showed only
+         on the project it belonged to, and the written report was a button on
+         the week. The week itself is now a page in here, because hours are
+         not a section of a workspace: they are one of the things the work
+         produces, and the report is built out of them. */
+      { id: "out",     label: "Outputs",   ico: ICONS.out,   alias: "week hours report filed results claimants standing" }
     ],
 
     blank: function () {
@@ -2219,12 +2246,12 @@ color-scheme: light;
       if (v === "home")     return renderHome();
       if (v === "boards")   return renderBoards();
       if (v === "waiting")  return renderWaiting();
-      if (v === "week")     return reportOn ? renderReport() : renderWeek();
+      if (v === "out")      return reportOn ? renderReport() : renderOut();
       if (v === "cal")      return renderCal();
       if (v === "jobs")     return jobMap ? renderJobMap(jobOf(jobMap.jobId) || { name: "?", id: "" })
                                    : openProj ? renderProj(projOf(openProj) || { id: "", name: "?" })
                                    : openJob ? renderJob(jobOf(openJob) || { name: "?", id: "" })
-                                   : renderJobs();
+                                   : renderProjectsTab();
       if (v === "repo")     return renderRepo();
       if (v === "vocab")    return openAsset ? assetPage(assetOf(openAsset) || { id: "", name: "?" })
                                    : openPerson ? (personOf(openPerson) ? personPage(personOf(openPerson))
@@ -2242,7 +2269,7 @@ color-scheme: light;
     // The Boards tab always lands on the list. Opening on whichever board you
     // last looked at means one tab shows a different screen depending on what
     // you did ten minutes ago, which is how nobody learns where anything is.
-    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "file"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
+    onTabChange: function () { openId = ""; weekOf = ""; reportOn = null; openMode = ""; openAsset = ""; openPerson = ""; kitTab = "things"; repoTab = "file"; outTab = "filed"; libTopic = ""; libKind = ""; openJob = ""; openProj = ""; projTab = "over"; projList = "projects"; jobMap = null; calMonth = ""; foldOpen = false; sel = ""; unmaximize(); },
 
     actions: {}
   };
@@ -2775,7 +2802,7 @@ color-scheme: light;
             (r.owed ? " of " + amountWords(r.owed, r.unit) : ", nothing owed") +
             (r.short ? ", short by " + amountWords(r.short, r.unit) : "");
           return [askSaid(said, "hours for a claimant",
-                          function () { findClose(); weekOf = wk; findTab("week"); })];
+                          function () { findClose(); weekOf = wk; outTab = "hours"; findTab("out"); })];
         }
         /* THE WEEK'S OWN FIGURE. Its COUNTED tile sums every span in the
            range, whatever unit its claimant is owed in; adding up
@@ -2788,12 +2815,12 @@ color-scheme: light;
         var rows = [askSaid(fmtMins(mins) + " " + span + " across " +
                             numWord(rowsIn.length) + (rowsIn.length === 1 ? " claimant" : " claimants"),
                             "hours " + span,
-                            function () { findClose(); weekOf = wk; findTab("week"); })];
+                            function () { findClose(); weekOf = wk; outTab = "hours"; findTab("out"); })];
         rowsIn.forEach(function (x) {
           rows.push({ g: cap(span), tile: askTile("t-bench", ICONS.bench), title: x.c.name,
                       sub: amountWords(x.got, x.unit) + (x.owed ? " of " + amountWords(x.owed, x.unit) : " · nothing owed"),
                       st: x.short ? '<span class="st watch"><i></i>short</span>' : "",
-                      run: function () { findClose(); weekOf = wk; findTab("week"); } });
+                      run: function () { findClose(); weekOf = wk; outTab = "hours"; findTab("out"); } });
         });
         return rows;
       }
@@ -2883,7 +2910,7 @@ color-scheme: light;
         f.slice(0, 8).forEach(function (x) {
           rows.push({ g: "Filed", tile: askTile("t-out", ICONS.file), title: x.label,
                       sub: x.board + " · " + agoWords(x.at),
-                      run: function () { findClose(); findTab("week"); } });
+                      run: function () { findClose(); outTab = "reports"; findTab("out"); } });
         });
         return rows;
       }
@@ -3068,7 +3095,7 @@ color-scheme: light;
     live(state.benches).forEach(function (bn) {
       out.push({ g: "Benches", key: benchLabel(bn.id), tile: findTile("t-bench", ICONS.bench),
                  title: benchLabel(bn.id), sub: "bench · a craft and who it is for", k: 6,
-                 run: function () { findTab("week"); } });
+                 run: function () { outTab = "hours"; findTab("out"); } });
     });
     people().forEach(function (p) {
       var tone = p.late ? "late" : p.waits.length ? "watch" : "idle";
@@ -3502,7 +3529,7 @@ color-scheme: light;
        beside the zoom controls, and is where you are looking when you want
        another step. */
     var tools = '<div class="tools">' +
-      '<button class="btn" data-act="board-back">All boards</button>' +
+      '<button class="btn" data-act="board-back">All workflows</button>' +
       /* Not the primary action on a board with nothing to run — it was the
          loudest button on a new board and all it could do was refuse. */
       (isRun ? "" : '<button class="btn' + (b.nodes.some(function (n) { return n.t === "step"; }) ? " primary" : "") +
@@ -3840,7 +3867,7 @@ function stateWord(b, n) {
       title: mk ? "Something to do" : "Edit it",
       confirmLabel: mk ? "Add" : "Save",
       wide: true,
-      message: mk ? "The one thing in this app you type rather than derive. Say what it belongs to and it shows up there as well as on Waiting \u2014 an errand that belongs to nothing belongs in Daybook."
+      message: mk ? "The one thing in this app you type rather than derive. Say what it belongs to and it shows up there as well as under Actions \u2014 an errand that belongs to nothing belongs in Daybook."
                   : "",
       fields: [
         { key: "label", label: "What", type: "text", span: true,
@@ -4085,7 +4112,7 @@ function stateWord(b, n) {
     var recentA = recentlyTouched({ assets: true }, 5);
     if (recentB.length || recentA.length) {
       h += '<div class="hgrid two">';
-      h += dcard("Continue working", { label: "All of them", act: "tab-boards" },
+      h += dcard("Continue working", { label: "Workflows", act: "tab-boards" },
         recentB.length ? recentB.map(function (r) {
           /* The mockup tags each of these rows with a short word \u2014 Maps,
              Research, 3D \u2014 and the app already has that list: the board's
@@ -4628,39 +4655,93 @@ function stateWord(b, n) {
     return h;
   }
 
-  function renderJobs() {
-    var js = jobs();
-    var h = '<div class="finding"><h1>' +
-      (js.length ? (js.length === 1 ? "One job." : cap(numWord(js.length)) + " jobs.") : "No jobs yet.") +
-      "</h1></div>" +
-      '<p class="saynote">A job is a bag: the benches you sit at for it, the boards you run for it, and what it hands you when you arrive.</p>' +
-      '<div class="tools" style="margin-bottom:1.2rem"><button class="btn primary" data-act="job-add">New job</button>' +
-      '<button class="btn" data-act="proj-add">New project</button>' +
-      '<button class="btn" data-act="tab-vocab">The workbench</button></div>';
+  /* ================= PROJECTS =================
 
-    // Projects belonging to no job are the brief's "life underneath that
-    // belongs to none of them" — a thesis, a visa, a paper of your own. They
-    // would be invisible under the jobs, so they come first.
+     "Project-based organization" is the first line of the poster's Key
+     Features, and this tab was landing on a list of EMPLOYERS. Both levels
+     are real and both are kept — a job is who the work is for and holds the
+     benches, the kit and the hours; a project is what you are actually doing,
+     and a thesis or a visa belongs to no employer at all. What changed is
+     which one you arrive at: the work first, who it is for behind a strip
+     press. Before this, the two projects with nobody paying for them were the
+     only ones on the landing screen, and everything else was two taps down
+     inside a bag named after a university.
+
+     One strip, two questions: what am I working on, and who is it for. */
+  var PROJ_LIST = [
+    { id: "projects", label: "Projects" },
+    { id: "jobs",     label: "Jobs" }
+  ];
+  var projList = "projects";   // view state, resets on a tab press
+
+  function renderProjectsTab() {
+    var ps = projects(), js = jobs();
+    var h = '<div class="finding"><h1>' +
+      (ps.length ? (ps.length === 1 ? "One project." : cap(numWord(ps.length)) + " projects.")
+                 : "No projects yet.") + "</h1></div>" +
+      '<p class="saynote">A project is what you are working on. A job is who it is for — and plenty of work belongs to no employer at all, which is why neither contains the other.</p>';
+
+    h += '<div class="subnav">' + PROJ_LIST.map(function (pg) {
+      var n = pg.id === "projects" ? ps.length : js.length;
+      return '<button class="btn' + (pg.id === projList ? " primary" : "") +
+        '" data-act="proj-list" data-id="' + pg.id + '">' + pg.label +
+        (n ? ' <span class="cnt">' + n + "</span>" : "") + "</button>";
+    }).join("") + "</div>";
+
+    return h + (projList === "jobs" ? jobsPage(js) : projectsPage(ps));
+  }
+
+  /* EVERY PROJECT, WORST FIRST, whoever it is for. The order is the one the
+     rest of the app uses for work — late, then past its date, then what is
+     still to file, then what is in hand — read off `projState()`, so this
+     list can never rank a project differently from the way its own page
+     describes it. */
+  function projectsPage(ps) {
+    var h = '<div class="tools" style="margin:0.2rem 0 0.9rem">' +
+      '<button class="btn primary" data-act="proj-add">New project</button>' +
+      '<button class="btn" data-act="board-new">New procedure</button></div>';
+    if (!ps.length) {
+      return h + '<p class="empty">Nothing yet. A project is a bounded piece of work with an end to it — the harbour brochure, the aerial survey, the thesis. Procedures and runs hang off it, and what it produces is filed under it.</p>';
+    }
+    var rank = { late: 0, "past its date": 1, "to file": 2, "in hand": 3, "set down": 4 };
+    var rows = ps.slice().sort(function (a, b) {
+      var ra = rank[projState(a).word], rb = rank[projState(b).word];
+      ra = ra === undefined ? 5 : ra; rb = rb === undefined ? 5 : rb;
+      if (ra !== rb) return ra - rb;
+      return String(a.name).localeCompare(String(b.name));
+    });
+    return h + '<div class="stack tight">' + rows.map(projRow).join("") + "</div>";
+  }
+
+  function jobsPage(js) {
+    var h = '<div class="tools" style="margin:0.2rem 0 0.9rem">' +
+      '<button class="btn primary" data-act="job-add">New job</button>' +
+      '<button class="btn" data-act="tab-vocab">The workbench</button></div>' +
+      '<p class="hint" style="margin:0 0 0.9rem">A job is a bag: the benches you sit at for it, the boards you run for it, the hours owed by it, and what it hands you when you arrive.</p>';
+
+    if (!js.length) {
+      h += '<p class="empty">No jobs yet. One is AUB Tripoli 21st Century, or a funder, or a university — anything that has its own work and its own things. Work that belongs to nobody needs no job at all.</p>';
+    } else {
+      h += '<div class="stack">' + js.map(function (j) {
+        var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
+        var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
+        return '<button type="button" class="panel rowbtn' + (late ? " late" : "") +
+          '" data-act="job-open" data-id="' + j.id + '">' +
+          '<span class="itile t-job">' + ICONS.jobs + "</span>" +
+          '<div class="grow"><div class="nm">' + esc(j.name) + "</div>" +
+          '<div class="says">' + esc(jobSays(j, bs.length, d.length)) + "</div></div>" +
+          (late ? '<div class="bigage"><b>' + late + "</b><span>late</span></div>" : "") + "</button>";
+      }).join("") + "</div>";
+    }
+
+    /* Work under no job is not an error state and is not hidden: it is the
+       brief's "life underneath that belongs to none of them", and on the Jobs
+       page it is the one thing the list above cannot show. */
     var loose = projects().filter(function (p) { return !p.jobId || !jobOf(p.jobId); });
     if (loose.length) {
       h += '<div class="sect">Yours, under no job</div><div class="stack tight">' +
         loose.map(projRow).join("") + "</div>";
     }
-
-    if (!js.length) {
-      return h + (loose.length ? "" :
-        '<p class="empty">Nothing yet. A job is AUB Tripoli 21st Century, or a visa, or a thesis — anything that has its own work and its own things.</p>');
-    }
-
-    h += (loose.length ? '<div class="sect">Jobs</div>' : "") + '<div class="stack">' + js.map(function (j) {
-      var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
-      var bs = jobBoards(j.id).filter(function (b) { return b.kind === "run" && !b.closedOn; });
-      return '<button type="button" class="panel rowbtn' + (late ? " late" : "") +
-        '" data-act="job-open" data-id="' + j.id + '">' +
-        '<div class="grow"><div class="nm">' + esc(j.name) + "</div>" +
-        '<div class="says">' + esc(jobSays(j, bs.length, d.length)) + "</div></div>" +
-        (late ? '<div class="bigage"><b>' + late + "</b><span>late</span></div>" : "") + "</button>";
-    }).join("") + "</div>";
     return h;
   }
 
@@ -4962,7 +5043,11 @@ function stateWord(b, n) {
     h += '<div class="card"><h3>Your book</h3>' +
       /* A count of one is a real book on its first week, so every one of
          these picks its own word. */
+      /* Projects lead, because they are what the app is organised around and
+         what a reader would count first; the book summary was the one place
+         that still described this app as procedures and hours. */
       '<p class="card-sub">' + [
+        projects().length + (projects().length === 1 ? " project" : " projects"),
         tpls + (tpls === 1 ? " procedure" : " procedures"),
         runs + (runs === 1 ? " run" : " runs"),
         live(state.claimants).length + (live(state.claimants).length === 1 ? " claimant" : " claimants"),
@@ -5218,6 +5303,95 @@ function stateWord(b, n) {
                  : d1 + " " + m1 + " \u2013 " + z.getDate() + " " + m2) + yr;
   }
 
+  /* ================= OUTPUTS =================
+
+     The fifth box of the poster's Core Structure: *Results — maps, models,
+     reports*. Everything under it already existed and none of it had a place
+     of its own. A filing step that is done is the only thing in the book that
+     says a piece of work LEFT THE BUILDING, and it could only be seen from
+     inside the project it belonged to; the written report was a button on the
+     week; and the week was a tab of its own, which said that hours are a
+     section of the workspace rather than one of the things the work produces.
+
+     Three pages, and each is a different answer to "what came out of this":
+     what was FILED, what was WRITTEN, and the HOURS the writing is made of.
+     Nothing here computes anything: `filings()` is the one walk (the project
+     page's `projOutputs()` is the same function unranged) and the report is
+     `buildReport()`, which reads the screens' own figures. */
+  var OUT_PAGES = [
+    { id: "filed",   label: "Filed",   one: "filing" },
+    { id: "reports", label: "Reports", one: "report" },
+    { id: "hours",   label: "Hours",   one: "week" }
+  ];
+  var outTab = "filed";   // view state, never saved, resets on a tab press
+
+  function renderOut() {
+    var all = filings(state.boards);
+    /* THE HEADLINE BELONGS TO THE PAGE, NOT THE SECTION. Written once for the
+       whole tab it read "Nothing has left the building yet." above the Hours
+       page showing sixteen hours of real work — a figure of nought over a
+       screen contradicting it, which is the fault this file already records
+       from Home's deadline tile. Each page states its own finding. */
+    var head = outTab === "hours" ? "Where the hours went."
+             : outTab === "reports" ? "Write the period out."
+             : all.length ? (all.length === 1 ? "One thing filed." : cap(numWord(all.length)) + " things filed.")
+             : "Nothing has left the building yet.";
+    var h = '<div class="finding"><h1>' + esc(head) + "</h1></div>" +
+      '<p class="saynote">What the work produced: what you archived, what you wrote out, and the hours underneath both. Every figure here is the one the screen it came from shows.</p>';
+
+    h += '<div class="subnav">' + OUT_PAGES.map(function (pg) {
+      var n = pg.id === "filed" ? all.length : 0;
+      return '<button class="btn' + (pg.id === outTab ? " primary" : "") +
+        '" data-act="out-page" data-id="' + pg.id + '">' + pg.label +
+        (n ? ' <span class="cnt">' + n + "</span>" : "") + "</button>";
+    }).join("") + "</div>";
+
+    if (outTab === "hours")   return h + renderWeek();
+    if (outTab === "reports") return h + outReports();
+    return h + outFiled(all);
+  }
+
+  /* WHAT WAS FILED, newest first, and it says which board and which project
+     it came off — a filing on its own is a name with no home. The path is
+     printed where there is one, because the whole point of a `file` step is
+     that the thing went somewhere. */
+  function outFiled(all) {
+    if (!all.length) {
+      return '<p class="empty">Nothing filed yet. A run cannot close while a filing step is undone, so what lands here is exactly the work you finished AND put away — which is the third of the three things that get forgotten.</p>';
+    }
+    return '<div class="stack tight">' + all.map(function (o) {
+      var b = byId(state.boards, o.boardId);
+      var pj = b && b.projectId && projOf(b.projectId) ? projName(b.projectId) : "";
+      return '<div class="panel calm"><span class="itile sm t-out">' + ICONS.file + "</span>" +
+        '<div class="grow"><div class="nm sm">' + esc(o.label) + "</div>" +
+        '<div class="says">' + esc(o.board + (pj ? " · " + pj : "") +
+          " · filed " + agoWords(o.at) + (o.path ? " · " + o.path : "")) + "</div></div>" +
+        (b ? '<div class="acts"><button class="btn quiet" data-act="board-open" data-id="' + b.id + '">Open it</button></div>' : "") +
+        "</div>";
+    }).join("") + "</div>";
+  }
+
+  /* THE REPORT IS BUILT, NEVER STORED. Nothing is kept here between visits:
+     a saved report would be a second copy of figures the record already
+     holds, and the day it disagreed with the app the older one would be the
+     one somebody had already sent. So this page is the builder and what it
+     says about itself. */
+  function outReports() {
+    var h = '<div class="tools" style="margin:0.2rem 0 0.9rem">' +
+      '<button class="btn primary" data-act="report-new">Build a report</button></div>';
+    h += '<p class="hint" style="margin:0 0 0.9rem">Any range, any claimant or all of them. It writes the whole period out as prose — the projects and where each stands, the hours by week, who is waiting on what, and what was filed — for a meeting, an email, an accountant or a visa office. Copy it or save it as text; it is never edited here.</p>';
+    h += '<p class="hint" style="margin:0 0 0.9rem">Nothing is kept between visits. Every figure in it comes from the same function the screens use, so a report built twice from the same range says the same thing, and a stored copy could only ever go stale.</p>';
+    var wk = weekStart(today());
+    h += '<div class="sect">What it would cover today</div>';
+    h += '<div class="tiles">' +
+      tile("Filed", String(filings(state.boards).length), "since the book began") +
+      tile("Projects", String(projects().length), "each with where it stands") +
+      tile("This week", fmtMins(state.spans.reduce(function (t, sp) {
+        return t + minsIn(sp, wk, addDays(wk, 6)); }, 0)), "logged so far") +
+      "</div>";
+    return h;
+  }
+
   function renderWeek() {
     var from = currentWeek(), to = addDays(from, 6);
     var isNow = from === weekStart(today());
@@ -5225,13 +5399,19 @@ function stateWord(b, n) {
     var total = state.spans.reduce(function (t, sp) { return t + minsIn(sp, from, to); }, 0);
     var susp = suspenseMins(from, to);
 
-    var h = pageHead("The week",
-      esc(weekWords(from, to) + (isNow ? " \u2014 this week" : "")),
+    /* The week is a page of Outputs now, which already carries the section
+       heading, so this head names the RANGE rather than repeating the
+       section's name — the same rule that stopped the report page
+       repeating the report's own first line. */
+    var h = pageHead(weekWords(from, to) + (isNow ? " — this week" : ""),
+      "Summed from the stretches you logged, and nothing else: an open stretch counts nowhere and time at no bench is shown rather than shared out.",
       '<div class="tools">' +
       '<button class="btn" data-act="week-prev">‹ earlier</button>' +
       (isNow ? "" : '<button class="btn" data-act="week-now">this week</button>') +
       '<button class="btn" data-act="week-next" ' + (isNow ? "disabled" : "") + '>later ›</button>' +
-      '<button class="btn" data-act="report-new">Report</button>' +
+      /* The "Report" button that was here is gone: Reports is the page
+         directly above this one on the same strip, and two controls a
+         thumb-width apart doing the same thing is a choice that is not one. */
       '<button class="btn" data-act="span-add">Add time</button></div>');
 
     h += '<div class="tiles">' +
@@ -5732,7 +5912,7 @@ function stateWord(b, n) {
        what it covers. */
     var h = pageHead("Report", "Written out as prose, for a meeting, an email or a funder. It is copied or saved, never edited here.",
       '<div class="tools">' +
-      '<button class="btn" data-act="report-back">Back to the week</button>' +
+      '<button class="btn" data-act="report-back">Back to Outputs</button>' +
       '<button class="btn" data-act="report-copy">Copy</button>' +
       '<button class="btn" data-act="report-save">Save as text</button>' +
       '<button class="btn" data-act="report-new">Change the range</button></div>');
@@ -5763,7 +5943,7 @@ function stateWord(b, n) {
       },
       onConfirm: function (v) {
         reportOn = { claimantId: v.claimantId, from: v.from.trim(), to: v.to.trim() };
-        view = "week";
+        view = "out";
         render();
       }
     });
@@ -6731,7 +6911,7 @@ function stateWord(b, n) {
     var total = live(state.assets).length;
 
     var h = '<div class="finding"><h1>' +
-      (total ? (total === 1 ? "One thing." : cap(numWord(total)) + " things.") : "Nothing in the repo yet.") +
+      (total ? (total === 1 ? "One thing." : cap(numWord(total)) + " things.") : "Nothing under Assets yet.") +
       "</h1></div>" +
       '<p class="saynote">Everything you own and everything you open, in one place \u2014 and a tap on a row opens it. The same entries carry their upkeep and what they were made from on the workbench.</p>';
 
@@ -7239,7 +7419,7 @@ function stateWord(b, n) {
 
   function kitUpkeepHtml() {
     var h = '<div class="card">' +
-      '<p class="hint" style="margin:0 0 0.5rem">Every so often since it was last done. It shows up on Waiting, filtered by where you have to be to do it.</p>' +
+      '<p class="hint" style="margin:0 0 0.5rem">Every so often since it was last done. It shows up under Actions, filtered by where you have to be to do it.</p>' +
       '<div class="tools" style="margin-bottom:0.5rem"><button class="btn" data-act="cadence-add">Add upkeep</button></div>' +
       (live(state.cadences).length ? live(state.cadences).map(function (cd) {
         var st = cadenceState(cd), p = protects(cd);
@@ -8265,7 +8445,14 @@ function stateWord(b, n) {
     var hrs = Math.round(mins / 60);
     if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
     var days = Math.round(hrs / 24);
-    return days + (days === 1 ? " day ago" : " days ago");
+    /* PAST ABOUT A MONTH, A COUNT OF DAYS STOPS BEING AN ANSWER. Outputs read
+       "filed 120 days ago" for something archived in May: nobody holds four
+       months as a number of days, and the date is the fact you would use.
+       Under that, elapsed time is what you want ("6 days ago" places a thing
+       in this week without arithmetic), so both readings are kept and the
+       switch is where one stops being useful. */
+    if (days <= 30) return days + (days === 1 ? " day ago" : " days ago");
+    return "on " + fullDate(iso(new Date(stamp)));
   }
 
   function bkRestore(at) {
@@ -8678,7 +8865,11 @@ function stateWord(b, n) {
         var day = stampDay(n.doneAt);
         if (from && day < from) return;
         if (to && day > to) return;
-        out.push({ label: n.label, board: b.name, at: n.doneAt, path: n.path || "" });
+        /* The id as well as the name: Outputs offers a way into the board a
+           filing came off, and looking that up BY NAME would open the wrong
+           one the first time two boards were called the same thing — which
+           is exactly what a run and the procedure it came from often are. */
+        out.push({ label: n.label, board: b.name, boardId: b.id, at: n.doneAt, path: n.path || "" });
       });
     });
     return out.sort(function (a, b) { return a.at < b.at ? 1 : -1; });
@@ -9107,7 +9298,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v61 · 18 Sep 2026";
+  var BUILD = "v62 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -9206,7 +9397,10 @@ function stateWord(b, n) {
       if (lateAll) {
         var sp = document.createElement("span");
         sp.className = "tabn";
+        /* The word is dropped under 760px by CSS, not here, so one render
+           serves both and the rail keeps "3 late" in words. */
         sp.textContent = lateAll + " late";
+        sp.setAttribute("data-n", lateAll);
         tab.appendChild(sp);
       }
     }
@@ -10198,7 +10392,10 @@ function dims(n) {
     if (st === "done") return n.doneAt ? "Done " + niceDate(n.doneAt) : "Done";
     if (st === "over") {
       var past = overdueBy(n);
-      return (who ? "With " + who + " " + numWord(d) + " days. " : numWord(d) + " days. ") +
+      /* "With N. Haddad and L. Mroueh six days." ran the names straight into
+         the count with nothing between them, which reads as a sentence that
+         lost a word. The names and the wait are two facts. */
+      return (who ? "With " + who + ", " + numWord(d) + " days. " : numWord(d) + " days. ") +
         "You meant to chase after " + num(n.chaseDays) + ".";
     }
     if (st === "waiting") {
@@ -11892,7 +12089,7 @@ function dims(n) {
     },
     "cadence-del": function (id) {
       var cd = byId(state.cadences, id); if (!cd) return;
-      confirmAction({ title: "Remove " + cd.label + "?", message: "It stops appearing on Waiting." }, function () {
+      confirmAction({ title: "Remove " + cd.label + "?", message: "It stops appearing under Actions." }, function () {
         go(function () { state.forgotten[id] = cd.label; cd.archived = true; });
       });
     },
@@ -11902,6 +12099,9 @@ function dims(n) {
     /* A rail row opens the Assets tab on its own section. `view` is set here
        as well as `repoTab`, because these rows fire from every screen. */
     "repo-sect":  function (id) { view = "repo"; repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
+
+    "out-page":   function (id) { outTab = id; reportOn = null; render(); },
+    "proj-list":  function (id) { projList = id; openJob = ""; openProj = ""; jobMap = null; render(); },
 
     "repo-page":  function (id) { repoTab = id; libTopic = ""; libKind = ""; openAsset = ""; render(); },
     /* Reached from the Library's own strip AND from a topic pill on a thing's
@@ -12175,7 +12375,11 @@ function dims(n) {
     },
     /* ---- jobs ---- */
     "job-open": function (id) { jobMap = null; openJob = id; view = "jobs"; render(); },
-    "job-back": function () { jobMap = null; openJob = ""; render(); },
+    /* A job page's way out says "All jobs", so it has to LAND on the jobs
+       list. Reached from Home or the finder, `projList` is still "projects"
+       and the button dropped you on a screen that does not contain the thing
+       you just left. */
+    "job-back": function () { jobMap = null; openJob = ""; projList = "jobs"; render(); },
     /* Rebuilt from state on every press rather than kept: the sheet is
        derived, so a stale copy is the one thing it must never be. */
     "job-map": function (id) {
@@ -13044,6 +13248,24 @@ function dims(n) {
       fromBoardId: "", nodes: [y1, y2, y3], edges: [], startedOn: back(64), closedOn: "", archived: false });
     spring.edges = [edge(y1, y2, "flow"), edge(y2, y3, "flow")];
 
+    /* --- ONE RUN THAT WENT ALL THE WAY: printed, filed, closed ---
+       Without it the example has nothing under Outputs, nothing under a
+       project's "What it has produced" and an empty FILED section in the
+       written report — three screens showing their empty state in the one
+       book anybody is ever shown. The rule this repo already states: if a
+       feature has no representation in the sample, nobody can be shown it.
+       It is also the honest pair to the run above, which is printed and
+       never filed: these two together are the archive lock's whole point. */
+    var w1 = step("Design it", "do", { doneAt: back(150), enteredAt: back(160) });
+    var w2 = step("Approved by the dean", "send", { doneAt: back(138), enteredAt: back(148), chaseDays: 7 });
+    var w3 = step("Print run", "do", { doneAt: back(126), enteredAt: back(134) });
+    var w4 = step("Archive the files", "file",
+      { doneAt: back(120), enteredAt: back(125), path: "D:\\balamand\\2025\\autumn-programme" });
+    var autumn = mk({ kind: "run", name: "Autumn programme 2025", kindId: kWork.id, benchId: bDes.id,
+      fromBoardId: "", nodes: [w1, w2, w3, w4], edges: [],
+      startedOn: back(160), closedOn: back(119), archived: false });
+    autumn.edges = [edge(w1, w2, "flow"), edge(w2, w3, "flow"), edge(w3, w4, "flow")];
+
     /* --- the lecture, as a procedure --- */
     var k2 = thing("Supervisor", "person");
     var l1 = step("Pull the last lecture", "do", {});
@@ -13321,10 +13543,11 @@ function dims(n) {
 
     broch.projectId = prHarb.id;
     spring.projectId = prPrint.id;
+    autumn.projectId = prPrint.id;
     lect.projectId = prTeach.id;
     visa.projectId = prCyp.id;
 
-    s.boards = [broch, gis, spring, soton, lect, visa];
+    s.boards = [broch, gis, spring, autumn, soton, lect, visa];
     s.boards.forEach(autoLayout);
     return s;
   }

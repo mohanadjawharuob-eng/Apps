@@ -744,8 +744,8 @@ somewhere — and the app holds the wake. Four nouns and nothing else:
 
 ## Mashghal's shape
 
-**Seven tabs, and a gear: Home · Projects · Workflows · Waiting · Assets ·
-Schedule · The week**, with Equipment, Knowledge and Connections as rail rows
+**Seven tabs, and a gear: Home · Projects · Workflows · Actions · Assets ·
+Schedule · Outputs**, with Equipment, Knowledge and Connections as rail rows
 under Assets (the poster's words; the record still says boards, jobs and
 repo). Settings gave up its slot and moved to a gear beside the finder —
 exactly the trade Coffer made to pay for Horizon, and for the same reason: it
@@ -1017,7 +1017,7 @@ question is prose, and prose is what a reader types.
 Projects never became a tab of its own. Coffer's rule applies here too: new
 work becomes a page inside an existing section rather than another slot on a
 bar a phone cannot hold. (The tab list is above, under *Mashghal's shape* —
-Home · Projects · Workflows · Waiting · Assets · Schedule · The week, with
+Home · Projects · Workflows · Actions · Assets · Schedule · Outputs, with
 Equipment, Knowledge and Connections as rail rows and Settings on the gear.)
 Under every screen is the **switch bar**, pinned to the bottom, saying where
 you are, since when, and the note you left. Boards lists procedures and runs;
@@ -1576,8 +1576,8 @@ poster's, and it is **one order for the rail and the bar**, so nothing sits in
 a different place depending on which screen you are looking at:
 
 ```
-Home · Projects · Workflows · Waiting · Assets
-         (Equipment · Knowledge · Connections) · Schedule · The week
+Home · Projects · Workflows · Actions · Assets
+         (Equipment · Knowledge · Connections) · Schedule · Outputs
 ```
 
 - **The record is untouched.** `state.boards` is still boards and every view
@@ -1631,6 +1631,77 @@ record or the canvas you draw it on, and those are two different things; the
 poster itself only uses "workflow" for the section and for the builder, never
 for a step. Sweeping the noun is a separate decision and belongs to its owner,
 not to a rename.
+
+### The Core Structure, and the section that was missing
+
+The poster's second panel names five things, and the app is those five now:
+**Projects** (why) · **Workflows** (how) · **Assets** (what) · **Actions**
+(what happens next) · **Outputs** (results). Nothing was dropped to get there;
+what changed is where each one lives.
+
+**OUTPUTS IS THE ONE THE APP HAD NOWHERE FOR.** A filing step that is done is
+the only thing in the book that says a piece of work LEFT THE BUILDING, and it
+could be seen only from inside the project it belonged to; the written report
+was a button on the week; and the week was a tab of its own, which said that
+hours are a section of the workspace rather than one of the things the work
+produces. Three pages, three answers to "what came out of this": what was
+**Filed**, what was **Written**, and the **Hours** both rest on. It computes
+nothing — `filings()` is the one walk (a project's `projOutputs()` is the same
+function unranged) and the report is `buildReport()`, which reads the screens'
+own figures.
+
+Two rules it needed immediately:
+
+- **The headline belongs to the page, not the section.** Written once for the
+  whole tab it read "Nothing has left the building yet." above the Hours page
+  showing sixteen hours of real work — a nought over a screen contradicting
+  it, which is Home's deadline tile all over again. Each page states its own
+  finding.
+- **A second caller finds the fragile lookup.** Outputs offers a way into the
+  board a filing came off, and `filings()` returned the board's NAME only —
+  so the row looked it up by name and would have opened the wrong board the
+  first time two were called the same thing, which a run and the procedure it
+  came from very often are. It carries `boardId` now.
+
+**THE PROJECTS TAB LANDS ON PROJECTS.** "Project-based organization" is the
+first line of the poster's Key Features and the tab was landing on a list of
+employers: the two projects nobody was paying for were the only ones on the
+landing screen, and everything else was two taps down inside a bag named after
+a university. Both levels are kept and neither contains the other — a job holds
+the benches, the kit and the hours; a project is the work, and a thesis or a
+visa belongs to no employer at all. The strip is **Projects · Jobs**, the
+project list is ordered worst-first off `projState()` so it can never rank a
+project differently from the way its own page describes it, and work under no
+job keeps its heading on the Jobs page, where it is the one thing the list
+above cannot show.
+
+**A WAY OUT HAS TO LAND WHERE ITS LABEL SAYS.** A job page's button reads "All
+jobs"; reached from Home or the finder, `projList` was still "projects" and it
+dropped you on a screen that did not contain the thing you had just left.
+
+**THE SAMPLE HAD NOTHING FILED**, so Outputs, a project's "What it has
+produced" and the report's FILED section all showed their empty state in the
+only book anybody is ever shown. It seeds a run that went all the way now —
+designed, approved, printed, archived, closed — which is also the honest pair
+to the run that is printed and never filed: the two of them together are the
+archive lock's whole point.
+
+**PAST ABOUT A MONTH, A COUNT OF DAYS STOPS BEING AN ANSWER.** Outputs read
+"filed 120 days ago" for something archived in May. Nobody holds four months
+as a number of days, and the date is the fact you would actually use; under a
+month, elapsed time still places a thing in this week without arithmetic, so
+`agoWords()` keeps both readings and switches where one stops being useful.
+
+**ON A PHONE A COUNT MAY NOT ADD A LINE.** The tab is an icon over a label
+there, so Actions' "3 late" landed as a third line and made one tab taller
+than the other six — the bar grew a row, which is exactly the chrome this app
+measured its way out of. It is a figure on the icon instead (105px of chrome,
+down from 122), and the word stays on the wide rail where there is room for
+it. Measured: seven tabs, all 48px, one row.
+
+**And the two sentences that ran together.** `stepMeta` printed "With N.
+Haddad and L. Mroueh six days." — the names ran straight into the count with
+nothing between them, which reads as a sentence that lost a word.
 
 ## What READING every screen found
 
