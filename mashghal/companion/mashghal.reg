@@ -1,0 +1,19 @@
+Windows Registry Editor Version 5.00
+
+; Registers mashghal:// so a link in the app can open a bench on this machine.
+; Edit the two paths below if you put mashghal.ps1 somewhere else.
+; Double-click to install; Windows will ask you to confirm.
+
+[HKEY_CURRENT_USER\Software\Classes\mashghal]
+@="URL:Mashghal"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\mashghal\DefaultIcon]
+@="powershell.exe,1"
+
+[HKEY_CURRENT_USER\Software\Classes\mashghal\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\mashghal\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\mashghal\shell\open\command]
+@="powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\Mashghal\\mashghal.ps1\" -Url \"%1\""

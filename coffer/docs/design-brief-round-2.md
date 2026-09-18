@@ -1,7 +1,8 @@
 # Coffer — round two: the three screens you have not designed
 
 Paste everything below the rule into Claude Design, along with the round-one
-bundle (`Coffer B - Press.dc.html`) so it has the system to work from.
+bundle (`Coffer B - Press.dc.html`, the design tool's own file and never
+committed here) so it has the system to work from.
 
 ---
 

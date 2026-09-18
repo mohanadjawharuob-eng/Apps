@@ -277,6 +277,9 @@
   .field.wide { grid-column: span 2; }
   @media (max-width: 620px) { .field.wide { grid-column: span 1; } }
 
+  /* A long option clipped mid-glyph ("belongs tc") rather than trailing off.
+     The whole text is still there once the select is opened. */
+  select { text-overflow: ellipsis; }
   input, select, textarea {
     font: inherit; font-size: 0.875rem; width: 100%;
     padding: 0.48rem 0.6rem; border-radius: 7px;
@@ -381,6 +384,13 @@
   .modal-head h3 { font-size: 1.1rem; }
   .modal-head p { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--dim); line-height: 1.5; }
   .modal-body { padding: 0.5rem 1.25rem 0.3rem; }
+  /* A refused form says so here, beside the button that refused it. It used to
+     go to a toast at the foot of the page, in the same channel as every
+     routine success. */
+  .modal-bad {
+    margin: 0; padding: 0.55rem 1.25rem 0; color: var(--loss);
+    font-size: 0.86rem; line-height: 1.45;
+  }
   .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.25rem 1.15rem; flex-wrap: wrap; }
 
   /* ---- toast ---- */
@@ -535,6 +545,36 @@
     .inv { border: none; border-radius: 0; padding: 0; }
   }
 
+
+  /* ---------------- the standing alarm ----------------
+     For a state the app is IN rather than something that happened: the book
+     could not be read, or the last change could not be written. A toast is
+     wrong for both — it says its piece and leaves, and these keep being true.
+     Pinned to the top so it cannot be scrolled past. */
+  .alarm:empty { display: none; }
+  /* Fixed, not sticky: sticky pins to whichever ancestor scrolls, and in one
+     app that is not the body — so the alarm scrolled away off the top of the
+     page, which is the one thing it may never do. */
+  .alarm {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 70;
+    padding: 0.6rem 0.9rem 0; pointer-events: none;
+  }
+  /* The one-line shape, for the alarm that stands while you keep working. */
+  .alarm-box.thin {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    padding: 0.5rem 0.7rem;
+  }
+  .alarm-box.thin b { display: inline; flex: 0 0 auto; }
+  .alarm-box.thin span { flex: 1; min-width: 12rem; font-size: 0.82rem; }
+  .alarm-box {
+    background: var(--surface); border: 1px solid var(--warn);
+    border-left: 4px solid var(--warn); border-radius: 12px;
+    padding: 0.85rem 1rem; box-shadow: 0 16px 34px -22px #000;
+    pointer-events: auto; max-width: 46rem; margin: 0 auto;
+  }
+  .alarm-box b { display: block; color: var(--ink); font-size: 0.95rem; }
+  .alarm-box p { margin: 0.35rem 0 0.7rem; font-size: 0.84rem; line-height: 1.55; }
+  .alarm-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 </style>
 
 <div class="shell">
@@ -546,6 +586,7 @@
   <main class="view" id="view"></main>
 </div>
 
+<div class="alarm" id="alarm" role="alert" aria-live="assertive"></div>
 <div class="toasts" id="toasts"></div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
 <div id="overlay"></div>
@@ -1714,17 +1755,118 @@ function weekStart(dateStr) {
 
 /* ---------------- storage ---------------- */
 
+/* Two ways the record can be in trouble, and the app used to carry on as
+   though neither had happened.
+
+   **It could not be read.** A truncated write, a half-finished sync, a pasted
+   backup missing its tail — `JSON.parse` throws, the catch returned a blank
+   shape, and the app opened on its first-run screen with not one word said. The
+   only rational reading of that screen is "everything is gone", while the text
+   was still sitting in storage, and the next thing that saved would write over
+   it. An empty book presented as your book is the worst failure this app can
+   have, so the raw text is KEPT and `persist()` refuses until somebody decides.
+
+   **It could not be written.** The old code toasted and moved on: four seconds
+   later nothing said so, and the screen went on showing a change that would
+   vanish on reload. Worse, the sample's own "Example loaded" toast landed
+   directly after two failures, so the app claimed success immediately after
+   admitting failure. A refused save is sticky now, and the first one opens the
+   backup dialog so the work can be copied out of the page it is still in. */
+var bookTrouble = { unread: null, unsaved: false, said: false };
+
 function loadState(shape) {
+  var raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch (e) { raw = null; }
+  if (!raw) return shape();
   try {
-    var raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return shape();
-    var p = JSON.parse(raw);
-    return APP.hydrate(p, shape());
-  } catch (e) { return shape(); }
+    return APP.hydrate(JSON.parse(raw), shape());
+  } catch (e) {
+    bookTrouble.unread = { raw: raw, why: String((e && e.message) || e) };
+    return shape();
+  }
 }
+
 function persist(state) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-  catch (e) { toast("Could not save — this browser's storage may be full or blocked."); }
+  // The unreadable text is the only copy of the work. Writing a blank book
+  // over it IS the loss, so nothing is written until it has been dealt with.
+  if (bookTrouble.unread) { alarmPaint(); return false; }
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    if (bookTrouble.unsaved) { bookTrouble.unsaved = false; alarmPaint(); }
+    return true;
+  } catch (e) {
+    bookTrouble.unsaved = true;
+    alarmPaint();
+    if (!bookTrouble.said) {
+      bookTrouble.said = true;
+      /* Deferred, because this can be reached from inside a dialog's confirm —
+         `go()` saves — and backupDialog takes over the overlay. Opening it on
+         top of a closing dialog leaves the scrim behind. */
+      var text = "";
+      try { text = JSON.stringify(state, null, 2); } catch (e2) { text = ""; }
+      setTimeout(function () {
+        if (!text) return;
+        backupDialog(STORE_KEY + "-unsaved.json", text,
+          "this could not be saved to the browser — keep a copy");
+      }, 0);
+    }
+    return false;
+  }
+}
+
+/* The standing alarm. Not a toast: a toast is for something that happened, and
+   these are states the app is IN — it will keep being true until somebody acts,
+   so it has to keep being on the screen. Wired with real listeners rather than
+   `data-act`, so it works in every app that shares this runtime without any of
+   them having to add an action. */
+function alarmPaint() {
+  var el = document.getElementById("alarm");
+  if (!el) return;
+  if (bookTrouble.unread) {
+    var kb = (bookTrouble.unread.raw.length / 1024).toFixed(1);
+    el.innerHTML = '<div class="alarm-box"><b>This book could not be read, and nothing has been saved over it.</b>' +
+      "<p>There are " + kb + " KB of text in this browser's storage that is not valid " +
+      "— a half-finished write, or a backup pasted in short. What you are looking at is an " +
+      "EMPTY book, not yours: nothing has been lost yet, and nothing will be saved until you choose.</p>" +
+      '<div class="alarm-acts"><button class="btn primary" data-alarm="keep">Show me the text</button>' +
+      '<button class="btn danger" data-alarm="fresh">Throw it away and start fresh</button></div></div>';
+    el.querySelector('[data-alarm="keep"]').addEventListener("click", function () {
+      backupDialog(STORE_KEY + "-damaged.txt", bookTrouble.unread.raw,
+        "the text as it is, unreadable — " + bookTrouble.unread.why);
+    });
+    el.querySelector('[data-alarm="fresh"]').addEventListener("click", function () {
+      confirmAction({
+        title: "Throw away the unreadable text?",
+        confirmLabel: "Throw it away",
+        message: "It is the only copy of whatever was in this browser. Copy it out first if you have not — " +
+          "<b>Show me the text</b> hands it to you. After this the app saves normally again and that text is gone."
+      }, function () {
+        bookTrouble.unread = null;
+        alarmPaint();
+        save();
+        render();
+        toast("Starting fresh. Saving works again.");
+      });
+    });
+    return;
+  }
+  if (bookTrouble.unsaved) {
+    /* One line, not a card. The unread alarm can take the top of the screen
+       because the page behind it is an empty book and covering it costs
+       nothing; this one stands while you carry on working, and a three-line
+       card permanently over the top of every screen is its own problem. The
+       whole essential fact fits on one line. */
+    el.innerHTML = '<div class="alarm-box thin"><b>Not saved.</b>' +
+      "<span>Storage is full or blocked, so everything on screen lives only in this tab.</span>" +
+      '<button class="btn primary" data-alarm="copy">Copy my book out</button></div>';
+    el.querySelector('[data-alarm="copy"]').addEventListener("click", function () {
+      var text = "";
+      try { text = JSON.stringify(state, null, 2); } catch (e) {}
+      if (text) backupDialog(STORE_KEY + "-unsaved.json", text, "what is on the screen, unsaved");
+    });
+    return;
+  }
+  el.innerHTML = "";
 }
 
 /* ---------------- modal ---------------- */
@@ -1734,6 +1876,45 @@ var overlay, escHandler = null;
 function closeModal() {
   overlay.innerHTML = "";
   if (escHandler) { document.removeEventListener("keydown", escHandler); escHandler = null; }
+}
+
+/* Escape and a focus trap, for ANY dialog in the overlay. Tab used to walk out
+   of the last button and into the page behind the scrim, where a keyboard
+   reader could reach controls they could neither see nor click.
+
+   Extracted because openModal was not the only dialog: the backup and restore
+   dialogs build the overlay by hand, so they had no Escape at all — the one
+   key everybody presses to get out of a modal did nothing, and Tab walked
+   straight through the scrim. Anything that writes overlay.innerHTML itself
+   calls this. */
+function trapOverlay(onEscape) {
+  /* `offsetParent !== null` is NOT enough once a dialog can fold fields away.
+     Chrome keeps the children of a closed <details> in the layout tree
+     (content-visibility: hidden), so they have an offsetParent and Tab walked
+     straight into seven fields nobody could see — which is the same fault as
+     Tab walking out through the scrim, one level in. The closed-fold test is
+     explicit rather than relying on `checkVisibility`, whose options are not
+     the same everywhere. */
+  var trap = function () {
+    return Array.prototype.filter.call(
+      overlay.querySelectorAll("button, input, select, textarea, a[href], label, [tabindex]:not([tabindex='-1'])"),
+      function (el) {
+        if (el.disabled || el.offsetParent === null) return false;
+        var fold = el.closest && el.closest("details:not([open])");
+        return !(fold && fold !== el && fold.querySelector("summary") !== el);
+      });
+  };
+  escHandler = function (e) {
+    if (e.key === "Escape") { closeModal(); if (onEscape) onEscape(); return; }
+    if (e.key !== "Tab") return;
+    var f = trap();
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (!overlay.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener("keydown", escHandler);
 }
 
 // fields: [{key,label,type,value,options,placeholder,step,min,hint,span,rows}]
@@ -1747,14 +1928,43 @@ function openModal(opts) {
     '<div class="modal-head"><h3>' + esc(opts.title) + "</h3>" +
     (opts.message ? "<p>" + opts.message + "</p>" : "") + "</div>";
 
+  /* `more: true` puts a field behind a fold. A dialog asking twelve questions
+     is a dialog people close, and the registry's asked for a name, a kind, a
+     write-in, which list, a path, a link, where it is kept, how it stands,
+     when it was last used, when it was made, what it is part of, what it is
+     about and a note — four of which are what anybody actually types. Same
+     reasoning as `showWhen`, one level up: a field needed one time in five
+     should not be on screen every time.
+
+     Native `<details>`, so a closed fold is out of the tab order for free
+     (its contents have no `offsetParent`, which is exactly what
+     `trapOverlay` filters on), and `collect()` reads by id, so a folded
+     field is still read and still saved. The summary says how many, because
+     a fold that does not is a fold nobody opens. */
   if (fields.length) {
-    html += '<div class="modal-body"><div class="fields">' + fields.map(function (f) {
+    var fieldHtml = function (f) {
       var id = "mf_" + f.key, inner;
       if (f.type === "select") {
-        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+        /* An option, or a GROUP of them: `{group, options}` becomes an
+           <optgroup>, so a picker over a hundred things can say which section
+           each one came from. Native, so on a phone it is the operating
+           system's own picker with the headings in it rather than a list this
+           app would have to build, scroll and trap focus in. A group carries
+           no value of its own — anything that needs a first entry to default
+           to has to flatten the list first, which is the lesson Coffer's
+           `accountOptions()` learned by defaulting a debt payment to
+           `undefined`. */
+        function optHtml(o) {
           var v = typeof o === "string" ? o : o.value;
           var l = typeof o === "string" ? o : o.label;
           return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? " selected" : "") + ">" + esc(l) + "</option>";
+        }
+        inner = '<select id="' + id + '">' + (f.options || []).map(function (o) {
+          if (o && o.group && o.options) {
+            return '<optgroup label="' + esc(o.group) + '">' +
+              o.options.map(optHtml).join("") + "</optgroup>";
+          }
+          return optHtml(o);
         }).join("") + "</select>";
       } else if (f.type === "textarea") {
         inner = '<textarea id="' + id + '" rows="' + (f.rows || 4) + '" spellcheck="false" placeholder="' +
@@ -1765,15 +1975,32 @@ function openModal(opts) {
           (f.type === "number" ? ' step="' + (f.step || "0.01") + '"' : "") +
           (f.min != null ? ' min="' + f.min + '"' : "") + ' autocomplete="off" />';
       }
-      return '<div class="field' + (f.span ? " wide" : "") + '">' +
-        '<label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
+      /* showWhen: {key, is} keeps a field out of the way until the field it
+         depends on has that value. The write-in box beside an "Other" picker
+         was on screen in every one of these dialogs, under the words "only
+         needed if you picked Other above" — a whole extra field, always, to
+         serve the one time in fifty it is used. */
+      return '<div class="field' + (f.span ? " wide" : "") + '"' +
+        (f.showWhen ? ' data-when="' + esc(f.showWhen.key) + '" data-is="' + esc(f.showWhen.is) + '" hidden' : "") +
+        '><label class="label" for="' + id + '">' + esc(f.label) + "</label>" + inner +
         (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + "</div>";
-    }).join("") + "</div>" + (opts.extraBody || "") + "</div>";
+    };
+    var plain = fields.filter(function (f) { return !f.more; });
+    var extra = fields.filter(function (f) { return f.more; });
+    html += '<div class="modal-body"><div class="fields">' +
+      plain.map(fieldHtml).join("") + "</div>";
+    if (extra.length) {
+      html += '<details class="modal-more"><summary>' +
+        esc(opts.moreLabel || ("More \u2014 " + extra.length + (extra.length === 1 ? " field" : " fields"))) +
+        '</summary><div class="fields">' + extra.map(fieldHtml).join("") + "</div></details>";
+    }
+    html += (opts.extraBody || "") + "</div>";
   } else if (opts.extraBody) {
     html += '<div class="modal-body">' + opts.extraBody + "</div>";
   }
 
-  html += '<div class="modal-foot">' +
+  html += '<p class="modal-bad" data-mbad="1" role="alert" hidden></p>' +
+    '<div class="modal-foot">' +
     '<button class="btn quiet" data-mclose="1">' + esc(opts.cancelLabel || "Cancel") + "</button>" +
     '<button class="btn ' + (opts.danger ? "danger" : "primary") + '" data-mok="1">' +
     esc(opts.confirmLabel || "Save") + "</button></div></div></div>";
@@ -1788,11 +2015,22 @@ function openModal(opts) {
     });
     return out;
   }
+  /* A refusal belongs in the dialog. It used to go to a toast at the foot of
+     the page — 340px below the button on a tall window, behind the eye that
+     was on the form — and a toast is also where every routine success goes,
+     so the one message that means "nothing happened" looked like all the ones
+     that mean "it worked". role="alert" so it is announced as well as shown. */
+  function say(bad) {
+    var el = overlay.querySelector("[data-mbad]");
+    if (!el) { toast(bad); return; }
+    el.textContent = bad;
+    el.hidden = false;
+  }
   function accept() {
     var v = collect();
     if (opts.validate) {
       var bad = opts.validate(v);
-      if (bad) { toast(bad); return; }
+      if (bad) { say(bad); return; }
     }
     closeModal();
     if (opts.onConfirm) opts.onConfirm(v);
@@ -1808,11 +2046,32 @@ function openModal(opts) {
   overlay.querySelectorAll(".modal input").forEach(function (i) {
     i.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); accept(); } });
   });
-  escHandler = function (e) { if (e.key === "Escape") { closeModal(); if (opts.onCancel) opts.onCancel(); } };
-  document.addEventListener("keydown", escHandler);
+  overlay.querySelectorAll(".modal input, .modal select, .modal textarea").forEach(function (i) {
+    i.addEventListener("input", function () {
+      var el = overlay.querySelector("[data-mbad]");
+      if (el && !el.hidden) el.hidden = true;     // the message outlived the problem
+    });
+  });
 
-  var first = overlay.querySelector(".modal input, .modal select, .modal textarea");
-  if (first) first.focus(); else overlay.querySelector("[data-mok]").focus();
+  // Fields that only apply once another answer has been given.
+  function dependants() {
+    overlay.querySelectorAll("[data-when]").forEach(function (wrap) {
+      var on = document.getElementById("mf_" + wrap.getAttribute("data-when"));
+      var want = wrap.getAttribute("data-is");
+      var show = !!on && String(on.value) === want;
+      wrap.hidden = !show;
+      if (!show) { var f = wrap.querySelector("input, select, textarea"); if (f) f.value = ""; }
+    });
+  }
+  overlay.querySelectorAll(".modal select, .modal input").forEach(function (i) {
+    i.addEventListener("change", dependants);
+  });
+  dependants();
+
+  trapOverlay(opts.onCancel);
+
+  var firstField = overlay.querySelector(".modal input, .modal select, .modal textarea");
+  if (firstField) firstField.focus(); else overlay.querySelector("[data-mok]").focus();
   if (opts.afterOpen) opts.afterOpen();
 }
 
@@ -1832,7 +2091,14 @@ function toast(msg, undo) {
   var box = document.getElementById("toasts");
   var el = document.createElement("div");
   el.className = "toast";
-  el.innerHTML = "<span>" + esc(msg) + "</span>";
+  /* While the book cannot be written, EVERY message the app gives you says so.
+     Without this the app contradicted itself in two channels at once: the
+     alarm said the last change was not saved, and a toast beside it said
+     "Headphone firmware — next in 90 days · Undo", which reads as done and
+     durable. One place, because every success message in every app that shares
+     this runtime comes through here. */
+  el.innerHTML = "<span>" + esc(msg) +
+    (bookTrouble.unsaved ? " \u00b7 <b>not saved</b>" : "") + "</span>";
   function remove() { if (el.parentNode) el.parentNode.removeChild(el); }
   if (undo) {
     var b = document.createElement("button");
@@ -1883,6 +2149,8 @@ function backupDialog(name, text, summary) {
     "</div></div></div>";
 
   var ta = document.getElementById("bkText");
+  trapOverlay();
+  ta.focus();
   overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
   overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
     if (e.target === e.currentTarget) closeModal();
@@ -1946,6 +2214,8 @@ function restoreDialog(describe, onJson) {
   }
 
   ta.addEventListener("input", peek);
+  trapOverlay();
+  ta.focus();
   overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
   overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
     if (e.target === e.currentTarget) closeModal();
@@ -2120,6 +2390,7 @@ function boot() {
   });
 
   render();
+  alarmPaint();
   if (APP.afterBoot) APP.afterBoot();
 }
 

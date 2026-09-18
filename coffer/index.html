@@ -3842,7 +3842,7 @@
     if (!raw.name) { raw.problem = "This line has no name before the colon."; return raw; }
 
     // 0. the terminal date, taken first so its date is gone before anything
-    //    else runs. PLAN-FORMAT.md has documented "until 2027-03-31" since
+    //    else runs. docs/plan-format.md has documented "until 2027-03-31" since
     //    income end dates shipped and it never parsed: left in, the account
     //    matcher ran on " into Wallet until 2027-03-31 " and took the whole
     //    tail as the account name.
