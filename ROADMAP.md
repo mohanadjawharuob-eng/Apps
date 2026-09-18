@@ -1,3 +1,74 @@
+## Shipped: the allowance asks the right month, and keeps what you said
+
+Three faults in one feature, all reported from the phone.
+
+**It asked about a month the contract did not exist in.** `allowancesAwaiting()`
+walked last month and this month unconditionally — nothing consulted the
+contract's own `startedOn` or `until`. A contract that began in September was
+asked how many days were worked in August.
+
+**The answer could not be put anywhere else.** The dialog took its month from
+the notice and offered no alternative, so thirteen days meant for September had
+nowhere to go but August, and no way to be moved once saved. The month is a
+field now: `allowanceMonths(r)` offers every month the contract has run,
+newest first, with what each already holds in its label, and an `onChange` that
+reloads the days box — otherwise the figure prefilled for one month gets saved
+against another. Nought clears a month, so a wrong answer can be taken back,
+and every save hands back an undo.
+
+**Nothing showed what had been entered.** `state.allowanceDays` was written by
+the dialog and read by the budget arithmetic, and rendered on no screen at all.
+`allowanceLog(r)` puts it on the contract that owns it: month, days, what they
+came to, an edit button per row.
+
+They are deliberately not ledger entries, which is what was asked for. The pay
+already arrived as income and the taxis are already logged as spending; a third
+record of the same money would count it twice, the way an adjustment
+transaction would have done for the account opening. The rule the request is
+really about is that anything a person typed has to be findable and
+changeable — and now it is, on the card where it belongs.
+
+`allowmonth.js` drives all four: the question that should not be asked, the
+month that can be changed, the record on the card, and answering for a month
+other than the one you were asked about.
+
+Two stale assertions fixed in the same change. `income.js` case 4 expected the
+money to run out inside the horizon, which stopped being true once the
+projection began folding in income due later this month — the contract pays in
+six days. A thinner wallet puts the cliff back in view. And a new assertion of
+mine walked into the repo's own documented trap: `.label` is uppercased in CSS,
+so `innerText` reads DAYS YOU WENT IN and a case-sensitive match fails.
+
+## Shipped: two figures that named the wrong basis
+
+Both reported from the phone, both the same fault — a number that is honest
+about one question printed under a label asking another.
+
+**"Expected in $933" under a heading reading THIS MONTH.** The figure was
+`monthlyIncomeExpected()`, the running rate: every contract that has not ended,
+whether or not it pays this month. In this book AUB pays on the 30th and
+Balamand's next payment is 31 October, so $600 was the whole of September and
+the card was a third out. `incomeDueIn(mk)` answers the month's question with
+the same liveness test `projectForward()` walks with, so the adviser and the
+chart cannot disagree about whether a contract pays in September.
+
+Both figures stay, because both are true and they answer different things. The
+card now leads with the month — *Due in September $600*, *What you usually
+spend −$369*, *Left this month $231* — then names the rate underneath ("A usual
+month brings $933; September is lighter because your contracts do not all pay
+in the same month"), and the verdict below the proposals reads *Short in a
+usual month*, because a goal is a promise that repeats and one lumpy month is
+no reason to move it. When the two agree the explanation is not printed.
+
+**The pace notice on Insights** projected `monthSummary().expense` and compared
+it against last month's, so a month holding a $290 refundable projected a
+figure nobody would ever pay and reported it as "$294 less than last month"
+off a $950 base — directly under a card headlined TRUE BURN $369. Both ends
+are `trueBurnFor()` now.
+
+`month.js` drives all three: a month lighter than the rate, a month equal to
+it, and a pace computed with a live refundable in the book.
+
 ## Shipped: the months ahead stop losing the rest of this month
 
 Found by checking my own arithmetic against the app's, after its owner said an

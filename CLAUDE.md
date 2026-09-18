@@ -198,7 +198,27 @@ effect of a Coffer change.
   screen. `outlook.js` computes the stub from today's date rather than writing
   it down, because it is nearly a whole month on the 2nd and almost nothing on
   the 29th.
-
+- **A rate and a month are different questions, and a card headed "This month"
+  owes you the month.** `monthlyIncomeExpected()` sums every contract that has
+  not ended, whether or not it pays this month — a running rate, and the right
+  basis for a promise that repeats. The adviser's card printed it under the
+  heading THIS MONTH, so a book whose second contract next paid on 31 October
+  read "Expected in $933" in a September where $600 was the whole of it.
+  `incomeDueIn(mk)` answers the other question, using **the same liveness test
+  `projectForward()` walks with** (`startsOn <= monthEnd && until >= monthStart`)
+  so the adviser and the chart cannot disagree about whether a contract pays in
+  a given month. `monthlySurplus()` returns both — `due`/`dueSurplus` beside
+  `income`/`surplus` — and every row on the card names its own basis: *Due in
+  September*, *Left this month*, then *Short in a usual month* below the
+  proposals, which are still sized on the rate because one lumpy month is no
+  reason to move a goal. When the two agree (`lumpy` false) the explanation is
+  not printed at all.
+- **The pace notice is set against true burn, like the card above it.** It
+  projected `monthSummary().expense` and compared it with last month's, so a
+  month holding a refundable projected a figure nobody would ever pay, and said
+  it was "$294 less than last month" against an $950 base — directly beneath a
+  card headlined TRUE BURN $369, which is what the runway, the goals and the
+  adviser are all built from. Both ends are `trueBurnFor()` now.
 - **A contract ends on `r.until`, and its renewal ends on `r.renewUntil`.**
   (`endsOn` belongs to grants; writing it on a recurring record means the
   contract silently never ends, which is how the sample's headline cliff went
@@ -207,6 +227,28 @@ effect of a Coffer change.
   flatters every figure built on it. The second date is how far a renewal is
   expected to run; past it the line stops. Left empty it still runs on, because
   that is what was said, and `renewUntil` is dropped when `renews` is.
+- **An allowance is asked about the months the contract actually ran, and the
+  month is a FIELD.** `allowancesAwaiting()` walked last month and this month
+  with nothing consulting `startedOn` or `until`, so a contract that began in
+  September was asked how many days were worked in AUGUST — and the dialog took
+  its month from the notice and offered no other, so an answer meant for
+  September had nowhere to go but August and could not be moved afterwards.
+  `allowanceLiveIn(r, mk)` gates the question; `allowanceMonths(r)` builds the
+  picker, newest first, and includes any month already recorded even if it
+  falls outside the contract's dates, or a mistake could not be reached to be
+  corrected. The picker's labels carry what each month already holds and its
+  `onChange` reloads the days box, or the figure prefilled for one month is
+  saved against another. Nought clears a month, which is how a wrong answer is
+  taken back.
+- **What someone typed has to be findable and changeable, even when it is not a
+  transaction.** The allowance days were an answer to a notice and nothing
+  else: entered once, then rendered on no screen in the app. `allowanceLog(r)`
+  puts them on the contract that owns them — month, days, what they came to,
+  and an edit button per row. They are deliberately **not** ledger entries: the
+  pay already arrived as income and the taxis are already logged as spending,
+  so a third record of the same money would count it twice. The rule is that
+  the record must be visible and editable, not that everything must be a
+  transaction.
 - **An allowance inside a salary is not a fourth kind of restricted money.**
   A travel allowance paid at so much a day is yours either way, so it counts as
   income and net worth on arrival and its spending stays in `trueBurnFor()` and
@@ -361,7 +403,6 @@ effect of a Coffer change.
   that is already recorded; for the same reason the picker opens on the
   account's own currency and the prefill is converted into it, since a base
   figure under a EUR label invites a EUR number typed into a dollar box.
-
 - **A pace needs three months, the same as a burn rate.**
   `avgMonthlySaving()` returns `partial` when it has fewer than three, and the
   screens then refuse to state a rate or a shortfall built on one — they say
