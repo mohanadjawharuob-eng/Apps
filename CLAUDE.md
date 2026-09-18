@@ -981,6 +981,89 @@ Seven rules hold the record:
   `showWhen` matches another field's value and this is settled before the
   dialog opens — which is exactly why the mode is chosen first.
 
+**PROVENANCE IS A SHAPE, AND TWO LISTS CANNOT SAY IT.** `provGraph(a)` draws
+what an entry was made from above it and what came of it below — the one
+data-driven visual the round-3 brief names that this app already holds the
+data for. (The other, a survey or site extent, it did NOT: there was no
+coordinate anywhere in the record, so a footprint drawn from it would have
+been invented geometry. That is why it waited for a field rather than being
+drawn.) An orthophoto made from three hundred frames and a control file,
+feeding a building layer that feeds a report, is a chain, and where you are
+in the chain is exactly what a column of names does not say.
+
+Six rules hold it:
+
+- **It computes nothing of its own.** Every node is `madeFrom`, `madeInto` or
+  the entry itself, so the drawing cannot name a relationship the words would
+  deny — and the test asserts the drawn names against the ones the fold
+  prints.
+- **THE WORDS FOLD AWAY UNDER IT**, which is the treatment the BOARD already
+  gets and for the same reason: the sheet is the screen, the same facts sit
+  behind one `<details>`, and that is what keeps *say it once* true while the
+  row's own controls — `Look`, and the `×` that takes a source back off —
+  stay where a keyboard can reach them. Replacing the lists outright would
+  have taken the unlink with them.
+- **It is drawn vertically, so there is ONE layout at 1340px and at 390px.**
+  No media query and no second layout to keep in step. Measured: the same
+  viewBox at both widths, 1:1 on a laptop and 0.81 at phone width.
+- **THREE OVALS IS THE WHOLE BAND, the "+N more" counted as one of them.**
+  The first draft drew three *plus* an overflow, which is four across at
+  604px — at 390px that scaled the names to 60% and 7.5px of type, which is
+  not a drawing anybody can read. Four sources now draw two and count the
+  rest. A `+N more` oval is a **label**: dashed, hollow, and it carries no
+  `data-act`, because a button that cannot open anything is the fault
+  `openHandle()` exists to prevent.
+- **How much further back the chain goes is SAID, not drawn.** One hop each
+  way is the drawing; a node opens the entry it names and that entry draws
+  its own chain, which is the navigation rather than a shortcoming. The
+  caption off `madeFromAncestors` is what stops one hop reading as all of it.
+- **Identity stays in the tile channel.** A node is a neutral oval with its
+  kind written underneath in words, never a hue — "made from" is not a state,
+  and eight identity colours beside four state colours is what the two
+  channels exist to keep apart. The subject carries an ink STROKE, the same
+  reasoning as the picked node on the sheet: "you are looking at this one" is
+  not a state of the work. Ovals, because an oval is data in ArcGIS
+  ModelBuilder and every node here is data.
+
+**A STRING-BUILT SVG TAKES TOKENS THROUGH CSS, NEVER `ink()` INTO ATTRIBUTES.**
+The board's sheet is built with `svgEl` and reads `ink(token)`, which snapshots
+a computed value; `assetPage` builds a string, so the same trick would freeze
+the palette into the markup and the theme toggle would leave the drawing
+behind. Every colour on it is a class reading a `var(--…)`, so the toggle
+moves it with the page and nothing has to re-render. And the natural width is
+written **inline** (`style="max-width:Wpx"`) because only the call knows it —
+a stylesheet cap alone inflated a two-node chain to 432px, scaling 12.5px
+type up 2.4× into a poster.
+
+**MEASURE THE TEXT ON A NEW DRAWING YOURSELF: `lightlook.js` does not reach an
+entry's page.** It walks the screens, and an entry is one strip and one row
+further in, so the ovals' names, the kind words under them and the caption had
+nobody measuring them. All seven runs clear 4.5:1 in both themes (the kind
+word is the tightest at 4.61:1 on paper) — and the measurement's *first*
+output was the fault: **CSS `fill` applies to every element and its initial
+value is black**, so `style.fill || style.color` on an HTML `<p>` measured
+black text and reported the caption at 1.12:1 dark and 19.54:1 light. A ratio
+that inverts between the two themes is the tell that the harness is wrong and
+not the app.
+
+Two faults reading the built page found, both rules already in this file:
+
+- **`.says` is a sub-line INSIDE a panel and carries nothing as a bare `<p>`**,
+  so the caption rendered louder than the section heading above it and ran
+  three lines. It has its own size and `--faint` now.
+- **"1 thing(s) were made from this"** in the next-actions column — a digit in
+  prose and a parenthesised plural, in the one place on the page that tells you
+  what to do next. `ones.js` exists for exactly this and had never reached an
+  entry's page either.
+
+**And one `var` name declared twice in one scope.** `assetPage` had `var up =
+partTrail(a)` at the top of its left column and `var up = assetUpkeep(a)`
+ninety lines below it. Nothing was wrong today, because the first is finished
+with before the second is assigned — which is precisely why it would have
+broken the first time either half moved. The trail is `trail` now. (`cap` was
+the same trap one level in: a local `var cap` inside `provGraph` shadowed the
+file's own `cap()`, the function that capitalises a sentence's first word.)
+
 **AND THE RELATIONSHIP THE BRIEF PUTS AT THE CENTRE OF THE MODEL: "a library
 method can explain a workflow step".** Borrowing had always worked one way
 round, from the sheet, which means it only occurred to you once you were

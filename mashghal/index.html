@@ -538,7 +538,7 @@ color-scheme: light;
   .cal-m:focus-visible, .cl-row:focus-visible,
   .repo-hit:focus-visible, .repo-row:focus-visible, .rwrow:focus-visible,
   .gearbtn:focus-visible, .findbtn:focus-visible, .chip:focus-visible,
-  .tinypic:focus-visible {
+  .tinypic:focus-visible, .pgn:focus-visible {
     outline: 1px solid var(--brass); outline-offset: 2px;
   }
   /* A LAUNCHER BUTTON IS ONE LINE, and `.btn.clip` is where that rule used to
@@ -547,6 +547,34 @@ color-scheme: light;
      `title`) and the class is gone rather than left behind. The rule itself
      has not changed: a 200-character name must not turn a launcher into a
      six-line paragraph. */
+  /* THE PROVENANCE DRAWING. Colour comes from tokens through CSS rather than
+     from `ink()` into attributes, because `ink()` snapshots a value at build
+     time and this fragment is a string: read as tokens, the theme toggle
+     moves the drawing with everything else and nothing has to re-render.
+     `max-width` is what stops three sources across ever having to shrink —
+     the viewBox is capped at three, so at 390px this renders about 1:1 and
+     the same layout serves a laptop. */
+  .pgraph { margin: 0.45rem 0 0.3rem; }
+  .pgraph svg { display: block; width: 100%; height: auto; }
+  /* `--faint`, never `--receded`: this is the only line saying the chain
+     goes further than the drawing, so it is text a reader has to read. */
+  .pgcap { margin: 0 0 0.45rem; font-size: 0.78rem; line-height: 1.5; color: var(--faint); }
+  .pgn rect { fill: var(--sunken); stroke: var(--rule); stroke-width: 1; transition: var(--t); }
+  .pgn[data-act]:hover rect, .pgn[data-act]:focus-visible rect { stroke: var(--brass); }
+  .pgn[data-act] { cursor: pointer; }
+  .pghub rect { fill: var(--raised); stroke: var(--ink); stroke-width: 1.5; }
+  /* A "+N more" oval is a label, not a control — dashed and hollow, so it
+     does not look like the three beside it that really do open something. */
+  .pgmore rect { fill: none; stroke: var(--rule); stroke-dasharray: 4 3; }
+  .pgnm { fill: var(--dim); font-size: 12.5px; }
+  .pghub .pgnm { fill: var(--ink); font-size: 13px; font-family: var(--display); }
+  .pgmore .pgnm { fill: var(--faint); font-size: 12px; }
+  .pgkind { fill: var(--faint); font-size: 9.5px; letter-spacing: 0.02em; }
+  /* A LINE ON A SHEET IS NOT A HAIRLINE, and the head follows the line —
+     both already paid for once by the board's four edge tokens. */
+  .pgline { stroke: var(--edge); stroke-width: 1.3; fill: none; }
+  .pghead { fill: var(--edge); }
+
   .btn:disabled { opacity: 0.38; cursor: default; }
   .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
 
@@ -6785,10 +6813,13 @@ function stateWord(b, n) {
   function nextActions(a) {
     var out = [], h = openHandle(a);
     if (h) out.push({ label: h.label, how: h.how, kind: h.kind, href: h.href, act: "asset-copy", id: a.id });
-    if (madeInto(a).length) out.push({ label: "What came out of it", act: "asset-open", id: madeInto(a)[0].id,
-                                       how: madeInto(a).length + " thing(s) were made from this" });
-    if (partsIn(a).length) out.push({ label: "What is inside it", act: "asset-open", id: partsIn(a)[0].id,
-                                      how: partsIn(a).length + " thing(s) are filed in this" });
+    /* A SMALL COUNT IN PROSE IS A WORD, and the verb follows the count.
+       These read "1 thing(s) were made from this" until they were read. */
+    var mi = madeInto(a).length, pi = partsIn(a).length;
+    if (mi) out.push({ label: "What came out of it", act: "asset-open", id: madeInto(a)[0].id,
+                       how: numWord(mi) + (mi === 1 ? " thing was" : " things were") + " made from this" });
+    if (pi) out.push({ label: "What is inside it", act: "asset-open", id: partsIn(a)[0].id,
+                       how: numWord(pi) + (pi === 1 ? " thing is" : " things are") + " filed in this" });
     if (assetTopics(a).length) out.push({ label: "Everything on " + assetTopics(a)[0], act: "lib-topic",
                                           id: assetTopics(a)[0], how: "read the Library on this subject" });
     /* PUT IT ON A BOARD — the relationship the brief puts at the centre of
@@ -7545,6 +7576,159 @@ function stateWord(b, n) {
       '<div class="says">' + esc(assetSays(a)) + "</div></div></button>";
   }
 
+  /* THE PROVENANCE GRAPH — the one data-driven visual the brief names that
+     this app already holds the data for. (The other, a survey or site extent,
+     it does NOT: there is no coordinate anywhere in the record, so drawing a
+     footprint today would be inventing geometry, which is the fault every
+     rule in this file is written against. That one waits for a field.)
+
+     Provenance was two lists — what this was made from, and what was made
+     from it — and a list answers "which" while saying nothing about "where in
+     the chain". An orthophoto made from three hundred frames and a control
+     file, feeding a building layer that feeds a report, is a SHAPE, and the
+     shape is the fact you cannot get from two columns of names.
+
+     Four things hold it:
+
+     - **It computes nothing of its own.** Every node comes from `madeFrom`,
+       `madeInto` and the entry itself, so the drawing cannot name a
+       relationship the lists would deny. The same rule the report and the
+       adviser live by.
+     - **It is drawn vertically, so there is one layout at 1340px and at
+       390px.** No media query, no second layout to keep in step: sources
+       above, this entry in the middle, what came of it below, and the width
+       is capped so three across never has to shrink to fit a phone.
+     - **It never recurses.** One hop each way, because a node opens the
+       entry it names and that entry draws its own chain — which is the
+       navigation, not a shortcoming. How much further back the chain goes is
+       STATED above it, off `madeFromAncestors`, or a two-deep drawing would
+       read as the whole of it.
+     - **Identity stays in the tile channel.** A node is a neutral oval with
+       the kind written under it in words, never a hue — eight identity
+       colours and four state colours on one screen is exactly what the two
+       channels exist to keep apart, and "made from" is not a state.
+
+     The vocabulary is the canvas's own, because its owner reads it
+     professionally: an oval is data in ArcGIS ModelBuilder, and every node
+     here is data. The subject carries an ink stroke rather than a fill, the
+     same reasoning as the picked node on the sheet — "you are looking at
+     this one" is not a state of the work. */
+  function provGraph(a) {
+    var from = madeFrom(a), into = madeInto(a);
+    if (!from.length && !into.length) return "";
+
+    var PW = 142, PH = 32, GX = 12, LBL = 14, ARR = 30, HW = 196, ACROSS = 3;
+    /* THREE OVALS IS THE WHOLE BAND, counting the "+N more" as one of them —
+       not three plus an overflow, which is what the first draft did and which
+       put FOUR across at 604px: at 390px that scaled the names to 60% and
+       7.5px of type, which is not a drawing anybody can read. Laid out
+       however many there are it only gets worse, and the fold underneath
+       carries the full list in words anyway.
+
+       A "+N more" oval is a LABEL and not a control — dashed, hollow, and it
+       takes no `data-act`, because a button that cannot open anything is the
+       fault `openHandle` exists to prevent. */
+    function band(list) {
+      var over = list.length > ACROSS;
+      var shown = over ? list.slice(0, ACROSS - 1) : list;
+      return { shown: shown, more: list.length - shown.length,
+               n: shown.length + (over ? 1 : 0) };
+    }
+    var src = band(from), out = band(into);
+    function bw(n) { return n ? n * PW + (n - 1) * GX : 0; }
+    var W = Math.max(bw(src.n), bw(out.n), HW);
+    var hubY = src.n ? PH + LBL + ARR : 0;
+    var outY = hubY + PH + LBL + ARR;
+    var H = (out.n ? outY : hubY) + PH + LBL;
+    var hubX = (W - HW) / 2;
+
+    function oval(x, y, w, name, kind, id, cls) {
+      var mid = Math.round(w / 2), chars = Math.floor((w - 22) / 6.4);
+      return '<g class="pgn' + (cls ? " " + cls : "") + '"' +
+        (id ? ' data-act="asset-open" data-id="' + esc(id) + '" tabindex="0" role="button"' : "") +
+        ' transform="translate(' + x + "," + y + ')">' +
+        "<title>" + esc(name) + (kind ? " — " + esc(kind) : "") + "</title>" +
+        '<rect x="0" y="0" width="' + w + '" height="' + PH + '" rx="' + (PH / 2) + '"></rect>' +
+        '<text class="pgnm" x="' + mid + '" y="' + (PH / 2 + 4.5) + '" text-anchor="middle">' +
+        esc(clip(name, chars)) + "</text>" +
+        (kind ? '<text class="pgkind" x="' + mid + '" y="' + (PH + 11) +
+          '" text-anchor="middle">' + esc(clip(kind, 24)) + "</text>" : "") +
+        "</g>";
+    }
+    /* The ways in fan onto the subject's own top edge rather than all meeting
+       one point, so three sources read as three arrows arriving and not as one
+       line drawn thrice. */
+    function arrow(x1, y1, x2, y2) {
+      return '<line class="pgline" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 +
+        '" y2="' + y2 + '" marker-end="url(#pgm)"></line>';
+    }
+
+    var g = "";
+    if (src.n) {
+      var sx0 = (W - bw(src.n)) / 2;
+      src.shown.forEach(function (x, i) {
+        var px = sx0 + i * (PW + GX);
+        g += oval(px, 0, PW, x.name, String(assetKindLabel(x)).toLowerCase(), x.id, "");
+        g += arrow(px + PW / 2, PH + LBL + 1,
+                   hubX + HW * (i + 1) / (src.n + 1), hubY - 5);
+      });
+      if (src.more > 0) {
+        var mx = sx0 + src.shown.length * (PW + GX);
+        g += oval(mx, 0, PW, "+" + src.more + " more", "", "", "pgmore");
+        g += arrow(mx + PW / 2, PH + LBL + 1,
+                   hubX + HW * src.n / (src.n + 1), hubY - 5);
+      }
+    }
+    g += oval(hubX, hubY, HW, a.name, String(assetKindLabel(a)).toLowerCase(), "", "pghub");
+    if (out.n) {
+      var ox0 = (W - bw(out.n)) / 2;
+      out.shown.forEach(function (x, i) {
+        var px = ox0 + i * (PW + GX);
+        g += arrow(hubX + HW * (i + 1) / (out.n + 1), hubY + PH + LBL + 1,
+                   px + PW / 2, outY - 5);
+        g += oval(px, outY, PW, x.name, String(assetKindLabel(x)).toLowerCase(), x.id, "");
+      });
+      if (out.more > 0) {
+        var ox = ox0 + out.shown.length * (PW + GX);
+        g += arrow(hubX + HW * out.n / (out.n + 1), hubY + PH + LBL + 1,
+                   ox + PW / 2, outY - 5);
+        g += oval(ox, outY, PW, "+" + out.more + " more", "", "", "pgmore");
+      }
+    }
+
+    /* HOW MUCH FURTHER BACK IT GOES IS SAID, NOT DRAWN. One hop is what the
+       drawing shows; the sentence is what stops one hop reading as all of it. */
+    var deeper = madeFromAncestors(a).length - from.length;
+    var note = deeper > 0
+      ? '<p class="pgcap">' + cap(numWord(deeper)) +
+        (deeper === 1 ? " thing" : " things") +
+        " further back — open a source to follow it.</p>"
+      : "";
+
+    /* THE NATURAL WIDTH IS THE CEILING, written inline because only this call
+       knows it. A stylesheet cap alone inflated a two-node chain to 432px —
+       `width: 100%` on a 182-wide viewBox scaled the text up 2.4× and the
+       drawing read as a poster. It still shrinks below it on a phone, which
+       is the half `width: 100%` is for. */
+    return '<div class="pgraph" style="max-width:' + Math.round(W) + 'px">' + note +
+      '<svg viewBox="0 0 ' + Math.round(W) + " " + Math.round(H) +
+      '" role="img" aria-label="' + esc(provWords(a)) + '">' +
+      '<defs><marker id="pgm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"' +
+      ' markerHeight="6" orient="auto-start-reverse">' +
+      '<path class="pghead" d="M0,1 L9,5 L0,9 z"></path></marker></defs>' +
+      g + "</svg></div>";
+  }
+  /* The drawing's own sentence, for anybody who cannot see it. A picture with
+     no text alternative is a picture that says nothing to a screen reader,
+     and this one carries a fact nothing else on the page states as plainly. */
+  function provWords(a) {
+    var from = madeFrom(a), into = madeInto(a), bits = [];
+    if (from.length) bits.push("made from " + from.map(function (x) { return x.name; }).join(", "));
+    if (into.length) bits.push(into.length + (into.length === 1 ? " thing" : " things") +
+      " was made from it: " + into.map(function (x) { return x.name; }).join(", "));
+    return a.name + (bits.length ? " — " + bits.join("; ") : "");
+  }
+
   function assetPage(a) {
     var tools = '<div class="tools">' +
       '<button class="btn" data-act="asset-back">All things</button>' +
@@ -7663,13 +7847,16 @@ function stateWord(b, n) {
        to know about a thing, and what it was manufactured out of is the
        second. The trail reads top-down (site, then trench) so it can be read
        as an address rather than decoded backwards. */
-    var up = partTrail(a), inside = partsIn(a);
-    if (up.length || inside.length) {
+    /* `trail`, not `up` — `up` is the upkeep list further down this same
+       function, and one `var` name declared twice in one scope is a trap
+       waiting for whichever of the two moves first. */
+    var trail = partTrail(a), inside = partsIn(a);
+    if (trail.length || inside.length) {
       left += '<div class="sect">Where it sits</div>';
-      if (up.length) {
+      if (trail.length) {
         left += '<div class="panel calm"><div class="grow"><div class="nm sm">' +
-          esc(up.concat([a.name]).join(" \u203a ")) + "</div>" +
-          '<div class="says">Part of ' + esc(up[up.length - 1]) + "</div></div>" +
+          esc(trail.concat([a.name]).join(" \u203a ")) + "</div>" +
+          '<div class="says">Part of ' + esc(trail[trail.length - 1]) + "</div></div>" +
           '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' +
           esc(partOf(a).id) + '">Look</button></div></div>';
       }
@@ -7693,27 +7880,41 @@ function stateWord(b, n) {
         }).join("") + "</div>";
     }
 
+    /* PROVENANCE IS ONE QUESTION WITH TWO DIRECTIONS, so it is one heading
+       and one drawing — `provGraph` covers both — with the same facts written
+       out as rows behind a fold underneath. That is exactly the treatment the
+       BOARD gets: the sheet is the screen and the words fold away under it,
+       for the same reason, and it is what keeps "say it once" true while the
+       row's own controls (Look, and the × that takes a source back off) stay
+       where a keyboard can reach them. */
     var from = madeFrom(a), into = madeInto(a);
-    left += '<div class="sect">What it was made from</div>';
-    left += from.length ? '<div class="stack tight">' + from.map(function (x) {
-      var lk = assetLook(x);
-      return '<div class="panel calm"><span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
-        '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
-        '<div class="says">' + esc(assetKindLabel(x)) + "</div></div>" +
-        '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' + x.id + '">Look</button>' +
-        '<button class="btn quiet danger" data-act="asset-from-del" data-id="' + a.id + ":" + x.id +
-        '" title="Not made from this">×</button></div></div>';
-    }).join("") + "</div>"
-      : '<p class="empty">Nothing said. For anything derived — an orthophoto, a map, a report — this is the one fact the file itself will not tell you in six months.</p>';
-
-    if (into.length) {
-      left += '<div class="sect">What was made from it</div><div class="stack tight">' + into.map(function (x) {
-        var lk = assetLook(x);
-        return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
-          '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
-          '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
-          '<div class="says">' + esc(assetKindLabel(x)) + "</div></div></button>";
-      }).join("") + "</div>";
+    left += '<div class="sect">What it came from, and what came of it</div>';
+    if (!from.length && !into.length) {
+      left += '<p class="empty">Nothing said. For anything derived — an orthophoto, a map, a report — this is the one fact the file itself will not tell you in six months. “It was made from…” above records it.</p>';
+    } else {
+      left += provGraph(a);
+      left += '<details class="fold"><summary>The same, written out</summary>';
+      if (from.length) {
+        left += '<div class="sect">What it was made from</div><div class="stack tight">' + from.map(function (x) {
+          var lk = assetLook(x);
+          return '<div class="panel calm"><span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+            '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
+            '<div class="says">' + esc(assetKindLabel(x)) + "</div></div>" +
+            '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' + x.id + '">Look</button>' +
+            '<button class="btn quiet danger" data-act="asset-from-del" data-id="' + a.id + ":" + x.id +
+            '" title="Not made from this">×</button></div></div>';
+        }).join("") + "</div>";
+      }
+      if (into.length) {
+        left += '<div class="sect">What was made from it</div><div class="stack tight">' + into.map(function (x) {
+          var lk = assetLook(x);
+          return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
+            '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+            '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
+            '<div class="says">' + esc(assetKindLabel(x)) + "</div></div></button>";
+        }).join("") + "</div>";
+      }
+      left += "</details>";
     }
 
     var uses = assetUses(a);
@@ -9894,7 +10095,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v65 · 18 Sep 2026";
+  var BUILD = "v66 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
