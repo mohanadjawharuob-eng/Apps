@@ -528,6 +528,7 @@ color-scheme: light;
   .btn:focus-visible, .tab:focus-visible,
   .panel:focus-visible, .rowbtn:focus-visible, .bcard:focus-visible,
   .drow:focus-visible, .dact:focus-visible,
+  .ntick:focus-visible, .nopen:focus-visible, .crow:focus-visible, .upc:focus-visible,
   .cal-m:focus-visible, .cl-row:focus-visible,
   .repo-hit:focus-visible, .repo-row:focus-visible, .rwrow:focus-visible,
   .gearbtn:focus-visible, .findbtn:focus-visible, .chip:focus-visible,
@@ -1035,6 +1036,129 @@ color-scheme: light;
   .gearbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
   .gearbtn .ico { display: flex; }
 
+  /* AN ENTRY'S FACTS, BESIDE ITS FACE. A definition list, because that is what
+     this is: a label and the one value the record holds for it. Two columns
+     at any real width; on a phone the label sits over the value rather than
+     squeezing it, and the face drops to the top-left. */
+  .aface { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+  .iface {
+    flex: 0 0 auto; width: 84px; height: 84px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--tint-of) 16%, transparent); color: var(--tint-of);
+  }
+  .iface svg { width: 38px; height: 38px; display: block; }
+  .afacts {
+    flex: 1 1 0; min-width: 0; margin: 0;
+    display: grid; grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.1rem 1rem; align-items: baseline;
+  }
+  .afacts dt { font-size: 0.78rem; color: var(--faint); padding: 0.22rem 0; }
+  .afacts dd { margin: 0; font-size: 0.86rem; color: var(--ink); padding: 0.22rem 0; min-width: 0; }
+  /* A path can be any length and has no spaces to break at. */
+  .fbrk { font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
+  /* A fact nobody has stated says so, in the app's voice for an absence. */
+  .fnone { color: var(--faint); font-family: var(--serif); font-style: italic; }
+  @media (max-width: 620px) {
+    .aface { gap: 0.7rem; }
+    .iface { width: 56px; height: 56px; border-radius: 12px; }
+    .iface svg { width: 26px; height: 26px; }
+    .afacts { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+    .afacts dt { padding-bottom: 0; }
+    .afacts dd { padding-top: 0; padding-bottom: 0.45rem; }
+  }
+
+  /* AN ENTRY'S TWO COLUMNS. The wider one holds what the thing is connected
+     to, the narrower what you can do with it — and they fold to one column
+     before either gets too narrow to read a name in. */
+  .agrid { display: grid; grid-template-columns: 3fr 2fr; gap: 0 1.6rem; align-items: start; }
+  .acol { min-width: 0; }
+  .acol > .sect:first-child { margin-top: 0; }
+  @media (max-width: 1000px) { .agrid { grid-template-columns: 1fr; gap: 0; } }
+
+  /* NEXT ACTIONS: a tick and a name. The tick is a real control (it marks the
+     step or the task done through the same action the screen behind it uses),
+     so it is a button and not a decoration, and the name beside it opens the
+     thing. Two controls in one row, the way a Repo row is built, for the same
+     reason: a row that is a link may not contain a button. */
+  .nhead { font-size: 0.72rem; color: var(--faint); margin: 0.5rem 0 0.15rem; }
+  .nhead:first-child { margin-top: 0.1rem; }
+  .nrow { display: flex; align-items: center; gap: 0.55rem; border-top: 1px solid var(--rule-soft); }
+  .nrow:first-of-type { border-top: 0; }
+  .ntick {
+    flex: 0 0 auto; width: 17px; height: 17px; margin: 0.45rem 0;
+    border: 1px solid var(--rule-mid); border-radius: 5px;
+    background: none; cursor: pointer; transition: var(--t);
+  }
+  .ntick:hover { border-color: var(--sage); background: color-mix(in srgb, var(--sage) 18%, transparent); }
+  .nrow.late .ntick { border-color: var(--apricot); }
+  .nopen {
+    flex: 1 1 0; min-width: 0; display: block; padding: 0.4rem 0;
+    background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .nopen .nm { display: block; font-size: 0.85rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nopen .says { display: block; font-size: 0.73rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nopen:hover .nm { color: var(--brass); }
+
+  /* UPCOMING: a date badge, what it is, and how far off. The badge is the one
+     place a date is set as a figure rather than written into a sentence. */
+  .upcbox { margin-bottom: 0.4rem; }
+  .upc {
+    display: flex; align-items: center; gap: 0.7rem; width: 100%;
+    padding: 0.45rem 0.6rem; margin-bottom: 4px;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 2px solid var(--rule); border-radius: 10px;
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+    transition: background var(--t);
+  }
+  .upc:hover { background: var(--raised); }
+  div.upc { cursor: default; }
+  .upc.t-late { border-left-color: var(--apricot); }
+  .upc.t-dated { border-left-color: var(--sage-deep); }
+  .upc.t-due { border-left-color: var(--id-project); }
+  .upcd {
+    flex: 0 0 auto; width: 2.6rem; text-align: center; display: flex;
+    flex-direction: column; line-height: 1;
+  }
+  .upcd b { font-family: var(--display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.02em; }
+  .upcd small { font-size: 0.66rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .upc .grow { flex: 1 1 0; min-width: 0; }
+  .upc .nm { display: block; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upc .says { display: block; font-size: 0.73rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* On a phone the month list below already reads in date order, so this
+     would be the same information twice. */
+  @media (max-width: 700px) { .upcbox { display: none; } }
+
+  /* A REPO ROW'S RIGHT-HAND END: how it stands over when it was last used. */
+  .rmeta { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+  .rwhen { font-size: 0.73rem; color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+  .rchev { flex: 0 0 auto; padding: 0 0.8rem 0 0.2rem; color: var(--faint); font-size: 1.1rem; line-height: 1; }
+  @media (max-width: 560px) {
+    .rmeta { flex-direction: row; align-items: center; gap: 0.4rem; }
+  }
+
+  /* CONNECTIONS, AS A GRID OF PILLS. Two columns on a laptop, one on a phone:
+     these are short rows (a name, what can be done with it, a tick) and a
+     column of full-width cards for them would be a page of mostly nothing. */
+  .cgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .crow {
+    display: flex; align-items: center; gap: 0.6rem; min-width: 0;
+    padding: 0.5rem 0.65rem; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 10px;
+    color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+    transition: background var(--t), border-color var(--t);
+  }
+  .crow:hover { background: var(--raised); border-color: var(--rule-mid); }
+  .crow .grow { flex: 1 1 0; min-width: 0; }
+  .crow .nm { display: block; font-size: 0.85rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .crow .says { display: block; font-size: 0.73rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* The tick is a STATE and carries no identity hue: sage when the app can
+     really open it, amber when all it can do is hand you the path, because a
+     copy is half a connection and the row says which. */
+  .ctick { flex: 0 0 auto; font-size: 0.9rem; line-height: 1; }
+  .ctick.on { color: var(--sage); }
+  .ctick.half { color: var(--amber); }
+  @media (max-width: 760px) { .cgrid { grid-template-columns: 1fr; } }
+
   /* A REPO ROW IS TWO CONTROLS, and the big one opens the thing. A whole row
      that is an <a> may not contain a <button>, so the row is a panel holding
      a full-width hit area beside the small acts rather than a link wrapped
@@ -1293,6 +1417,8 @@ color-scheme: light;
   .t-person { --tint-of: var(--id-conn); }
   .t-doc   { --tint-of: var(--id-asset); }
   .t-photo { --tint-of: var(--id-output); }
+  .t-know  { --tint-of: var(--id-know); }
+  .t-conn  { --tint-of: var(--id-conn); }
   .t-soft  { --tint-of: var(--id-soft); }
   .t-equip { --tint-of: var(--id-equip); }
 
@@ -1769,7 +1895,9 @@ color-scheme: light;
     bench:  svgIcon('<path d="M3 8.2h14v2.2H3zM5 10.4v5.4M15 10.4v5.4M3 8.2l2-4h10l2 4"/>'),
     cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>'),
     // a project: a bounded body of work with a date on it
-    proj:   svgIcon('<path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M7 11.4h6"/>')
+    book:   svgIcon('<path d="M3.4 4.6a1.4 1.4 0 0 1 1.4-1.4h3.4A2 2 0 0 1 10 5v10.6a1.8 1.8 0 0 0-1.4-.8H3.4z"/><path d="M16.6 4.6a1.4 1.4 0 0 0-1.4-1.4h-3.4A2 2 0 0 0 10 5v10.6a1.8 1.8 0 0 1 1.4-.8h5.2z"/>'),
+    plug:   svgIcon('<path d="M7.6 2.8v3.4M12.4 2.8v3.4"/><path d="M5.4 6.2h9.2v2.4A4.6 4.6 0 0 1 10 13.2a4.6 4.6 0 0 1-4.6-4.6z"/><path d="M10 13.2v4"/>'),
+        proj:   svgIcon('<path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M7 11.4h6"/>')
   };
   function actIcon(act) { return ICONS[act] || ICONS.do; }
   function thingIcon(kind) {
@@ -4281,7 +4409,17 @@ function stateWord(b, n) {
     boards("run").forEach(function (b) {
       if (b.closedOn) return;
       activeNodes(b).forEach(function (n) {
-        if (n.dueAt) put(n.dueAt, { tone: "dated", label: n.label, where: b.name, id: b.id });
+        /* `.slice(0, 7) === ym` on THIS branch too. It was the only one
+           without the test, which the grid never noticed because it reads
+           `by[day]` for the days of the month it is drawing and nothing else
+           — so a step dated in November sat in September's map, unread. The
+           moment a second caller walked the map itself (`upcoming()`, over
+           three months), every dated step came back three times. A function
+           called `calMarks(ym)` has to return the marks in `ym`: a name that
+           is only true for its first caller is a trap laid for the second. */
+        if (n.dueAt && String(n.dueAt).slice(0, 7) === ym) {
+          put(n.dueAt, { tone: "dated", label: n.label, where: b.name, id: b.id });
+        }
         // The day a chase falls due, which is a date you can plan around even
         // though nobody wrote it down.
         if (n.chaseDays && n.enteredAt) {
@@ -4328,6 +4466,28 @@ function stateWord(b, n) {
     });
 
     return by;
+  }
+
+  /* WHAT IS COMING, ACROSS MONTHS. The month grid answers "what is dated in
+     September"; the mockup's Schedule panel also carries an Upcoming list,
+     which is the question you actually have on the 28th — the next few
+     things, whichever month they fall in. It reads `calMarks()` for this
+     month and the two after it rather than walking the record again: two
+     walks would eventually answer one question differently, which is the rule
+     the report and the adviser both live by. */
+  function upcoming(n) {
+    var out = [], ym = String(today()).slice(0, 7);
+    for (var i = 0; i < 3; i++) {
+      var by = calMarks(ym);
+      Object.keys(by).forEach(function (day) {
+        if (day < today()) return;
+        by[day].forEach(function (m) { out.push({ day: day, m: m }); });
+      });
+      var d = parseISO(ym + "-01");
+      ym = iso(new Date(d.getFullYear(), d.getMonth() + 1, 1)).slice(0, 7);
+    }
+    out.sort(function (a, b) { return a.day.localeCompare(b.day); });
+    return out.slice(0, n || 6);
   }
 
   function renderCal() {
@@ -4382,6 +4542,28 @@ function stateWord(b, n) {
        render that reads the window width is a render that is wrong after a
        resize. Same reasoning as the sheet on the laptop and the rows on the
        phone. */
+    /* Under the grid on a wide screen, where the grid says what is dated in
+       the month you are looking at and this says what is next whatever month
+       it is in. On a phone the list below already reads in date order, so
+       printing both would be the same information twice. */
+    var up = upcoming(6);
+    if (up.length) {
+      h += '<div class="upcbox"><div class="sect">Upcoming</div>' + up.map(function (x) {
+        var tag = x.m.id ? "button" : "div";
+        return "<" + tag + ' class="upc t-' + x.m.tone + '"' +
+          (x.m.id ? ' type="button" data-act="' + (x.m.act || "board-open") + '" data-id="' + x.m.id + '"' : "") +
+          ' title="' + esc(x.m.label + " — " + x.m.where) + '">' +
+          '<span class="upcd"><b>' + Number(x.day.slice(8)) + "</b><small>" +
+          esc(parseISO(x.day).toLocaleDateString(undefined, { month: "short" })) + "</small></span>" +
+          '<span class="grow"><span class="nm">' + esc(x.m.label) + "</span>" +
+          '<span class="says">' + esc(x.m.where) + "</span></span>" +
+          /* The badge already says the date, so this says WHICH DAY it is —
+             "20 SEP ... Sep 20" was the same fact twice on one row. */
+          '<span class="dmeta">' + esc(x.day === today() ? "today"
+            : x.day === addDays(today(), 1) ? "tomorrow" : dayName(x.day)) + "</span></" + tag + ">";
+      }).join("") + "</div>";
+    }
+
     h += '<div class="calist">';
     var listed = days.filter(function (d) { return (by[d] || []).length; });
     if (!listed.length) {
@@ -5247,6 +5429,12 @@ function stateWord(b, n) {
   function plainDate(d) {
     return parseISO(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
+  /* A DATE IN A TABLE CARRIES ITS YEAR. `plainDate` is month and day, which is
+     right for a week-commencing column and wrong for a thing dated 1916 ("Jan
+     1"), and `niceDate` is relative, which belongs in a sentence. */
+  function fullDate(d) {
+    return parseISO(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
   function pad(s, n) { s = String(s); return s + new Array(Math.max(1, n - s.length + 1)).join(" "); }
 
   function weeksBetween(from, to) {
@@ -5593,7 +5781,16 @@ function stateWord(b, n) {
        what keeps the vocabulary a description of the work rather than a
        taxonomy to maintain. */
     { id: "lib",    label: "Library", one: "entry",
-      blurb: "Everything you know, by subject rather than by kind \u2014 the method note beside the dataset beside the paper." }
+      blurb: "Everything you know, by subject rather than by kind \u2014 the method note beside the dataset beside the paper." },
+    /* CONNECTIONS IS THE SAME STORE ASKED A DIFFERENT QUESTION: what can this
+       app actually open for me? The mockup draws it as Software / Web
+       services / Hardware with a tick against each, and every part of that is
+       already in the record \u2014 `openHandle()` is the one place that decides
+       what "open" means, so a tick here is not a stored flag but that
+       function answering yes. A second list of "integrations" would be the
+       one name, one entry mistake this file records twice. */
+    { id: "conn",   label: "Connections", one: "connection",
+      blurb: "What this app can reach: the software it launches, the sites it opens, the hardware you have written down." }
   ];
   var repoTab = "device";   // view state, never saved — a tab lands on its list
   var libTopic = "";        // which subject is open; view state too
@@ -6237,7 +6434,6 @@ function stateWord(b, n) {
     var look = assetLook(a), h = openHandle(a);
     var n = assetUses(a).length;
     var says = [assetKindLabel(a)], stt = thingState(a);
-    if (lastUsedWords(a)) says.push(lastUsedWords(a));
     if (h) says.push(h.brief || h.how);
     /* "nothing to open yet" reads as a gap to fill, and for a device it is
        not one — a pair of headphones has nothing to open, ever. So it is said
@@ -6251,10 +6447,22 @@ function stateWord(b, n) {
     /* The state is a PILL CARRYING A WORD, which is the app's one channel for
        "how is this going" — never a coloured row, and never a colour on its
        own, so it survives a reader who cannot separate the hues. */
+    /* THE STATE AND THE DATE SIT ON THE RIGHT, as the mockup draws an
+       equipment row: how it stands over when it was last used, at the far end
+       of the row, so a column of them reads down rather than having to be
+       hunted for inside a run of prose. The state is still a PILL CARRYING A
+       WORD — this app's one channel for "how is this going" — and a
+       thing nobody has said anything about carries nothing at all rather than
+       a guess dressed as a fact. */
+    var rmeta = (stt.word || lastUsedWords(a))
+      ? '<div class="rmeta">' +
+        (stt.word ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>" : "") +
+        (lastUsedWords(a) ? '<span class="rwhen">' + esc(lastUsedWords(a)) + "</span>" : "") +
+        "</div>"
+      : "";
     var face = '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
-      '<div class="grow"><div class="nm sm">' + esc(a.name) +
-      (stt.word ? ' <span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>" : "") + "</div>" +
-      '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div>";
+      '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
+      '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div>" + rmeta;
 
     /* `repo-open` so a phone can drop it: under 560px the acts move onto
        their own line, and the row is already the open control — so a second
@@ -6280,9 +6488,15 @@ function stateWord(b, n) {
             : '<a class="repo-hit" href="' + esc(h.href) + '"' +
               (h.kind === "url" ? ' target="_blank" rel="noopener"' : "") + ">" + face + "</a>")
         : '<button type="button" class="repo-hit" data-act="asset-open" data-id="' + a.id + '">' + face + "</button>") +
-      '<div class="repo-acts">' + open +
-      '<button class="btn quiet" data-act="asset-open" data-id="' + a.id +
-      '" title="What it is, where it is used, what it was made from">About</button></div></div>';
+      (h
+        ? '<div class="repo-acts">' + open +
+          '<button class="btn quiet" data-act="asset-open" data-id="' + a.id +
+          '" title="What it is, where it is used, what it was made from">About</button></div>'
+        /* Nothing to open means the row's own hit IS "About" — the same
+           action twice with one of them labelled, which looks like a choice
+           and is not. A chevron says the row opens a page, the way every
+           other row in the app does. */
+        : '<span class="rchev" aria-hidden="true">\u203a</span>') + "</div>";
   }
 
   /* The Library: subjects, then what is filed under the open one. A row here
@@ -6307,19 +6521,79 @@ function stateWord(b, n) {
       return h + '<p class="empty">No subjects yet. Open anything in the Repo, press Edit, and write what it is about \u2014 "harbour surveying, photogrammetry". Everything carrying a word appears here under it, whatever kind of thing it is.</p>';
     }
 
-    h += '<div class="tools" style="margin-bottom:0.9rem">' + topics.map(function (t) {
-      var n = assetsOnTopic(t).length;
-      return '<button class="btn' + (libTopic && libTopic.toLowerCase() === t.toLowerCase() ? " primary" : "") +
-        '" data-act="lib-topic" data-id="' + esc(t) + '">' + esc(t) +
-        ' <span class="cnt">' + n + "</span></button>";
-    }).join("") + "</div>";
-
+    /* A SUBJECT IS A ROW, NOT A CHIP OVER AN EMPTY SCREEN. The landing used to
+       be a strip of subject chips above "Pick a subject" \u2014 a screen whose
+       whole content was an instruction to press something, which is the
+       "an empty list's one job is to say what to do" rule applied to a list
+       that was not empty at all. The mockup draws what it should have been:
+       one row per subject, what it holds, and the first few things in it, so
+       the page answers "what do I know about" without a tap. */
     if (!libTopic) {
-      var carry = live(state.assets).filter(function (a) { return assetTopics(a).length; }).length;
-      return h + '<p class="empty">Pick a subject. ' + topics.length +
-        (topics.length === 1 ? " subject is" : " subjects are") + " written across " +
-        carry + (carry === 1 ? " thing." : " things.") + "</p>";
+      var pool = live(state.assets).filter(function (a) { return assetTopics(a).length; });
+      /* The chips are the kinds actually present across the library, counted,
+         so no chip can empty the list \u2014 and selecting one re-counts every
+         subject row beneath it rather than filtering a list that is not
+         there. A subject holding none of the chosen kind drops out, which is
+         the honest reading of "Papers" and not a row saying nought. */
+      var ks = {};
+      pool.forEach(function (a) { ks[a.kind] = (ks[a.kind] || 0) + 1; });
+      var kk = Object.keys(ks).sort(function (x, y) {
+        return String(assetKindLabel({ kind: x })).localeCompare(String(assetKindLabel({ kind: y })));
+      });
+      if (kk.length > 1) {
+        h += '<div class="tools" style="margin-bottom:0.9rem">' +
+          '<button class="btn' + (libKind ? "" : " primary") + '" data-act="lib-kind" data-id="">All' +
+          ' <span class="cnt">' + pool.length + "</span></button>" +
+          kk.map(function (k) {
+            return '<button class="btn' + (libKind === k ? " primary" : "") +
+              '" data-act="lib-kind" data-id="' + esc(k) + '">' + esc(assetKindLabel({ kind: k })) +
+              ' <span class="cnt">' + ks[k] + "</span></button>";
+          }).join("") + "</div>";
+      }
+
+      var subj = topics.map(function (t) {
+        var things = assetsOnTopic(t).filter(function (a) { return !libKind || a.kind === libKind; });
+        return { t: t, things: things };
+      }).filter(function (x) { return x.things.length; });
+
+      if (!subj.length) {
+        return h + '<p class="empty">Nothing under ' + esc(assetKindLabel({ kind: libKind })) +
+          " carries a subject yet.</p>";
+      }
+
+      h += '<div class="stack tight">' + subj.map(function (x) {
+        var n = x.things.length;
+        return '<button type="button" class="panel rowbtn calm" data-act="lib-topic" data-id="' + esc(x.t) +
+          '" title="' + esc(x.t) + '">' +
+          '<span class="itile t-know">' + ICONS.book + "</span>" +
+          '<div class="grow"><div class="nm sm">' + esc(x.t) + "</div>" +
+          '<div class="says">' + esc(x.things.slice(0, 3).map(function (a) { return a.name; }).join(", ")) +
+          (n > 3 ? "\u2026" : "") + "</div></div>" +
+          '<div class="dmeta">' + n + (n === 1 ? " thing" : " things") + "</div></button>";
+      }).join("") + "</div>";
+
+      /* QUICK ACCESS, as drawn \u2014 and derived rather than a list to keep: the
+         library entries you have actually leaned on most, which is what
+         `assetUses()` counts, and only the ones there is really something to
+         open. A button that cannot do what it names is the fault
+         `openHandle()` exists to prevent. */
+      var quick = pool.map(function (a) { return { a: a, n: assetUses(a).length, h: openHandle(a) }; })
+        .filter(function (x) { return x.h && x.n; })
+        .sort(function (x, y) { return y.n - x.n; }).slice(0, 3);
+      if (quick.length) {
+        h += '<div class="sect">Quick access</div><div class="tools">' + quick.map(function (x) {
+          return x.h.kind === "copy"
+            ? '<button class="btn" data-act="asset-copy" data-id="' + x.a.id + '" title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</button>"
+            : '<a class="btn" href="' + esc(x.h.href) + '"' + (x.h.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+              ' title="' + esc(x.h.how) + '">' + esc(x.a.name) + "</a>";
+        }).join("") + "</div>";
+      }
+      return h;
     }
+
+    /* Inside a subject: the way back, then its own kinds. */
+    h += '<div class="tools" style="margin-bottom:0.9rem">' +
+      '<button class="btn" data-act="lib-topic" data-id="">\u2190 All subjects</button>' + "</div>";
 
     var all = assetsOnTopic(libTopic);
     /* The chips are the kinds present UNDER THIS SUBJECT, with a count each,
@@ -6357,10 +6631,62 @@ function stateWord(b, n) {
     return h;
   }
 
+  /* CONNECTIONS. Grouped the way the mockup groups them, and a row's tick is
+     `openHandle()` answering rather than anything stored: a url opens in the
+     browser and is a tick; a path with the companion on opens through the
+     launcher and is a tick; a path with the companion OFF can only be copied,
+     which is the browser refusing and not this app failing, so it reads as
+     half a connection and says why. Hardware has nothing to open, ever, so
+     its rows carry where the thing is and how it stands instead \u2014 the
+     question you actually ask of a total station. */
+  function connGroups() {
+    return [
+      { label: "Software", ico: ICONS.device, tile: "t-soft", ids: ["app"] },
+      { label: "Web services", ico: ICONS.plug, tile: "t-conn", ids: ["site"] },
+      { label: "Hardware", ico: ICONS.kit, tile: "t-equip", ids: ["device"] }
+    ].map(function (g) {
+      g.rows = g.ids.reduce(function (acc, id) { return acc.concat(repoIn(id)); }, []);
+      return g;
+    });
+  }
+
+  function renderConn() {
+    var gs = connGroups();
+    var any = gs.some(function (g) { return g.rows.length; });
+    var h = '<p class="hint" style="margin:0 0 0.9rem">Nothing is set up here and nothing is signed in. A tick means this app can really open that one \u2014 read off the same function every Open button in the app goes through, so a tick can never be a promise it cannot keep.</p>';
+    if (!any) {
+      return h + '<p class="empty">Nothing to reach yet. Add an app, a site or a device in the Repo and it appears here with what this app can do about it.</p>';
+    }
+    gs.forEach(function (g) {
+      h += '<div class="sect">' + esc(g.label) + "</div>";
+      if (!g.rows.length) {
+        h += '<p class="dempty">Nothing under ' + esc(g.label.toLowerCase()) + " yet.</p>";
+        return;
+      }
+      h += '<div class="cgrid">' + g.rows.map(function (a) {
+        var hd = openHandle(a), st = thingState(a);
+        var mark = hd && hd.kind !== "copy" ? '<span class="ctick on" title="' + esc(hd.how) + '">\u2713</span>'
+                 : hd ? '<span class="ctick half" title="' + esc(hd.how) + '">\u2295</span>'
+                 : "";
+        var say = hd ? (hd.brief || hd.how)
+                : st.word ? st.word + (a.where ? " \u00b7 " + a.where : "")
+                : a.where ? a.where : "nothing to open";
+        var inner = '<span class="itile sm ' + g.tile + '">' + g.ico + "</span>" +
+          '<span class="grow"><span class="nm">' + esc(a.name) + "</span>" +
+          '<span class="says">' + esc(say) + "</span></span>" + mark;
+        return hd && hd.kind === "url"
+          ? '<a class="crow" href="' + esc(hd.href) + '" target="_blank" rel="noopener" title="' + esc(a.name + " \u2014 " + hd.how) + '">' + inner + "</a>"
+          : '<button type="button" class="crow" data-act="asset-open" data-id="' + a.id +
+            '" title="' + esc(a.name) + '">' + inner + "</button>";
+      }).join("") + "</div>";
+    });
+    return h;
+  }
+
   function renderRepo() {
     if (openAsset && byId(state.assets, openAsset)) return assetPage(byId(state.assets, openAsset));
     var page = REPO_PAGES.filter(function (p) { return p.id === repoTab; })[0] || REPO_PAGES[0];
-    var rows = page.id === "lib" ? [] : repoIn(page.id);
+    var rows = page.id === "lib" || page.id === "conn" ? [] : repoIn(page.id);
     var total = live(state.assets).length;
 
     var h = '<div class="finding"><h1>' +
@@ -6371,13 +6697,20 @@ function stateWord(b, n) {
     // The strip carries a count each, so an empty section is visible without
     // being opened.
     h += '<div class="subnav">' + REPO_PAGES.map(function (p) {
-      var n = p.id === "lib" ? allTopics().length : repoIn(p.id).length;
+      /* Connections counts what can be REACHED rather than what is filed:
+         the question that section asks. A count of things you have written
+         down would be the Repo's own total said twice. */
+      var n = p.id === "lib" ? allTopics().length
+            : p.id === "conn" ? connGroups().reduce(function (t, g) {
+                return t + g.rows.filter(function (a) { return !!openHandle(a); }).length; }, 0)
+            : repoIn(p.id).length;
       return '<button class="btn' + (p.id === repoTab ? " primary" : "") +
         '" data-act="repo-page" data-id="' + p.id + '">' + p.label +
         (n ? ' <span class="cnt">' + n + "</span>" : "") + "</button>";
     }).join("") + "</div>";
 
     if (page.id === "lib") return h + renderLibrary();
+    if (page.id === "conn") return h + renderConn();
 
     h += '<div class="tools" style="margin:0.9rem 0 0.5rem">' +
       '<button class="btn primary" data-act="repo-add" data-id="' + page.id + '">New ' + esc(page.one) + "</button>" +
@@ -6432,11 +6765,56 @@ function stateWord(b, n) {
     var stt = thingState(a);
     var h = '<div class="page-head"><div><h2>' + esc(a.name) + "</h2>" +
       "<p>" + esc(assetSays(a)) + "</p>" +
-      '<div class="stand">' +
-      (stt.word ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>" : "") +
-      (lastUsedWords(a) ? '<span class="sp muted">' + esc(lastUsedWords(a)) + "</span>" : "") +
-      (!stt.word && !lastUsedWords(a) ? '<span class="sp muted">Nothing said about how it stands</span>' : "") +
-      "</div></div>" + tools + "</div>";
+      /* The pill and the last-used date were repeated here, directly above the
+         facts table that now carries both. Said once. */
+      "</div>" + tools + "</div>";
+
+    /* THE FACTS, AS A TABLE BESIDE THE THING'S FACE. The mockup opens an asset
+       with a thumbnail and a short column of label-and-value rows — Type,
+       Created, Software, Size, Status — and that shape is right: these are
+       the questions you ask of one entry, and as loose sentences they were
+       spread down the page in four places.
+
+       Only the rows that EXIST are printed. Half of the mockup's labels are
+       fields this record does not have (a file's size, which program wrote
+       it), and inventing them would be a table of blanks or, worse, a guess.
+       Where a fact is genuinely unstated the row says so in words, because
+       "Nothing said about how it stands" is already this app's answer to that
+       and it belongs in the row rather than in a gap. The face is the
+       identity tile at size: the registry keeps no picture of an entry — a
+       thumbnail belongs to a photograph on a board — and a stand-in here
+       would be a picture of nothing. */
+    var facts = [];
+    facts.push(["Kind", esc(assetKindLabel(a))]);
+    facts.push(["How it stands", stt.word
+      ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>"
+      : '<span class="fnone">Nothing said</span>']);
+    /* `lastUsedWords` reads "last used Jul 18", which under a label reading
+       "Last used" says it twice. A table wants the value alone. */
+    if (a.lastUsedOn && dayOk(a.lastUsedOn)) facts.push(["Last used", esc(fullDate(a.lastUsedOn))]);
+    if (a.where) facts.push(["Where it is kept", esc(a.where)]);
+    if (partTrail(a).length) facts.push(["Part of", esc(partTrail(a).join(" › "))]);
+    if (a.onDate) facts.push(["Dated", esc(fullDate(a.onDate))]);
+    if (a.path) facts.push(["Path", '<span class="fbrk">' + esc(a.path) + "</span>"]);
+    if (a.url) facts.push(["Link", '<a class="fbrk" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.url) + "</a>"]);
+    var hdl = openHandle(a);
+    facts.push(["Opening it", hdl ? esc(hdl.how)
+      : '<span class="fnone">Nothing to open — this is a thing, not a file</span>']);
+
+    var look = assetLook(a);
+    h += '<div class="aface"><span class="iface ' + look.tile + '">' + look.ico + "</span>" +
+      '<dl class="afacts">' + facts.map(function (f) {
+        return "<dt>" + esc(f[0]) + "</dt><dd>" + f[1] + "</dd>";
+      }).join("") + "</dl></div>";
+
+    /* TWO COLUMNS, AS THE POSTER LAYS THEM OUT: what the thing is connected to
+       on the left, what you can do with it on the right. The poster puts
+       everything on the left under one heading, "Related" — this app keeps
+       them apart on purpose, because "made from three hundred frames", "found
+       at trench 4" and "used on this board" are three different facts and the
+       pickers that write them refuse to conflate them. So the shape is the
+       poster's and the headings are this app's. */
+    var left = "", right = "";
 
     /* WHAT YOU CAN DO NEXT, and every one of them is something this app can
        actually do — see `nextActions`. The mockup lists an application's menu
@@ -6445,7 +6823,7 @@ function stateWord(b, n) {
        to avoid. */
     var nx = nextActions(a);
     if (nx.length) {
-      h += '<div class="sect">What you can do next</div><div class="stack tight">' +
+      right += '<div class="sect">What you can do next</div><div class="stack tight">' +
         nx.map(function (x) {
           var inner = '<div class="grow"><div class="nm sm">' + esc(x.label) + "</div>" +
             '<div class="says">' + esc(x.how) + "</div></div>";
@@ -6457,16 +6835,8 @@ function stateWord(b, n) {
         }).join("") + "</div>";
     }
 
-    if (a.path || a.url || a.onDate) {
-      h += '<div class="card"><div class="sect" style="margin-top:0">Where and when</div>';
-      if (a.path) h += '<div class="row"><span class="grow"><b>Path</b><small>' + esc(a.path) + "</small></span></div>";
-      if (a.url) h += '<div class="row"><span class="grow"><b>Link</b><small>' + esc(a.url) + "</small></span></div>";
-      if (a.onDate) h += '<div class="row"><span class="grow"><b>Dated</b><small>' +
-        esc(niceDate(a.onDate)) + "</small></span></div>";
-      h += "</div>";
-    }
     if (a.notes) {
-      h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(a.notes) + "</div></div></div>";
+      left += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(a.notes) + "</div></div></div>";
     }
 
     /* Provenance, both ways. The forward list is stated and the reverse is
@@ -6478,16 +6848,16 @@ function stateWord(b, n) {
        as an address rather than decoded backwards. */
     var up = partTrail(a), inside = partsIn(a);
     if (up.length || inside.length) {
-      h += '<div class="sect">Where it sits</div>';
+      left += '<div class="sect">Where it sits</div>';
       if (up.length) {
-        h += '<div class="panel calm"><div class="grow"><div class="nm sm">' +
+        left += '<div class="panel calm"><div class="grow"><div class="nm sm">' +
           esc(up.concat([a.name]).join(" \u203a ")) + "</div>" +
           '<div class="says">Part of ' + esc(up[up.length - 1]) + "</div></div>" +
           '<div class="acts"><button class="btn quiet" data-act="asset-open" data-id="' +
           esc(partOf(a).id) + '">Look</button></div></div>';
       }
       if (inside.length) {
-        h += '<div class="stack tight">' + inside.map(function (x) {
+        left += '<div class="stack tight">' + inside.map(function (x) {
           var lk = assetLook(x);
           return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
             '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
@@ -6500,15 +6870,15 @@ function stateWord(b, n) {
 
     var tps = assetTopics(a);
     if (tps.length) {
-      h += '<div class="sect">What it is about</div><div class="tools">' +
+      left += '<div class="sect">What it is about</div><div class="tools">' +
         tps.map(function (t) {
           return '<button class="btn" data-act="lib-topic" data-id="' + esc(t) + '">' + esc(t) + "</button>";
         }).join("") + "</div>";
     }
 
     var from = madeFrom(a), into = madeInto(a);
-    h += '<div class="sect">What it was made from</div>';
-    h += from.length ? '<div class="stack tight">' + from.map(function (x) {
+    left += '<div class="sect">What it was made from</div>';
+    left += from.length ? '<div class="stack tight">' + from.map(function (x) {
       var lk = assetLook(x);
       return '<div class="panel calm"><span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
         '<div class="grow"><div class="nm sm">' + esc(x.name) + "</div>" +
@@ -6520,7 +6890,7 @@ function stateWord(b, n) {
       : '<p class="empty">Nothing said. For anything derived — an orthophoto, a map, a report — this is the one fact the file itself will not tell you in six months.</p>';
 
     if (into.length) {
-      h += '<div class="sect">What was made from it</div><div class="stack tight">' + into.map(function (x) {
+      left += '<div class="sect">What was made from it</div><div class="stack tight">' + into.map(function (x) {
         var lk = assetLook(x);
         return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + x.id + '">' +
           '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
@@ -6530,8 +6900,8 @@ function stateWord(b, n) {
     }
 
     var uses = assetUses(a);
-    h += '<div class="sect">Where it is used</div>';
-    h += uses.length ? '<div class="stack tight">' + uses.map(function (u) {
+    left += '<div class="sect">Where it is used</div>';
+    left += uses.length ? '<div class="stack tight">' + uses.map(function (u) {
       return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + u.board.id + '">' +
         '<div class="grow"><div class="nm sm">' + esc(u.board.name) + "</div>" +
         '<div class="says">' + esc("as “" + u.node.label + "”" +
@@ -6541,7 +6911,7 @@ function stateWord(b, n) {
 
     var up = assetUpkeep(a);
     if (up.length) {
-      h += '<div class="sect">Upkeep on it</div><div class="stack tight">' + up.map(function (cd) {
+      right += '<div class="sect">Upkeep on it</div><div class="stack tight">' + up.map(function (cd) {
         var st = cadenceState(cd);
         return '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(cd.label) + "</div>" +
           '<div class="says">' + esc("every " + cd.everyDays + "d · " + placeLabel(cd.place)) + "</div></div>" +
@@ -6549,6 +6919,9 @@ function stateWord(b, n) {
           '"><i></i>' + esc(st.word) + "</span></div>";
       }).join("") + "</div>";
     }
+    h += '<div class="agrid"><div class="acol">' + left + "</div>" +
+      '<div class="acol">' + right + "</div></div>";
+
     return h;
   }
 
@@ -8426,6 +8799,20 @@ function stateWord(b, n) {
      PROJECTS and closes with WHAT WAS FILED). The percentage and the bar's
      width are the same figure out of `projPace`, so the two cannot
      disagree. */
+  /* THE PROJECT'S OVERVIEW IS THE POSTER'S PROJECT WORKSPACE: where the work
+     stands on the left, and on the right the two things the panel puts beside
+     it — what to do next, and what the project is made of. Both are leads
+     rather than copies of the pages behind them: a card that grows into a
+     whole page is how Coffer's Today tab became the screen everybody scrolled
+     past, and both carry the route to the full list.
+
+     NEXT ACTIONS IS DERIVED AND TYPED, SIDE BY SIDE, AND SAYS WHICH IS WHICH.
+     A live step of a run is born from the record; a task is the one thing
+     somebody types. Folding the two into one undifferentiated list is exactly
+     what `dues()` refuses to do, and for the same reason — so they sit in
+     one card in two groups, each row ticking through the action that screen
+     already uses (`step-done`, `task-done`), so nothing here can mark
+     something done in a way the rest of the app would not. */
   function projOver(p, runs, tpls) {
     var pace = projPace(p);
     /* Read here rather than taken from `renderProj`'s local: `barTone(st)`
@@ -8434,16 +8821,16 @@ function stateWord(b, n) {
        threw at render time — the project page simply refused to open. The
        suite caught it; the parser never would. */
     var st = projState(p);
-    var h = "";
+    var left = "", right = "";
     if (p.note) {
-      h += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
+      left += '<div class="panel calm"><div class="grow"><div class="nm sm">' + esc(p.note) + "</div></div></div>";
     }
 
-    h += '<div class="sect">How far along</div>';
-    h += '<div class="panel calm"><div class="grow">' +
+    left += '<div class="sect">How far along</div>';
+    left += '<div class="panel calm"><div class="grow">' +
       '<div class="nm sm">' + pace.done + " of " + pace.total +
       (pace.total === 1 ? " step done" : " steps done") +
-      (pace.runs ? "" : " \u2014 nothing has been started") + "</div>" +
+      (pace.runs ? "" : " — nothing has been started") + "</div>" +
       '<div class="bar ' + barTone(st) + '"><i style="width:' + pace.pct + '%"></i></div>' +
       '<div class="says">' + pace.pct + "% \u00b7 " +
       (pace.runs ? pace.runs + (pace.runs === 1 ? " run" : " runs") : "no runs") +
@@ -8452,7 +8839,7 @@ function stateWord(b, n) {
 
     if (p.endsOn && dayOk(p.endsOn)) {
       var gone = p.endsOn < today();
-      h += '<div class="panel calm' + (gone ? " late" : "") + '"><div class="grow">' +
+      left += '<div class="panel calm' + (gone ? " late" : "") + '"><div class="grow">' +
         '<div class="nm sm">' + esc((gone ? "Was due " : "Due ") + niceDate(p.endsOn)) + "</div>" +
         /* The full date with its year underneath, not `plainDate` — that
            returns the same "Oct 5" the line above already says, so the card
@@ -8463,15 +8850,78 @@ function stateWord(b, n) {
     }
 
     var outs = projOutputs(p.id);
-    h += '<div class="sect">What it has produced</div>';
-    h += outs.length ? '<div class="stack tight">' + outs.map(function (o) {
+    left += '<div class="sect">What it has produced</div>';
+    left += outs.length ? '<div class="stack tight">' + outs.map(function (o) {
       return '<div class="panel calm"><span class="itile sm t-out">' + ICONS.file + "</span>" +
         '<div class="grow"><div class="nm sm">' + esc(o.label) + "</div>" +
         '<div class="says">' + esc(o.board + " \u00b7 filed " + agoWords(o.at) + (o.path ? " \u00b7 " + o.path : "")) +
         "</div></div></div>";
     }).join("") + "</div>"
-      : '<p class="empty">Nothing filed yet. A filing step that is done is what lands here \u2014 the same steps the archive lock watches.</p>';
-    return h;
+      : '<p class="empty">Nothing filed yet. A filing step that is done is what lands here — the same steps the archive lock watches.</p>';
+
+    /* NEXT ACTIONS. The derived half first, worst first, because a chase
+       outranks anything typed — the order Waiting itself uses. */
+    var pb = {};
+    projBoards(p.id).forEach(function (b) { pb[b.id] = 1; });
+    var pd = dues().filter(function (d) { return pb[d.board.id]; }).slice(0, 4);
+    var pt = openTasks().filter(function (t) { return t.projId === p.id; }).slice(0, 4);
+    var body = "";
+    if (pd.length) {
+      body += '<div class="nhead">From the boards</div>' + pd.map(function (d) {
+        return '<div class="nrow' + (d.st === "over" ? " late" : "") + '">' +
+          '<button type="button" class="ntick" data-act="step-done" data-id="' + d.board.id + ":" + d.node.id +
+          '" title="Mark it done" aria-label="Mark done: ' + esc(d.node.label) + '"></button>' +
+          '<button type="button" class="nopen" data-act="board-open" data-id="' + d.board.id +
+          '" title="' + esc(d.node.label + " — " + d.board.name) + '">' +
+          '<span class="nm">' + esc(d.node.label) + "</span>" +
+          /* The step's own words come from `stepMeta`, the same function the
+             board and Waiting print — a due carries no sentence of its own,
+             and writing one here is how two screens come to disagree about
+             one step. */
+          '<span class="says">' + esc(d.board.name + " \u00b7 " + stepMeta(d.board, d.node)) + "</span></button></div>";
+      }).join("");
+    }
+    if (pt.length) {
+      body += '<div class="nhead">Written down</div>' + pt.map(function (t) {
+        return '<div class="nrow' + (taskLate(t) ? " late" : "") + '">' +
+          '<button type="button" class="ntick" data-act="task-done" data-id="' + t.id +
+          '" title="Mark it done" aria-label="Mark done: ' + esc(t.label) + '"></button>' +
+          '<button type="button" class="nopen" data-act="task-edit" data-id="' + t.id +
+          '" title="' + esc(t.label) + '">' +
+          '<span class="nm">' + esc(t.label) + "</span>" +
+          '<span class="says">' + esc(taskSays(t)) + "</span></button></div>";
+      }).join("");
+    }
+    if (!body) {
+      body = '<p class="dempty">Nothing is waiting on this project. Start a run of one of its procedures, or write something down.</p>';
+    }
+    right += dcard("Next actions", { label: "Tasks", act: "proj-page", id: "tasks" }, body);
+
+    /* WHAT IT IS MADE OF, under the registry's own headings. Derived from the
+       boards (`projThings`), so it cannot disagree with the Things page or
+       with the Repo, and capped: this is a lead, and the page behind it is
+       one tap away on the strip. */
+    var things = projThings(p.id).filter(function (t) { return t.asset; });
+    var groups = {};
+    things.forEach(function (t) { (groups[repoOf(t.asset)] = groups[repoOf(t.asset)] || []).push(t); });
+    var made = "";
+    REPO_PAGES.forEach(function (sec) {
+      var g = groups[sec.id];
+      if (!g || !g.length) return;
+      made += '<div class="nhead">' + esc(sec.label) + "</div>" + g.slice(0, 3).map(function (t) {
+        var lk = assetLook(t.asset);
+        return '<button type="button" class="drow" data-act="asset-open" data-id="' + t.asset.id +
+          '" title="' + esc(t.asset.name) + '">' +
+          '<span class="itile sm ' + lk.tile + '">' + lk.ico + "</span>" +
+          '<span class="grow"><span class="nm">' + esc(t.asset.name) + "</span></span></button>";
+      }).join("");
+    });
+    if (made) {
+      right += dcard("What it is made of", { label: "Things", act: "proj-page", id: "things" }, made);
+    }
+
+    return '<div class="agrid"><div class="acol">' + left + "</div>" +
+      '<div class="acol">' + right + "</div></div>";
   }
 
   function projWork(p, runs, tpls, shut) {
@@ -8616,7 +9066,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v59 · 18 Sep 2026";
+  var BUILD = "v60 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };

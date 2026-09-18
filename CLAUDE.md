@@ -1473,6 +1473,95 @@ in. `.dcard:first-of-type` matched the first card of the *second* grid as well
 as the first, whose rows carry no figure at all, so a test reading Today's
 figures crashed on the wrong card. Find the card by its heading.
 
+### The poster's other panels
+
+**CONNECTIONS IS THE SAME STORE ASKED A DIFFERENT QUESTION.** Panel 7 draws
+Software · Web services · Hardware with a tick against each, which looks like
+a list of integrations to keep. It is not one: `openHandle()` is already the
+single place that decides what "open" means, so a **tick is that function
+answering yes** rather than a stored flag — a url opens in the browser and
+ticks, a path with the companion on opens through the launcher and ticks, and
+a path with the companion **off** is amber and says why, because a copy is
+half a connection. Hardware has nothing to open ever, so its rows carry how
+the thing stands and where it is instead. It is the sixth section of the Repo
+strip, not a tab: one store, six questions, and its count is what can be
+**reached**, because a count of things filed would be the Repo's own total
+said twice.
+
+**A SUBJECT IS A ROW, NOT A CHIP OVER AN EMPTY SCREEN.** The Library's landing
+was a strip of subject chips above the words "Pick a subject" — a screen whose
+entire content was an instruction to press something, on a page that was not
+empty at all. Panel 6 draws what it should always have been: one row per
+subject with what it holds and the first few things in it, so the page answers
+"what do I know about" without a tap. The kind chips now sit **above** the
+subjects and re-count every row beneath them, and a subject holding none of
+the chosen kind drops out rather than reading nought — which is the honest
+meaning of picking "Papers". **Quick access** is derived too: the library
+entries with the most uses that `openHandle()` can really open, because a
+shortcut that cannot open what it names is the fault that function exists to
+prevent.
+
+**AN ENTRY OPENS ON ITS FACTS.** Panel 4 puts a short table of label-and-value
+rows beside the thing's face, and that shape is right — these are the
+questions you ask of one entry, and they had been spread down the page as four
+cards of loose prose. Only the rows that **exist** are printed: half the
+poster's labels (a file's size, which program wrote it) are fields this record
+does not have, and a table of blanks is worse than a shorter table. Where a
+fact is genuinely unstated the row says so in words rather than leaving a gap.
+The face is the identity tile at size, because the registry keeps no picture
+of an entry — a thumbnail belongs to a photograph on a board, and a stand-in
+would be a picture of nothing.
+
+Below it the page is **two columns, as the poster lays them out**: what the
+thing is connected to on the left, what you can do with it on the right. The
+poster puts everything on the left under one heading, "Related"; this app keeps
+them apart on purpose, because *made from three hundred frames*, *found at
+trench 4* and *used on this board* are three different facts and the pickers
+that write them refuse to conflate them. **The shape is the poster's and the
+headings are this app's.**
+
+**A ROW'S STATE AND ITS DATE BELONG AT THE ROW'S RIGHT-HAND END**, as panel 5
+draws an equipment row: how it stands over when it was last used, so a column
+of them reads down instead of being hunted for inside a run of prose. Reading
+it found two things worth keeping. Under a label saying "Last used",
+`lastUsedWords()` reads "last used Jul 18" — **the label and the value said it
+twice**, so a table takes the value alone. And where there is nothing to open,
+the row's own hit already **is** "About": the labelled button beside it was the
+same action twice, one of them dressed as a choice, so it is a chevron now —
+which is also what the poster draws.
+
+**UPCOMING IS A SECOND CALLER, AND THAT IS HOW A LYING FUNCTION NAME WAS
+FOUND.** Panel 8 carries an Upcoming list under the month grid — the question
+you actually have on the 28th, which the grid cannot answer because the answer
+is in October. `upcoming()` reads `calMarks()` for this month and the two after
+it rather than walking the record again; two walks would eventually answer one
+question differently, which is the rule the report and the adviser both live
+by. It immediately printed **"Friday meeting" three times**: `calMarks(ym)`
+filtered every branch to `ym` except the dated-step one, and the grid had never
+noticed because it reads `by[day]` for the days it is drawing and nothing else.
+**A function called `calMarks(ym)` has to return the marks in `ym`** — a name
+that is only true for its first caller is a trap laid for the second. (And the
+row's right-hand meta printed the date the badge beside it already carried, so
+it says which *day* it is instead.)
+
+**THE PROJECT'S OVERVIEW IS THE POSTER'S PROJECT WORKSPACE**: where the work
+stands on the left, and beside it the two things panel 2 puts there — what to
+do next, and what the project is made of. Both are **leads and not copies** of
+the pages behind them, and both carry the route to the full list: a card that
+grows into a whole page is how Coffer's Today tab became the screen everybody
+scrolled past. **Next actions keeps the derived and the typed apart and says
+which is which** — a live step of a run is born from the record, a task is the
+one thing somebody types, and folding the two into one list is exactly what
+`dues()` refuses to do. Each row ticks through the action that screen already
+uses (`step-done`, `task-done`) and its sub-line comes from `stepMeta()`, the
+same function the board and Waiting print, so nothing here can mark something
+done, or describe a step, in a way the rest of the app would not.
+
+**NAME A SECTION, NEVER COUNT ONE.** `repo.js` asserted "five sections" and
+broke the day Connections landed. It names the six ids it wants now, so the
+failure says which one is missing instead of only that the number moved — the
+same rule as naming a tab and naming a card, one level further in.
+
 ## What READING every screen found
 
 Eleven faults from driving the interface; these came from **reading** it —
