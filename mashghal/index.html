@@ -98,6 +98,8 @@
     --late-edge2: #3c2b38;
 
     /* identity, for icon tiles only — never on text, a border or a pill */
+    --nav-on: #1d4ed8;
+    --nav-on-ink: #ffffff;
     --id-project: #60a5fa;
     --id-workflow: #a78bfa;
     --id-asset: #4ade80;
@@ -181,6 +183,8 @@
     --late-tint2: #fef2f2;
     --late-edge2: #f6cdd4;
 
+    --nav-on: #1d4ed8;
+    --nav-on-ink: #ffffff;
     --id-project: #1d4ed8;
     --id-workflow: #6d28d9;
     --id-asset: #047857;
@@ -250,6 +254,8 @@
     --late-tint2: #fef2f2;
     --late-edge2: #f6cdd4;
 
+    --nav-on: #1d4ed8;
+    --nav-on-ink: #ffffff;
     --id-project: #1d4ed8;
     --id-workflow: #6d28d9;
     --id-asset: #047857;
@@ -300,28 +306,80 @@ color-scheme: light;
 
   /* ---------------- shell ---------------- */
   .shell { display: flex; min-height: 100vh; }
+  /* THE SIDEBAR IS ITS OWN COLUMN AND DOES NOT SCROLL WITH THE PAGE. Without
+     this the rail stretched to the height of the document — a long screen put
+     the user footer two thousand pixels down, so the one control the mockup
+     pins to the bottom corner was somewhere off the bottom of the work. Sticky
+     at full viewport height, with the work list the only part that scrolls
+     inside it. Not on a phone, where the rail is a bar across the top and
+     pinning it would cost a row of the screen the app has least of. */
   .rail {
+    position: sticky; top: 0; height: 100vh;
     width: 264px; flex: none; border-right: 1px solid var(--rule);
-    background: var(--rail); padding: 1.1rem 0 1.4rem;
+    background: var(--rail);
+    /* The switch bar is fixed across the bottom of every screen, so the rail
+       has to end above it or its own footer sits underneath the bar — the
+       same measurement the toasts already make, and for the same reason: the
+       bar is two lines tall when there is a re-entry note to read back, so
+       the figure is read from `--sbh` rather than written down. */
+    padding: 1.1rem 0 calc(1.4rem + var(--sbh, 3.4rem));
     display: flex; flex-direction: column; overflow: hidden;
   }
   .railtop { display: contents; }
   .brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 1rem 0.15rem; }
   .brand-mark { display: inline-flex; line-height: 0; }
   .brand-mark svg { display: block; }
-  .brand h1 { margin: 0; font-size: 0.78rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brass); font-weight: 600; }
-  #nav { display: flex; flex-direction: column; gap: 1px; padding: 0 0.55rem; }
+  /* The workspace name, not the app's: the mockup's sidebar is headed with
+     whose workspace it is. With no name typed it falls back to "Mashghal", so
+     nothing is invented and you can still tell which of six apps you are in
+     (the mark says it either way). A name can be long, so it clips. */
+  .brand h1 { margin: 0; min-width: 0; font-size: 0.9rem; letter-spacing: -0.01em; color: var(--ink);
+              font-weight: 500; font-family: var(--display); overflow: hidden;
+              text-overflow: ellipsis; white-space: nowrap; }
+  #nav { display: flex; flex-direction: column; gap: 2px; padding: 0 0.55rem; }
+  /* THE OPEN SECTION IS A FILLED PILL, which is what the mockup's sidebar
+     draws and is the one place in this app where a solid identity fill is
+     right: it is not saying a thing is healthy or late, it is saying you are
+     standing here. The left-hand brass bar it replaces had to be looked for.
+     `--nav-on` is defined per theme like every other colour rather than
+     hardcoded beside a token — `.btn.primary:hover` already cost us a label
+     that vanished at 1.01:1 for exactly that shortcut. */
   .tab {
-    display: flex; align-items: center; gap: 0.65rem; width: 100%;
-    background: none; border: 0; border-left: 2px solid transparent;
-    padding: 0.5rem 0.7rem; color: var(--dim); cursor: pointer;
-    font-size: 0.92rem; text-align: left; transition: color var(--t), background var(--t), border-color var(--t);
+    display: flex; align-items: center; gap: 0.7rem; width: 100%;
+    background: none; border: 0; border-radius: 10px;
+    padding: 0.5rem 0.6rem; color: var(--dim); cursor: pointer;
+    font-size: 0.9rem; text-align: left; transition: color var(--t), background var(--t);
   }
   .tab:hover { color: var(--ink); background: var(--raised); }
-  .tab[aria-current="page"] { color: var(--ink); background: var(--raised); border-left-color: var(--brass); }
+  .tab[aria-current="page"] { color: var(--nav-on-ink); background: var(--nav-on); }
+  .tab[aria-current="page"] .tabn { color: var(--nav-on-ink); opacity: 0.85; }
   .tab .ico { width: 1.1rem; text-align: center; opacity: 0.9; }
-  .rail-foot { margin-top: auto; padding: 1.2rem 1rem 0; }
-  .rail-foot p { margin: 0; font-size: 0.72rem; line-height: 1.6; color: var(--faint); font-family: var(--serif); font-style: italic; }
+
+  /* QUICK ACTIONS — the four things you start rather than open. */
+  .railquick { padding: 0.9rem 0.55rem 0; display: flex; flex-direction: column; gap: 1px; }
+  .rwico { display: inline-flex; width: 1.1rem; justify-content: center; color: var(--faint); flex: 0 0 auto; }
+  .rwrow:hover .rwico { color: var(--dim); }
+
+  /* THE USER FOOTER. The mockup has an avatar, a name and a state dot; the
+     state here is where the book is kept, because this app has no account to
+     be online with. */
+  .railme {
+    margin-top: auto; display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.8rem 0.7rem 0; margin-left: 0.3rem; margin-right: 0.3rem;
+    border-top: 1px solid var(--rule);
+  }
+  .mepic {
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 99px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--id-project) 18%, transparent);
+    color: var(--id-project); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .megrow { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .megrow b { font-size: 0.82rem; color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mesay { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--faint); }
+  .mesay i { width: 6px; height: 6px; border-radius: 99px; flex: 0 0 auto; background: var(--faint); }
+  .mesay i.on { background: var(--sage); }
+  .mesay span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .view { flex: 1; min-width: 0; padding: 1.5rem 1.6rem 4rem; max-width: 1560px; }
 
   /* ON A PHONE THE CHROME WAS A QUARTER OF THE SCREEN. Measured off its
@@ -341,7 +399,8 @@ color-scheme: light;
         and it does not need announcing twice. */
   @media (max-width: 760px) {
     .shell { flex-direction: column; }
-    .rail { width: auto; border-right: 0; border-bottom: 1px solid var(--rule);
+    .rail { position: static; height: auto;
+            width: auto; border-right: 0; border-bottom: 1px solid var(--rule);
             padding: calc(0.45rem + env(safe-area-inset-top)) 0 0; }
     /* One row: mark, then the finder taking the rest. */
     .railtop { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.7rem 0.5rem; }
@@ -357,7 +416,7 @@ color-scheme: light;
     }
     .tab .ico { width: auto; }
     .tab[aria-current="page"] { border-left-color: transparent; border-bottom-color: var(--brass); }
-    .rail-foot { display: none; }
+    .railme, .railquick { display: none; }
     .view { padding: 0.9rem 0.85rem 4rem; }
     /* A run card stood 370px tall for a name, a job and two figures. The
        content is right; the air around it was not. Nothing is removed — the
@@ -468,21 +527,19 @@ color-scheme: light;
      `all`) and the ring animates in from nought. */
   .btn:focus-visible, .tab:focus-visible,
   .panel:focus-visible, .rowbtn:focus-visible, .bcard:focus-visible,
-  .hometile:focus-visible, .cal-m:focus-visible, .cl-row:focus-visible,
+  .drow:focus-visible, .dact:focus-visible,
+  .cal-m:focus-visible, .cl-row:focus-visible,
   .repo-hit:focus-visible, .repo-row:focus-visible, .rwrow:focus-visible,
   .gearbtn:focus-visible, .findbtn:focus-visible, .chip:focus-visible,
   .tinypic:focus-visible {
     outline: 1px solid var(--brass); outline-offset: 2px;
   }
-  /* A LAUNCHER BUTTON IS ONE LINE. A name can be any length and a
-     200-character one turned a Quick run button into a six-line paragraph
-     filling the row. The full name is on the thing's own page and in the
-     `title`; the button says as much of it as fits. */
-  .btn.clip {
-    max-width: 15rem; white-space: nowrap; overflow: hidden;
-    text-overflow: ellipsis; vertical-align: bottom;
-  }
-  @media (max-width: 560px) { .btn.clip { max-width: 11rem; } }
+  /* A LAUNCHER BUTTON IS ONE LINE, and `.btn.clip` is where that rule used to
+     live — Quick run was its only caller and Quick run is rows now, so the
+     rule moved to `.drow .nm` (nowrap, clipped, the full name in the row's
+     `title`) and the class is gone rather than left behind. The rule itself
+     has not changed: a 200-character name must not turn a launcher into a
+     six-line paragraph. */
   .btn:disabled { opacity: 0.38; cursor: default; }
   .btn:disabled:hover { color: var(--dim); border-color: var(--rule); background: transparent; }
 
@@ -909,7 +966,9 @@ color-scheme: light;
   .stand i.d-hand { background: var(--sage); }
 
   /* ---------------- the work, in the rail ---------------- */
-  .brand-sub { margin: 0 0 0.9rem; padding: 0 1rem; font-size: 0.76rem; color: var(--faint); line-height: 1.4; }
+  /* The sub-line that was here — where the book is kept — moved into the
+     user footer at the bottom of the rail, where the mockup puts it, so it is
+     an id inside `.mesay` now and has no class rule of its own. */
   .railwork { padding: 1.1rem 0.55rem 0; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; min-height: 0; }
   .rwgroup { display: flex; flex-direction: column; gap: 0.1rem; }
   /* A label, so it takes --faint. It was on --receded, which is the state
@@ -941,7 +1000,7 @@ color-scheme: light;
   /* The count rides the nav item, so "something is late" is visible from every
      screen rather than only from the one that says so. */
   .tabn { margin-left: auto; font-size: 0.76rem; color: var(--apricot); }
-  @media (max-width: 880px) { .railwork, .brand-sub { display: none; } }
+  @media (max-width: 880px) { .railwork { display: none; } }
 
   /* ---------------- the finder ----------------
      One box over everything that reaches every named thing in the book. It is
@@ -949,13 +1008,18 @@ color-scheme: light;
      steps inside those, so the thing you are looking for is usually three
      clicks deep and you have to already know which section it is in. Typing
      its name is the only route that does not require that. */
+  /* It LOOKS like the field the mockup draws and it is still a button, because
+     a real input here would be a second copy of the finder's own box — two
+     places to type one query, and this repo already knows what two copies of
+     one control costs (`omniEl` in Coffer). */
   .findbtn {
     display: flex; align-items: center; gap: 0.5rem; width: calc(100% - 1.1rem);
-    margin: 0 0.55rem 0.7rem; padding: 0.44rem 0.55rem;
+    margin: 0 0.55rem 0.7rem; padding: 0.54rem 0.6rem;
     background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px;
     color: var(--faint); font: inherit; font-size: 0.83rem; text-align: left; cursor: pointer;
     transition: color var(--t), border-color var(--t);
   }
+  .findbtn > span:not(.ico) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .findbtn:hover { color: var(--ink); border-color: var(--rule-mid); }
   /* The gear Settings moved onto. Same height and radius as the finder beside
      it, so the header row reads as one control and not as a button bolted to
@@ -991,44 +1055,95 @@ color-scheme: light;
     .repo-acts { padding: 0 0.6rem 0.55rem; justify-content: flex-end; }
     .repo-open { display: none; }
   }
-  /* HOME'S THREE TILES. Three figures over one line each, side by side,
-     because "what cannot wait" is one question with three parts and stacking
-     them would make it read as three. They are buttons: every one of them is
-     the way to the screen that can do something about it, and a figure you
-     cannot act on is worse than no figure. */
-  .homerow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
-  .hometile {
-    display: block; text-align: left; padding: 0.8rem 0.85rem;
-    background: var(--surface); border: 1px solid var(--rule);
-    border-left: 2px solid var(--rule-mid);
-    border-radius: var(--r); cursor: pointer; color: inherit; font: inherit;
-    transition: var(--t);
+  /* THE THREE TILES THAT WERE HERE ARE THREE ROWS OF ONE CARD NOW. `.homerow`
+     and `.hometile` are gone rather than left as rules nothing writes — the
+     tidy-up the dead-CSS scan exists to force. What replaced them keeps the
+     rule they were written for: one question with three parts looks like
+     three of the same thing, the figure beside the words, at every width. */
+  /* ---------------- HOME, AS THE MOCKUP DRAWS IT ----------------
+     The same five things in the same order the argument has always had —
+     TODAY, what is moving, what you open, where you were — laid as a grid of
+     small cards instead of a column of full-width blocks. The order is still
+     the argument; only the shape changed, and the shape is what stops the
+     screen scrolling past the third question.
+
+     Each card is a header and rows. The header carries ONE action on the
+     right (the mockup's "View all \u2192"), because a card that answers a
+     question should also be the way into the screen that answers it in full. */
+  .hgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; align-items: start; margin-bottom: 0.8rem; }
+  .hgrid.two { grid-template-columns: 2fr 1fr; }
+  .dcard {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r);
+    padding: 0.8rem 0.9rem 0.55rem; min-width: 0;
   }
-  .hometile:hover { background: var(--raised); }
-  .hometile b {
-    display: block; font-family: var(--display); font-weight: 500;
-    font-size: 1.7rem; line-height: 1; letter-spacing: -0.02em;
+  .dhead { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.25rem; }
+  .dhead h3 { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.93rem; overflow-wrap: anywhere; }
+  /* A link, in the app's accent \u2014 6.7:1 in both themes, measured. It is not
+     an identity tile and not a state pill, so it borrows neither channel. */
+  .dact {
+    flex: 0 0 auto; background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--brass); font: inherit; font-size: 0.76rem; text-decoration: none;
   }
-  .hometile .htw { display: block; }
-  .hometile .htw > span { display: block; font-size: 0.82rem; color: var(--dim); margin-top: 0.15rem; }
-  .hometile small { display: block; font-size: 0.72rem; color: var(--faint); margin-top: 0.3rem; line-height: 1.35; }
-  /* State on the edge and nowhere else — the tile is not a coloured card, the
-     same rule every late row in this app follows. */
-  .hometile.late { border-left-color: var(--apricot); }
-  .hometile.late b { color: var(--apricot); }
-  /* ONE QUESTION WITH THREE PARTS HAS TO LOOK LIKE THREE OF THE SAME THING.
-     Three into two columns left the third as a wide banner under two squares
-     — the shape said "two things and one other thing", which is not what the
-     row means. On a phone all three become rows of the same shape, figure
-     beside words rather than over them, which is both consistent and shorter
-     than the two-column version it replaces (168px against ~200px). */
+  .dact:hover { text-decoration: underline; }
+  .drow {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%;
+    padding: 0.5rem 0; background: none; border: 0; border-top: 1px solid var(--rule-soft);
+    color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+    transition: background var(--t);
+  }
+  .drow:first-of-type { border-top: 0; }
+  .drow:hover { background: var(--raised); }
+  .drow .grow { flex: 1 1 0; min-width: 0; }
+  /* `display: block` on both, because these are spans (a row can be an <a>,
+     and an <a> may not contain a <div>) \u2014 inline they ran together and the
+     screen read "ArcGIS Proon this machine only". */
+  .drow .nm { display: block; font-size: 0.86rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drow .says { display: block; font-size: 0.74rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drow .bar { display: block; margin: 0.28rem 0 0.2rem; }
+  /* The figure a Today row is about, beside the words rather than over them:
+     three rows of one shape, which is what "one question with three parts"
+     asked for on a phone and reads the same way here. */
+  .dfig { flex: 0 0 auto; min-width: 1.5rem; font-family: var(--display); font-weight: 500;
+          font-size: 1.25rem; line-height: 1; letter-spacing: -0.02em; text-align: right; }
+  .drow.late .dfig { color: var(--apricot); }
+  .ddot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 99px; background: var(--rule-mid); }
+  .ddot.late { background: var(--apricot); }
+  .ddot.drift { background: var(--amber); }
+  .ddot.calm { background: var(--sage); }
+  .dmeta { flex: 0 0 auto; font-size: 0.73rem; color: var(--faint); font-family: var(--mono); }
+  /* A tag is a pill and clips: a project can be called anything. */
+  .dtag { flex: 0 1 auto; min-width: 0; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dpct { flex: 0 0 auto; font-size: 0.78rem; color: var(--dim); font-family: var(--mono); min-width: 2.4rem; text-align: right; }
+  /* A round glyph on a launcher row, as drawn \u2014 identity, so it takes an
+     --id-* tint behind a muted mark and never a state hue. */
+  .dgl {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 99px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--id-soft) 16%, transparent); color: var(--id-soft);
+  }
+  .dgl svg { width: 14px; height: 14px; }
+  .dempty { margin: 0.5rem 0 0.4rem; color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.84rem; }
+  /* Two cards side by side at 1000px are 300px wide, which is where a name
+     and a figure stop fitting on one line \u2014 so the grid folds to one column
+     before that rather than after it. */
+  @media (max-width: 1040px) {
+    .hgrid, .hgrid.two { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 700px) {
+    .hgrid, .hgrid.two { grid-template-columns: 1fr; gap: 0.6rem; }
+  }
+  /* ON A PHONE THE TAG AND THE AGE TAKE THEIR OWN LINE. A pill, a two-line
+     name and a timestamp on one 334px row left "Southampton \u2014 Maritime
+     Archaeology" about ten characters wide \u2014 the same fault this app already
+     fixed on its upkeep rows, in a new place. The basis is 60% rather than
+     100% so the leading tile stays on the name's line: at 100% the grow wants
+     the whole width and pushes the icon onto a line of its own. */
   @media (max-width: 560px) {
-    .homerow { grid-template-columns: 1fr; gap: 0.45rem; }
-    .hometile { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.6rem 0.8rem; }
-    .hometile b { font-size: 1.45rem; flex: 0 0 auto; min-width: 1.6rem; }
-    .hometile .htw { min-width: 0; flex: 1 1 0; }
-    .hometile span { margin-top: 0; }
-    .hometile small { margin-top: 0.1rem; }
+    .drow { flex-wrap: wrap; }
+    .drow .grow { flex: 1 1 60%; }
+    .drow .dtag { margin-left: auto; }
+    .drow .dtag + .dmeta { margin-left: 0; }
+    .drow .grow + .dmeta { margin-left: auto; }
   }
 
   /* A project's progress, and its figure. The bar is the percentage drawn —
@@ -1524,8 +1639,7 @@ color-scheme: light;
         <path d="M216 276 C216 344 292 352 292 424" stroke="var(--sage)"
               stroke-width="42" stroke-linecap="round"/>
         <circle cx="292" cy="424" r="24" fill="var(--apricot)" stroke="none"/>
-      </svg></span><h1>Mashghal</h1></div>
-    <p class="brand-sub" id="brandSub">This computer only</p>
+      </svg></span><h1 id="brandName">Mashghal</h1></div>
     <!-- Above the nav, because it reaches further than any of the sections
          under it: a step three levels inside a board has no other route to it
          than typing its name. -->
@@ -1538,26 +1652,30 @@ color-scheme: light;
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15" fill="none"
         stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle
         cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span>
-      <span>Find anything</span><kbd>Ctrl K</kbd>
+      <span>Search anything…</span><kbd>Ctrl K</kbd>
     </button>
-    <!-- Settings gave up its slot on the tab bar so the Repo could have one,
-         so it lives here, on every screen, beside the finder. Icon-only with
-         the label in `title` and `aria-label`: one glyph everybody already
-         reads, and a word would cost the row it is trying to save. -->
-    <button class="gearbtn" data-act="tab-settings" title="Settings"
-            aria-label="Settings"><span class="ico" aria-hidden="true">
-      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"
-              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="10" cy="10" r="2.6"/>
-        <path d="M10 2.6v2M10 15.4v2M2.6 10h2M15.4 10h2M4.8 4.8l1.4 1.4M13.8 13.8l1.4 1.4M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4"/>
-      </svg></span></button>
     </div>
     </div>
     <nav id="nav" aria-label="Sections"></nav>
+    <!-- QUICK ACTIONS, from the mockup's sidebar: the four things you start
+         rather than navigate to. They are here and not on a screen because
+         every one of them is reachable from whichever screen you are on, and
+         the finder's own command list is the other route to the same four. -->
+    <div class="railquick">
+      <div class="rwhead">Quick Actions</div>
+      <button class="rwrow" data-act="run-start"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M8.4 7l4.4 3-4.4 3z"/></svg></span><span class="rwname">Run workflow</span></button>
+      <button class="rwrow" data-act="proj-add"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 6.4a1.8 1.8 0 0 1 1.8-1.8h3l1.5 2h5.3a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H5a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M10 9.6v4M8 11.6h4"/></svg></span><span class="rwname">New project</span></button>
+      <button class="rwrow" data-act="board-new"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="6" height="5" rx="1.5"/><path d="M8.5 6.5h3a2 2 0 0 1 2 2v1"/><path d="M14.5 11v5M12 13.5h5"/></svg></span><span class="rwname">New workflow</span></button>
+      <button class="rwrow" data-act="find-open"><span class="rwico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.8" cy="8.8" r="5.4"/><path d="M12.8 12.8l4 4"/></svg></span><span class="rwname">Find anything</span></button>
+    </div>
     <!-- Filled by railList() in afterRender rather than by renderNav(), which
          belongs to the shared runtime and must stay byte-identical. -->
     <div id="railWork" class="railwork"></div>
-    <div class="rail-foot"><p id="railFoot">No account and no server.</p></div>
+    <!-- The mockup's user footer. It reads "● Online" there, which would be
+         a lie in an app with no account and no server, so the slot carries the
+         one fact that belongs in it: where this book is kept, and a dot
+         coloured by whether it reaches anywhere else. -->
+    <div class="railme" id="railFoot"></div>
   </aside>
   <main class="view" id="view"></main>
 </div>
@@ -1888,6 +2006,13 @@ color-scheme: light;
            Waiting lists them in their own section and says they were typed. */
         tasks: [],       // {id,label,doneAt,dueAt,jobId,projId,boardId,place,note,archived}
         settings: { showDone: true, companion: false,
+                    /* WHOSE WORKSPACE THIS IS. The mockup heads its sidebar
+                       with the owner's name and greets them by it, and the
+                       app cannot know a name — so it is typed once in
+                       Settings and blank means the app keeps its own name and
+                       greets nobody. Invented, it would be the "seeded
+                       fiction" fault wearing a friendly face. */
+                    owner: "",
                     /* Field mode is a SETTING and not view state, against
                        this app's usual rule, and deliberately: you turn it on
                        at the site and off in the car, and surviving a reload
@@ -1918,6 +2043,7 @@ color-scheme: light;
         if (parsed[k] && typeof parsed[k] === "object") s[k] = parsed[k];
       });
       if (parsed.settings) {
+        if (typeof parsed.settings.owner === "string") s.settings.owner = parsed.settings.owner;
         if (typeof parsed.settings.showDone === "boolean") s.settings.showDone = parsed.settings.showDone;
         if (typeof parsed.settings.companion === "boolean") s.settings.companion = parsed.settings.companion;
         if (typeof parsed.settings.field === "boolean") s.settings.field = parsed.settings.field;
@@ -3636,9 +3762,19 @@ function stateWord(b, n) {
     out.sort(function (x, y) { return String(y.at).localeCompare(String(x.at)); });
     return out.filter(function (r) { return !!r.at; }).slice(0, n || 4);
   }
+  /* A BRACE THAT WAS NEVER THERE MADE THIS RETURN ON ITS FIRST LINE. Written
+     `if (cond) var n = \u2026` with the return on the next line and no braces,
+     the return sat OUTSIDE the if \u2014 so every board on Home read
+     "a procedure \u00b7 undefined steps", a run included, and the three lines
+     below that describe a run were unreachable. It parses, it throws nothing,
+     and every screen that printed it said the same wrong thing quietly. The
+     word "undefined" on a screen is the only reason it was ever noticed, and
+     reading the screen is what found it. */
   function boardRecentSays(b) {
-    if (b.kind !== "run") var n = runProgress(b).total;
+    if (b.kind !== "run") {
+      var n = runProgress(b).total;
       return "a procedure \u00b7 " + n + (n === 1 ? " step" : " steps");
+    }
     var p = runProgress(b);
     if (b.closedOn) return "closed \u00b7 " + p.done + " of " + p.total + " done";
     var act = activeNodes(b);
@@ -3696,27 +3832,13 @@ function stateWord(b, n) {
 
     if (emptyBook()) return h + firstRun();
 
-    /* TODAY, as three figures over one line each. Not a summary of the month:
-       the only things here are the ones that cannot wait. */
-    h += '<div class="sect">Today</div><div class="homerow">';
-    h += homeTile(tk.length, tk.length === 1 ? "task" : "tasks",
-                  tkLate.length ? cap(numWord(tkLate.length)) + " past its date" : "none past its date",
-                  tkLate.length ? "late" : "", "task-add");
-    h += homeTile(deadlines.length, deadlines.length === 1 ? "deadline" : "deadlines",
-                  !deadlines.length ? "none inside a fortnight"
-                    : dlGone ? cap(numWord(dlGone)) + " already gone \u00b7 " + niceDate(deadlines[0].endsOn)
-                    : "nearest " + niceDate(deadlines[0].endsOn),
-                  dlGone ? "late" : "", "tab-jobs");
-    h += homeTile(over.length, over.length === 1 ? "chase" : "chases",
-                  over.length ? "somebody is waiting on you" : "nobody is waiting",
-                  over.length ? "late" : "", "tab-waiting");
-    h += "</div>";
-
-    /* The one line that outranks everything, said once and only when true —
-       the archive lock is the third forgetting and nothing else surfaces it
-       on arrival. */
+    /* THE ALARMS COME FIRST AND ARE THE ONLY FULL-WIDTH THING ON THE SCREEN.
+       The mockup has no slot for them, and it should: a run finished but not
+       filed and upkeep past its interval are the third and the quietest of
+       the three forgettings, and both of them outrank a dashboard. Said once,
+       and only when true. */
     if (s.length || up.length) {
-      h += '<div class="stack tight" style="margin-top:0.7rem">';
+      h += '<div class="stack tight" style="margin-bottom:0.9rem">';
       if (s.length) {
         h += '<button type="button" class="panel rowbtn late" data-act="tab-waiting">' +
           '<div class="grow"><div class="nm sm">' +
@@ -3732,65 +3854,96 @@ function stateWord(b, n) {
       h += "</div>";
     }
 
-    // WHAT IS MOVING
+    /* ROW ONE: what cannot wait \u00b7 what is moving \u00b7 what you open. */
+    h += '<div class="hgrid">';
+
+    /* TODAY. Three rows of one shape, each a route to the screen that can do
+       something about it \u2014 a figure you cannot act on is worse than no
+       figure. The sub-line is the fact behind the figure, which is what stops
+       "1 deadline" reading as a deadline that is still ahead of you. */
+    h += dcard("Today", { label: "View all", act: "tab-waiting" },
+      dRow(tk.length, tk.length === 1 ? "task" : "tasks",
+           tkLate.length ? cap(numWord(tkLate.length)) + " past its date" : "none past its date",
+           tkLate.length ? "late" : "", "task-add") +
+      dRow(deadlines.length, deadlines.length === 1 ? "deadline" : "deadlines",
+           !deadlines.length ? "none inside a fortnight"
+             : dlGone ? cap(numWord(dlGone)) + " already gone \u00b7 " + niceDate(deadlines[0].endsOn)
+             : "nearest " + niceDate(deadlines[0].endsOn),
+           dlGone ? "late" : "", "tab-jobs") +
+      dRow(over.length, over.length === 1 ? "chase" : "chases",
+           over.length ? "somebody is waiting on you" : "nobody is waiting",
+           over.length ? "late" : "", "tab-waiting"));
+
+    // WHAT IS MOVING — the projects, with the bar in its row's own tone.
     var ps = projects().filter(function (p) { return !p.parked; })
       .map(function (p) { return { p: p, pace: projPace(p), st: projState(p) }; })
       .filter(function (x) { return x.pace.runs || x.p.endsOn; })
       .sort(function (a, b) { return b.pace.pct - a.pace.pct; })
-      .slice(0, 5);
-    if (ps.length) {
-      h += '<div class="sect">What is moving</div><div class="stack tight">' +
-        ps.map(function (x) {
-          return '<button type="button" class="panel rowbtn' + (x.st.tone === "late" ? " late" : "") +
-            '" data-act="proj-open" data-id="' + x.p.id + '">' +
-            '<span class="itile t-proj">' + ICONS.proj + "</span>" +
-            '<div class="grow"><div class="nm sm">' + esc(x.p.name) + "</div>" +
-            '<div class="bar ' + barTone(x.st) + '"><i style="width:' + x.pace.pct + '%"></i></div>' +
-            '<div class="says">' + esc(x.st.word) + " \u00b7 " + x.pace.done + " of " + x.pace.total +
-            (x.pace.total === 1 ? " step done" : " steps done") + "</div></div>" +
-            '<div class="pct">' + x.pace.pct + "%</div></button>";
-        }).join("") + "</div>";
-    }
+      .slice(0, 4);
+    h += dcard("Active projects", { label: "View all", act: "tab-jobs" },
+      ps.length ? ps.map(function (x) {
+        return '<button type="button" class="drow" data-act="proj-open" data-id="' + x.p.id +
+          '" title="' + esc(x.p.name) + '">' +
+          '<span class="itile t-proj">' + ICONS.proj + "</span>" +
+          '<span class="grow"><span class="nm">' + esc(x.p.name) + "</span>" +
+          '<span class="bar ' + barTone(x.st) + '"><i style="width:' + x.pace.pct + '%"></i></span>' +
+          '<span class="says">' + esc(x.st.word) + " \u00b7 " + x.pace.done + " of " + x.pace.total +
+          (x.pace.total === 1 ? " step done" : " steps done") + "</span></span>" +
+          '<span class="dpct">' + x.pace.pct + "%</span></button>";
+      }).join("") : '<p class="dempty">Nothing is running. A project with a board under it appears here.</p>');
 
-    // QUICK RUN — the launcher, the two or three things you open every day.
-    var apps = repoIn("app").concat(repoIn("site")).filter(function (a) { return !!openHandle(a); }).slice(0, 6);
-    h += '<div class="sect">Quick run</div>';
-    /* `.chip` clips the name to one line. A name can be any length, and a
-       200-character one turned a launcher button into a six-line paragraph
-       filling the row — the full name is on the thing's own page, and the
-       `title` carries it here. A chip that is not chip-shaped is not a
-       launcher. */
-    h += apps.length ? '<div class="tools">' + apps.map(function (a) {
-      var hd = openHandle(a);
-      return hd.kind === "copy"
-        ? '<button class="btn clip" data-act="asset-copy" data-id="' + a.id + '" title="' + esc(a.name + " \u2014 " + hd.how) + '">' + esc(a.name) + "</button>"
-        : '<a class="btn clip" href="' + esc(hd.href) + '"' + (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
-          ' title="' + esc(a.name + " \u2014 " + hd.how) + '">' + esc(a.name) + "</a>";
-    }).join("") + '<button class="btn quiet" data-act="tab-repo">All of it</button></div>'
-      : '<p class="empty">Nothing to open yet. Put the apps and sites you use into the <b>Repo</b> and they appear here, one tap each.</p>';
+    /* QUICK RUN. Every row goes through `openHandle()`, so a row exists only
+       where there is really something to open \u2014 and a path with the
+       companion off is a copy, which the row says rather than pretending. */
+    var apps = repoIn("app").concat(repoIn("site")).filter(function (a) { return !!openHandle(a); }).slice(0, 5);
+    h += dcard("Quick run", { label: "All of it", act: "tab-repo" },
+      apps.length ? apps.map(function (a) {
+        var hd = openHandle(a), look = assetLook(a);
+        var inner = '<span class="dgl">' + look.ico + "</span>" +
+          '<span class="grow"><span class="nm">' + esc(a.name) + "</span>" +
+          '<span class="says">' + esc(hd.brief || hd.how) + "</span></span>";
+        return hd.kind === "copy"
+          ? '<button type="button" class="drow" data-act="asset-copy" data-id="' + a.id + '" title="' + esc(a.name + " \u2014 " + hd.how) + '">' + inner + "</button>"
+          : '<a class="drow" href="' + esc(hd.href) + '"' + (hd.kind === "url" ? ' target="_blank" rel="noopener"' : "") +
+            ' title="' + esc(a.name + " \u2014 " + hd.how) + '">' + inner + "</a>";
+      }).join("") : '<p class="dempty">Nothing to open yet. Put the apps and sites you use into the Repo and they appear here, one tap each.</p>');
 
-    // CONTINUE WORKING, and RECENT FILES — "where was I".
-    var recentB = recentlyTouched({ boards: true }, 3);
-    if (recentB.length) {
-      h += '<div class="sect">Continue working</div><div class="stack tight">' +
-        recentB.map(function (r) {
-          return '<button type="button" class="panel rowbtn calm" data-act="board-open" data-id="' + r.id + '">' +
-            '<div class="grow"><div class="nm sm">' + esc(r.name) + "</div>" +
-            '<div class="says">' + esc(r.says) + "</div></div>" +
-            '<div class="age">' + esc(agoWords(r.at)) + "</div></button>";
-        }).join("") + "</div>";
-    }
-    var recentA = recentlyTouched({ assets: true }, 4);
-    if (recentA.length) {
-      h += '<div class="sect">Recent things</div><div class="stack tight">' +
-        recentA.map(function (r) {
+    h += "</div>";
+
+    /* ROW TWO: WHERE WAS I \u2014 the second of the three forgettings, and the
+       whole reason `updatedAt` is read rather than a recents list stored. */
+    var recentB = recentlyTouched({ boards: true }, 4);
+    var recentA = recentlyTouched({ assets: true }, 5);
+    if (recentB.length || recentA.length) {
+      h += '<div class="hgrid two">';
+      h += dcard("Continue working", { label: "All boards", act: "tab-boards" },
+        recentB.length ? recentB.map(function (r) {
+          /* The mockup tags each of these rows with a short word \u2014 Maps,
+             Research, 3D \u2014 and the app already has that list: the board's
+             KIND, which the reader writes themselves. A project name was the
+             obvious choice and the wrong one: "Harbour festival 2026" in a
+             pill clipped mid-word at every width, and a pill that has to be
+             decoded is worse than no pill. Nothing shows when no kind is
+             written rather than a word standing in for one. */
+          var b = byId(state.boards, r.id) || {};
+          var tag = b.kindId ? kindName(b.kindId) : "";
+          return '<button type="button" class="drow" data-act="board-open" data-id="' + r.id +
+            '" title="' + esc(r.name) + '">' +
+            '<span class="grow"><span class="nm">' + esc(r.name) + "</span>" +
+            '<span class="says">' + esc(r.says) + "</span></span>" +
+            (tag ? '<span class="pill p-grey dtag">' + esc(tag) + "</span>" : "") +
+            '<span class="dmeta">' + esc(agoWords(r.at)) + "</span></button>";
+        }).join("") : '<p class="dempty">Nothing opened yet.</p>');
+      h += dcard("Recent things", { label: "All of it", act: "tab-repo" },
+        recentA.length ? recentA.map(function (r) {
           var a = assetOf(r.id), look = assetLook(a);
-          return '<button type="button" class="panel rowbtn calm" data-act="asset-open" data-id="' + r.id + '">' +
+          return '<button type="button" class="drow" data-act="asset-open" data-id="' + r.id +
+            '" title="' + esc(r.name) + '">' +
             '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
-            '<div class="grow"><div class="nm sm">' + esc(r.name) + "</div>" +
-            '<div class="says">' + esc(r.says) + "</div></div>" +
-            '<div class="age">' + esc(agoWords(r.at)) + "</div></button>";
-        }).join("") + "</div>";
+            '<span class="grow"><span class="nm">' + esc(r.name) + "</span></span>" +
+            '<span class="dmeta">' + esc(agoWords(r.at)) + "</span></button>";
+        }).join("") : '<p class="dempty">Nothing touched yet.</p>');
+      h += "</div>";
     }
 
     /* This said the same thing in the language of the code \u2014 "read off the
@@ -3801,19 +3954,40 @@ function stateWord(b, n) {
     return h;
   }
 
-  /* The words are wrapped in `.htw` so a phone can put them BESIDE the figure
-     instead of under it, with one flex rule and no second markup. */
-  function homeTile(n, unit, says, tone, act) {
-    return '<button type="button" class="hometile' + (tone ? " " + tone : "") +
-      '" data-act="' + act + '"><b>' + n + "</b>" +
-      '<span class="htw"><span>' + esc(unit) + "</span>" +
-      '<small>' + esc(says) + "</small></span></button>";
+  /* A DASHBOARD CARD IS A HEADER AND ROWS, and the header's one action is the
+     way into the screen that answers the same question in full. It is built
+     here rather than written out five times, so every card on Home is the
+     same shape \u2014 a bigger or differently-dressed card reads as a more
+     important question, and these are five equal ones. */
+  function dcard(title, act, body) {
+    return '<section class="dcard"><div class="dhead"><h3>' + esc(title) + "</h3>" +
+      (act ? '<button type="button" class="dact" data-act="' + act.act + '"' +
+             (act.id ? ' data-id="' + act.id + '"' : "") + ">" + esc(act.label) + " \u2192</button>" : "") +
+      "</div>" + body + "</section>";
+  }
+
+  /* A Today row: a figure, what it counts, and the fact behind it. The dot
+     carries the state and the figure takes the state's colour with it, so the
+     row says it twice \u2014 in a hue and in a word \u2014 for a reader who cannot
+     separate the two. */
+  function dRow(n, unit, says, tone, act) {
+    return '<button type="button" class="drow' + (tone ? " " + tone : "") +
+      '" data-act="' + act + '"><span class="ddot' + (tone ? " " + tone : "") + '"></span>' +
+      '<span class="dfig">' + n + "</span>" +
+      '<span class="grow"><span class="nm">' + esc(unit) + "</span>" +
+      '<span class="says">' + esc(says) + "</span></span></button>";
   }
   /* The time of day, and nothing else pretending to be personal. A name here
      would have to come from somewhere, and this app asks for nothing. */
   function homeGreeting() {
     var hr = new Date().getHours();
-    return hr < 5 ? "Still up." : hr < 12 ? "Good morning." : hr < 18 ? "Good afternoon." : "Good evening.";
+    var w = hr < 5 ? "Still up" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+    /* The mockup greets its owner by name. The name comes from Settings and
+       from nowhere else, so with none typed this is the time of day on its
+       own, exactly as before. First name only: "Good morning, Mohannad Haysam
+       Jawhar." is not how anybody is greeted. */
+    var nm = ownerName().split(/\s+/)[0];
+    return nm ? w + ", " + nm + "." : w + ".";
   }
 
   function renderWaiting() {
@@ -4534,6 +4708,17 @@ function stateWord(b, n) {
       '<p class="card-sub"><b>' + esc(BUILD) + '</b></p>' +
       '<p class="hint" style="margin:0 0 0.6rem">If the app looks older than you expect, read this line first — it says what is actually running. A phone keeps a copy of the app so it opens without a network, and an old copy can outlive a new release by a launch or two. <b>Get the newest</b> throws that copy away and fetches everything again. Nothing you have recorded is touched: your book lives somewhere else entirely.</p>' +
       '<div class="tools"><button class="btn primary" data-act="refresh-app">Get the newest</button></div></div>';
+
+    /* The name is asked for HERE and nowhere else, and blank is a legitimate
+       answer the whole app already handles — the sidebar keeps the app's own
+       name and Home greets the time of day rather than a person. */
+    h += '<div class="card"><h3>Your name</h3>' +
+      '<p class="card-sub">' + esc(ownerName() || "Not set \u2014 nothing is assumed") + "</p>" +
+      '<p class="hint" style="margin:0 0 0.6rem">It heads the sidebar as your workspace, greets you on Home and sits in the corner beside where the book is kept. It is written down in your book like anything else, so it travels with a sync and a backup and goes nowhere near a network. Leave it empty and the app uses its own name and greets the hour instead.</p>' +
+      '<div class="tools"><button class="btn" data-act="owner-set">' +
+      (ownerName() ? "Change it" : "Write it in") + "</button>" +
+      (ownerName() ? '<button class="btn quiet" data-act="owner-clear">Take it off</button>' : "") +
+      "</div></div>";
 
     h += syncCard();
 
@@ -8431,7 +8616,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v58 · 18 Sep 2026";
+  var BUILD = "v59 · 18 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -8534,17 +8719,36 @@ function stateWord(b, n) {
         tab.appendChild(sp);
       }
     }
-    var bs = document.getElementById("brandSub");
-    if (bs) bs.textContent = syncOn() ? syncWords() : "This computer only";
   }
 
+  /* WHOSE WORKSPACE, AND WHERE THE BOOK IS. The mockup's footer reads a name
+     over "\u25cf Online"; there is no account here to be online with, so the
+     second line says where this book is kept and the dot is green only when it
+     actually reaches another device. Saying "Online" would be the app stating
+     something it cannot know, which is the one thing every rule in this file
+     is against. */
+  function ownerName() { return String((state.settings || {}).owner || "").trim(); }
+  function ownerInitials() {
+    var parts = ownerName().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "";
+    return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : "")).toUpperCase();
+  }
   function railFoot() {
     var el = document.getElementById("railFoot");
-    if (!el) return;
-    var cfg = syncCfg();
-    el.textContent = cfg.mode === "gist"
-      ? "No account and no server. Sealed here with your passphrase, then kept in a gist — and only when you press sync."
-      : "Stored only on this device. No account, no server, no network.";
+    if (el) {
+      var nm = ownerName(), ini = ownerInitials();
+      el.innerHTML = '<span class="mepic" aria-hidden="true">' +
+        (ini || ICONS.person) + "</span>" +
+        '<span class="megrow"><b>' + esc(nm || "This book") + "</b>" +
+        '<span class="mesay"><i' + (syncOn() ? ' class="on"' : "") + '></i>' +
+        '<span id="brandSub">' + esc(syncOn() ? syncWords() : "This computer only") + "</span></span></span>" +
+        '<button class="gearbtn" data-act="tab-settings" title="Settings" aria-label="Settings">' +
+        '<span class="ico" aria-hidden="true">' + ICONS.settings + "</span></button>";
+    }
+    /* The sidebar is headed with the workspace name, so it moves with the one
+       typed in Settings and falls back to the app's own. */
+    var bn = document.getElementById("brandName");
+    if (bn) bn.textContent = ownerName() ? ownerName().split(/\s+/)[0] + " Workspace" : "Mashghal";
   }
 
   function syncCard() {
@@ -10576,6 +10780,28 @@ function dims(n) {
       openJob = p && p.jobId && jobOf(p.jobId) ? p.jobId : "";
       render();
     },
+    "owner-set": function () {
+      openModal({
+        title: "Your name", confirmLabel: "Save",
+        message: "Whose workspace this is. It heads the sidebar, greets you on Home, and is stored in your book \u2014 nothing is sent anywhere.",
+        fields: [{ key: "owner", label: "Name", type: "text", value: ownerName(), span: true,
+                   placeholder: "Mohannad Haysam Jawhar" }],
+        onConfirm: function (v) {
+          go(function () { state.settings.owner = String(v.owner || "").trim(); });
+          toast(ownerName() ? "Saved" : "Taken off");
+        }
+      });
+    },
+
+    "owner-clear": function () {
+      confirmAction({
+        title: "Take your name off?",
+        message: "The sidebar goes back to reading Mashghal and Home greets the time of day. Nothing else changes.",
+        confirmLabel: "Take it off",
+        onConfirm: function () { go(function () { state.settings.owner = ""; }); toast("Taken off"); }
+      });
+    },
+
     "proj-add": function (id) {
       if (id && jobOf(id)) openJob = id;
       projDialog(null);
@@ -12170,6 +12396,12 @@ function dims(n) {
        that happened. A due date is a plan, and the projects already carry
        `endsOn` ahead of today for exactly this reason. */
     function fwd(n) { return addDays(today(), n); }
+
+    /* The example is one person's book already — its jobs, its universities
+       and its harbour are all theirs — so it seeds the name too, or the one
+       feature that cannot be demonstrated without one is invisible in the
+       only book anybody is shown. */
+    s.settings.owner = "Mohannad Haysam Jawhar";
 
     var kWork  = mk({ name: "Work", colour: "#8a9ac9" });
     var kTrain = mk({ name: "Trainings and workshops", colour: "#8fae6a" });

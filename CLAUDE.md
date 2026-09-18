@@ -1363,6 +1363,116 @@ against the viewBox and fails if one is outside it.
   at the start; a thing reaching into a shared table would be a hole in that
   freeze, and renaming a person would rewrite a closed board.
 
+## The mockup, built
+
+Its owner sent a twelve-panel poster of the app they wanted and said *make it
+exactly as shown*. Most of what it draws was already here under other words;
+what it really carried was a **shape** — a sidebar with a search field and a
+user footer, and a home screen that is a grid of small cards rather than a
+column of full-width blocks. Both are built. Four of its panels were folded
+rather than copied and the reasons are already in this file (eight project
+tabs are five pages, five hardcoded palette headings are `borrowGroups()`, a
+per-kind action menu is `nextActions()`, and four archaeology nouns are one
+write-in field plus `atId`); everything below is what the poster changed.
+
+**THE SIDEBAR IS THE MOCKUP'S, AND THE ONE THING IT ASKS FOR THAT THE APP
+CANNOT KNOW IS TYPED.** It heads the rail with "Mohannad Workspace" and greets
+its owner by name on Home. A name cannot be derived from anything in the book,
+and inventing one is the "seeded fiction" fault wearing a friendly face — so
+`settings.owner` is written once in Settings, adopted in `adoptState` like
+every other setting, and **blank is a first-class answer**: the rail reads
+"Mashghal" and Home greets the hour, exactly as before. The greeting takes the
+**first name** only ("Good morning, Mohannad."), because nobody is greeted by
+three.
+
+Four things about the rail's own shape:
+
+- **The open section is a filled pill** (`--nav-on`, white on blue, measured
+  6.70:1 in both themes) rather than the brass left-hand bar it replaces,
+  which had to be looked for. This is the one place a solid identity fill is
+  right: it is not claiming a thing is healthy or late, it is saying you are
+  standing here. Defined per theme like every other colour — `.btn.primary:hover`
+  already cost this app a label that vanished at 1.01:1 for exactly the
+  shortcut of hardcoding one beside a token.
+- **The search control looks like the field the mockup draws and is still a
+  button.** A real `<input>` in the rail would be a second place to type one
+  query, and Coffer's `omniEl()` is what two copies of one control costs.
+- **Quick Actions is four things you start rather than navigate to**, and every
+  one of them hands to an action that already existed (`run-start`,
+  `proj-add`, `board-new`, `find-open`). The `data-act` scan earned its keep
+  here immediately: the first draft named `run-quick` and `board-add`, neither
+  of which has a handler, and "no handler" is the half of that scan that is
+  never a false positive.
+- **The footer says where the book is, not that you are online.** The mockup
+  reads a name over "● Online"; there is no account here to be online with, so
+  the slot carries the one fact that belongs in it — "This computer only", or
+  the sync words — with the dot green only when the book really does reach
+  another device. A screen may not state what the app cannot know.
+
+**THE RAIL IS A STICKY FULL-HEIGHT COLUMN, AND IT HAS TO CLEAR THE SWITCH
+BAR.** Without `position: sticky; height: 100vh` the rail stretched to the
+height of the *document*, so on a long screen the user footer sat two thousand
+pixels below the fold — the one control the mockup pins to the bottom corner
+was off the bottom of the work. And its own bottom padding reads `--sbh`, the
+height `mountBar()` measures, for the same reason the toasts do: the switch bar
+is fixed across every screen and is two lines tall when there is a re-entry
+note, so a constant would hide the footer exactly when the bar had most to
+say. On a phone the rail goes back to being a bar across the top — pinning it
+there would cost a row of the screen the app has least of.
+
+**HOME IS A GRID OF FIVE CARDS, AND THE ORDER IS STILL THE ARGUMENT.** Today ·
+Active projects · Quick run, then Continue working · Recent things — the same
+five questions in the same order they have always been in, laid three across
+and two across instead of stacked. The shape is what stops the screen being
+scrolled past: the third question used to be below the fold.
+
+- **`dcard()` builds every one of them**, so all five are the same shape. A
+  bigger or differently-dressed card reads as a more important question and
+  these are five equal ones — the same rule Horizon's hub cards live by.
+- **Every card's header carries exactly one action**, the way into the screen
+  that answers the same question in full ("View all →"). A card that answers a
+  question and is not a route to it is a dead end, and `home.js` fails if any
+  card lacks one.
+- **The alarms are the only full-width thing on the screen.** A run finished
+  but not filed, and upkeep past its interval, are the third and quietest of
+  the three forgettings; the mockup has no slot for them and it should. They
+  sit above the grid, said once and only when true.
+- **A tag on a row is a short word, so it is the board's KIND** — the mockup's
+  own tags are Maps · Research · 3D. A project name was the obvious choice and
+  the wrong one: "Harbour festival 2026" in a pill clipped mid-word at every
+  width, and a pill that has to be decoded is worse than no pill.
+- **A clipped name carries the full text in the row's `title`**, and on a
+  phone (under 560px) the tag and the age wrap onto their own line: a pill, a
+  name and a timestamp on one 334px row left "Southampton — Maritime
+  Archaeology" about ten characters wide, which is this app's upkeep-row fault
+  in a new place. The wrap basis is 60% and not 100%, or the grow demands the
+  whole width and pushes the leading tile onto a line of its own.
+
+**A BRACE THAT WAS NEVER THERE MADE A FUNCTION RETURN ON ITS FIRST LINE.**
+`boardRecentSays()` was written `if (b.kind !== "run") var n = …` with the
+return on the next line and no braces, so the return sat **outside** the `if`:
+every board on Home read "a procedure · undefined steps", a run included, and
+the three lines below it that describe a run were unreachable. It parses, it
+throws nothing, no assertion looked at that string, and the only reason it was
+ever caught is that the word "undefined" was on screen and the screen was
+read. `new Function` cannot see it, the same as the free variable in
+`projOver` — **reading the rendered text is the only test for this class.**
+
+**AND THE RULES THAT MOVED WITH THE RESHAPE, RATHER THAN BEING LOST.**
+`.homerow` and `.hometile` are gone, and so is `.btn.clip` — Quick run was its
+only caller. The rule it existed for did not go anywhere: *a launcher button
+is one line*, now carried by `.drow .nm` (nowrap, clipped, the full name in
+the row's `title`). The dead-CSS scan is what forced the tidy-up, and the
+three new dead names it printed — `brand-sub`, `clip` and the tile rules —
+were all real. `.drow` and `.dact` went into the one focus-ring rule the same
+day they were written, because `keys.js` fails on a control wearing
+Chromium's default outline and it caught both.
+
+**NAME A CARD, NEVER COUNT ONE** — the same rule as naming a tab, one level
+in. `.dcard:first-of-type` matched the first card of the *second* grid as well
+as the first, whose rows carry no figure at all, so a test reading Today's
+figures crashed on the wrong card. Find the card by its heading.
+
 ## What READING every screen found
 
 Eleven faults from driving the interface; these came from **reading** it —
