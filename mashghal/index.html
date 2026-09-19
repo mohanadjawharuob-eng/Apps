@@ -1673,7 +1673,12 @@ color-scheme: light;
   .btn.loud {
     background: var(--ink); border-color: var(--ink); color: var(--page); font-weight: 600;
   }
-  .btn.loud:hover { background: #fff; border-color: #fff; color: var(--page); }
+  /* Not `#fff` beside `color: var(--page)`: on paper that is #fbf7ef-white
+     under near-white text, the same 1.01:1 vanishing that cost
+     `.btn.primary:hover` its label. `--ink-hover` is defined per theme. */
+  .btn.loud:hover, .btn.loud:focus-visible {
+    background: var(--ink-hover); border-color: var(--ink-hover); color: var(--page);
+  }
 
   @media (max-width: 700px) {
     .panel { flex-wrap: wrap; gap: 0.6rem 0.9rem; padding: 0.95rem 1.05rem; }
@@ -1767,6 +1772,47 @@ color-scheme: light;
     font-size: 0.86rem; line-height: 1.45;
   }
   .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.1rem 1.1rem; }
+
+  /* The sheet's menu. Not a modal — no scrim, no trap — so it is styled as
+     a small floating card rather than a dialog: over the maximised sheet (55)
+     and the switch bar (50), under the storage alarm (70) and the overlay
+     (90), so any dialog one of its rows opens lands on top of it. */
+  /* A NODE'S MENU IS AS LONG AS THE NODE, so it can be taller than the phone
+     it is on — a live send with three ways out and two pictures runs to
+     fourteen rows. Clamped to the top by `Math.max(8, y)`, the rows past the
+     bottom would simply not be there: exactly the control that quietly does
+     nothing. It scrolls instead, and the scroll is contained so the page
+     behind does not move with it. */
+  .cvmenu {
+    position: fixed; z-index: 60; min-width: 12.5rem; max-width: 17rem;
+    max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--raised); border: 1px solid var(--rule-mid);
+    border-radius: 12px; padding: 0.3rem; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    display: flex; flex-direction: column; gap: 0.1rem;
+  }
+  .cvmhead {
+    display: flex; flex-direction: column; gap: 0.1rem;
+    padding: 0.35rem 0.5rem 0.4rem; border-bottom: 1px solid var(--rule-soft);
+    margin-bottom: 0.2rem;
+  }
+  .cvmhead b { font-size: 0.84rem; color: var(--ink); overflow-wrap: anywhere; }
+  /* A row, not a pill: the strip lays these out across and the menu lays the
+     same buttons down, so the shape changes and the list does not. */
+  .cvmenu .cvmrow {
+    justify-content: flex-start; text-align: left; width: 100%;
+    border-color: transparent; background: transparent; padding: 0.42rem 0.5rem;
+  }
+  .cvmenu .cvmrow:hover, .cvmenu .cvmrow:focus-visible { background: var(--sunken); }
+  /* The menu says "primary" and "destructive" exactly the way the strip does,
+     or two renderings of one list disagree about what its rows mean. Weight,
+     not sage — a row is neither a pill nor a left edge, so it is not a place
+     state is allowed to speak — and the remove row is quiet until the finger
+     is on it, like every other `.btn.danger` outside a dialog. */
+  .cvmenu .cvmrow.loud { color: var(--ink); font-weight: 600; }
+  .cvmenu .cvmrow.danger { color: var(--dim); }
+  .cvmenu .cvmrow.danger:hover, .cvmenu .cvmrow.danger:focus-visible {
+    color: var(--apricot); background: var(--late-tint);
+  }
 
   /* ---------------- toasts + tip ---------------- */
   /* Above the switch bar, which is pinned to the bottom of every screen — a
@@ -10630,7 +10676,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v68 · 19 Sep 2026";
+  var BUILD = "v69 · 19 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -11133,6 +11179,7 @@ function dims(n) {
   var PW = 132, PH = 96;   // a thumbnail on the sheet
   var NS = "http://www.w3.org/2000/svg";
   var vb = { x: 0, y: 0, w: 1400, h: 800 }, drag = null, pan = null, hov = null, cvSvg = null;
+  var cvHold = null;      // the long-press timer; view state, never saved
 
   function canvasHtml(b, tools) {
     /* The class is written into the markup as well as toggled by `setMax`,
@@ -11218,6 +11265,142 @@ function dims(n) {
     }
     steps.forEach(function (n, i) { if (depth[n.id] === undefined) depth[n.id] = 100 + i; });
     return depth;
+  }
+
+  /* ---------------- the sheet's own menu ----------------
+
+     THE BRIEF ASKS FOR A DESKTOP RIGHT-CLICK AND A PHONE LONG-PRESS, and the
+     reason it earns its place over simply picking the node is distance: on a
+     laptop the strip is at the top of the sheet and the cursor is wherever the
+     node is, and on a phone it can be a scroll away. A menu at the pointer is
+     the same actions nearer your hand.
+
+     **Nothing is only in the menu.** It renders `nodeActs(b, n)`, the same
+     array the strip renders, so this is a second surface over one list and
+     never a second list — which is the `omniEl()` lesson, and the reason
+     `borrowInto`/`borrowLine` are one pair. Everything here stays reachable
+     with no pointer at all: Enter opens the strip, Space fires the first of
+     these, Delete the last.
+
+     It is NOT a modal. There is no scrim, no focus trap and no Escape stack
+     entry beyond its own, because a menu is a shortcut to buttons that are
+     already on the screen — putting a trap round it would make an accidental
+     right-click something you have to get out of, which is the fault "a tap
+     on the sheet selects; it does not open a dialog" exists to prevent.
+     z-index 60: over the maximised sheet (55) and the switch bar (50), under
+     the storage alarm (70) and the overlay (90), so every dialog it opens
+     still lands on top of it. */
+  var cvMenu = null;      // view state, never saved
+
+  function menuClose() {
+    if (cvMenu && cvMenu.parentNode) cvMenu.parentNode.removeChild(cvMenu);
+    cvMenu = null;
+  }
+
+  /* PICK THE NODE, LET THE STRIP PAINT, THEN OPEN — in that order, and the
+     order is the whole of it. Selecting a node makes `selPanel` appear, which
+     is ~46px of layout the sheet did not have, which fires a `scroll` on the
+     document, which is one of the things that closes this menu. Opened in the
+     same tick the menu was built and destroyed between two frames and the
+     right-click looked like it did nothing at all.
+
+     A frame later the layout has settled, the coordinates are measured
+     against what is actually on screen, and a real scroll still closes it. */
+  function menuPick(b, n, cx, cy) {
+    if (sel !== n.id) { sel = n.id; paintSel(b); }
+    requestAnimationFrame(function () { menuOpen(b, n, cx, cy); });
+  }
+
+  function menuOpen(b, n, cx, cy) {
+    menuClose();
+    if (!b || !n || b.derived) return;
+    var acts = nodeActs(b, n);
+    if (!acts.length) return;
+    var what = n.t === "step" ? vocabLabel("acts", n.act) : vocabLabel("things", n.kind);
+    var el = document.createElement("div");
+    el.className = "cvmenu";
+    el.setAttribute("role", "menu");
+    el.innerHTML = '<div class="cvmhead"><span class="selkind">' +
+      esc(String(what).toLowerCase()) + "</span><b>" + esc(clip(n.label, 28)) + "</b></div>" +
+      acts.map(function (a) { return nodeActBtn(b, n, a, " cvmrow"); }).join("");
+    document.body.appendChild(el);
+    cvMenu = el;
+
+    /* Placed so it never hangs off an edge — measured after it is in the
+       document, because its height is however many acts this node has and
+       that is four on a template step and nine on a live one. */
+    var r = el.getBoundingClientRect();
+    var x = Math.min(cx, window.innerWidth - r.width - 8);
+    var y = Math.min(cy, window.innerHeight - r.height - 8);
+    el.style.left = Math.max(8, x) + "px";
+    el.style.top = Math.max(8, y) + "px";
+    var first = el.querySelector(".cvmrow");
+    if (first) first.focus();
+  }
+
+  /* One listener each, at the document, because the menu is appended to the
+     body rather than to the sheet — and it closes on the press that fires one
+     of its own buttons too, which is why this is on the CAPTURE phase: the
+     dispatcher runs on the bubble, so without capture the menu would still be
+     standing over whatever dialog its button just opened. */
+  function menuWire() {
+    document.addEventListener("pointerdown", function (e) {
+      if (cvMenu && !e.target.closest(".cvmenu")) menuClose();
+    }, true);
+    document.addEventListener("click", function (e) {
+      if (cvMenu && e.target.closest(".cvmenu")) menuClose();
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      if (!cvMenu) return;
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); menuClose(); return; }
+      /* Down and up walk it, because a menu that can be opened from the
+         keyboard nowhere is still a menu somebody lands in by right-clicking
+         with a trackpad and then cannot leave without a mouse. */
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var rows = [].slice.call(cvMenu.querySelectorAll(".cvmrow"));
+        var i = rows.indexOf(document.activeElement);
+        var step = e.key === "ArrowDown" ? 1 : -1;
+        var next = rows[(i + step + rows.length) % rows.length];
+        if (next) next.focus();
+      }
+    }, true);
+    window.addEventListener("resize", menuClose);
+    window.addEventListener("scroll", menuClose, true);
+  }
+
+  /* A NEW NODE LANDS WHERE YOU ARE LOOKING, and nothing else moves.
+
+     The brief asks for "node appears at current viewport center. Do not
+     automatically connect it", and the second half was already true. The
+     first half was not, and what stood in its place was worse than a wrong
+     position: every add called `autoLayout(b)`, which re-ranks the WHOLE
+     board. So arranging a sheet by hand and then adding one step threw the
+     arrangement away — which is exactly the fault `settleNode` was written
+     against ("Tidy would fix it by moving everything, including whatever was
+     placed by hand"), reappearing on the one path nobody had looked at.
+
+     `autoLayout` keeps two jobs and loses the third: seeding a brand-new
+     board so nobody ever meets a blank sheet, and Tidy, which is the button
+     that ASKS for everything to move.
+
+     `vb` is the live viewBox, so the centre is in sheet units already and no
+     conversion is needed. The node is placed with its centre there rather
+     than its corner, or a card drawn 260 wide sits visibly right of where
+     you were looking. */
+  function newSpot(b) {
+    var w = 260, h = 92;
+    var x = Math.round(vb.x + vb.w / 2 - w / 2);
+    var y = Math.round(vb.y + vb.h / 2 - h / 2);
+    /* If the middle is already taken, step off it rather than stacking one
+       card exactly on another — `settleNode` will push whatever is still in
+       the way, but starting on top of something makes the push look like the
+       new node jumping somewhere random. */
+    var tries = 0;
+    while (tries < 12 && (b.nodes || []).some(function (n) {
+      return typeof n.x === "number" && Math.abs(n.x - x) < 40 && Math.abs(n.y - y) < 30;
+    })) { x += 34; y += 26; tries++; }
+    return { x: x, y: y };
   }
 
   function autoLayout(b) {
@@ -12167,26 +12350,39 @@ function dims(n) {
      can do to it appear over the sheet — edit, a photo, delete, look — so the
      board is the place you work rather than a picture of the work with the
      controls somewhere else. */
-  function selPanel(b) {
-    var n = sel && nodeOf(b, sel);
-    if (!n) return "";
+  /* WHAT CAN BE DONE TO ONE NODE, AS A LIST RATHER THAN AS MARKUP — because
+     it is now rendered in TWO places: the strip under the toolbar, and the
+     menu a right-click or a long-press opens at the pointer. Two copies of
+     this mapping would drift the first time an act was added, which is the
+     same reason `borrowInto`/`borrowLine` are one pair and the reason
+     `openHandle()` is the single place that decides what "open" means.
+
+     The invariant that makes the menu safe: **nothing is only in the menu.**
+     Both surfaces render this array, so a pointer affordance can never be the
+     sole route to anything — the strip stays keyboard-reachable through
+     Enter, and Space fires whichever of these comes first. There is a test
+     that compares the two lists.
+
+     The brief names six items for that menu (Edit · Duplicate · Connect · Add
+     related thing · Disconnect · Delete) and four of them existed under other
+     names. The two that did not are here, and both are what the brief calls
+     routine and reversible: no confirmation, an undo on the message. */
+  function nodeActs(b, n) {
+    var out = [];
+    if (!b || !n) return out;
     var isStep = n.t === "step";
-    var what = isStep ? vocabLabel("acts", n.act) : vocabLabel("things", n.kind);
-    var acts = "";
     if (isStep) {
       var st = nodeState(b, n);
       if (b.kind === "run" && !b.closedOn) {
         if (n.enteredAt && !n.doneAt) {
-          acts += n.act === "ask"
-            ? '<button class="btn loud" data-act="step-answer" data-id="' + b.id + ":" + n.id + '">Answer it</button>'
-            : '<button class="btn loud" data-act="step-done" data-id="' + b.id + ":" + n.id + '">Mark done</button>';
-          if (st === "over") {
-            acts += '<button class="btn" data-act="step-chased" data-id="' + b.id + ":" + n.id + '">I chased today</button>';
-          }
+          out.push(n.act === "ask"
+            ? { act: "step-answer", label: "Answer it", loud: true }
+            : { act: "step-done", label: "Mark done", loud: true });
+          if (st === "over") out.push({ act: "step-chased", label: "I chased today" });
         } else if (!n.enteredAt) {
-          acts += '<button class="btn" data-act="step-enter" data-id="' + b.id + ":" + n.id + '">Start it</button>';
+          out.push({ act: "step-enter", label: "Start it" });
         } else {
-          acts += '<button class="btn" data-act="step-reopen" data-id="' + b.id + ":" + n.id + '">Reopen</button>';
+          out.push({ act: "step-reopen", label: "Reopen" });
         }
       }
       /* What this step needs, opened in one press. It is the strongest thing
@@ -12198,29 +12394,56 @@ function dims(n) {
       if (state.settings.companion && b.kind === "run" && !b.closedOn &&
           n.enteredAt && !n.doneAt && hasNeeds(b, n)) {
         var need = stepNeeds(b, n);
-        var cnt = need.software.length + need.links.length;
-        acts += launchLink(n.id, "Open what it needs (" + cnt + ")");
+        out.push({ launch: true, label: "Open what it needs (" +
+                   (need.software.length + need.links.length) + ")" });
       }
-      acts += '<button class="btn" data-act="photo-here" data-id="' + b.id + ":" + n.id + '">Add a photo</button>';
-      if (n.act === "send") acts += '<button class="btn" data-act="send-to" data-id="' + b.id + ":" + n.id + '">Waiting on…</button>';
-      if (n.act === "ask") acts += '<button class="btn" data-act="exit-add" data-id="' + b.id + ":" + n.id + '">Add a way out</button>';
+      out.push({ act: "photo-here", label: "Add a photo" });
+      if (n.act === "send") out.push({ act: "send-to", label: "Waiting on…" });
+      if (n.act === "ask") out.push({ act: "exit-add", label: "Add a way out" });
     } else if (hasPic(n)) {
-      acts += '<button class="btn" data-act="pic-open" data-id="' + b.id + ":" + n.id + '">Look at it</button>';
-      acts += '<button class="btn" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">Replace</button>';
+      out.push({ act: "pic-open", label: "Look at it" });
+      out.push({ act: "pic-add", label: "Replace" });
     } else if (n.kind === "photo") {
-      acts += '<button class="btn loud" data-act="pic-add" data-id="' + b.id + ":" + n.id + '">Add a picture</button>';
+      out.push({ act: "pic-add", label: "Add a picture", loud: true });
     }
-    if (n.url) {
-      acts += '<a class="btn" href="' + esc(n.url) + '" target="_blank" rel="noopener">Open the link</a>';
-    }
-    acts += '<button class="btn" data-act="node-edit" data-id="' + b.id + ":" + n.id + '">Edit</button>';
-    acts += '<button class="btn danger" data-act="node-del" data-id="' + b.id + ":" + n.id + '">Remove</button>';
+    if (n.url) out.push({ href: n.url, label: "Open the link" });
+    /* CONNECT FROM HERE, with this node already in the From box — the brief's
+       "select source, then destination". The drag handle does the same thing
+       with a pointer; this is the route for somebody who cannot drag. */
+    if (b.nodes.length > 1) out.push({ act: "edge-add", label: "Connect…" });
+    out.push({ act: "thing-here", label: "Add related thing…" });
+    if (edgesAt(b, n).length) out.push({ act: "node-cut", label: "Disconnect" });
+    out.push({ act: "node-dup", label: "Duplicate" });
+    out.push({ act: "node-edit", label: "Edit" });
+    out.push({ act: "node-del", label: "Remove", danger: true });
+    return out;
+  }
+  // Every line touching a node, either end, both kinds.
+  function edgesAt(b, n) {
+    return (b.edges || []).filter(function (e) { return e.a === n.id || e.b === n.id; });
+  }
+  /* One button from one entry in that list, so the strip and the menu draw the
+     same thing. A launcher row is the one that is not a plain button:
+     `launchLink()` is the single place that link is built. */
+  function nodeActBtn(b, n, a, extra) {
+    var cls = "btn" + (a.loud ? " loud" : "") + (a.danger ? " danger" : "") + (extra || "");
+    if (a.launch) return launchLink(n.id, a.label);
+    if (a.href) return '<a class="' + cls + '" href="' + esc(a.href) +
+      '" target="_blank" rel="noopener">' + esc(a.label) + "</a>";
+    return '<button type="button" class="' + cls + '" data-act="' + a.act +
+      '" data-id="' + b.id + ":" + n.id + '">' + esc(a.label) + "</button>";
+  }
 
+  function selPanel(b) {
+    var n = sel && nodeOf(b, sel);
+    if (!n) return "";
+    var what = n.t === "step" ? vocabLabel("acts", n.act) : vocabLabel("things", n.kind);
+    var acts = nodeActs(b, n).map(function (a) { return nodeActBtn(b, n, a); }).join("");
     return '<div class="selbar">' +
       '<div class="selwho"><span class="selkind">' + esc(String(what).toLowerCase()) + "</span>" +
       '<b>' + esc(clip(n.label, 40)) + "</b></div>" +
       '<div class="selacts">' + acts + "</div>" +
-      '<button class="btn quiet selx" data-act="sel-clear" title="Nothing selected">\u00d7</button></div>';
+      '<button class="btn quiet selx" data-act="sel-clear" title="Nothing selected">×</button></div>';
   }
 
   function clearWire() {
@@ -12368,7 +12591,58 @@ function dims(n) {
     fitBoard(b);
     mountKeys(b);
 
+    /* RIGHT-CLICK, and it picks the node first so the strip and the menu
+       agree about what is selected — opening a menu on a node the strip is
+       not showing would be two surfaces disagreeing in the one place they
+       must not. */
+    /* THE NODE COMES FROM THE PRESS, NOT FROM A HIT TEST IN A LATER EVENT —
+       and this took three wrong fixes to see. `ev.target` is no good, because
+       `pointerdown` has already set pointer capture on the svg and under
+       capture everything after it targets the svg itself (`pointermove`
+       carries that note too). So the obvious repair is
+       `document.elementFromPoint(ev.clientX, ev.clientY)` — and that fails as
+       well, for a reason nothing on screen suggests: **the sheet is
+       `tabindex="0"`, so pressing it FOCUSES it, and a browser scrolls a
+       newly focused element into view.** Measured, the svg's top moved 85px
+       between `pointerdown` and `contextmenu` on a scrolled page, so the
+       coordinates the menu was resolving were stale by one event and landed
+       on the background rect.
+
+       `pointerdown` already found the node correctly — it is `drag.n` — so
+       the menu reads it from there and no coordinate is trusted twice. The
+       menu still OPENS at the cursor, because that is where a menu belongs,
+       and its head names the node so the two can never be read as different
+       things. */
+    cvSvg.addEventListener("contextmenu", function (ev) {
+      var n = drag && drag.n;
+      if (!n || b.derived) { menuClose(); return; }   // the browser's menu on bare sheet
+      ev.preventDefault();
+      menuPick(b, n, ev.clientX, ev.clientY);
+    });
+
     cvSvg.addEventListener("pointerdown", function (ev) {
+      menuClose();
+      /* LONG-PRESS, touch only. Half a second, cancelled by moving more than
+         a few pixels — a drag is how a node is moved and how the sheet is
+         panned, and both start with a finger going down, so the timer has to
+         lose to either of them. Mouse and pen are left alone: they have a
+         right button. */
+      if (ev.pointerType === "touch") {
+        var sx = ev.clientX, sy = ev.clientY;
+        clearTimeout(cvHold);
+        cvHold = setTimeout(function () {
+          /* The node the press found, for the same reason the right-click
+             above reads it there: focusing the sheet scrolls it, so half a
+             second later the coordinates mean a different row. */
+          var nn = drag && drag.n;
+          if (!nn || b.derived) return;
+          /* Take the drag and the pan back, or letting go after the menu
+             opens would also move the node it is a menu for. */
+          drag = null; pan = null;
+          cvSvg.classList.remove("grabbing");
+          menuPick(b, nn, sx, sy);
+        }, 500);
+      }
       var g = ev.target.closest ? ev.target.closest("g[data-id]") : null;
       var onHandle = ev.target.closest ? ev.target.closest("[data-handle]") : null;
       var p = toSvg(ev);
@@ -12407,6 +12681,7 @@ function dims(n) {
         drawWire(b);
         return;
       }
+      if (cvHold) clearTimeout(cvHold);   // a move is a drag or a pan, not a hold
       if (drag) {
         var p = toSvg(ev);
         drag.n.x = Math.round(p.x - drag.dx);
@@ -12427,6 +12702,7 @@ function dims(n) {
     });
 
     function endPointer(ev) {
+      clearTimeout(cvHold); cvHold = null;
       if (wire) {
         var to = wire.over ? nodeOf(b, wire.over) : null;
         var from = wire.from;
@@ -12440,7 +12716,10 @@ function dims(n) {
          do with a node — open what it stands for — so picking it would be a
          step to nowhere. */
       if (drag && !drag.moved && b.derived) { mapTap(drag.n); return; }
-      if (drag && !drag.moved) { sel = drag.n.id; paintSel(b); }
+      /* Only when it actually changes. Repainting the strip for the node it
+         is already showing is a layout shift for nothing — and with the
+         menu open it is a layout shift underneath it. */
+      if (drag && !drag.moved && sel !== drag.n.id) { sel = drag.n.id; paintSel(b); }
       if (pan && !pan.moved && sel) { sel = ""; paintSel(b); }
       drag = null; pan = null;
       cvSvg.classList.remove("grabbing");
@@ -13221,15 +13500,22 @@ function dims(n) {
     },
 
     /* ---- edges ---- */
+    /* Takes a board, or a board AND a node — "Connect\u2026" on one node's
+       strip or menu opens this with that node already in the From box, which
+       is the brief's "select source, then destination" without making the
+       reader find their step again in a list of forty. */
     "edge-add": function (id) {
-      var b = byId(state.boards, id); if (!b || b.nodes.length < 2) return;
+      var q = String(id).split(":");
+      var b = byId(state.boards, q[0]); if (!b || b.nodes.length < 2) return;
       var all = b.nodes;
+      var from = q[1] && nodeOf(b, q[1]) ? q[1] : all[0].id;
+      var to = all.filter(function (n) { return n.id !== from; })[0].id;
       openModal({
         title: "Connect two things", confirmLabel: "Connect",
         message: "<b>Then</b> is sequence — one step follows another. <b>About</b> is association and says nothing about order, which is how a photo or a piece of kit hangs off a step without coming before it.",
         fields: [
-          { key: "a", label: "From", type: "select", options: nodeOpts(b, ""), value: all[0].id },
-          { key: "b", label: "To", type: "select", options: nodeOpts(b, ""), value: all[1].id },
+          { key: "a", label: "From", type: "select", options: nodeOpts(b, ""), value: from },
+          { key: "b", label: "To", type: "select", options: nodeOpts(b, ""), value: to },
           { key: "k", label: "Line", type: "select", value: "flow",
             options: [{ value: "flow", label: "Then — sequence" }, { value: "link", label: "About — association" }] },
           { key: "label", label: "Label (optional)", type: "text", value: "" }
@@ -13246,10 +13532,79 @@ function dims(n) {
         }
       });
     },
+    /* DUPLICATE AND DISCONNECT — the two of the brief's six menu items the
+       app did not have. Both are what it calls routine and reversible, so
+       neither confirms and both put an undo on the message: the rule in this
+       file is that every removal confirms, says what it touches and offers an
+       undo, and a line between two steps is the one removal where the
+       confirmation is the part that gets in the way. A step carrying five
+       weeks of hours is a different matter and `node-del` still asks. */
+    "node-dup": function (id) {
+      var s = split(id); if (!s.b || s.b.derived) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      /* A COPY AND NOT A SECOND REFERENCE, and it carries NO EDGES — the
+         brief's "do not automatically connect it" applies here more than
+         anywhere: a duplicated step that inherited its original's lines would
+         silently put a second path through the run. The picture comes too
+         (`pic` is what a thumbnail belongs to, so both nodes point at the
+         same one and neither owns it), and `enteredAt`/`doneAt` do NOT: a
+         copy of a finished step has not itself been done. */
+      var copy = JSON.parse(JSON.stringify(n));
+      copy.id = uid();
+      delete copy.enteredAt; delete copy.doneAt; delete copy.chasedOn;
+      copy.label = n.label + " (copy)";
+      copy.x = (typeof n.x === "number" ? n.x : 0) + 28;
+      copy.y = (typeof n.y === "number" ? n.y : 0) + 28;
+      go(function () { s.b.nodes.push(copy); settleNode(s.b, copy); });
+      sel = copy.id;
+      toast("Copied " + clip(n.label, 28) + " — the copy has no lines of its own",
+            function () {
+              go(function () {
+                s.b.nodes = s.b.nodes.filter(function (x) { return x.id !== copy.id; });
+              });
+              sel = n.id;
+            });
+    },
+    "node-cut": function (id) {
+      var s = split(id); if (!s.b || s.b.derived) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      var cut = edgesAt(s.b, n);
+      /* A refusal says why rather than doing nothing: this is reachable from
+         the strip and from the menu, and a control that quietly does nothing
+         is worse than no control. (It is not offered at all when there are
+         none — this is the belt.) */
+      if (!cut.length) { toast("Nothing is connected to " + clip(n.label, 28) + "."); return; }
+      var was = s.b.edges.slice();
+      go(function () {
+        s.b.edges = s.b.edges.filter(function (e) { return e.a !== n.id && e.b !== n.id; });
+      });
+      toast("Cut " + numWord(cut.length) + (cut.length === 1 ? " line" : " lines") +
+            " off " + clip(n.label, 24),
+            function () { go(function () { s.b.edges = was; }); });
+    },
+    /* ADD A RELATED THING, which is what the LINK edge exists for: a
+       reference photo or a pair of headphones hanging off a step without
+       becoming a predecessor. So it is one act, not two — the thing and the
+       line it hangs by — because adding a thing and then remembering to
+       connect it is exactly the step people forget. */
+    "thing-here": function (id) {
+      var s = split(id); if (!s.b || s.b.derived) return;
+      var n = nodeOf(s.b, s.n); if (!n) return;
+      thingDialog(s.b, null, { linkTo: n.id, at: { x: (typeof n.x === "number" ? n.x : 0),
+                                                   y: (typeof n.y === "number" ? n.y : 0) + 150 } });
+    },
+    /* This was three lines straight to `go()` with no undo — the same shape
+       `bench-del` had, and the rule is the same: a removal offers a way back.
+       No confirmation, because one line is routine and reversible, which is
+       what the brief asks for too. */
     "edge-del": function (id) {
       var p = String(id).split(":"), b = byId(state.boards, p[0]);
       if (!b) return;
-      go(function () { b.edges = b.edges.filter(function (e) { return e.id !== p[1]; }); });
+      var e = byId(b.edges, p[1]); if (!e) return;
+      var was = b.edges.slice();
+      go(function () { b.edges = b.edges.filter(function (x) { return x.id !== p[1]; }); });
+      toast(e.k === "flow" ? "Line cut" : "Association cut",
+            function () { go(function () { b.edges = was; }); });
     },
 
     /* ---- canvas ---- */
@@ -14233,19 +14588,25 @@ function dims(n) {
         return null;
       },
       onConfirm: function (v) {
+        var made = null;
         go(function () {
           var t = n;
           if (!t) {
             t = { id: uid(), t: "step", label: "", act: "do", chaseDays: 0, dueAt: "",
                   enteredAt: "", doneAt: "", answer: "" };
-            b.nodes.push(t);
+            b.nodes.push(t); made = t;
           }
           t.label = v.label.trim();
           t.act = vocabTake("acts", v.act, v.actOther, "do");
           t.chaseDays = num(v.chaseDays);
           t.dueAt = v.dueAt.trim();
-          if (typeof t.x !== "number") { autoLayout(b); }
+          /* IT LANDS WHERE YOU ARE LOOKING, and nothing else moves. This was
+             `autoLayout(b)` — which re-ranks the whole board, so arranging a
+             sheet by hand and then adding one step threw the arrangement
+             away. See `newSpot`. */
+          if (made) { var p = newSpot(b); made.x = p.x; made.y = p.y; settleNode(b, made); }
         });
+        if (made) sel = made.id;
       }
     });
   }
@@ -14466,12 +14827,30 @@ function dims(n) {
     });
   }
 
-  function thingDialog(b, n) {
+  /* `opts` is the third argument for "Add related thing": a node id to hang
+     the new thing off, and where to put it. Two rules in it.
+
+     THE LINE IS A `link` AND NEVER A `flow`. That is the whole distinction the
+     model rests on — a reference photo or a pair of headphones belongs WITH a
+     step without coming before it — and drawn as sequence it would put a
+     second path through the run.
+
+     AND IT IS ONE ACT. Adding a thing and then remembering to connect it is
+     exactly the step people forget, which is why the dialog says so in the
+     branch where the line is coming: an unlinked thing floats on the sheet
+     saying nothing about what it is for. */
+  function thingDialog(b, n, opts) {
     if (!b) return;
+    opts = opts || {};
+    var host = opts.linkTo ? nodeOf(b, opts.linkTo) : null;
     openModal({
-      title: n ? "Edit thing" : "New thing",
+      title: n ? "Edit thing" : host ? "Add something to " + clip(host.label, 24) : "New thing",
       confirmLabel: n ? "Save" : "Add",
-      message: n ? "" : "A person, a file, a photograph, a piece of kit. Link it to a step afterwards — a link says nothing about order.",
+      message: n ? ""
+        : host ? "A person, a file, a photograph, a piece of kit. It is joined to <b>" +
+                 esc(clip(host.label, 30)) + "</b> with an <b>About</b> line, which says " +
+                 "nothing about order — so it belongs with that step without coming before it."
+               : "A person, a file, a photograph, a piece of kit. Link it to a step afterwards — a link says nothing about order.",
       fields: [
         { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },
         { key: "kind", label: "What is it", type: "select", value: n ? n.kind : "person",
@@ -14490,14 +14869,28 @@ function dims(n) {
         return null;
       },
       onConfirm: function (v) {
+        var made = null;
         go(function () {
           var t = n;
-          if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); }
+          if (!t) { t = { id: uid(), t: "thing", kind: "person", label: "" }; b.nodes.push(t); made = t; }
           t.label = v.label.trim();
           t.kind = vocabTake("things", v.kind, v.kindOther, "person");
           t.path = v.path.trim(); t.url = v.url.trim();
-          if (typeof t.x !== "number") autoLayout(b);
+          /* WHERE IT LANDS, and `autoLayout` is the last resort rather than
+             the default. Laying out the whole board on every add throws away
+             every position anybody placed by hand — which is precisely what
+             `settleNode` was written to avoid, and Tidy is the button that
+             asks for it. */
+          if (made) {
+            if (opts.at) { made.x = Math.round(opts.at.x); made.y = Math.round(opts.at.y); }
+            else { var p = newSpot(b); made.x = p.x; made.y = p.y; }
+            settleNode(b, made);
+          }
+          if (made && host) {
+            b.edges.push({ id: uid(), a: host.id, b: made.id, k: "link", label: "" });
+          }
         });
+        if (made) sel = made.id;
       }
     });
   }
@@ -15149,6 +15542,10 @@ function dims(n) {
     if (ensureJobs()) save();
     if (ensureStamps()) save();
     if (borrowed()) armBorrowed();
+    /* Wired once at boot, not per render: the menu is appended to the body,
+       so its listeners are on the document and a render must not stack a
+       second copy of each of them. */
+    menuWire();
     // Opening the app is itself a reason to pull: the other device has been
     // writing while this one was shut.
     wireAutoSync();

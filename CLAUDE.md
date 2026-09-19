@@ -1059,6 +1059,94 @@ opens on. A row findable only by somebody who already thinks to type
 "settings" is not a route for the one screen whose name is the thing you have
 forgotten.
 
+**A RIGHT-CLICK IS THE SECOND RENDERING OF ONE LIST, NOT A SECOND LIST.** The
+brief asks for a node menu carrying Edit · Duplicate · Connect · Add related
+thing · Disconnect · Delete, and the sheet already had all of that behind the
+selection strip — so the thing to build was a menu that shows *the strip's own
+list*, not a menu with a list of its own. `nodeActs(b, n)` is that list,
+extracted out of `selPanel` and returned as records (`{act, label, loud,
+danger, href, launch}`); `selPanel` lays it across and the menu lays it down,
+and `nodeActBtn` builds the button either way. There is a test that reads both
+and fails if the two strings differ, because **two copies of one list is the
+same bug as two copies of one rule** — it would drift the first time an act
+was added, and the drift would be silent.
+
+- **The menu says "primary" and "destructive" the way the strip does.**
+  Written first with the loud row in sage and the remove row in rose, it broke
+  the channel rule in a third place: state lives in a pill carrying a word and
+  in a row's left edge, and a menu row is neither. The loud row takes **weight
+  and `--ink`**, and Remove is `--dim` until the finger is on it, exactly like
+  every other `.btn.danger` outside a dialog. Two renderings of one list may
+  not disagree about what its rows mean.
+- **A menu as long as the node can be longer than the phone.** A live `send`
+  with three ways out and two pictures runs to fourteen rows; clamped to the
+  top by `Math.max(8, y)`, everything past the bottom was simply not there.
+  It scrolls, with `overscroll-behavior: contain` so the page behind does not
+  move with it, and the test drives it at **390 × 360** — a phone on its side,
+  where no node's menu fits — and asserts the last row is inside the box once
+  scrolled to. *Reachable means reached*: a scroll container that clips its
+  last child is the same fault with a scrollbar drawn on it.
+- **Two of the six items did not exist, and each one is a rule.**
+  **Duplicate** copies the node and **not one edge** — the brief says so in as
+  many words, and it is right: a copy of a step is a step you are about to
+  place somewhere else in the sequence, so inheriting the original's
+  predecessors would put it in the flow you have not decided on yet. It clears
+  `enteredAt`, `doneAt` and `chasedOn`, because a copy of a step that is
+  finished has not been done. **Disconnect** cuts every edge touching the node,
+  says how many **as a word**, and refuses by name when there are none —
+  neither asks for a confirmation, because both are reversible and the undo is
+  on the toast, which is this app's rule for a routine act.
+- **A thing and its line in one act.** `Add related thing…` is `thingDialog`
+  with `opts.linkTo` and `opts.at`, so it writes the node *and* the `link`
+  edge — a `link` and never a `flow`, since nothing waits on a reference photo
+  and a run does not advance through it. Asked for the thing and then asked
+  again for the line, nobody would draw the line.
+
+**AND A NEW NODE LANDS WHERE YOU ARE LOOKING.** `nodeDialog` called
+`autoLayout(b)` on every add, which re-ranks the whole board — so adding one
+step to a forty-node procedure threw away every position anybody had placed by
+hand, and on a panned sheet the new step appeared somewhere off screen.
+`newSpot(b)` reads the live `vb` and returns the centre of what is actually in
+view, nudged until it is not on top of something, and `settleNode` pushes only
+what is genuinely in the way. "Tidy" is still there for when a re-layout is
+what you want — which is the point: *a layout is a thing the reader asked for,
+never a side effect of adding one node.*
+
+**THE COORDINATES OF A PRESS GO STALE IN ONE EVENT, AND THAT COST FOUR
+ATTEMPTS.** The menu did not open at all and every plausible cause was wrong
+in an interesting way. `ev.target` is the `<svg>` under pointer capture, so it
+never names the node; `document.elementFromPoint` failed the same way; the
+selection strip appearing fires a `scroll`, which is one of the things that
+closes the menu, so it was built and destroyed between two frames. The real
+cause, measured: **the sheet's top moved 184 → 269px between `pointerdown` and
+`contextmenu`** — the sheet is `tabindex="0"`, pressing it focuses it, and the
+browser scrolls a newly-focused element into view. So the node comes from
+**the press** (`drag && drag.n`), in the `contextmenu` handler and in the
+long-press timer alike, and `menuPick` sets `sel`, paints the strip, and opens
+the menu a frame later against a layout that has settled. The same fault then
+appeared twice in the harness — a shot script that produced a screenshot with
+no menu in it, and a contrast walk that right-clicked a point it had read
+before picking the node. **A stored coordinate on a canvas is a coordinate
+about the last frame.**
+
+**AND THE ONE THAT WAS FOUND BY LOOKING: `.btn.loud:hover` HARDCODED `#fff`
+BESIDE `color: var(--page)`.** On paper that is near-white text on white —
+about 1.01:1 — so *Mark done*, the strip's primary button on every board,
+lost its label the moment a pointer touched it. It is the identical fault this
+file already records about `.btn.primary:hover`, in a second rule, and
+`--ink-hover` already existed for it. It survived because `lightlook.js` hovers
+every button on a *screen* and the strip is not on one: it appears only when a
+node is picked, and picking a node is a press on a canvas. The walk now picks
+one, measures the strip and then the menu in both themes, and `hoverScan` is a
+function rather than a block written inline for one tab — **the surface that
+proves a rule is the surface nobody thought to visit.** Two traps in that
+measurement, both of which reported the fix as not having landed: an empty
+selector *passes* a contrast assertion (nothing on screen is nothing
+unreadable), so each scan asserts it matched some controls first; and the scan
+leaves the pointer on the **last** row it hovered, so a read of "the menu at
+rest" taken straight afterwards is a read of Remove under the finger.
+
+
 **A second gear on the phone row was the wrong answer**, and the reasons are
 worth keeping: it is two copies of one control, which is what `omniEl()` cost
 Coffer; there is no room for a fourth row of chrome, since the phone pass
