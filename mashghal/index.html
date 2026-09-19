@@ -10802,7 +10802,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v70 · 19 Sep 2026";
+  var BUILD = "v71 · 19 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -14693,7 +14693,10 @@ function dims(n) {
   function nodeDialog(b, n) {
     if (!b) return;
     openModal({
-      title: n ? "Edit step" : "New step",
+      // Named, not typed — the same reason `thingDialog`'s title is the node's
+      // label: "Edit step" is a placeholder where every other edit dialog here
+      // says which record you are looking at.
+      title: n ? "Edit " + clip(n.label, 26) : "New step",
       confirmLabel: n ? "Save" : "Add",
       message: "<b>Do</b> is work you perform. <b>Send</b> opens a wait on the people linked to it. <b>Watch</b> waits with nobody to chase. <b>Decide</b> branches along its labelled exits. <b>File</b> puts it somewhere — and a run will not close while one is undone.",
       fields: [
@@ -14980,12 +14983,22 @@ function dims(n) {
     opts = opts || {};
     var host = opts.linkTo ? nodeOf(b, opts.linkTo) : null;
     openModal({
-      title: n ? "Edit thing" : host ? "Add something to " + clip(host.label, 24) : "New thing",
+      /* NAME THE RECORD, DON'T NAME ITS TYPE. "Edit thing" is what every
+         other edit dialog in the app refuses to say — "Edit Lenovo Legion",
+         "Edit \u201cSerial\u201d", "Edit N. Haddad" — and a generic noun in a
+         title reads as a placeholder somebody forgot to fill in. */
+      title: n ? "Edit " + clip(n.label, 26)
+               : host ? "Add something to " + clip(host.label, 24) : "New thing",
       confirmLabel: n ? "Save" : "Add",
+      /* AND THE HOST IS NOT ALWAYS A STEP. "Add related thing\u2026" is offered
+         on any node the menu opens on, so this sentence read "so it belongs
+         with that step" under a title reading "Add something to Reference
+         photo" — a photograph, which is not a step and never will be. The
+         reasoning is the same either way, so the noun goes. */
       message: n ? ""
         : host ? "A person, a file, a photograph, a piece of kit. It is joined to <b>" +
                  esc(clip(host.label, 30)) + "</b> with an <b>About</b> line, which says " +
-                 "nothing about order — so it belongs with that step without coming before it."
+                 "nothing about order — so it belongs with it without coming before it."
                : "A person, a file, a photograph, a piece of kit. Link it to a step afterwards — a link says nothing about order.",
       fields: [
         { key: "label", label: "Name", type: "text", value: n ? n.label : "", span: true },

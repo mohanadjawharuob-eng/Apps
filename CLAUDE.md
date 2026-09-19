@@ -2488,6 +2488,38 @@ ANYTHING.** The screens had been read; the dialogs had not. Four more:
   way round and asserts where the focus actually went rather than reading a
   property that lies.
 
+**AND THEN READ THE DIALOGS AGAIN, BECAUSE FOUR HAD SHIPPED SINCE THE LAST
+READ.** `dialogs2.js` walked the boards, the workbench and Settings, and
+nothing in it could reach the four newest — the fact row's pen, "Note
+something else", "Add related thing…" and the keyboard table — because **two
+of them are not on a screen at all**: they open off a node that has been
+picked or a row that has been written, and a walk of `data-act` buttons on
+tabs never arrives. Same gap `lightlook.js` had, one layer in: *the surface
+that proves a rule is the surface nobody thought to visit.* Two faults, both
+in v69's own dialog:
+
+- **A screen may not say something the reader can see is untrue.** "Add
+  related thing…" is offered on **any** node the menu opens on, so under a
+  title reading *Add something to Reference photo* the message went on to say
+  "so it belongs with **that step** without coming before it" — a photograph
+  is not a step and never will be. The reasoning holds for any host, so the
+  noun goes rather than being made conditional.
+- **Name the record, not its type.** `thingDialog` titled itself "Edit thing"
+  and `nodeDialog` "Edit step", where every other edit dialog in the app says
+  which one you are looking at — "Edit Lenovo Legion", "Edit “Serial”", "Edit
+  N. Haddad". A generic noun in a title reads as a placeholder somebody forgot
+  to fill in, and on a forty-node board it is the one thing you would want the
+  dialog to confirm before you start typing over a name.
+
+**A `| head -N` ON A TEST IS A KILLED TEST THAT REPORTS EXIT 0.** The first
+run of that walk was read through `| sed … | head -90`: `head` closed the pipe
+at ninety lines, `node` died of EPIPE part-way through printing a dialog, and
+the shell reported the pipeline's exit status — `head`'s, which is 0. Eight
+dialogs and the script's own `ERRORS:` line were simply absent, and absent
+looks exactly like nothing to report. This file already says a sweep must read
+the exit code and that silence is not success; the same rule applies to the
+pipe you read a script through. **Write to a file and grep the file.**
+
 **AND THEN COUNT TO ONE.** A count of one is where a bare plural shows, and a
 source scan for it drowns in state keys, ids and comments — so `ones.js`
 builds a book where **every countable thing is exactly one**, walks every
