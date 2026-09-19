@@ -2391,6 +2391,95 @@ Two traps for the next person driving the app rather than reading it:
   somebody typing the section's actual former name, "the week", matched
   nothing. Half an old name is not the old name.
 
+## The round-3 brief is a different app, and folding it in was the mistake
+
+Its owner said it plainly: *"you are building the features in stuff inside the
+structure of the old one and telling me that everything is matching while it
+does not."* That is exactly what happened, and the mechanism is worth writing
+down because this file encouraged it.
+
+Every round, the new document was read and the question asked was **"what does
+this app already have that answers this?"** — and the answer was written up as
+a virtue: *composing what was already there rather than adding a noun*. Once,
+against one feature, that is discipline and it is why the Library is the
+registry and a drill is a cadence. Seven rounds running, against documents
+describing a **different app**, it means the app never becomes the thing that
+was described. It becomes the old app wearing the new words.
+
+Then the conformance was graded against the app's own structure and reported
+as a match. That second half is the worse one.
+
+**The evidence is countable.** `design-brief-round-3.md` specifies, screen by
+screen, the state vocabulary (§5) and the empty-state copy (§6): **133 exact
+strings.** The app was missing **95** of them. `spec3.js` reads them out of the
+document rather than out of anybody's memory of it and prints the number; it
+FAILS until that number is nought, and it is deliberately left out of the
+named sweep so it cannot be mistaken for a regression.
+
+**And the structure that is still the old app's**, none of which either
+document asks for:
+
+- `state.claimants`, `state.modes`, `state.benches`, `state.spans` — claimant,
+  craft and bench. The brief has `Job` and a `TimeEntry {projectId,
+  claimantId, startedAt, endedAt}`. Neither document contains the word bench.
+- **The switch bar**, pinned to the bottom of every screen. It is in none of
+  the poster's twelve panels. It is rev-1's switch-led spine.
+- `state.boards` — one record that is both a procedure and a run. The brief
+  separates `Workflow`, `WorkflowNode`, `WorkflowEdge`, `WorkflowRun`,
+  `WorkflowRunNode`, which is *why* a failed run can keep its failure point
+  without touching the reusable workflow.
+- `state.tasks` — the brief's `Action` is one record with six types (`task`,
+  `waiting`, `unfiled`, `in_hand`, `upkeep`, `workflow_manual_step`).
+- **No `Output` records at all** — the brief's are `Filed`, `Reports` (with
+  Draft/Submitted) and `TimeEntries`.
+- No `PersonRelationship`, no typed asset records, no `Schedule record`.
+
+The brief's §32 says what to do instead, in one line: **"Build canonical
+records, relationships, and shared derived selectors first; then make each
+screen a view over that same underlying workspace."** This app did the
+opposite — kept the store and re-dressed the screens — and that is the whole
+of the fault.
+
+**What shipped here is the half that survives a rebuild**: the brief's own
+words, and one selector per question rather than per screen. What does not
+survive is the structure, and that is a rebuild rather than a patch, waiting
+on one decision from its owner (whether the current book has to migrate).
+
+**AND THE BRIEF'S SITES ARE PLACES, WHICH WAS A REAL MISREADING.** Round 3
+asks that section *"what archaeological or geographic places are part of my
+work?"*, with states **Located** and **Location unknown** — and this app had
+filed Drive and a mail search there, which is the brief's **Connections**
+("web services"). Two different things had the same word. What decides a place
+needs no vocabulary and invents nothing: **a place is a coordinate with
+nothing to open.** That is stated, generic, breaks no write-in rule, and it is
+why the brief's two states are Located and Location unknown — an entry filed
+there with no coordinate reads as the second rather than being guessed at. The
+second half of the test matters: an orthophoto has an extent *and* a path, and
+it is a file with a footprint, not a place.
+
+**`assetState(a)` is one selector for "how does this asset stand"**, in the
+brief's words and per its own section — Devices get Available · In use ·
+Maintenance · Missing · Unknown, Apps Installed · Web · Launcher unavailable ·
+Unknown, Sites Located · Location unknown, Files Available · Path unavailable ·
+Unknown, the Library Reusable · Needs review, Connections Connected ·
+Available · Unavailable · No opener recorded. One function, so the row, the
+entry's own facts table, the Connections grid and the finder cannot disagree —
+which is the brief's own rule that every screen reads the same derived
+selector.
+
+**AND AN UNSTATED STATE READS "Unknown".** This file used to say a thing
+nobody has said anything about carries no pill at all. That was the wrong
+reading of the reality rules, and the brief's §28 says the opposite in as many
+words: *"Unknown information should be represented explicitly as unknown."* A
+named absence is not a guess. `THING_STATES` keys that the brief has no word
+for (`busy`, `done`) are no longer offered but still read, mapped onto the
+nearest word it does have, so nothing on screen is outside its vocabulary and
+nothing stored is lost.
+
+**`emptyLines(pair)` is the shape of forty of those strings** — a finding,
+then the one thing to do about it — so the two lines are always set the same
+way round and the second is always the quieter one.
+
 ## What READING every screen found
 
 Eleven faults from driving the interface; these came from **reading** it —

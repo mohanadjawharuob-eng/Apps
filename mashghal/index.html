@@ -483,6 +483,11 @@ color-scheme: light;
      not a rule with no match.) */
   .sect:first-child { margin-top: 0; }
   .empty { color: var(--faint); font-family: var(--serif); font-style: italic; font-size: 0.9rem; margin: 0.4rem 0; }
+  /* The brief gives every empty state two lines: a finding, then the one
+     thing to do about it. The second is quieter and on its own line, or the
+     pair reads as one long sentence. */
+  .empty .esub { display: block; margin-top: 0.2rem; font-size: 0.84rem; font-style: normal;
+                 font-family: inherit; color: var(--faint); opacity: 0.85; }
   .hint { color: var(--faint); font-size: 0.8rem; margin: 0.35rem 0 0; }
   .row { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule-soft); }
   .row:last-child { border-bottom: 0; }
@@ -3097,7 +3102,7 @@ color-scheme: light;
         /* Stated or nothing: the record cannot know where a thing is, so a
            thing nobody has said anything about says exactly that rather than
            being placed somewhere plausible. */
-        if (stt.word) bits.push(stt.word);
+        if (thingStated(a)) bits.push(stt.word);
         if (a.where) bits.push("kept in " + a.where);
         if (lastUsedWords(a)) bits.push(lastUsedWords(a));
         var rows = [askSaid(a.name + " — " + (bits.length ? bits.join(" · ")
@@ -3885,7 +3890,7 @@ color-scheme: light;
 
     h += '<div class="sect">Procedures</div>';
     h += tpls.length ? '<div class="boards">' + tpls.map(tplCard).join("") + "</div>"
-                     : '<p class="empty">No procedures yet. Write one, then run it as many times as you like.</p>';
+                     : '<p class="empty">No workflows yet.<span class="esub">Create a procedure you can run again.</span></p>';
 
     if (closed.length) {
       h += '<div class="sect">Finished</div><div class="boards">' + closed.map(runCard).join("") + "</div>";
@@ -4104,7 +4109,7 @@ color-scheme: light;
       ' <span class="foldn">' + steps.length + "</span></summary>";
 
     h += steps.length ? '<div class="stack tight">' + steps.map(function (n) { return stepRow(b, n); }).join("") + "</div>"
-                      : '<p class="empty">No steps yet. Add the first thing you actually do.</p>';
+                      : '<p class="empty">Start building your workflow.<span class="esub">Add a step, then connect it to the thing it uses.</span></p>';
 
     if (loose.length) {
       h += '<div class="sect">Not attached to anything yet</div>' +
@@ -4573,7 +4578,11 @@ function stateWord(b, n) {
     /* QUICK RUN. Every row goes through `openHandle()`, so a row exists only
        where there is really something to open — and a path with the
        companion off is a copy, which the row says rather than pretending. */
-    var apps = repoIn("app").concat(repoIn("site")).filter(function (a) { return !!openHandle(a); }).slice(0, 5);
+    /* Apps and CONNECTIONS, not apps and sites — the brief's Sites are places
+       and a place has nothing to launch, while a web service is exactly what
+       this row is for. It moved with the meaning. */
+    var apps = repoIn("app").concat(repoIn("conn"))
+      .filter(function (a) { return !!openHandle(a); }).slice(0, 5);
     h += dcard("Quick run", { label: "All of it", act: "tab-repo" },
       apps.length ? apps.map(function (a) {
         var hd = openHandle(a), look = assetLook(a);
@@ -5143,7 +5152,7 @@ function stateWord(b, n) {
     h += '<div class="calist">';
     var listed = days.filter(function (d) { return (by[d] || []).length; });
     if (!listed.length) {
-      h += '<p class="empty">Nothing is dated this month.</p>';
+      h += '<p class="empty">Nothing is scheduled.<span class="esub">Dates appear here when work has an actual date.</span></p>';
     } else {
       listed.forEach(function (day) {
         h += '<div class="cl-day' + (day === today() ? " now" : "") + '"><b>' +
@@ -5209,7 +5218,7 @@ function stateWord(b, n) {
       '<button class="btn primary" data-act="proj-add">New project</button>' +
       '<button class="btn" data-act="board-new">New procedure</button></div>';
     if (!ps.length) {
-      return h + '<p class="empty">Nothing yet. A project is a bounded piece of work with an end to it — the harbour brochure, the aerial survey, the thesis. Procedures and runs hang off it, and what it produces is filed under it.</p>';
+      return h + '<p class="empty">No projects yet.<span class="esub">Create a project to give your work a home.</span></p>';
     }
     var rank = { late: 0, "past its date": 1, "to file": 2, "in hand": 3, "set down": 4 };
     var rows = ps.slice().sort(function (a, b) {
@@ -5228,7 +5237,7 @@ function stateWord(b, n) {
       '<p class="hint" style="margin:0 0 0.9rem">A job is a bag: the benches you sit at for it, the boards you run for it, the hours owed by it, and what it hands you when you arrive.</p>';
 
     if (!js.length) {
-      h += '<p class="empty">No jobs yet. One is AUB Tripoli 21st Century, or a funder, or a university — anything that has its own work and its own things. Work that belongs to nobody needs no job at all.</p>';
+      h += '<p class="empty">No jobs recorded yet.<span class="esub">Jobs group projects by employer or claimant.</span></p>';
     } else {
       h += '<div class="stack">' + js.map(function (j) {
         var d = jobDues(j.id), late = d.filter(function (x) { return x.st === "over"; }).length;
@@ -5876,7 +5885,7 @@ function stateWord(b, n) {
      that the thing went somewhere. */
   function outFiled(all) {
     if (!all.length) {
-      return '<p class="empty">Nothing filed yet. A run cannot close while a filing step is undone, so what lands here is exactly the work you finished AND put away — which is the third of the three things that get forgotten.</p>';
+      return '<p class="empty">Nothing has been filed yet.<span class="esub">A run cannot close while a filing step is undone, so what lands here is the work you finished and put away.</span></p>';
     }
     return '<div class="stack tight">' + all.map(function (o) {
       var b = byId(state.boards, o.boardId);
@@ -5955,7 +5964,7 @@ function stateWord(b, n) {
          on an empty week that is supposed to say what to do. A dead
          instruction is worse than none, so it names the page it means AND
          carries the button, which is one tap instead of three. */
-      h += '<p class="empty">Nothing to measure against yet. A claimant is whoever is owed the hours \u2014 an employer, a funder, your own thesis.</p>' +
+      h += '<p class="empty">No work hours have been logged.<span class=\"esub\">A claimant is whoever is owed the hours \u2014 an employer, a funder, your own thesis.</span></p>' +
         '<div class="tools"><button class="btn primary" data-act="claimant-add">Add a claimant</button>' +
         '<button class="btn" data-act="kit-words">The workbench \u00b7 Words</button></div>';
     } else {
@@ -6526,12 +6535,27 @@ function stateWord(b, n) {
      migration. */
   var REPO_PAGES = [
     { id: "device", label: "Devices", one: "device",
+      empty: ["No devices recorded.", "Add equipment you use in the field or at the desk."],
       blurb: "What you own and carry. A laptop, a phone, a total station, the headphones." },
     { id: "app",    label: "Apps",    one: "app",
+      empty: ["No applications recorded.", "Add software you use regularly."],
       blurb: "What you open to work. ArcGIS Pro, Agisoft, Illustrator \u2014 with the path the launcher opens." },
+    /* THE BRIEF'S SITES ARE PLACES, NOT WEBSITES. Round 3 asks this section
+       "what archaeological or geographic places are part of my work?", with
+       states Located and Location unknown — and the app had filed Drive and
+       a mail search here, which is the brief's CONNECTIONS ("web services").
+       Two different things had the same word.
+
+       What decides a place needs no vocabulary and invents nothing: a place
+       is an entry carrying a COORDINATE. That is stated, generic, breaks no
+       write-in rule, and it is exactly why the brief's two states are
+       Located and Location unknown — an entry filed here with no coordinate
+       reads as the second one rather than being guessed at. */
     { id: "site",   label: "Sites",   one: "site",
-      blurb: "What you log into. Drive, the library catalogue, a mail search you keep coming back to." },
+      empty: ["No sites recorded.", "Add a site when a place becomes part of your work."],
+      blurb: "The places the work is about \u2014 a site, a trench, a survey extent, anywhere you have a coordinate for." },
     { id: "file",   label: "Files",   one: "file",
+      empty: ["No files recorded.", "Add a file or record one from your work."],
       blurb: "What the work is made of. The orthophoto, the control file, the brochure." },
     /* THE LIBRARY IS THE SAME STORE READ BY TOPIC INSTEAD OF BY KIND. It sits
        on this strip rather than in a tab of its own because it is not a
@@ -6541,6 +6565,7 @@ function stateWord(b, n) {
        what keeps the vocabulary a description of the work rather than a
        taxonomy to maintain. */
     { id: "lib",    label: "Library", one: "entry",
+      empty: ["Your library is empty.", "Save something you will want to use again."],
       blurb: "Everything you know, by subject rather than by kind \u2014 the method note beside the dataset beside the paper." },
     /* CONNECTIONS IS THE SAME STORE ASKED A DIFFERENT QUESTION: what can this
        app actually open for me? The mockup draws it as Software / Web
@@ -6550,7 +6575,9 @@ function stateWord(b, n) {
        function answering yes. A second list of "integrations" would be the
        one name, one entry mistake this file records twice. */
     { id: "conn",   label: "Connections", one: "connection",
-      blurb: "What this app can reach: the software it launches, the sites it opens, the hardware you have written down." }
+      empty: ["No connections recorded.",
+              "Add a software, service, device, or location you use with your work."],
+      blurb: "What this app can reach: the software it launches, the web services it opens, the hardware you have written down." }
   ];
   var repoTab = "device";   // view state, never saved — a tab lands on its list
   var libTopic = "";        // which subject is open; view state too
@@ -6570,9 +6597,27 @@ function stateWord(b, n) {
     if (k === "snippet") return "lib";
     if (k === "laptop" || k === "phone" || k === "audio" || k === "gear") return "device";
     if (k === "software") return "app";
-    if (k === "site") return "site";
-    if (k === "other" && a.url && !a.path) return "site";
+    /* A COORDINATE AND NOTHING TO OPEN MAKES IT A PLACE. Nothing
+       archaeological is named here — the test is `geo`, which the reader
+       typed — so Site, Feature, Survey and whatever else somebody writes in
+       land on Sites generically. The second half matters: an orthophoto has
+       an extent AND a path, and it is a file with a footprint rather than a
+       place. A place is a coordinate with nothing to open. */
+    if (geoOf(a) && !a.path && !a.url) return "site";
+    /* And a website is one of the brief's CONNECTIONS, which is where it
+       was already appearing under "Web services". */
+    if (k === "site") return "conn";
+    if (k === "other" && a.url && !a.path) return "conn";
     return "file";
+  }
+  /* A FINDING, THEN WHAT TO DO — which is the shape every one of the
+     brief's empty states has, and there are forty of them. One helper so
+     the two lines are always set the same way round and the second is
+     always the quieter one. */
+  function emptyLines(pair) {
+    var a = [].concat(pair);
+    return '<p class="empty">' + esc(a[0]) +
+      (a[1] ? '<span class="esub">' + esc(a[1]) + "</span>" : "") + "</p>";
   }
   function repoIn(id) {
     return live(state.assets).filter(function (a) { return repoOf(a) === id; })
@@ -6612,6 +6657,10 @@ function stateWord(b, n) {
                brief: "opens through the launcher" };
     if (a.path) return { kind: "copy", label: "Copy the path",
                          how: "a browser is not allowed to open a file on your machine \u2014 turn the launcher on in Settings and this becomes one tap",
+                         /* The brief's own two sentences for this case: one
+                            about the path, one about the launcher. */
+                         why: "The recorded path could not be opened.",
+                         lacks: "No local launcher is recorded.",
                          brief: "on this machine only" };
     return null;
   }
@@ -7270,19 +7319,39 @@ function stateWord(b, n) {
      board's `updatedAt` would put a plausible wrong date on screen, which is
      the one thing this app refuses. Blank means nobody said, and the row says
      "not said" rather than inventing a day. */
+  /* THE BRIEF'S WORDS, NOT THE APP'S. Round 3 names these state by state —
+     Available · In use · Maintenance · Missing · Unknown for a device, the
+     first four minus Maintenance for any other asset — and the app had
+     written its own set ("in the field", "processing", "complete"). One
+     vocabulary, and it is the one in the document.
+
+     `busy` and `done` were beyond the brief's list and are no longer OFFERED,
+     but a record already carrying one still reads, mapped onto the nearest
+     word the brief does have: nothing on screen is outside its vocabulary and
+     nothing stored is lost. `offer` is what the picker shows.
+
+     AND AN UNSTATED STATE READS "Unknown". CLAUDE.md said a thing nobody has
+     said anything about carries no pill at all — that was the wrong reading
+     of the reality rules, and the brief's own §28 says the opposite in as
+     many words: "Unknown information should be represented explicitly as
+     unknown." A named absence is not a guess. */
   var THING_STATES = {
-    "": { word: "", tone: "" },
-    ready: { word: "available", tone: "p-sage" },
-    out: { word: "in the field", tone: "p-dim" },
-    fixing: { word: "maintenance", tone: "p-oxide" },
-    busy: { word: "processing", tone: "p-dim" },
-    done: { word: "complete", tone: "p-sage" },
-    lost: { word: "missing", tone: "p-oxide" }
+    "":      { word: "Unknown",     tone: "p-grey", offer: false },
+    ready:   { word: "Available",   tone: "p-sage", offer: true },
+    out:     { word: "In use",      tone: "p-dim",  offer: true },
+    fixing:  { word: "Maintenance", tone: "p-oxide", offer: true },
+    lost:    { word: "Missing",     tone: "p-oxide", offer: true },
+    busy:    { word: "In use",      tone: "p-dim",  offer: false },
+    done:    { word: "Archived",    tone: "p-grey", offer: false }
   };
   function thingState(a) {
-    var k = a.state || "";
+    var k = (a && a.state) || "";
     return THING_STATES[k] || { word: k, tone: "p-grey" };
   }
+  /* Whether anybody has actually said, which is a different question from
+     what the pill reads — the row prints a pill either way now, and the
+     entry's own page still says so in a sentence. */
+  function thingStated(a) { return !!(a && a.state); }
   function lastUsedWords(a) {
     if (!a.lastUsedOn || !dayOk(a.lastUsedOn)) return "";
     return "last used " + niceDate(a.lastUsedOn);
@@ -7391,9 +7460,9 @@ function stateWord(b, n) {
            said" is a real answer and better than a guessed one. */
         { key: "state", label: "How it stands", type: "select", more: true,
           value: a ? (a.state || "") : "",
-          options: [{ value: "", label: "Nothing said" }].concat(
-            Object.keys(THING_STATES).filter(function (k) { return !!k; })
-              .map(function (k) { return { value: k, label: cap(THING_STATES[k].word) }; })) },
+          options: [{ value: "", label: "Unknown" }].concat(
+            Object.keys(THING_STATES).filter(function (k) { return THING_STATES[k].offer; })
+              .map(function (k) { return { value: k, label: THING_STATES[k].word }; })) },
         { key: "lastUsedOn", label: "Last used", type: "text", more: true,
           value: a ? (a.lastUsedOn || "") : "", placeholder: "YYYY-MM-DD",
           hint: "Stated, not worked out: a board that named this in March says nothing about last week." },
@@ -7491,6 +7560,57 @@ function stateWord(b, n) {
      An entry with nothing to open is not a dead link: the row navigates
      instead, and the sub-line says it is only named. A control that does
      nothing is worse than no control. */
+  /* ONE FUNCTION FOR "HOW DOES THIS ASSET STAND", in the brief's own words
+     and per its own section, because round 3 names a different set for each:
+     Devices get Available · In use · Maintenance · Missing · Unknown, Apps
+     Installed · Web · Launcher unavailable · Unknown, Sites Located ·
+     Location unknown · Active · Archived, Files Available · Path unavailable
+     · Unknown, the Library Reusable · Needs review · Archived, and
+     Connections Connected · Available · Unavailable · No opener recorded.
+
+     It is one function so the row, the entry's own facts table, the
+     Connections grid and the finder cannot disagree — the brief's own rule
+     that every screen reads the same derived selector. Nothing here is
+     inferred from age or silence: a device's state is typed, and everywhere
+     else the word follows from whether a coordinate, a path or a link was
+     actually recorded. */
+  function assetState(a) {
+    if (!a) return { word: "Unknown", tone: "p-grey" };
+    if (a.archived) return { word: "Archived", tone: "p-grey" };
+    var sec = repoOf(a);
+    if (sec === "device") return thingState(a);
+    if (sec === "lib") {
+      if (a.review) return { word: "Needs review", tone: "p-oxide" };
+      return { word: "Reusable", tone: "p-sage" };
+    }
+    if (sec === "site") {
+      return geoOf(a) ? { word: "Located", tone: "p-sage" }
+                      : { word: "Location unknown", tone: "p-dim" };
+    }
+    if (sec === "app") {
+      if (a.url) return { word: "Web", tone: "p-sage" };
+      if (a.path) return state.settings.companion
+        ? { word: "Installed", tone: "p-sage" }
+        : { word: "Launcher unavailable", tone: "p-oxide" };
+      return { word: "Unknown", tone: "p-grey" };
+    }
+    if (sec === "conn") {
+      if (a.url) return { word: "Connected", tone: "p-sage" };
+      if (a.path) return state.settings.companion
+        ? { word: "Connected", tone: "p-sage" }
+        : { word: "Unavailable", tone: "p-oxide" };
+      if (thingStated(a)) return thingState(a);
+      return { word: "No opener recorded", tone: "p-dim" };
+    }
+    // Files, and anything filed there
+    if (a.url) return { word: "Available", tone: "p-sage" };
+    if (a.path) return state.settings.companion
+      ? { word: "Available", tone: "p-sage" }
+      : { word: "Path unavailable", tone: "p-oxide" };
+    if (hasBody(a)) return { word: "Available", tone: "p-sage" };
+    return { word: "Unknown", tone: "p-grey" };
+  }
+
   function repoRow(a) {
     var look = assetLook(a), h = openHandle(a);
     var n = assetUses(a).length;
@@ -7515,12 +7635,15 @@ function stateWord(b, n) {
        WORD — this app's one channel for "how is this going" — and a
        thing nobody has said anything about carries nothing at all rather than
        a guess dressed as a fact. */
-    var rmeta = (stt.word || lastUsedWords(a))
-      ? '<div class="rmeta">' +
-        (stt.word ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>" : "") +
-        (lastUsedWords(a) ? '<span class="rwhen">' + esc(lastUsedWords(a)) + "</span>" : "") +
-        "</div>"
-      : "";
+    /* EVERY ROW CARRIES A PILL, and the word is its own section's — read off
+       `assetState`, the one selector, so this row and the entry's own page
+       cannot say two different things. An unstated device reads "Unknown",
+       which is the brief's word and an honest one. */
+    var ast = assetState(a);
+    var rmeta = '<div class="rmeta">' +
+      '<span class="st ' + ast.tone + '"><i></i>' + esc(ast.word) + "</span>" +
+      (lastUsedWords(a) ? '<span class="rwhen">' + esc(lastUsedWords(a)) + "</span>" : "") +
+      "</div>";
     var face = '<span class="itile ' + look.tile + '">' + look.ico + "</span>" +
       '<div class="grow"><div class="nm sm">' + esc(a.name) + "</div>" +
       '<div class="says">' + esc(says.join(" \u00b7 ")) + "</div></div>" + rmeta;
@@ -7963,7 +8086,7 @@ function stateWord(b, n) {
   function connGroups() {
     return [
       { label: "Software", ico: ICONS.device, tile: "t-soft", ids: ["app"] },
-      { label: "Web services", ico: ICONS.plug, tile: "t-conn", ids: ["site"] },
+      { label: "Web services", ico: ICONS.plug, tile: "t-conn", ids: ["conn"] },
       { label: "Hardware", ico: ICONS.kit, tile: "t-equip", ids: ["device"] }
     ].map(function (g) {
       g.rows = g.ids.reduce(function (acc, id) { return acc.concat(repoIn(id)); }, []);
@@ -7990,8 +8113,8 @@ function stateWord(b, n) {
                  : hd ? '<span class="ctick half" title="' + esc(hd.how) + '">\u2295</span>'
                  : "";
         var say = hd ? (hd.brief || hd.how)
-                : st.word ? st.word + (a.where ? " \u00b7 " + a.where : "")
-                : a.where ? a.where : "nothing to open";
+                : thingStated(a) ? st.word + (a.where ? " \u00b7 " + a.where : "")
+                : a.where ? a.where : "No opener recorded";
         var inner = '<span class="itile sm ' + g.tile + '">' + g.ico + "</span>" +
           '<span class="grow"><span class="nm">' + esc(a.name) + "</span>" +
           '<span class="says">' + esc(say) + "</span></span>" + mark;
@@ -8054,13 +8177,12 @@ function stateWord(b, n) {
         '<div class="acts"><button class="btn" data-act="tab-settings">Turn the launcher on</button></div></div>';
     }
 
-    /* The empty line used to repeat `page.blurb`, which is printed in full
-       forty words above it — the same sentence twice on a screen with
-       nothing else on it. It says what to do instead, which is the one thing
-       an empty list is for. */
+    /* THE BRIEF'S OWN TWO LINES, per section: a finding, then the one thing
+       to do about it. They were the app's own sentences, which said the same
+       thing in different words — and the words are specified. */
     h += rows.length ? '<div class="stack tight">' + rows.map(repoRow).join("") + "</div>"
-      : '<p class="empty">Nothing under ' + esc(page.label) + ' yet \u2014 "New ' +
-        esc(page.one) + '" above puts the first one in.</p>';
+      : emptyLines(page.empty || ["No assets in this section.",
+                                  "Add a thing when your work needs it."]);
     return h;
   }
 
@@ -8451,9 +8573,13 @@ function stateWord(b, n) {
       if (isCode(a)) facts.push(["Written in", esc(snipLangLabel(a))]);
       facts.push(["How long", snipLines(a).length + (snipLines(a).length === 1 ? " line" : " lines")]);
     }
-    facts.push(["How it stands", stt.word
-      ? '<span class="st ' + stt.tone + '"><i></i>' + esc(stt.word) + "</span>"
-      : '<span class="fnone">Nothing said</span>']);
+    /* The pill either way, because "Unknown" is the brief's own word for an
+       unstated state and a named absence is not a guess — and off
+       `assetState`, the same selector the row reads, so the page and the list
+       can never disagree about one entry. */
+    var ast = assetState(a);
+    facts.push(["How it stands",
+      '<span class="st ' + ast.tone + '"><i></i>' + esc(ast.word) + "</span>"]);
     /* `lastUsedWords` reads "last used Jul 18", which under a label reading
        "Last used" says it twice. A table wants the value alone. */
     if (a.lastUsedOn && dayOk(a.lastUsedOn)) facts.push(["Last used", esc(fullDate(a.lastUsedOn))]);
@@ -10629,7 +10755,7 @@ function stateWord(b, n) {
       }).join("");
     }
     if (!body) {
-      body = '<p class="dempty">Nothing is waiting on this project. Start a run of one of its procedures, or write something down.</p>';
+      body = '<p class="dempty">This project has no recorded work yet.</p>';
     }
     right += dcard("Next actions", { label: "Tasks", act: "proj-page", id: "tasks" }, body);
 
@@ -10683,7 +10809,7 @@ function stateWord(b, n) {
         '<div class="grow"><div class="nm sm">' + esc(b.name) + "</div>" +
         '<div class="says">' + ns + (ns === 1 ? " step" : " steps") + "</div></div></button>";
     }).join("") + "</div>"
-      : '<p class="empty">No procedure of its own yet. Write one and every run of it starts from the same shape.</p>';
+      : '<p class="empty">No workflows are attached to this project.<span class="esub">Create a procedure you can run again.</span></p>';
 
     if (shut.length) {
       h += '<div class="sect">Closed</div><div class="stack tight">' + shut.map(function (b) {
@@ -10702,7 +10828,7 @@ function stateWord(b, n) {
     var h = '<div class="tools" style="margin:0.9rem 0 0.2rem">' +
       '<button class="btn primary" data-act="task-add-proj" data-id="' + p.id + '">Something to do</button></div>';
     h += pt.length ? '<div class="stack tight">' + pt.map(taskRow).join("") + "</div>"
-      : '<p class="empty">Nothing written down for it. Everything else on this project is derived from its boards \u2014 this is the one list you type.</p>';
+      : '<p class="empty">Nothing is waiting to be done here.<span class=\"esub\">A task is the one thing you type; everything else here is derived from its workflows.</span></p>';
     return h;
   }
 
@@ -10713,7 +10839,7 @@ function stateWord(b, n) {
      included, or one of the two screens is wrong. */
   function projThingsPage(p, things) {
     if (!things.length) {
-      return '<p class="empty">Nothing on its boards yet. A thing lands here by being on a board of this project \u2014 there is no list to keep, which is why it can never be out of date.</p>';
+      return '<p class="empty">No things are connected to this project yet.<span class=\"esub\">A thing lands here by being on one of its workflows, so there is no list to keep.</span></p>';
     }
     var h = '<p class="saynote">Derived from the boards in this project. Bring one in on a board and it appears here; there is nothing to maintain.</p>';
     var groups = {};
@@ -10748,7 +10874,7 @@ function stateWord(b, n) {
      eventually answer the same question two ways. */
   function projPeoplePage(p, pep) {
     if (!pep.length) {
-      return '<p class="empty">Nobody named on its boards yet. Link a person to a send or a wait and they appear here, with whatever is outstanding.</p>';
+      return '<p class="empty">No people are connected to this project yet.<span class=\"esub\">Link a person to a send or a wait and they appear here, with whatever is outstanding.</span></p>';
     }
     return '<p class="saynote">Everyone named on a board of this project, worst first \u2014 the same reading as their own page.</p>' +
       '<div class="stack tight">' + pep.map(personRow).join("") + "</div>";
@@ -10802,7 +10928,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v71 · 19 Sep 2026";
+  var BUILD = "v72 · 19 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -15372,11 +15498,11 @@ function dims(n) {
        opens with no companion installed — a `url` — beside ArcGIS Pro, whose
        path cannot open from a browser at all. Both states on one screen is
        the point: this is where the difference gets explained. */
-    var aDrv = mk({ name: "Drive \u2014 area 1", kind: "site", repo: "site",
+    var aDrv = mk({ name: "Drive \u2014 area 1", kind: "site", repo: "conn",
                     notes: "Where the full-size frames live.",
                     path: "", url: "https://drive.google.com/drive/folders/EXAMPLE",
                     where: "", fromIds: [], archived: false });
-    var aMail = mk({ name: "Mail: harbour brochure", kind: "site", repo: "site",
+    var aMail = mk({ name: "Mail: harbour brochure", kind: "site", repo: "conn",
                     notes: "The thread with Balamand, filtered.",
                     path: "", url: "https://mail.google.com/mail/u/0/#search/brochure",
                     where: "", fromIds: [], archived: false });
@@ -15404,22 +15530,22 @@ function dims(n) {
        box on a 120m plan is two pixels, and a point is the honest mark at
        that scale. The sherd sits four metres from its trench, which is what
        forced the labels to push rather than overlap. */
-    var aSite = mk({ name: "Anfeh harbour, area 1", kind: "site", repo: "file",
+    var aSite = mk({ name: "Anfeh harbour, area 1", kind: "site", repo: "site",
                      notes: "Coastal, partly submerged. Permit through AUB.",
                      path: "", url: "", where: "", onDate: back(300),
                      geo: { lat: 34.3384, lon: 35.7282, lat2: 34.33921, lon2: 35.7295 },
                      topics: ["harbour surveying"], fromIds: [], archived: false });
-    var aQy = mk({ name: "Quay face, north", kind: "feature", repo: "file",
+    var aQy = mk({ name: "Quay face, north", kind: "feature", repo: "site",
                    notes: "Ashlar, two courses standing. Surveyed with the total station.",
                    path: "", url: "", where: "", onDate: back(130), atId: aSite.id,
                    geo: { lat: 34.33905, lon: 35.7284, lat2: 34.3391, lon2: 35.7292 },
                    topics: ["harbour surveying"], fromIds: [], archived: false });
-    var aTr = mk({ name: "Trench 4", kind: "feature", repo: "file",
+    var aTr = mk({ name: "Trench 4", kind: "feature", repo: "site",
                    notes: "2 \u00d7 3m, cut into the quay bedding.",
                    path: "", url: "", where: "", onDate: back(120), atId: aSite.id,
                    geo: { lat: 34.33878, lon: 35.72881 },
                    topics: ["harbour surveying"], fromIds: [], archived: false });
-    var aSh = mk({ name: "Amphora sherd 4.12", kind: "artifact", repo: "file",
+    var aSh = mk({ name: "Amphora sherd 4.12", kind: "artifact", repo: "site",
                    /* The archaeology fields the brief lists under Sites and
                       finds, written as what they are: facts of this one
                       record, on a kind the app itself has never heard of. */
@@ -15429,7 +15555,7 @@ function dims(n) {
                    path: "", url: "", where: "crate 2", onDate: back(118), atId: aTr.id,
                    geo: { lat: 34.33877, lon: 35.72886 },
                    topics: ["ceramics", "harbour surveying"], fromIds: [], archived: false });
-    var aSv = mk({ name: "Bathymetric survey, 2026", kind: "survey", repo: "file",
+    var aSv = mk({ name: "Bathymetric survey, 2026", kind: "survey", repo: "site",
                    notes: "Single-beam, 2m lines.",
                    path: "D:\\anfeh\\bathy2026", url: "", where: "", onDate: back(95),
                    /* THE BRIEF'S OWN NOUN: a survey extent. Offshore of the
