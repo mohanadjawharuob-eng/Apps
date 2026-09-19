@@ -413,6 +413,20 @@ color-scheme: light;
     .brand { padding: 0; flex: none; }
     .brand h1 { display: none; }
     .railtop .findrow { flex: 1 1 auto; min-width: 0; padding: 0; }
+    /* THE GEAR IS NOT HOISTED HERE, AND THE FINDER IS WHY. `.railme` is
+       hidden on a phone because it is an avatar, a name and a sync line — a
+       laptop's luxury — and the gear rode down with it, which for a while
+       left Settings with NO ROUTE on a phone at all: the finder did not list
+       it either, because the finder builds its sections from `APP.tabs` and
+       Settings is not one. The finder lists it now, which is the same route
+       the rail already relies on for everything it cannot show at this width
+       (it hides the board list too). A second gear in this row would be two
+       copies of one control, which is what `omniEl()` cost Coffer, and there
+       is no room for a fourth row of chrome — the phone pass took this rail
+       from 208px to 122px and that is not being given back for a screen
+       opened a few times a year. The one control a phone urgently needs from
+       there, FIELD MODE, is not in Settings at all: its toggle is on
+       Waiting, where somebody standing on a site will actually be. */
     #nav { flex-direction: row; overflow: hidden; padding: 0 0.3rem; gap: 0; }
     .tab {
       flex: 1 1 0; min-width: 0; flex-direction: column; gap: 0.1rem;
@@ -837,7 +851,21 @@ color-scheme: light;
   .cvkeys {
     margin: 0.45rem 0 0; font-size: 0.74rem; color: var(--faint); line-height: 1.6;
   }
-  .cvkeys kbd {
+  /* The keyboard table's rows. They sit in `.modal-body` now, so they can be
+     real block elements — the first draft put them in `openModal`'s
+     `message`, which the runtime wraps in a `<p>`, where a `<div>` is hoisted
+     out by the parser and the layout comes apart. */
+  .kbdrow { display: flex; gap: 0.7rem; align-items: baseline; margin: 0.55rem 0 0; }
+  .kbdk { flex: 0 0 8.5rem; text-align: right; }
+  .kbdw { flex: 1 1 0; color: var(--faint); font-size: 0.8rem; line-height: 1.5; }
+  @media (max-width: 560px) {
+    /* The key and its sentence run together on one line here, so the chip
+       needs its own breathing room — "Ctrl K Open the finder" with nothing
+       between them reads as one phrase. */
+    .kbdrow { display: block; margin: 0.7rem 0 0; }
+    .kbdk { text-align: left; margin-right: 0.3rem; }
+  }
+  .cvkeys kbd, .kbdk kbd {
     font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
     border: 1px solid var(--rule); border-radius: 5px; padding: 0.02rem 0.26rem;
   }
@@ -3220,6 +3248,19 @@ color-scheme: light;
     out.push({ g: "Sections", key: "Write a procedure prose", tile: findTile("t-go", ICONS.note),
                title: "Write a procedure", sub: "page · type it out in words", k: 7,
                run: function () { findTab("write"); } });
+    /* SETTINGS WAS IN NO LIST THE FINDER READS. It is not a tab — it gave
+       up its slot for the seventh one and moved to the gear — and the
+       finder builds its section rows from `APP.tabs`, so typing "settings"
+       found nothing. That is the fault this file already records twice as a
+       screen the finder cannot name, and on a phone it was worse than that:
+       the gear lives in `.railme`, which is `display: none` under 760px, so
+       the whole screen had NO ROUTE. Every word somebody might reach for is
+       in the key, because the things people actually go there for are the
+       theme, their name, sync, Field mode and the build string. */
+    out.push({ g: "Sections", key: "Settings preferences options theme light dark appearance name sync wipe erase field mode keyboard shortcuts build version update accessibility",
+               tile: findTile("t-go", ICONS.settings),
+               title: "Settings", sub: "section · the theme, your name, sync, Field mode and this build", k: 7,
+               run: function () { findTab("settings"); } });
 
     boards().forEach(function (b) {
       var run = b.kind === "run";
@@ -3357,7 +3398,11 @@ color-scheme: light;
       { name: "Write a procedure in words", act: "prose-open", sub: "arrows and indentation, read back as a procedure" },
       { name: "Build a report", act: "report-new", sub: "the week written out as prose" },
       { name: "Back up now", act: "bk-now", sub: "a snapshot on this device" },
-      { name: "Switch bench", act: "span-switch", sub: "end the stretch you are in and start another" }
+      { name: "Switch bench", act: "span-switch", sub: "end the stretch you are in and start another" },
+      /* A SHORTCUT NOBODY CAN FIND IS A SHORTCUT NOBODY HAS, and the finder is
+         where somebody looks up a thing whose name they have forgotten. */
+      { name: "Keyboard shortcuts", act: "keys-help", sub: "the ten keys, and what each one presses",
+        alias: "keys hotkeys ctrl cmd accessibility" }
     ];
     if (syncOn()) cs.push({ name: "Sync now", act: "sync-now", sub: "pull, merge, push" });
     return cs.map(function (c) {
@@ -3417,6 +3462,16 @@ color-scheme: light;
       out.push({ g: "Sections", tile: findTile("t-go", t.ico), title: t.label, sub: "section",
                  run: function () { findTab(t.id); } });
     });
+    /* AND SETTINGS, WHICH IS ON NO TAB. It gave up its slot for the seventh
+       one and moved to the gear — and the gear rides in `.railme`, which is
+       hidden under 760px. So on a phone this row is the ONLY route to the
+       theme, your name, sync and "Get the newest", and it has to be in the
+       list the box opens on: a row findable only by somebody who already
+       thinks to type "settings" is not a route for a screen whose own name
+       is the thing you have forgotten. */
+    out.push({ g: "Sections", tile: findTile("t-go", ICONS.settings), title: "Settings",
+               sub: "section · the theme, your name, sync and this build",
+               run: function () { findTab("settings"); } });
     return out;
   }
 
@@ -3540,6 +3595,23 @@ color-scheme: light;
       if (e.key === "/" && !typing && !findIsOpen() && !(overlay && overlay.firstChild)) {
         e.preventDefault(); findOpen();
       }
+      /* THE OTHER SIX THE BRIEF NAMES. Ctrl+S is the only one that fires WITH
+         a dialog open — it is the dialog's own confirm — so the rest are
+         guarded on the overlay and the finder being shut, the same way Ctrl+K
+         is: two things claiming the keyboard at once is how a modal stops
+         being modal. */
+      if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+        e.preventDefault(); keySave(); return;
+      }
+      if (findIsOpen() || (overlay && overlay.firstChild)) return;
+      if ((e.metaKey || e.ctrlKey) && (e.key === "n" || e.key === "N")) {
+        e.preventDefault(); keyNew(); return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        if (e.shiftKey) keyRedo(); else keyUndo();
+        return;
+      }
       /* Escape out of the full screen from anywhere on it. The sheet has its
          own Escape, but it only fires while the sheet itself has focus — and
          pressing Fill, or any button on the bar, moves focus off it, so the
@@ -3549,6 +3621,147 @@ color-scheme: light;
         if (sheetEscape(openBoard())) e.preventDefault();
       }
     });
+  }
+
+  /* ================= the keyboard =================
+
+     THE BRIEF NAMES TEN SHORTCUTS AND FOUR OF THEM ALREADY WORKED — Ctrl+K,
+     Escape, `/` and Enter came with the finder and the sheet. The other six
+     are here, and every one of them is a keyboard route to a control that is
+     already on the screen rather than a second way to change the record.
+     That is the whole discipline: `APP.actions` stays the only place a figure
+     moves, so a shortcut cannot do something a reader could not have done
+     with a tap, and it cannot drift from the button it fires.
+
+     `SHORTCUTS` is one table, read by the dialog that prints it and by
+     nothing else — the same rule the finder's ask table lives by. **A
+     shortcut nobody can find is a shortcut nobody has**, which is already
+     written under the sheet in `.cvkeys`; this is that rule for the app. */
+  var SHORTCUTS = [
+    { k: ["Ctrl", "K"], what: "Open the finder. It reaches everything by name, and it can be asked a question." },
+    { k: ["/"], what: "The same, when you are not typing into something." },
+    { k: ["Ctrl", "N"], what: "Make a new one of whatever the screen you are on is a list of — a procedure on Workflows, a step on an open sheet, a thing in Assets." },
+    { k: ["Ctrl", "S"], what: "Save the dialog that is open. Enter does it too, except inside a note, where Enter is a new line." },
+    { k: ["Ctrl", "Z"], what: "Take the undo the last message is offering. This app has no undo stack: an undo belongs to the change that made it and lives as long as the message does." },
+    { k: ["Esc"], what: "Close a dialog, let go of a picked step, leave the full screen — innermost first." },
+    { k: ["Enter"], what: "Open the finder's picked row; on the sheet, show what can be done to the picked step." },
+    { k: ["Space"], what: "On the sheet, do the main thing to the picked step — whichever the strip under the toolbar shows first." },
+    /* Backspace as well, because that is the key a Mac keyboard actually
+       has — and it is safe to accept here precisely because Remove confirms:
+       somebody reaching for Backspace out of go-back habit gets a question,
+       not a loss. */
+    { k: ["Delete"], what: "On the sheet, remove the picked step — or Backspace, which is the key a Mac keyboard has. It confirms, and says what goes with it." },
+    { k: ["←", "→", "↑", "↓"], what: "On the sheet: left and right walk the steps in order, down and up follow a line on and back." }
+  ];
+  /* A LIST, NOT A FORM. The first draft made it ten read-only text fields,
+     which meant inventing a `ro` property the shared runtime does not have —
+     the same trap `type: "note"` was last round, and a field spec is not the
+     place to put a reference table anyway. `openModal`'s `message` takes raw
+     markup, so the table goes there; it is wrapped in a `<p>`, so every
+     element here is INLINE — a `<div>` or a `<dl>` inside a paragraph is
+     hoisted out of it by the parser and the layout comes apart. */
+  /* A LIST, NOT A FORM, AND ONE WAY OUT. Two drafts were wrong before this
+     one. Ten read-only text fields meant inventing a `ro` property the
+     shared runtime does not have — the same trap `type: "note"` was last
+     round, and a field spec is not the place to put a reference table. And
+     `openModal` with `cancelLabel: ""` still drew **Cancel** beside Close,
+     because the runtime reads `opts.cancelLabel || "Cancel"` and an empty
+     string falls through: two buttons that both dismiss, one of them dressed
+     as a choice, which is the fault this file already records about the
+     equipment row. A reference table changes nothing, so it has exactly one
+     way out — and the app's route for a dialog that is not a form is to
+     write the overlay and call `trapOverlay`, the way `backupDialog` does.
+     Missing that call is the other rule here: Escape and the focus trap
+     belong to the OVERLAY, not to `openModal`. */
+  function keysDialog() {
+    closeModal();
+    overlay.innerHTML = '<div class="scrim" data-scrim="1">' +
+      '<div class="modal" style="max-width:560px" role="dialog" aria-modal="true" aria-label="Keyboard">' +
+      '<div class="modal-head"><h3>Keyboard</h3>' +
+      "<p>On a Mac read Cmd for Ctrl. Every one of these presses a control that is already on the screen " +
+      "\u2014 there is nothing here you cannot also do with a tap.</p></div>" +
+      '<div class="modal-body">' +
+      SHORTCUTS.map(function (sc) {
+        return '<div class="kbdrow"><span class="kbdk">' +
+          sc.k.map(function (k) { return "<kbd>" + esc(k) + "</kbd>"; }).join(" ") +
+          '</span><span class="kbdw">' + esc(sc.what) + "</span></div>";
+      }).join("") + "</div>" +
+      '<div class="modal-foot"><button class="btn primary" data-mclose="1">Close</button></div>' +
+      "</div></div>";
+    trapOverlay();
+    overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
+    overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
+      if (e.target.hasAttribute("data-scrim")) closeModal();
+    });
+    overlay.querySelector("[data-mclose]").focus();
+  }
+
+  /* WHAT "NEW ITEM IN CURRENT SECTION" MEANS, stated as a table rather than
+     guessed at, and it goes by DEPTH: on an open sheet the thing you make is
+     a step, not another procedure. Where a screen makes nothing — Home is
+     five other screens, Schedule and Outputs are both derived — it returns
+     null, and the press SAYS so rather than doing nothing silently, which is
+     the fault a control that quietly does nothing already carries a rule
+     about. */
+  function newHere() {
+    if (view === "boards") {
+      var b = openBoard();
+      if (b && !b.derived) return { act: "node-add", id: b.id, what: "step on this sheet" };
+      return { act: "board-new", id: "", what: "procedure" };
+    }
+    if (view === "jobs") {
+      if (openProj) return { act: "task-add-proj", id: openProj, what: "task on this project" };
+      if (projList === "jobs") return { act: "job-add", id: "", what: "job" };
+      return { act: "proj-add", id: "", what: "project" };
+    }
+    if (view === "waiting") return { act: "task-add", id: "", what: "task" };
+    if (view === "repo") {
+      if (repoTab === "lib") return { act: "lib-add", id: "", what: "Library entry" };
+      return { act: "repo-add", id: repoTab, what: "thing" };
+    }
+    return null;
+  }
+  function keyNew() {
+    var n = newHere();
+    if (!n) {
+      /* Naming the screens that DO make something, because "nothing here"
+         on its own reads as the shortcut being broken. */
+      toast("Nothing is made on this screen. Ctrl+N makes a procedure on Workflows, a project on Projects, a task on Actions and a thing on Assets.");
+      return;
+    }
+    APP.actions[n.act](n.id);
+  }
+  /* Ctrl+S is the dialog's own confirm button, pressed. It earns its place on
+     one case: the runtime wires Enter to confirm, and inside a TEXTAREA Enter
+     is a new line — so a note or a body was the one field you had to reach for
+     the mouse from. */
+  function keySave() {
+    var ok = overlay && overlay.querySelector("[data-mok]");
+    if (ok) { ok.click(); return; }
+    toast("Nothing is being edited. Ctrl+S saves an open dialog.");
+  }
+  /* THE UNDO IS THE TOAST'S, AND IT LIVES EXACTLY AS LONG AS THE TOAST DOES.
+     This app has never had an undo stack: every change that can be taken back
+     offers its own undo on the message it prints, as a closure over the
+     records it touched. Keeping one reachable for longer than the message
+     would widen a real hole — the sample, a restored backup and a sync merge
+     all REPLACE state, and a closure captured before that would mutate
+     objects no longer in the book. So Ctrl+Z presses the Undo that is on
+     screen, and when there is none it says what the app's undo actually is
+     rather than pretending to have lost one. */
+  function keyUndo() {
+    var box = document.getElementById("toasts");
+    var btns = box ? box.querySelectorAll(".toast button") : [];
+    if (btns.length) { btns[btns.length - 1].click(); return; }
+    toast("Nothing to undo. An undo is offered on the message a change prints, and only while it is up.");
+  }
+  /* AND THERE IS NO REDO, so it says so. Offering one would mean keeping the
+     state from before the undo and putting it back through `APP.hydrate` —
+     which works once and then cannot re-offer the undo, because the closure
+     that performed it captured records the restore has just replaced. A redo
+     that silently stops being reversible is worse than not having one. */
+  function keyRedo() {
+    toast("There is no redo. An undo belongs to the change that made it, so taking it back is the change again.");
   }
 
   /* ================= Boards ================= */
@@ -5252,6 +5465,17 @@ function stateWord(b, n) {
       "</div></div>";
 
     h += syncCard();
+
+    /* THE BRIEF'S SETTINGS ORDER PUTS KEYBOARD/ACCESSIBILITY IN IT, and this
+       is that row. It sits above the theme because it is the one thing on
+       this screen a reader cannot discover by pressing something: the theme
+       is three visible buttons, and a shortcut is invisible until somebody
+       tells you it exists. The count comes from the table, so the sentence
+       cannot say ten while the table holds nine. */
+    h += '<div class="card"><h3>Keyboard</h3>' +
+      '<p class="card-sub">— ' + SHORTCUTS.length + " keys, and every one presses a control that is already on the screen</p>" +
+      '<p class="hint" style="margin:0 0 0.6rem">Ctrl+K opens the finder, Ctrl+N makes a new one of whatever the screen is a list of, Ctrl+S saves an open dialog, and on the sheet the arrows walk the board while Space does the main thing to the picked step. There is no undo stack: Ctrl+Z takes the undo the last message is offering, and says so when there is none.</p>' +
+      '<div class="tools"><button class="btn" data-act="keys-help">See all of them</button></div></div>';
 
     h += '<div class="card"><h3>Light or dark</h3>' +
       '<p class="card-sub">' + esc(THEME_WORD[themeChoice()]) + "</p>" +
@@ -10406,7 +10630,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v67 · 18 Sep 2026";
+  var BUILD = "v68 · 19 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -10957,7 +11181,7 @@ function dims(n) {
          other child of it is absolutely positioned. */
       '<p class="cvkeys" id="cvKeys">On the sheet: <kbd>←</kbd> <kbd>→</kbd> move through the steps in order, ' +
       '<kbd>↓</kbd> <kbd>↑</kbd> follow a line on or back, <kbd>Enter</kbd> opens what you can do, ' +
-      '<kbd>Esc</kbd> lets go.</p>';
+      '<kbd>Space</kbd> does the main one, <kbd>Del</kbd> removes it, <kbd>Esc</kbd> lets go.</p>';
   }
 
   function svgEl(n, a) {
@@ -11648,7 +11872,7 @@ function dims(n) {
           : "Nothing comes before " + n.label + ". Left and right still walk the sheet.");
         return;
       }
-      if (ev.key === "Enter" || ev.key === " ") {
+      if (ev.key === "Enter") {
         // Into the strip of things you can do to it. The strip is rendered
         // before the sheet in the document, so Tab alone would walk away from
         // the board rather than into it.
@@ -11656,6 +11880,33 @@ function dims(n) {
         if (!n) { selectNode(bd, focusNode(bd)); return; }
         var first = document.querySelector("#selHost .selacts .btn, #selHost .selacts a");
         if (first) first.focus();
+        return;
+      }
+      /* SPACE DOES THE MAIN THING, AND THE STRIP DECIDES WHICH IT IS — the
+         `loud` button when there is one (Mark done, Answer it, Add a
+         picture), otherwise whatever the strip offers first (Reopen on a
+         finished step, Start it on one not begun). Read off the DOM the strip
+         has already drawn rather than worked out again here, so Space can
+         never do something the screen is not showing, and it cannot drift
+         from `selPanel` the next time that is reordered.
+
+         Space used to share Enter's job, which was one of them too many:
+         Enter says "show me what I can do" and Space does it. */
+      if (ev.key === " ") {
+        ev.preventDefault();
+        if (!n) { selectNode(bd, focusNode(bd)); return; }
+        var main = document.querySelector("#selHost .selacts .btn.loud") ||
+                   document.querySelector("#selHost .selacts .btn:not(.danger), #selHost .selacts a");
+        if (main) main.click();
+        else toast("Nothing to do to " + n.label + " from here. Enter opens the strip, Delete removes it.");
+        return;
+      }
+      /* Delete is the strip's own Remove, which confirms and says what goes
+         with it — the brief asks for exactly that, and it is already built. */
+      if (ev.key === "Delete" || ev.key === "Backspace") {
+        ev.preventDefault();
+        if (!n) return;
+        APP.actions["node-del"](bd.id + ":" + n.id);
         return;
       }
       if (ev.key === "Escape") {
@@ -13168,6 +13419,7 @@ function dims(n) {
 
     /* ---- tasks: the one thing that is typed ---- */
     "task-add":  function () { taskDialog(null, {}); },
+    "keys-help": function () { keysDialog(); },
     "task-edit": function (id) { taskDialog(taskOf(id), {}); },
     /* Attached where it was written, so the question that makes a task worth
        having here is answered without being asked. */

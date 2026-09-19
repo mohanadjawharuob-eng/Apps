@@ -981,6 +981,94 @@ Seven rules hold the record:
   `showWhen` matches another field's value and this is settled before the
   dialog opens — which is exactly why the mode is chosen first.
 
+**THE BRIEF NAMES TEN SHORTCUTS AND FOUR OF THEM ALREADY WORKED.** Ctrl+K,
+Escape, `/` and Enter came with the finder and the sheet; Ctrl+N, Ctrl+S,
+Ctrl+Z, Ctrl+Shift+Z, Space and Delete are the other six. The rule under all
+of them, and the reason none of them needed a new action: **a shortcut is a
+keyboard route to a control that is already on the screen.** `APP.actions`
+stays the only place a figure moves, so a key cannot do something a reader
+could not have done with a tap, and it cannot drift from the button it fires.
+
+- **Ctrl+N is a table, not a guess, and it goes by DEPTH.** `newHere()`
+  returns what the screen you are on is a list *of* — a procedure on
+  Workflows, a **step** on an open sheet, a project or a job on Projects
+  depending on which half of the strip is up, a task on Actions, a thing or a
+  Library entry in Assets. Home is five other screens and Schedule and
+  Outputs are both derived, so there it returns null and the press **says
+  so and names where it does work**: a shortcut that silently does nothing is
+  the same fault as a button that does.
+- **Ctrl+S earns its place on one case.** The runtime already wires Enter to
+  a dialog's confirm, but inside a TEXTAREA Enter is a new line — so a note
+  or a body was the one field you had to reach for the mouse from. It presses
+  `[data-mok]`, and with nothing open it says nothing is being edited rather
+  than letting the browser's Save Page through.
+- **THE UNDO IS THE TOAST'S, AND IT LIVES EXACTLY AS LONG AS THE TOAST
+  DOES.** This app has never had an undo stack: every change that can be
+  taken back offers its own undo on the message it prints, as a closure over
+  the records it touched. Ctrl+Z clicks that button. Keeping one reachable
+  for longer would widen a real hole — the sample, a restored backup and a
+  sync merge all **replace** state, and a closure captured before that would
+  mutate objects no longer in the book. With none up it says what the app's
+  undo actually is rather than pretending to have lost one.
+- **And there is no redo, said plainly.** Offering one would mean keeping the
+  state from before the undo and putting it back through `APP.hydrate` —
+  which works once and then cannot re-offer the undo, because the closure
+  that performed it captured records the restore has just replaced. A redo
+  that silently stops being reversible is worse than not having one.
+- **Space does the main thing and THE STRIP DECIDES WHICH IT IS** — the
+  `loud` button when there is one (Mark done, Answer it, Add a picture),
+  otherwise whatever the strip offers first (Reopen on a finished step).
+  Read off the DOM `selPanel` has already drawn rather than worked out again,
+  so Space can never do something the screen is not showing and cannot drift
+  the next time that strip is reordered. Space used to share Enter's job,
+  which was one of them too many: **Enter says "show me what I can do" and
+  Space does it.**
+- **Delete is the strip's own Remove**, which already confirms and says what
+  goes with it. Backspace counts too, because that is the key a Mac keyboard
+  has — and it is safe to accept precisely *because* Remove confirms:
+  somebody reaching for Backspace out of go-back habit gets a question, not
+  a loss.
+
+**A REFERENCE TABLE IS NOT A FORM, AND IT HAS ONE WAY OUT.** Two drafts of
+the keyboard dialog were wrong before the third. Ten read-only text fields
+meant inventing a `ro` property the shared runtime does not have — the same
+trap `type: "note"` was, and a field spec is not the place to put a
+reference table. Then `openModal` with `cancelLabel: ""` **still drew
+Cancel** beside Close, because the runtime reads `opts.cancelLabel ||
+"Cancel"` and an empty string falls through: two buttons that both dismiss,
+one of them dressed as a choice, which is the fault this file already
+records about the equipment row. A dialog that is not a form writes the
+overlay itself and calls `trapOverlay` — the way `backupDialog` does — and
+the test presses Escape and Tabs all the way round, because *Escape and the
+focus trap belong to the OVERLAY, not to `openModal`* and a hand-written
+overlay is exactly where that is forgotten.
+
+**AND LOOKING FOR THE NEW SETTINGS CARD FOUND A WHOLE SCREEN WITH NO ROUTE ON
+A PHONE.** Settings gave up its tab slot for the seventh one and moved to the
+gear; the gear lives in `.railme`, which is `display: none` under 760px; and
+the finder built its section rows from `APP.tabs`, **where Settings is not**.
+So typing "settings" found nothing and the gear was not on screen — the theme,
+your name, sync, "Erase everything" and **"Get the newest"** were all
+unreachable by tap on the device this app is most used on, and "Get the
+newest" is exactly what a phone reaches for when its cached copy is stale.
+
+The fix is the finder, in both places it has to be: in `findAll()` so it can
+be searched for (with every word a reader would try — theme, dark, erase,
+shortcuts, version), and in **`findDefault()`** so it is in the list the box
+opens on. A row findable only by somebody who already thinks to type
+"settings" is not a route for the one screen whose name is the thing you have
+forgotten.
+
+**A second gear on the phone row was the wrong answer**, and the reasons are
+worth keeping: it is two copies of one control, which is what `omniEl()` cost
+Coffer; there is no room for a fourth row of chrome, since the phone pass
+took that rail from 208px to 122px and that is not being given back for a
+screen opened a few times a year; and **the one control a phone urgently
+needs from there is not in Settings at all** — Field mode's toggle is on
+Waiting, where somebody standing on a site will actually be. The rail already
+hides the board list at this width and leans on the finder for it; this is
+the same trade.
+
 **THE EXTENT WAITED FOR A FIELD, AND THAT IS THE WHOLE ANSWER TO WHY
 PROVENANCE COULD BE DRAWN AND IT COULD NOT.** The round-3 brief names two
 data-driven visuals side by side; `fromIds` was already stated, so the chain
@@ -1243,9 +1331,22 @@ file untouched and every earlier edit in the batch lost — which looked
 exactly like a rep that had applied, and produced a half-patched function that
 would not parse. Save after each replacement. And **an em dash in a comment is
 a real em dash while the same character inside a JS string may be `\u2014`**,
-so a match string built one way fails against the other; twenty-four comments
-in this file were carrying a literal `\u2014` from an earlier patch that used
-a Python raw string, and they read as escapes on screen.
+so a match string built one way fails against the other.
+
+The mechanism is the opposite of what this file used to say, and the wrong
+version would mislead the next person: **Python 3 raw strings DO decode
+`\uXXXX`.** `r'\u2014'` is one character, not six — so a patch written with
+`r'''…'''` writes a real dash into the file, and it is a *non-raw* string with
+`'\\u2014'` that writes the literal escape. Which means a match string typed
+one way against a file written the other fails silently, and the fix is always
+the same: build the match with the real character (`D = "\u2014"` and
+concatenate) rather than typing an escape and hoping. Two replacements in one
+round failed on exactly this.
+
+**And past a certain size, match the function's BOUNDARIES rather than its
+body.** A rewrite of `keysDialog` failed on one space before a comma inside
+twelve lines of hand-typed match string. `s.index("  function name() {")` to
+the next `"\n  }\n"` cannot get that wrong.
 
 **THE ARCHAEOLOGICAL DATA MODEL IS ONE FIELD, NOT FOUR NOUNS.** Site,
 Artifact, Feature and Survey are exactly what a reader types into "Other —
