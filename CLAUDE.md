@@ -1157,6 +1157,73 @@ Waiting, where somebody standing on a site will actually be. The rail already
 hides the board list at this width and leans on the finder for it; this is
 the same trade.
 
+**THE BRIEF'S PER-TYPE FIELDS ARE ONE STATED LIST, NOT SIXTEEN BOXES.** Round
+3 names them by kind: a file's extension, size, modified date and checksum; an
+app's category, platform and version; a device's specifications, serial,
+accessories, manuals and drivers; a site's alternative names, location, period
+and type. Hardcoding those four sets is wrong three times over, and each
+reason is a rule already in this file.
+
+- **`assetKinds` is a floor and not a ceiling.** Site, Feature, Artifact and
+  Survey are write-ins — there is a test that fails if any of them appears in
+  `ASSET_KINDS` — so a fixed set of fields per kind would be wrong the first
+  time somebody writes in a fifth, and *a picker that cannot be extended will
+  eventually be wrong* applies twice over to a whole form.
+- **A dialog of twelve boxes is a dialog people close.** The registry's is
+  already thirteen behind a `more: true` fold for exactly that reason. Adding
+  sixteen would make it twenty-nine.
+- **Two of them are figures this app cannot know.** A page served over https
+  may not read `C:\…` at all — that is why `openHandle()` exists — so a file's
+  size and its checksum would be numbers typed by hand and wrong the next time
+  the file is saved. *A plausible wrong number is worse than a visible
+  failure*, and a checksum is the purest example of one: it is worth having
+  only if it is true.
+
+So `a.facts` is `{id, k, v}` — a label and a value, both typed — printed as
+rows in the facts table the page already has, beside `Kind`, `Where it is
+kept` and `Part of`, because **a serial number is a fact about a laptop and
+not a different sort of thing**. Five rules hold it:
+
+- **The brief's own words are a HINT, not fields.** `FACT_HINTS` carries one
+  sentence per section of the Repo — *Serial, Specifications, Accessories,
+  Warranty* on a device, *Version, Platform, Licence* on an app — because a
+  suggestion can be ignored and a field cannot. Same fold, same reason, as
+  four archaeology nouns being one write-in. The site hint says **never a
+  password**, since that is the one thing somebody would try to keep here and
+  this book is not a place for one.
+- **Both halves or no row.** `assetFacts()` filters to facts carrying a label
+  *and* a value: a label with the value cleared is a blank row and a value
+  with no label is a row nobody can read. Same test as `assetTopics`, and
+  there is one that hand-edits half a fact into the record — which a bad merge
+  can do — and fails if the page prints it.
+- **Emptying the value is how a row comes off**, and the dialog says so.
+  A two-field record does not need a second delete button, and Coffer's
+  allowance days already answer a wrong figure with *nought clears the month*.
+  The undo is on the toast like every other removal here.
+- **The finder reads the value, which is half the reason the field exists.**
+  The question six months later is "which laptop is PF2XK9QD", and the serial
+  is the half you have not forgotten. There is a test that types one and
+  fails if the laptop is not the hit.
+- **The same label with the same value is a double tap, not two facts.** Two
+  accessories both labelled "Accessory" are two facts, so only the exact pair
+  refuses — the opposite of `topicList()`, which de-duplicates on the word
+  alone, because a topic IS its word and a fact is a pair.
+
+Two things reading the rendered page changed. The pen was revealed on
+`dd:hover`, which is **no gesture at all on a touch screen** and, on a laptop,
+makes the only route to correcting what you typed something you have to
+discover by waving the pointer at it — it is dim and always there now. And a
+long value wraps, which dropped the control onto **a line of its own** at
+phone width, reading as a stray button attached to nothing: the cell is a flex
+row, so the value wraps inside its own box and the pen stays on the first
+line's baseline. The sample states facts on three kinds (a serial and a
+specification on the laptop, a version and a licence on ArcGIS Pro, a period
+and a fabric on the sherd) because *a feature with no representation in the
+sample is a feature nobody can be shown* — and the one on the sherd is the
+whole argument in miniature: the brief's archaeology fields, on a kind the app
+has never heard of, with no code naming either.
+
+
 **THE EXTENT WAITED FOR A FIELD, AND THAT IS THE WHOLE ANSWER TO WHY
 PROVENANCE COULD BE DRAWN AND IT COULD NOT.** The round-3 brief names two
 data-driven visuals side by side; `fromIds` was already stated, so the chain

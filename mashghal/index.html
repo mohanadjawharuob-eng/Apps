@@ -1145,6 +1145,26 @@ color-scheme: light;
   }
   .afacts dt { font-size: 0.78rem; color: var(--faint); padding: 0.22rem 0; }
   .afacts dd { margin: 0; font-size: 0.86rem; color: var(--ink); padding: 0.22rem 0; min-width: 0; }
+  /* The one control a reader's own fact row carries. Inline with the value
+     rather than in a column of its own: a `<dd>` is one cell, and a table
+     whose every row ends in a button reads as a form. Quiet, not HIDDEN —
+     the first draft revealed it on `dd:hover`, which on a touch screen is no
+     gesture at all and on a laptop means the only route to correcting what
+     you typed is a thing you have to discover by waving the pointer at it.
+     Dim and always there instead, brightening under the finger. */
+  .afacts .fpen {
+    padding: 0.05rem 0.2rem; margin-left: 0.3rem; vertical-align: -0.25em;
+    color: var(--faint);
+  }
+  .afacts .fpen:hover, .afacts .fpen:focus-visible { color: var(--ink); }
+  /* A LONG VALUE MAY NOT LEAVE THE CONTROL ON A LINE OF ITS OWN. At phone
+     width "i7-12700H, 32GB, 1TB — integrated graphics" wraps and the pen
+     dropped below it, reading as a stray button attached to nothing. The
+     cell is a flex row instead: the value wraps inside its own box and the
+     control stays beside it, on the first line's baseline. */
+  .afacts dd.fmine { display: flex; align-items: baseline; gap: 0.15rem; }
+  .afacts dd.fmine .fval { min-width: 0; overflow-wrap: anywhere; }
+  .afacts dd.fmine .fpen { margin-left: 0; flex: 0 0 auto; }
   /* A path can be any length and has no spaces to break at. */
   .fbrk { font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
   /* A fact nobody has stated says so, in the app's voice for an absence. */
@@ -2077,6 +2097,7 @@ color-scheme: light;
     run:    svgIcon('<circle cx="10" cy="10" r="7"/><path d="M8.4 7l4.4 3-4.4 3z"/>'),
     bench:  svgIcon('<path d="M3 8.2h14v2.2H3zM5 10.4v5.4M15 10.4v5.4M3 8.2l2-4h10l2 4"/>'),
     cmd:    svgIcon('<path d="M4 6.2l3.4 3.8L4 13.8M9.6 14h6.4"/>'),
+    pen:    svgIcon('<path d="M13.4 3.4l3.2 3.2L7.2 16H4v-3.2z"/><path d="M11.6 5.2l3.2 3.2"/>'),
     // a project: a bounded body of work with a date on it
     out:    svgIcon('<path d="M3.4 12.4v2.8a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-2.8"/><path d="M10 3v9.2"/><path d="M6.6 8.6 10 12l3.4-3.4"/>'),
         book:   svgIcon('<path d="M3.4 4.6a1.4 1.4 0 0 1 1.4-1.4h3.4A2 2 0 0 1 10 5v10.6a1.8 1.8 0 0 0-1.4-.8H3.4z"/><path d="M16.6 4.6a1.4 1.4 0 0 0-1.4-1.4h-3.4A2 2 0 0 0 10 5v10.6a1.8 1.8 0 0 1 1.4-.8h5.2z"/>'),
@@ -3395,7 +3416,8 @@ color-scheme: light;
          forgotten. The topics are in it for the same reason. */
       out.push({ g: hasBody(a) ? "Library" : "Things",
                  key: a.name + " " + (a.notes || "") + " " + (a.path || "") + " " +
-                      assetTopics(a).join(" ") + " " + snipLangLabel(a) + " " + (a.body || ""),
+                      assetTopics(a).join(" ") + " " + snipLangLabel(a) + " " + (a.body || "") +
+                      " " + assetFacts(a).map(function (f) { return f.k + " " + f.v; }).join(" "),
                  tile: findTile(look.tile, look.ico),
                  title: a.name, sub: assetSays(a), k: 4,
                  run: function () { findTab("vocab"); openAsset = a.id; render(); } });
@@ -7055,6 +7077,91 @@ function stateWord(b, n) {
     return out;
   }
 
+  /* THE BRIEF'S PER-TYPE FIELDS ARE ONE STATED LIST, NOT SIXTEEN BOXES.
+     Round 3 names them by kind: a file's extension, size, modified date and
+     checksum; an app's category, platform and version; a device's
+     specifications, serial, accessories, manuals and drivers; a site's
+     alternative names, location, period and type. Hardcoding those four sets
+     is wrong three times over. `assetKinds` is a FLOOR AND NOT A CEILING —
+     the archaeology nouns are already write-ins, so a fixed set of fields per
+     kind would be wrong the first time somebody writes in a fifth. The
+     registry's dialog is already thirteen boxes behind a fold, because a
+     dialog of twelve is a dialog people close, and this would be twenty-nine.
+     And two of them are figures this app CANNOT KNOW: a browser is not
+     allowed to read `C:\…` at all, so a size and a checksum would be numbers
+     typed by hand and wrong the next time the file is saved — a plausible
+     wrong number, which is the one thing every rule in this file refuses.
+
+     So a fact is `{id, k, v}`: a label and a value, both typed, printed as
+     rows in the facts table the page already has. The brief's own words are
+     offered as a HINT per section rather than as fields, which is the same
+     fold as four archaeology nouns being one write-in, and the same reason:
+     a suggestion can be ignored and a field cannot. */
+  var FACT_HINTS = {
+    device: "Serial, Specifications, Accessories, Warranty \u2014 or anything else you would want to find it by.",
+    app:    "Version, Platform, Licence, Category \u2014 or anything else worth writing down.",
+    site:   "Login, Account, What it is for \u2014 never a password: this book is not a place for one.",
+    file:   "Extension, Made with, Period, Alternative names \u2014 whatever the file itself does not say.",
+    lib:    "Written for, Depends on, Where it came from \u2014 whatever you would need to reuse it."
+  };
+  function factHint(a) {
+    return FACT_HINTS[repoOf(a)] ||
+      "A label and a value \u2014 whatever this thing's own kind does not have a row for.";
+  }
+  /* Stated, and only where both halves are there: a label with no value is a
+     row that says nothing, and a value with no label is a row nobody can
+     read. Same test as `assetTopics`. */
+  function assetFacts(a) {
+    return (a.facts || []).filter(function (f) { return f && f.k && f.v; });
+  }
+  /* ONE DIALOG, AND EMPTYING THE VALUE IS HOW A ROW COMES OFF. There is no
+     second delete button on a two-field record — Coffer's allowance days
+     already answer a wrong figure with "nought clears the month", and the
+     dialog says so in as many words. The undo is on the toast, like every
+     other removal in this app. */
+  function factDialog(a, f) {
+    openModal({
+      title: f ? "Edit \u201c" + clip(f.k, 24) + "\u201d" : "Note something else",
+      message: f
+        ? "Empty the value to take the row off the table."
+        : "It goes on this thing\u2019s own facts, and the finder reads it \u2014 so a serial number is findable by typing the serial number.",
+      fields: [
+        { key: "k", label: "What is it called", type: "text", span: true,
+          value: f ? f.k : "", hint: factHint(a) },
+        { key: "v", label: "And what is it", type: "text", span: true,
+          value: f ? f.v : "" }
+      ],
+      validate: function (v) {
+        if (!String(v.k || "").trim())
+          return "Give it a label \u2014 a value with nothing naming it is a row nobody can read.";
+        if (!f && !String(v.v || "").trim())
+          return "Give it a value. An empty row says nothing, which is why emptying one is how it comes off.";
+        return "";
+      },
+      confirmLabel: f ? "Save" : "Note it",
+      onConfirm: function (v) {
+        var was = (a.facts || []).map(function (x) { return { id: x.id, k: x.k, v: x.v }; });
+        var k = String(v.k || "").trim(), val = String(v.v || "").trim();
+        /* A label typed twice with the same value is a double tap, not two
+           facts. Two accessories both labelled "Accessory" are two facts, so
+           only the exact pair refuses. */
+        if (!f && was.some(function (x) {
+          return String(x.k).toLowerCase() === k.toLowerCase() &&
+                 String(x.v).toLowerCase() === val.toLowerCase();
+        })) { toast("That is already on it."); return; }
+        go(function () {
+          var list = was.map(function (x) { return { id: x.id, k: x.k, v: x.v }; });
+          if (!f) list.push({ id: uid(), k: k, v: val });
+          else if (!val) list = list.filter(function (x) { return x.id !== f.id; });
+          else list.forEach(function (x) { if (x.id === f.id) { x.k = k; x.v = val; } });
+          a.facts = list;
+        });
+        toast(f && !val ? "Row taken off" : f ? "Saved" : "Noted",
+              function () { go(function () { a.facts = was; }); });
+      }
+    });
+  }
+
   /* A SNIPPET IS A REGISTRY ENTRY WITH A BODY, and that is the whole of it —
      no fifth noun. Asked for a Library holding "formulas for excels" and
      "scripts I might use to extract certain photos in Python", the shape that
@@ -8309,6 +8416,7 @@ function stateWord(b, n) {
         '" title="Paste it into whatever map you use">Copy where it is</button>' : "") +
       (a.url ? '<a class="btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">Open the link</a>' : "") +
       '<button class="btn" data-act="asset-from-add" data-id="' + a.id + '">It was made from…</button>' +
+      '<button class="btn" data-act="asset-fact-add" data-id="' + a.id + '">Note something else</button>' +
       '<button class="btn" data-act="cadence-add" data-id="' + a.id + '">Add upkeep</button>' +
       '<button class="btn danger" data-act="asset-del" data-id="' + a.id + '">Delete</button></div>';
 
@@ -8361,6 +8469,18 @@ function stateWord(b, n) {
     if (a.onDate) facts.push(["Dated", esc(fullDate(a.onDate))]);
     if (a.path) facts.push(["Path", '<span class="fbrk">' + esc(a.path) + "</span>"]);
     if (a.url) facts.push(["Link", '<a class="fbrk" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.url) + "</a>"]);
+    /* THE READER'S OWN ROWS, in the same table as the stated ones, because a
+       serial number is a fact about a laptop and not a different sort of
+       thing. Each carries the one control it needs — the dialog that wrote
+       it, where emptying the value is how the row comes off — icon-only with
+       the label in `title` and `aria-label`, the way Coffer's Pending card
+       does it, since the words are already the row's own `<dt>`. */
+    assetFacts(a).forEach(function (f) {
+      facts.push([f.k, '<span class="fval">' + esc(f.v) + "</span>" +
+        '<button class="btn quiet fpen" data-act="asset-fact" data-id="' + a.id + ":" + f.id +
+        '" title="Edit \u201c' + esc(f.k) + '\u201d" aria-label="Edit \u201c' + esc(f.k) +
+        '\u201d">' + ICONS.pen + "</button>", "fmine"]);
+    });
     var hdl = openHandle(a);
     /* A FACT ROW MAY NOT SAY SOMETHING THE READER CAN SEE IS UNTRUE. "Nothing
        to open — this is a thing, not a file" is right for a pair of
@@ -8380,7 +8500,8 @@ function stateWord(b, n) {
     var look = assetLook(a);
     h += '<div class="aface"><span class="iface ' + look.tile + '">' + look.ico + "</span>" +
       '<dl class="afacts">' + facts.map(function (f) {
-        return "<dt>" + esc(f[0]) + "</dt><dd>" + f[1] + "</dd>";
+        return "<dt>" + esc(f[0]) + "</dt><dd" +
+          (f[2] ? ' class="' + f[2] + '"' : "") + ">" + f[1] + "</dd>";
       }).join("") + "</dl></div>";
 
     /* TWO COLUMNS, AS THE POSTER LAYS THEM OUT: what the thing is connected to
@@ -8506,7 +8627,12 @@ function stateWord(b, n) {
         '<div class="says">' + esc("as “" + u.node.label + "”" +
           (u.proj ? " · " + u.proj.name : "")) + "</div></div></button>";
     }).join("") + "</div>"
-      : '<p class="empty">Not on any board yet. “Put it on a board” on the right does it from here — a copy is taken, so the board keeps working even if this entry changes.</p>';
+      /* NOT "ON THE RIGHT". The page is two columns on a laptop and one
+         stacked column on a phone, so under 900px that button is BELOW —
+         a screen may not name a place that does not exist, and this one
+         named a direction that is only true on half the devices. The
+         control's own words are the whole of the route. */
+      : '<p class="empty">Not on any board yet. “Put it on a board” does it from here — a copy is taken, so the board keeps working even if this entry changes.</p>';
 
     var up = assetUpkeep(a);
     if (up.length) {
@@ -10676,7 +10802,7 @@ function stateWord(b, n) {
      in Settings and it is the first thing to read when something looks stale.
 
      Bumped with the service worker, every ship. */
-  var BUILD = "v69 · 19 Sep 2026";
+  var BUILD = "v70 · 19 Sep 2026";
 
   var THEME_KEY = "mashghal.theme";
   var THEME_WORD = { auto: "Follow the system", light: "Paper", dark: "Evening ink" };
@@ -13951,6 +14077,16 @@ function dims(n) {
         }
       });
     },
+    "asset-fact-add": function (id) {
+      var a = assetOf(id); if (!a) return;
+      factDialog(a, null);
+    },
+    "asset-fact": function (id) {
+      var q = String(id).split(":"), a = assetOf(q[0]); if (!a) return;
+      var f = assetFacts(a).filter(function (x) { return x.id === q[1]; })[0];
+      if (!f) return;
+      factDialog(a, f);
+    },
     "asset-from-del": function (id) {
       var q = String(id).split(":"), a = assetOf(q[0]); if (!a) return;
       var was = (a.fromIds || []).slice();
@@ -15179,7 +15315,14 @@ function dims(n) {
        Five kinds, a chain of provenance three deep, one entry used on a board
        and one piece of software with a path the launcher could open. A feature
        with no representation here is a feature nobody can be shown. */
+    /* THE FACTS A KIND HAS NO ROW FOR. The brief asks for a serial and a
+       specification on a device, a version on an app, a period on a find —
+       and the app's answer is one stated list rather than sixteen boxes, so
+       the sample has to write some or the whole path sits unexercised in the
+       only book anybody is ever shown. */
     var aLap = mk({ name: "Lenovo Legion", kind: "laptop", notes: "no RTX", where: "desk",
+                    facts: [{ id: uid(), k: "Serial", v: "PF2XK9QD" },
+                            { id: uid(), k: "Specifications", v: "i7-12700H, 32GB, 1TB \u2014 integrated graphics" }],
                     path: "", url: "", fromIds: [], archived: false });
     var aPho = mk({ name: "Nothing Phone", kind: "phone", notes: "", where: "pocket",
                     path: "", url: "", fromIds: [], archived: false });
@@ -15189,6 +15332,8 @@ function dims(n) {
                     path: "", url: "", fromIds: [], archived: false });
     var aArc = mk({ name: "ArcGIS Pro", kind: "software", notes: "3.2, licence through AUB",
                     path: "C:\\Program Files\\ArcGIS\\Pro\\bin\\ArcGISPro.exe",
+                    facts: [{ id: uid(), k: "Version", v: "3.2.1" },
+                            { id: uid(), k: "Licence", v: "Named user, through AUB \u2014 renews in October" }],
                     url: "", where: "", fromIds: [], archived: false });
     var aAer = mk({ name: "Aerials 1916·1930·1970", kind: "dataset",
                     notes: "Scanned from the IFPO plates. Three epochs, area 1.",
@@ -15262,6 +15407,11 @@ function dims(n) {
                    geo: { lat: 34.33878, lon: 35.72881 },
                    topics: ["harbour surveying"], fromIds: [], archived: false });
     var aSh = mk({ name: "Amphora sherd 4.12", kind: "artifact", repo: "file",
+                   /* The archaeology fields the brief lists under Sites and
+                      finds, written as what they are: facts of this one
+                      record, on a kind the app itself has never heard of. */
+                   facts: [{ id: uid(), k: "Period", v: "Late Roman, 5th\u20136th c." },
+                           { id: uid(), k: "Fabric", v: "LRA 1, Cilician" }],
                    notes: "Rim, combed. Drawn and photographed.",
                    path: "", url: "", where: "crate 2", onDate: back(118), atId: aTr.id,
                    geo: { lat: 34.33877, lon: 35.72886 },

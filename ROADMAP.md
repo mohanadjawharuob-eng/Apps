@@ -891,6 +891,27 @@ a way of preparing what comes next** — in its owner's words, *"مش بس عن 
 - **The digest mail** (`mashghal/mailer/`) — a scheduled GitHub Actions workflow
   reading a numbers-only digest. Best-effort by nature.
 
+### Shipped: the round-3 brief
+- **The provenance chain, drawn.** What an entry was made from above it and
+  what came of it below, one hop each way, with how much further the chain
+  goes said rather than drawn. The words fold away under it.
+- **A coordinate, and the plan it makes honest.** Decimal degrees only, never
+  rounded on the way back out, copy-only rather than a link to a map — a
+  basemap is tiles off a network and this app fetches nothing. `sitePlan`
+  draws an extent and everything filed inside it in their real relative
+  positions, with a scale bar and a north arrow.
+- **The keyboard table** — the brief's ten shortcuts, six of them new, every
+  one a keyboard route to a control already on the screen.
+- **The sheet's menu** — a right-click or a long-press over the same list the
+  selection strip renders, with Duplicate and Disconnect as the two items the
+  app did not have. A new node lands at the centre of what is in view instead
+  of the whole board being re-laid-out.
+- **The per-type fields, as one stated list.** `a.facts` is a label and a value
+  the reader types, printed in the facts table and read by the finder, because
+  sixteen hardcoded boxes across four kinds would break the app's own
+  floor-not-a-ceiling rule — and a file's size and checksum are figures no
+  page served over https can read off a path.
+
 ### Next
 - **A step that holds a small matrix.** GIS work runs over a grid (layer × area
   × year); one node per cell would be forty nodes on one board. Open question,
@@ -898,8 +919,11 @@ a way of preparing what comes next** — in its owner's words, *"مش بس عن 
 - **Observations** — fragmentation and learned tool pairs. Deliberately last:
   they are the only part of the idea that is about watching yourself rather
   than doing the work, and it is not yet clear they earn their place.
-- **Canvas selection** — clicking a node opens its editor; there is no select,
-  multi-select or delete from the sheet.
+- **Selecting several nodes at once.** One is picked by a tap, a right-click or
+  a long-press, and everything that can be done to it is on the strip and in
+  the menu — but moving four steps together, or removing a branch, is still
+  four acts. The open question is what a multi-selection would mean for
+  `settleNode`, which pushes what is in the way one node at a time.
 - **A second design pass.** `docs/design-brief-round-1.md` is written for a designer and
   deliberately withholds the current look.
 
