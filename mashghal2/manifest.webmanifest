@@ -1,0 +1,32 @@
+{
+  "id": "/Apps/mashghal2/",
+  "name": "Mashghal Workspace — rebuilt on the round-3 model",
+  "short_name": "Workspace",
+  "description": "The round-3 rebuild: one workspace of canonical records, with every screen a view over it",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#1b1e24",
+  "theme_color": "#1b1e24",
+  "icons": [
+    {
+      "src": "../icons/mashghal-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/mashghal-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/mashghal-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

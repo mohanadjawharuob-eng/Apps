@@ -1,6 +1,6 @@
 # Apps
 
-Six small offline web apps. They run entirely in the browser on your own device —
+Seven small offline web apps. They run entirely in the browser on your own device —
 no account, no server, nothing sent anywhere.
 
 **Live at:** https://mohanadjawharuob-eng.github.io/Apps/

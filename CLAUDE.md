@@ -1,10 +1,14 @@
 # Working in this repo
 
-Six small offline web apps served from GitHub Pages. No build step, no bundler,
+Seven small offline web apps served from GitHub Pages — six of them, plus
+`mashghal2/`, which is the round-3 rebuild of Mashghal standing beside the
+original rather than replacing it, because the two are different apps and
+their owner asked to keep both. No build step, no bundler,
 no package.json. What is in the repo is what runs. (`handoff/` is not an app —
 it is a page of screenshots for a design round.)
 
-**Daybook, Kitchen, Timesheet and Mashghal share a byte-identical runtime.**
+**Daybook, Kitchen, Timesheet, Mashghal and mashghal2 share a byte-identical
+runtime.**
 The block that begins `Shared runtime for all of these apps` carries
 `loadState`/`persist` over `APP.storeKey`, the in-page modal with its field
 spec, `confirmAction`, `toast`, the backup and restore dialogs, `download`,
@@ -14,16 +18,18 @@ sandbox lessons are encoded in it: **native `confirm()` silently returns
 false** and **`<form>` submit never fires**, so every confirmation is an
 in-page modal and every action is a button with Enter wired by hand. Copy it
 verbatim into a new app and never improve one copy alone — a fix belongs in
-all four at once, and this is the test:
+all five at once, and this is the test:
 
 ```
-for f in daybook kitchen timesheet mashghal; do
+for f in daybook kitchen timesheet mashghal mashghal2; do
   sed -n '/Shared runtime for all of these apps/,/^<\/script>$/p' $f/index.html |
   sed '$d' | md5sum
 done
 ```
 
-Four identical hashes, or a copy has drifted.
+**Five identical hashes now**, because `mashghal2/` carries the runtime too —
+so a fix belongs in five copies, and the rebuild is not licence to improve it
+in one. Five identical hashes, or a copy has drifted.
 
 ## Where things live
 
@@ -37,6 +43,7 @@ and pulling webfonts off a CDN — inside the directory of an app whose first
 rule is that it fetches nothing.
 
 ```
+mashghal2/                  the round-3 rebuild, beside the original, own book
 <app>/docs/                 briefs, the design system, formats — never served
 tools/                      icon generators; nothing ships, no app loads them
 mashghal/companion/         the mashghal:// handler, to be installed
@@ -3393,3 +3400,39 @@ and it sits at one month's rent.
 
 Look at it after changing it. Every figure on every screen is derived, so a
 plausible-looking seed can still produce a screen that says something false.
+
+## mashghal2 — the rebuild, beside the original
+
+Its owner asked to keep both: *"clone everything, and rebuild in the cloned
+version … i mean keep both."* So `mashghal2/` is the round-3 rebuild and
+`mashghal/` goes on being the app as it grew. The reason there are two is in
+the section above — the brief describes a different app and folding it into
+the old structure was the mistake — and `mashghal2/docs/README.md` says what
+the directory is, the way every folder in this repo does.
+
+**The clone had to be given its own storage, and that is not cosmetic.**
+`localStorage` is scoped to the **site**, not the folder, which is exactly how
+Coffer's two paths came to share one ledger and how loading the sample in one
+wiped the real book in the other. A clone that kept `mashghal.v1` would repeat
+that, silently, and the book it destroyed would be the original's real work.
+So every name is its own: `mashghal2.v1`, `mashghal2.theme`,
+`mashghal2.sync.token` / `.pass` / `.device`, `mashghal2-pics`,
+`mashghal2-backups` — and `twoapps.js` is the test. It seeds the original,
+opens the clone **on the same origin**, seeds that too, and fails if either
+can see the other's book, if they share an IndexedDB, if the manifest `id` is
+not the clone's own directory, or if the service-worker cache name is shared.
+A shared theme key would be cosmetic; a shared sync key is one app holding
+another's credential, and a shared IndexedDB is one app's photographs turning
+up in the other.
+
+**The build string is `wN`, not `vN`**, so a version of the rebuild can never
+be mistaken for a version of the original in a commit message or on the
+Settings card.
+
+**The briefs are not copied.** They live once in `mashghal/docs/` and
+`mashghal2/docs/README.md` points at them — two copies of one document is the
+fault this file already records about two copies of one list.
+
+**The launcher and the mailer are not copied either.** They are one handler
+and one workflow per machine; the clone's own text still names
+`mashghal/companion/`, which is where they are installed from.
