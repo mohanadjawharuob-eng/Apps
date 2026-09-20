@@ -3436,3 +3436,144 @@ fault this file already records about two copies of one list.
 **The launcher and the mailer are not copied either.** They are one handler
 and one workflow per machine; the clone's own text still names
 `mashghal/companion/`, which is where they are installed from.
+
+### What the rebuild actually is, once it had records
+
+`mashghal2/` is now a working app rather than a clone, and it was built in the
+brief's own order because §32 is one sentence and the whole method: *"Build
+canonical records, relationships, and shared derived selectors first; then make
+each screen a view over that same underlying workspace."*
+
+**Fifteen lists, the brief's own**, and `STATE_LISTS` plus `adoptState`'s
+settings block are the only two places any of them is named — Coffer lost
+grants out of a restored backup because two sites hand-copied one key list and
+only one was updated. `Workflow`, `WorkflowNode`, `WorkflowEdge`,
+`WorkflowRun` and `WorkflowRunNode` are **five separate records**, which is
+the whole reason the brief separates them: a failed run keeps its failure
+point without touching the reusable workflow.
+
+**THE FREEZE IS GONE, AND WHAT REPLACED IT IS NARROWER AND SAYS MORE.** The
+original froze a procedure into a run at its start, so editing a template
+could never move a run under way. The brief's model has a run pointing at the
+workflow's own nodes. Its real job is kept by two rules instead:
+
+- **A node a run has entered is RETIRED, never deleted.** The run points at
+  that record and nothing else says what the step was, so deleting it would
+  take the history with it. It leaves the canvas and the new runs, and stays
+  readable wherever an old run names it — and the confirmation says which of
+  the two is about to happen and how many runs reached it.
+- **A run stamps `workflowVersion`, and a structural edit bumps the
+  workflow's.** So the run can SAY *"the procedure has been edited twice since
+  this run started"* — which the freeze could never say, because under a
+  freeze it had not been.
+
+**AN ACTION IS ONE SHAPE, SIX TYPES, AND TWO OF THEM ARE STORED.** A task and
+a piece of upkeep are the only things somebody types; `waiting`, `in_hand`,
+`workflow_manual_step` and `unfiled` are derived from the runs and the person
+relationships, so *"is this step done"* stays one fact with one home rather
+than a runNode and an Action that can drift. `actionAll()` is where the two
+halves meet, and **every derived row says so on its own face** — folding the
+born and the typed into one undifferentiated list is what makes a figure stop
+meaning what it says. The mapping is 1:1 and each type has exactly one rule:
+`do` → in your hands, `send`/`watch` → waiting, `ask` → a manual step,
+`file` → unfiled, because archiving is the forgetting that matters and is not
+just another manual step.
+
+**THE SEVEN STATES PARTITION THE LIST, so the tiles are its parts.**
+`actionState()` puts every open action in exactly one of Late · Unfiled ·
+Today · Waiting · Recurring · In your hands · Complete, and nothing about it
+is stored — the brief says so in as many words ("Do not store a separate
+isLate boolean"). That is what lets the four attention tiles be counted by
+state and the groups below them be the same states: *a figure may never
+disagree with its own parts*, and there is a test that adds them up.
+
+One consequence worth keeping: the Waiting group's empty state cannot always
+be the brief's own sentence. "You are not waiting on anyone." above a late
+chase would be the screen contradicting itself, so it is printed only when no
+open action is of type `waiting` at all, and otherwise the line points at
+Late.
+
+**A PROJECT'S STATUS IS STATED AND ITS ATTENTION IS DERIVED**, which is the
+brief's split and the right one: Active · Waiting · Completed · Archived are
+typed, "Drifting: only if explicitly marked; never infer it", and what is
+worked out is whether the project needs attention. **But a project whose own
+end date has gone by may not read "Active" over a header printing that
+date** — that is derived from a figure somebody typed, which is the difference
+from the inferred drift the brief forbids, and the row names the date it
+missed rather than leaving a pill to be decoded.
+
+**THE STEP ORDER IS A DEPTH, NOT A DEPTH-FIRST WALK.** A DFS from the entry
+steps put the second of two parallel ways in after everything the first leads
+to, so a run listed *"Bring in the control points"* after the orthophoto had
+been filed — the reverse of the truth. Shortest distance from any way in is
+the right measure and it ignores a back edge for free: the loop's target
+already has a smaller depth and the minimum keeps it.
+
+**A CLIP THAT CUTS MID-WORD CAN SAY THE OPPOSITE OF WHAT IT MEANT.** "It loops
+while there are notes" cut at sixty characters read *"…while there are no…"*,
+which is not a shortened sentence but a wrong one. `clip()` breaks at the last
+space inside the limit; the worst it can then do is stop a word early. This is
+the same class as a warning with no cause and a figure with no basis — and no
+assertion anywhere would have caught it.
+
+**Three more from reading every screen's text**, each one a rule already in
+this file, broken in a new place:
+
+- **SAY IT ONCE.** An action row on a project's own page printed that
+  project's name in every sub-line, three inches under the heading that *is*
+  the project's name; a person's page did the same with theirs. `actionRow(a,
+  opts)` is told what the page already names. A job row printed its own name
+  twice, because `job-add` creates a claimant of the same name.
+- **AN EXTENT IS FOUR NUMBERS** and was printed as two, so a footprint read as
+  a point — a smaller claim than the record makes. All four corners, unrounded,
+  with the derived span stated as *"about 119 m east–west"*.
+- **A WORD THE CODE USES IS NOT A WORD THE SCREEN MAY USE.** Settings counted
+  the record straight off the state keys: *"21 wf nodes · four person links ·
+  two schedule"*. `LIST_WORDS` is the reader's vocabulary beside the record's.
+  And that same card **still said the Library and Schedule were to come, on a
+  build that has both** — a screen that explains itself has to be re-read when
+  what it explains changes.
+
+**`--receded` IS NOT A TEXT COLOUR, for the fourth time.** The chevron on a
+row measured 3.35:1 dark and 2.46:1 light, and it is not decoration: it is the
+only thing on the row saying the row opens something. `--faint`.
+
+**The Schedule is a view and not a store**, so `calMarks(ym)` returns the
+marks in `ym` and nothing else — *a function whose name is only true for its
+first caller is a trap laid for the second* — and the forward-looking
+`getUpcomingSchedule()` is not stretched backwards to fill the grid, because
+that would make its own name untrue. `pastMarks()` is the other half, since a
+date you have MISSED is the one most worth seeing.
+
+**Nine identity hues and eleven things to identify**, so two of them share,
+and the shares are where the meanings are closest: a person and a connection
+are both something you reach, a place and a file are both a section of the one
+registry. Inventing a tenth hue would be a colour with no reason behind it,
+and letting a section borrow sage, amber or rose is the one thing the two
+channels exist to prevent.
+
+**There is no switch bar**, so `--sbh` is nought rather than a guess. It was
+rev-1's spine and it is in none of the round-3 brief and none of the poster's
+twelve panels.
+
+**What is not built is not on the bar.** Six tabs — Home · Projects ·
+Workflows · Actions · Assets · Schedule — with Settings on the rail's footer,
+and the node canvas, Outputs and the command bar still to come. Settings says
+so in as many words. A tab leading to a screen that does not exist is the
+control-that-does-nothing fault at the size of a whole section.
+
+**The tests are `w2.js` (133 assertions, driving the real app end to end) and
+`look2.js` (132, measuring every run of text in both themes at rest and under
+the pointer).** Three things they caught about themselves are worth keeping,
+because each is a harness fault that reported an app fault:
+
+- **`innerText` reflects `text-transform`**, so a tile label uppercased in CSS
+  reads `TO FILE` and a case-sensitive match on "To file" is always false.
+- **A phrase is not an invariant.** Testing "a thing is not a step" by looking
+  for a person's name in the steps panel fails, because a `send` step
+  legitimately says *"with Patricia Antaki"* in its sub-line. Read the rows'
+  **names**, not their whole text.
+- **A reshaped screen breaks the test that drove it**, and that is not a
+  regression: the Library's rows became `.arow` with a Copy button beside the
+  name, so `.drow[data-act="asset-open"]` stopped matching. Fix it in the same
+  change.
