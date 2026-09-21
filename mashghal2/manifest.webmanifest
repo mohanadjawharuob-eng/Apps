@@ -1,14 +1,14 @@
 {
   "id": "/Apps/mashghal2/",
-  "name": "Mashghal Workspace — rebuilt on the round-3 model",
-  "short_name": "Workspace",
-  "description": "The round-3 rebuild: one workspace of canonical records, with every screen a view over it",
+  "name": "Mashghal — a card and a link",
+  "short_name": "Mashghal",
+  "description": "One noun and one relation: a card is anything with a name, a link says then or with",
   "display": "standalone",
   "orientation": "portrait-primary",
   "start_url": "./",
   "scope": "./",
-  "background_color": "#1b1e24",
-  "theme_color": "#1b1e24",
+  "background_color": "#efe9dc",
+  "theme_color": "#f2ede2",
   "icons": [
     {
       "src": "../icons/mashghal-192.png",
