@@ -671,6 +671,169 @@
   .cday.cnow { border-color: var(--rule-strong); }
   .cday.csel { background: var(--raised); border-color: var(--brass); }
 
+  /* ---------------- the canvas ----------------
+     ArcGIS ModelBuilder: a cut-corner rectangle is a process, an oval is
+     data. Every colour here is a CLASS reading a var(--…) and never a
+     computed value written into an attribute, because the SVG is built
+     as a string and a snapshotted palette would leave the drawing
+     behind when the theme toggles. */
+  .cvpanel { padding: 0; overflow: hidden; }
+  .cvbar {
+    display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+    padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule);
+    background: var(--raised);
+  }
+  .cvsp { flex: 1 1 auto; }
+  .cvbody { display: flex; align-items: stretch; min-height: 0; position: relative; }
+  /* A LINE ON THE SHEET IS NOT A HAIRLINE. The four edge tokens exist
+     because the sheet used to borrow the page's rules, which measure
+     1.54:1 against it — and on a template nothing has started, so that
+     was EVERY line on the screen. */
+  .cvsheet {
+    flex: 1 1 auto; min-width: 0; height: 58vh; min-height: 330px; max-height: 620px;
+    display: block; background: var(--sheet); cursor: grab;
+    touch-action: none; user-select: none;
+  }
+  .cvsheet:active { cursor: grabbing; }
+  .cvsheet.joining { cursor: crosshair; }
+  .cvsheet .cvbg { pointer-events: none; }
+  .cvg1 { fill: none; stroke: var(--rule-soft); stroke-width: 0.6; }
+  .cvg2 { fill: none; stroke: var(--rule); stroke-width: 0.9; }
+
+  .cvn { cursor: pointer; }
+  .cvn .cvshape {
+    fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.2;
+    transition: var(--t);
+  }
+  .cvn:hover .cvshape { stroke: var(--brass-deep); }
+  /* "Selected node receives a clear outline." SOLID, because dashed is
+     already how something else reads, and an INK stroke rather than a
+     state hue — "you are looking at this one" is not a state of the
+     work. */
+  .cvn.on .cvshape { stroke: var(--ink); stroke-width: 2.2; }
+  .cvn.from .cvshape { stroke: var(--brass); stroke-width: 2.2; stroke-dasharray: 5 4; }
+  .cvn.gone .cvshape { stroke-dasharray: 3 4; opacity: 0.72; }
+  /* State is the LEFT EDGE and the word in the footer, the same two
+     channels as a row. A filled card in a state hue is what made the top
+     of the original's Waiting screen one continuous alarm. */
+  .cvn.t-late .cvshape  { stroke: var(--apricot); }
+  .cvn.t-drift .cvshape { stroke: var(--amber); }
+  .cvn.t-live .cvshape  { stroke: var(--sage); }
+  .cvn.t-done .cvshape  { fill: var(--raised); }
+  .cvrule { stroke: var(--rule-soft); stroke-width: 1; }
+  .cvkind {
+    fill: var(--faint); font-family: var(--mono); font-size: 8.5px;
+    letter-spacing: 0.1em;
+  }
+  .cvname { fill: var(--ink); font-family: var(--sans); font-size: 12.5px; }
+  .cvn.t-done .cvname { fill: var(--dim); }
+  .cvstate { font-family: var(--sans); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .cvstate.s-late  { fill: var(--apricot-lift); }
+  .cvstate.s-drift { fill: var(--amber-lift); }
+  .cvstate.s-live  { fill: var(--sage-lift); }
+  .cvstate.s-idle  { fill: var(--faint); }
+  .cvstate.s-done  { fill: var(--faint); }
+  /* Ports: the connection points the brief asks for. Visible enough to
+     say where a line leaves and arrives, quiet enough not to read as
+     content. */
+  .cvport { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.1; }
+  .cvn:hover .cvport, .cvn.on .cvport { stroke: var(--brass); }
+  .cvport.out { fill: var(--rule-strong); }
+
+  /* A path is not a state, so no line here carries a state hue.
+     Sequence is inked with a head; association is dashed WITHOUT one,
+     because it says nothing about order; a loop back is legible by its
+     arc over the top and takes the brass so the direction reads. */
+  .cve-seq { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+  .cve-seq.on { stroke: var(--edge-back); stroke-width: 2; }
+  .cve-back { fill: none; stroke: var(--edge-back); stroke-width: 1.4; stroke-dasharray: 7 3; }
+  .cve-assoc { fill: none; stroke: var(--edge-assoc); stroke-width: 1.2; stroke-dasharray: 2 4; }
+  /* THE ARROWHEAD FOLLOWS THE LINE, or a line raised to a readable
+     contrast ends in a tip still at 1.54:1. */
+  .cvhead.h-seq { fill: var(--edge); }
+  .cvhead.h-back { fill: var(--edge-back); }
+  .cvhead.h-on { fill: var(--edge-back); }
+  .cvlmask { fill: var(--sheet); }
+  .cvlabel { fill: var(--dim); font-family: var(--sans); font-size: 9.5px; }
+
+  /* The inspector. On a phone it stops being a column and becomes the
+     block under the sheet — the brief calls for a bottom sheet and this
+     is the honest version of one without a second layer of chrome. */
+  .cvinsp {
+    flex: 0 0 258px; min-width: 0; border-left: 1px solid var(--rule);
+    padding: 0.8rem 0.9rem; overflow-y: auto; background: var(--surface);
+  }
+  .cvi-empty { padding: 0.4rem 0; }
+  .cvi-head { display: flex; align-items: flex-start; gap: 0.55rem; margin: 0 0 0.7rem; }
+  .cvi-ico { flex: none; color: var(--faint); line-height: 0; margin-top: 2px; }
+  .cvi-head h4 {
+    margin: 0; font-family: var(--display); font-weight: 500; font-size: 0.95rem;
+    letter-spacing: -0.015em; overflow-wrap: anywhere;
+  }
+  .cvi-state { margin: 0.3rem 0 0; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-size: 0.74rem; }
+  .cvi-acts { margin-top: 0.8rem; }
+  .cvi-acts .btn { flex: 1 1 auto; text-align: center; }
+  .cvempty {
+    position: absolute; inset: 0 258px 0 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0.6rem; text-align: center;
+    pointer-events: none; padding: 1rem;
+  }
+  .cvempty .acts { pointer-events: auto; }
+  .cvkeys {
+    margin: 0; padding: 0.45rem 0.7rem; border-top: 1px solid var(--rule);
+    font-size: 0.7rem; color: var(--faint); background: var(--raised);
+  }
+  .cvkeys kbd {
+    font-family: var(--mono); font-size: 0.66rem; border: 1px solid var(--rule);
+    border-radius: 4px; padding: 0 0.22rem; margin-right: 0.1rem; color: var(--dim);
+  }
+
+  /* The node menu: a small floating card, not a dialog. Above the page
+     and below the overlay (90) and the storage alarm (70), so any dialog
+     one of its rows opens lands on top of it. */
+  .cvmenu {
+    position: fixed; z-index: 60; min-width: 12.5rem; max-width: 17rem;
+    max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--raised); border: 1px solid var(--rule-strong);
+    border-radius: 12px; padding: 0.3rem; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    display: flex; flex-direction: column; gap: 0.1rem;
+  }
+  .cvmhead {
+    display: flex; flex-direction: column; gap: 0.1rem;
+    padding: 0.35rem 0.5rem 0.4rem; border-bottom: 1px solid var(--rule-soft);
+    margin-bottom: 0.2rem;
+  }
+  .cvmhead b { font-size: 0.84rem; color: var(--ink); overflow-wrap: anywhere; }
+  .cvmhead .dim { font-size: 0.7rem; }
+  /* TWO RENDERINGS OF ONE LIST MAY NOT DISAGREE ABOUT WHAT ITS ROWS
+     MEAN. The loud row takes weight and ink and Remove stays quiet until
+     the finger is on it — exactly as in the inspector — because state
+     lives in a pill and a row's edge, and a menu row is neither. */
+  .cvmenu .cvmrow {
+    justify-content: flex-start; text-align: left; width: 100%;
+    border-color: transparent; background: transparent; padding: 0.42rem 0.5rem;
+    font-size: 0.82rem;
+  }
+  .cvmenu .cvmrow:hover, .cvmenu .cvmrow:focus-visible { background: var(--sunken); color: var(--ink); }
+  .cvmenu .cvmrow.primary { background: transparent; border-color: transparent; color: var(--ink); font-weight: 600; }
+  .cvmenu .cvmrow.primary:hover { background: var(--sunken); color: var(--ink); }
+  .cvmenu .cvmrow.danger { color: var(--dim); border-color: transparent; }
+  .cvmenu .cvmrow.danger:hover, .cvmenu .cvmrow.danger:focus-visible {
+    color: var(--apricot); background: var(--late-tint); border-color: transparent;
+  }
+
+  /* The fold the written-out steps sit behind. It remembers nothing, so
+     a workflow always opens on the drawing. */
+  .fold { margin: 0 0 0.9rem; }
+  .fold > summary {
+    cursor: pointer; list-style: none; padding: 0.5rem 0;
+    font-size: 0.8rem; color: var(--faint);
+  }
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::before { content: "\25b8"; margin-right: 0.4em; color: var(--faint); }
+  .fold[open] > summary::before { content: "\25be"; }
+  .fold > summary:hover { color: var(--ink); }
+
   /* ---------------- ONE FOCUS RING FOR EVERY TAPPABLE THING ----------------
      Applied once, the way `--t` is, rather than per component. Without it
      every whole-row control falls back to Chromium's default outline,
@@ -679,7 +842,8 @@
   .btn:focus-visible, .tab:focus-visible, .rwrow:focus-visible,
   .drow:focus-visible, .arow:focus-visible, .amain:focus-visible,
   .atick:focus-visible, .spage:focus-visible, .chip:focus-visible,
-  .fpen:focus-visible, .cday:focus-visible {
+  .fpen:focus-visible, .cday:focus-visible, .cvsheet:focus-visible,
+  .cvmrow:focus-visible, .fold > summary:focus-visible {
     outline: 1px solid var(--brass); outline-offset: 2px;
   }
   .btn:disabled { opacity: 0.38; cursor: default; }
@@ -687,6 +851,19 @@
   /* ---------------- the phone ---------------- */
   @media (max-width: 900px) {
     .grid2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    /* DO NOT SQUEEZE THE DESKTOP CANVAS INTO 390px — the brief's own
+       words. It stays pannable at a readable node size and the inspector
+       stops being a column, which is the honest version of the bottom
+       sheet the brief asks for: the same content, one layer less. */
+    .cvbody { flex-direction: column; }
+    .cvsheet { height: 46vh; min-height: 280px; }
+    .cvinsp {
+      flex: 1 1 auto; border-left: 0; border-top: 1px solid var(--rule);
+      max-height: 40vh;
+    }
+    .cvempty { inset: 0 0 auto 0; height: 46vh; min-height: 280px; }
   }
   @media (max-width: 760px) {
     .shell { flex-direction: column; }
@@ -714,6 +891,17 @@
     .page-head h2 { font-size: 1.25rem; }
   }
   @media (max-width: 560px) {
+    /* A PAGE HEADER MAY NOT EAT THE SCREEN. `.ph-main` shrinks to make
+       room for the buttons beside it, so at 390px three of them left
+       about 110px for the title: "Brochure, design to archive" wrapped to
+       three lines and its one-line description to four, and the canvas
+       started 480px down a 800px screen. The title takes the width and
+       the buttons take the line under it. Measured: 300px of header down
+       to 150px. */
+    .page-head { gap: 0.5rem; }
+    .ph-main { flex: 1 1 100%; }
+    .page-head > .acts, .page-head > .btn { flex: 1 1 100%; }
+    .page-head > .acts .btn { flex: 1 1 auto; text-align: center; }
     /* A pill, a sentence and a date on one 334px row leaves the sentence
        about ten characters wide. The right-hand end takes its own line
        instead, basis 60% and not 100% or the grow demands the whole width
@@ -999,7 +1187,7 @@
          say, because under a freeze it had not been.
      ============================================================ */
 
-  var BUILD = "w2 · 20 Sep 2026";
+  var BUILD = "w3 · 20 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. localStorage is scoped to
      the SITE and not the folder — which is exactly how Coffer's two
@@ -2568,6 +2756,973 @@
       (clamp(pct, 0, 1) * 100).toFixed(0) + '%"></span></span>';
   }
 
+  /* ============================================================
+     THE CANVAS — "What happens, in what order, using which things,
+     and where can the procedure branch?"
+
+     ArcGIS ModelBuilder, deliberately: a cut-corner rectangle is a
+     process and an oval is data, and the reader of this app knows that
+     vocabulary professionally. A list of steps can say what happens in
+     what order; it cannot say where the procedure BRANCHES, which is
+     the half the canvas exists for.
+
+     The list is not replaced. One graph, two renderings — the sheet is
+     the screen and the same steps written out fold away under it, which
+     is the rendering a phone gets and the one a keyboard reads.
+
+     Three rules the brief is explicit about and they are all rules
+     against being clever:
+
+       • "node appears at current viewport center. Do not automatically
+         connect it." So `nodeDialog` ASKS what a step comes after,
+         with "on its own" as a real answer, rather than joining it to
+         whatever was added last. A hidden auto-connection is a
+         procedure the app wrote.
+       • "No automatic smart rearrangement." Tidy is a button. A layout
+         is a thing the reader asked for, never a side effect of adding
+         one node.
+       • "The user owns the procedure." Nothing here infers a
+         dependency, and nothing draws an edge the record does not hold.
+     ============================================================ */
+
+  /* View state, every bit of it. None of this is in `state`, so a pan,
+     a zoom, a picked node and the undo stack all die with the tab —
+     which is right: a saved zoom means the sheet opens somewhere you
+     did not leave it. */
+  var CV = { scale: 1, ox: 0, oy: 0, sel: "", mode: "", from: "", nextSeen: "", fitted: "" };
+
+  /* WHICH WORKFLOW AND WHICH RUN ARE NOT THE CANVAS'S TO REMEMBER.
+     `openWf` and `openRun` already say, and holding a second copy on
+     `CV` is two records of one fact — which had already drifted at
+     five sites that set one and not the other, so the sheet came up
+     empty after creating a workflow. Read it, never store it. */
+  function cvWfId() {
+    if (openRun) { var r = byId(state.runs, openRun); return r ? r.workflowId : ""; }
+    return openWf;
+  }
+  function cvRun() { return openRun ? byId(state.runs, openRun) : null; }
+
+  var STEP_W = 178, STEP_H = 64, THING_W = 150, THING_H = 52, CUT = 11;
+
+  function nodeBox(n) {
+    var w = n.type === "thing" ? THING_W : STEP_W;
+    var h = n.type === "thing" ? THING_H : STEP_H;
+    return { x: num(n.positionX), y: num(n.positionY), w: w, h: h,
+             cx: num(n.positionX) + w / 2, cy: num(n.positionY) + h / 2 };
+  }
+
+  /* A BACK EDGE IS A DFS STACK TEST AND NOTHING ELSE WORKS. "Is the
+     target to the left" calls a forward edge a loop; comparing depth
+     calls a JOIN a loop; plain reachability flags every edge in a
+     cycle. Only "points at a node still on the stack" marks exactly the
+     edge that closes it — and the brief asks for backward connections
+     to be visually distinguished, so it has to be exactly right. */
+  function backEdges(wfId) {
+    var seq = workflowEdges(wfId).filter(function (e) { return e.type === "sequence"; });
+    var out = {}, seen = {}, stack = {};
+    function walk(id) {
+      seen[id] = 1; stack[id] = 1;
+      seq.filter(function (e) { return e.fromNodeId === id; }).forEach(function (e) {
+        if (stack[e.toNodeId]) { out[e.id] = 1; return; }
+        if (!seen[e.toNodeId]) walk(e.toNodeId);
+      });
+      stack[id] = 0;
+    }
+    entryNodes(wfId).forEach(function (n) { if (!seen[n.id]) walk(n.id); });
+    liveNodes(wfId).forEach(function (n) { if (!seen[n.id]) walk(n.id); });
+    return out;
+  }
+
+  /* WHAT A STEP IS MISSING, said rather than guessed at. The brief's
+     "Needs configuration" has to mean something specific or it is a
+     badge nobody can act on — so each kind names the one thing that
+     makes it unrunnable, and a step with nothing missing reads Ready. */
+  function nodeNeeds(n) {
+    var c = n.config || {};
+    if (n.type === "send" && !nodePeople(n).length) return "nobody to send it to";
+    if (n.type === "ask") {
+      var outs = workflowEdges(n.workflowId).filter(function (e) {
+        return e.type === "sequence" && e.fromNodeId === n.id;
+      });
+      if (outs.length < 2) return "a decision needs at least two ways out";
+      if (outs.some(function (e) { return !e.label; })) return "each way out needs the answer that takes it";
+    }
+    if (n.type === "file" && !c.path && !c.url) return "nowhere to file it";
+    if (n.type === "thing" && !c.assetId) return "";
+    return "";
+  }
+
+  /* ONE LADDER, TWO RENDERINGS. The canvas footer and the run page's
+     list read this same function, so the sheet and the words under it
+     can never say a step is Waiting and Running at once. The words are
+     the brief's own seven, plus Skipped, because a branch not taken is
+     a real state and calling it Complete would be a lie. */
+  function nodeStand(n, run) {
+    if (!run) {
+      var need = nodeNeeds(n);
+      return need
+        ? { word: "Needs configuration", tone: "drift", why: need }
+        : { word: "Ready", tone: "idle", why: "" };
+    }
+    var st = runNodeState(run, n);
+    if (st === "failed") return { word: "Failed", tone: "late", why: (runNodeFor(run.id, n.id) || {}).note || "" };
+    if (st === "skipped") return { word: "Skipped", tone: "idle", why: "a way out that was not taken" };
+    if (st === "done") return { word: "Complete", tone: "done", why: "" };
+    if (st === "blocked") return { word: "Blocked", tone: "drift", why: "it waits for every way in, and one is still open" };
+    if (st === "active") {
+      if (n.type === "send" || n.type === "watch") {
+        var who = nodePeople(n).map(function (id) { return nameOf("people", id); });
+        return { word: "Waiting", tone: "idle", why: who.length ? "on " + who.join(" and ") : "on nobody in particular" };
+      }
+      return { word: "Running", tone: "live", why: "" };
+    }
+    return { word: "Ready", tone: "idle", why: "the run has not reached it" };
+  }
+
+  /* THE BRIEF'S REFUSAL, AND IT HAS TO NAME ITS REASON. "These nodes
+     cannot be connected." on its own is a conclusion with nothing
+     attached — the same fault as an over-allocation warning with no
+     figures. */
+  function cvCanJoin(from, to, kind) {
+    if (!from || !to) return "Pick a step to join from, then one to join to.";
+    if (from.id === to.id) return "These nodes cannot be connected: nothing comes after itself.";
+    if (kind === "sequence" && (from.type === "thing" || to.type === "thing")) {
+      return "These nodes cannot be connected in sequence: nothing waits on a thing, and a run does not advance through one. Join it with an association instead.";
+    }
+    var dup = state.wfEdges.some(function (e) {
+      return e.workflowId === from.workflowId && e.type === kind &&
+        ((e.fromNodeId === from.id && e.toNodeId === to.id) ||
+         (kind === "association" && e.fromNodeId === to.id && e.toNodeId === from.id));
+    });
+    if (dup) return "Those two are already joined that way.";
+    return "";
+  }
+
+  /* ---------------- the sheet, drawn ----------------
+     A STRING-BUILT SVG TAKES ITS COLOURS THROUGH CSS, never a computed
+     value read into an attribute: the theme toggle has to move the
+     drawing with the page, and a snapshotted palette would leave it
+     behind. So every stroke and fill here is a class reading a
+     `var(--…)`.
+
+     And the shell is painted separately from the render. `cvPaint()`
+     fills the sheet in place, because a full render re-fits it and
+     throws away wherever the reader had panned to — the same reason the
+     original kept `paintSel()` out of `render()`. */
+
+  function cvNodes() {
+    if (!cvWfId()) return [];
+    var run = cvRun();
+    return workflowNodes(cvWfId()).filter(function (n) {
+      /* A retired node is off the canvas — that is the whole point of
+         retiring rather than deleting — except on the run that entered
+         it, where it is part of what happened. */
+      if (!n.retired) return true;
+      return !!(run && runNodeFor(run.id, n.id));
+    });
+  }
+
+  function cvWrap(s, max, lines) {
+    var words = String(s || "").split(/\s+/).filter(Boolean), out = [], line = "";
+    words.forEach(function (w) {
+      var t = line ? line + " " + w : w;
+      if (t.length <= max) { line = t; return; }
+      if (line) out.push(line);
+      line = w.length > max ? w.slice(0, max - 1) + "…" : w;
+    });
+    if (line) out.push(line);
+    if (out.length > lines) {
+      out = out.slice(0, lines);
+      out[lines - 1] = out[lines - 1].slice(0, max - 1) + "…";
+    }
+    return out;
+  }
+
+  function cvSheetSize() {
+    var el = document.getElementById("cvSheet");
+    var r = el ? el.getBoundingClientRect() : null;
+    return { w: r && r.width ? r.width : 900, h: r && r.height ? r.height : 420 };
+  }
+
+  /* The floor is about readability and not about fitting. Below it the
+     type is smaller than anything else on screen, so the fit gives up
+     and the reader pans instead — which is honest, and on a phone it is
+     the only workable answer for a forty-step procedure. */
+  function cvMinScale() { return cvSheetSize().w < 620 ? 0.55 : 0.32; }
+
+  function cvFit() {
+    var ns = cvNodes();
+    var sz = cvSheetSize();
+    if (!ns.length) { CV.scale = 1; CV.ox = -40; CV.oy = -40; return; }
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    ns.forEach(function (n) {
+      var b = nodeBox(n);
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h);
+    });
+    var pad = 40;
+    var sc = Math.min(sz.w / (x2 - x1 + pad * 2), sz.h / (y2 - y1 + pad * 2));
+    var floored = sc < cvMinScale();
+    CV.scale = clamp(sc, cvMinScale(), 1.4);
+    var vw = sz.w / CV.scale, vh = sz.h / CV.scale;
+    if (floored) {
+      /* It does not fit, so it opens on the step that matters — late
+         first, then the one in hand, then the way in — and you pan.
+         Then it is pulled back so the view never shows more empty sheet
+         than work: the floor pins the zoom, so the spare room in an axis
+         is room nothing can use, and half a phone of blank grid above
+         the first step reads as the work being lost rather than as the
+         sheet having space. */
+      var f = cvFocusNode();
+      var b = f ? nodeBox(f) : { cx: x1, cy: y1 };
+      var pd = 26;
+      CV.ox = b.cx - vw / 2;
+      CV.oy = b.cy - vh / 2;
+      if (x2 - x1 + pd * 2 > vw) CV.ox = clamp(CV.ox, x1 - pd, x2 + pd - vw);
+      else CV.ox = x1 - pd;
+      if (y2 - y1 + pd * 2 > vh) CV.oy = clamp(CV.oy, y1 - pd, y2 + pd - vh);
+      else CV.oy = y1 - pd;
+      return;
+    }
+    CV.ox = (x1 + x2) / 2 - vw / 2;
+    CV.oy = (y1 + y2) / 2 - vh / 2;
+  }
+
+  function cvPanTo(n) {
+    var sz = cvSheetSize(), b = nodeBox(n);
+    var vw = sz.w / CV.scale, vh = sz.h / CV.scale;
+    /* Into view WITHOUT changing the zoom: a re-fit is a second thing
+       happening that the reader did not ask for. */
+    if (b.x < CV.ox + 20) CV.ox = b.x - 20;
+    if (b.x + b.w > CV.ox + vw - 20) CV.ox = b.x + b.w - vw + 20;
+    if (b.y < CV.oy + 20) CV.oy = b.y - 20;
+    if (b.y + b.h > CV.oy + vh - 20) CV.oy = b.y + b.h - vh + 20;
+  }
+
+  function cvEdgePath(a, b, kind, back) {
+    var A = nodeBox(a), B = nodeBox(b);
+    if (back) {
+      /* A loop back is legible by the ARC OVER THE TOP rather than by
+         colour — colour is the state channel and a path is not a state.
+         The brief asks for backward connections to be distinguished and
+         this is the distinction that survives a reader who cannot
+         separate hues. */
+      var lift = 46 + Math.min(70, Math.abs(A.cx - B.cx) / 4);
+      return "M" + A.cx + " " + A.y + " C" + A.cx + " " + (A.y - lift) + " " +
+        B.cx + " " + (B.y - lift) + " " + B.cx + " " + B.y;
+    }
+    if (kind === "association") {
+      return "M" + A.cx + " " + (A.y + A.h) + " C" + A.cx + " " + (A.y + A.h + 30) + " " +
+        B.cx + " " + (B.y - 30) + " " + B.cx + " " + B.y;
+    }
+    /* WHICH PORTS A LINE LEAVES AND ARRIVES BY IS GEOMETRY, not a
+       constant. Left to right when the target really is to the right;
+       top to bottom when it is below, which is what a decision branching
+       downwards is. Forced through the side ports either way, the line
+       left the source's right edge, swung out past it and came back
+       left — a drawing that says the flow goes the wrong way. */
+    if (B.x >= A.x + A.w - 12) {
+      var x1 = A.x + A.w, y1 = A.cy, x2 = B.x, y2 = B.cy;
+      var d = Math.max(34, Math.abs(x2 - x1) / 2);
+      return "M" + x1 + " " + y1 + " C" + (x1 + d) + " " + y1 + " " + (x2 - d) + " " + y2 + " " + x2 + " " + y2;
+    }
+    var sy = A.y + A.h, ty = B.y;
+    var dy = Math.max(30, Math.abs(ty - sy) / 2);
+    return "M" + A.cx + " " + sy + " C" + A.cx + " " + (sy + dy) + " " +
+      B.cx + " " + (ty - dy) + " " + B.cx + " " + ty;
+  }
+
+  function cvDrawNode(n, run) {
+    var b = nodeBox(n), st = nodeStand(n, run);
+    var t = NODE_TYPES[n.type] || NODE_TYPES.do;
+    var picked = CV.sel === n.id;
+    var cls = ["cvn", "cvn-" + n.type, "t-" + st.tone];
+    if (picked) cls.push("on");
+    if (n.retired) cls.push("gone");
+    if (CV.mode === "join" && CV.from === n.id) cls.push("from");
+    var g = '<g class="' + cls.join(" ") + '" data-cvn="' + n.id + '" tabindex="-1">' +
+      "<title>" + esc(n.label + " — " + t.word + " · " + st.word + (st.why ? " (" + st.why + ")" : "")) + "</title>";
+
+    if (n.type === "thing") {
+      /* An oval is DATA in ModelBuilder, and every thing here is data. */
+      g += '<ellipse class="cvshape" cx="' + b.cx + '" cy="' + b.cy + '" rx="' + (b.w / 2) + '" ry="' + (b.h / 2) + '"/>';
+      var tl = cvWrap(n.label, 22, 2);
+      tl.forEach(function (line, i) {
+        g += '<text class="cvname" x="' + b.cx + '" y="' + (b.cy + 4 + i * 13 - (tl.length - 1) * 6.5) +
+          '" text-anchor="middle">' + esc(line) + "</text>";
+      });
+      g += '<circle class="cvport" cx="' + b.cx + '" cy="' + b.y + '" r="3.2"/>';
+    } else {
+      /* A cut-corner rectangle is a PROCESS. */
+      var p = "M" + (b.x + CUT) + " " + b.y + " L" + (b.x + b.w) + " " + b.y +
+        " L" + (b.x + b.w) + " " + (b.y + b.h) + " L" + b.x + " " + (b.y + b.h) +
+        " L" + b.x + " " + (b.y + CUT) + " Z";
+      g += '<path class="cvshape" d="' + p + '"/>';
+      g += '<line class="cvrule" x1="' + b.x + '" y1="' + (b.y + 19) + '" x2="' + (b.x + b.w) + '" y2="' + (b.y + 19) + '"/>';
+      g += '<line class="cvrule" x1="' + b.x + '" y1="' + (b.y + b.h - 17) + '" x2="' + (b.x + b.w) + '" y2="' + (b.y + b.h - 17) + '"/>';
+      g += '<text class="cvkind" x="' + (b.x + 9) + '" y="' + (b.y + 13.5) + '">' + esc(t.word.toUpperCase()) + "</text>";
+      var lines = cvWrap(n.label, 26, 2);
+      lines.forEach(function (line, i) {
+        g += '<text class="cvname" x="' + (b.x + 9) + '" y="' + (b.y + 33 + i * 13) + '">' + esc(line) + "</text>";
+      });
+      /* The footer is the run state, which is the brief's own anatomy:
+         header, body, footer. */
+      g += '<text class="cvstate s-' + st.tone + '" x="' + (b.x + 9) + '" y="' + (b.y + b.h - 5) + '">' +
+        esc(st.word) + "</text>";
+      g += '<circle class="cvport" cx="' + b.x + '" cy="' + b.cy + '" r="3.2"/>' +
+        '<circle class="cvport out" cx="' + (b.x + b.w) + '" cy="' + b.cy + '" r="3.2"/>';
+    }
+    return g + "</g>";
+  }
+
+  function cvDraw() {
+    var run = cvRun();
+    var ns = cvNodes(), byid = {};
+    ns.forEach(function (n) { byid[n.id] = n; });
+    var back = backEdges(cvWfId());
+    var edges = "", labels = "";
+    workflowEdges(cvWfId()).forEach(function (e) {
+      var a = byid[e.fromNodeId], b = byid[e.toNodeId];
+      if (!a || !b) return;
+      var isBack = !!back[e.id];
+      var cls = e.type === "association" ? "cve-assoc" : isBack ? "cve-back" : "cve-seq";
+      var mk = e.type === "association" ? "" : isBack ? "back" : "seq";
+      /* WHICH WAY THE RUN ACTUALLY WENT is derived, not stored: the
+         source is done and the target was entered. On a template every
+         edge is equal, which is also true. */
+      if (run && e.type === "sequence") {
+        var ra = runNodeFor(run.id, a.id), rb = runNodeFor(run.id, b.id);
+        if (ra && ra.completedAt && rb && rb.startedAt) { cls = "cve-seq on"; mk = "on"; }
+      }
+      edges += '<path class="' + cls + '" d="' + cvEdgePath(a, b, e.type, isBack) + '"' +
+        (mk ? ' marker-end="url(#mk-' + mk + ')"' : "") + "/>";
+      if (e.label) {
+        var A = nodeBox(a), B = nodeBox(b);
+        var lx = isBack ? (A.cx + B.cx) / 2 : (A.x + A.w + B.x) / 2;
+        var ly = isBack ? Math.min(A.y, B.y) - 34 : (A.cy + B.cy) / 2 - 6;
+        /* A LABEL IS MASKED AGAINST WHAT IS BEHIND IT — pushing it
+           clear of another label does nothing about it landing on a
+           line, which is what a real drawing solves with a mask. */
+        var w = e.label.length * 6 + 10;
+        labels += '<rect class="cvlmask" x="' + (lx - w / 2) + '" y="' + (ly - 9) + '" width="' + w + '" height="14" rx="3"/>' +
+          '<text class="cvlabel" x="' + lx + '" y="' + (ly + 1.5) + '" text-anchor="middle">' + esc(e.label) + "</text>";
+      }
+    });
+    var nodes = ns.map(function (n) { return cvDrawNode(n, run); }).join("");
+    /* The survey grid pans and zooms WITH the work, so it reads as the
+       sheet the work is drawn on rather than a texture behind a window. */
+    var defs = '<defs>' +
+      '<pattern id="cvgrid" width="40" height="40" patternUnits="userSpaceOnUse">' +
+      '<path class="cvg1" d="M40 0 L0 0 0 40"/></pattern>' +
+      '<pattern id="cvgrid2" width="200" height="200" patternUnits="userSpaceOnUse">' +
+      '<rect width="200" height="200" fill="url(#cvgrid)"/>' +
+      '<path class="cvg2" d="M200 0 L0 0 0 200"/></pattern>' +
+      ['seq', 'back', 'on'].map(function (k) {
+        return '<marker id="mk-' + k + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+          '<path class="cvhead h-' + k + '" d="M0 1 L9 5 L0 9 z"/></marker>';
+      }).join("") + "</defs>";
+    var sz = cvSheetSize();
+    var vw = sz.w / CV.scale, vh = sz.h / CV.scale;
+    return { defs: defs, body: '<rect class="cvbg" x="' + (CV.ox - vw) + '" y="' + (CV.oy - vh) +
+      '" width="' + (vw * 3) + '" height="' + (vh * 3) + '" fill="url(#cvgrid2)"/>' +
+      edges + nodes + labels,
+      vb: CV.ox + " " + CV.oy + " " + vw + " " + vh };
+  }
+
+  /* ---------------- the undo, and there is only one of it ----------------
+     The brief asks for Undo and Redo on the canvas toolbar, and this
+     app's standing rule is that the undo is the toast's, with no stack,
+     because the sample, a restored backup and a sync merge all REPLACE
+     state and a closure captured before that would mutate records no
+     longer in the book.
+
+     Both can be true, and the way through is what the stack HOLDS. Every
+     entry here closes over ids and values — never a record object — so
+     putting one back is a lookup that no-ops if the thing is gone. And
+     the stack is dropped outright whenever state is replaced, which is
+     three named places rather than a hope.
+
+     There is ONE mechanism with two routes: the toast's Undo button
+     calls the same `cvUndoOne()` the toolbar does, and pops the same
+     stack. Two undos for one act is the fault two copies of a list is. */
+  var cvUndo = [], cvRedo = [];
+
+  function cvClearUndo() { cvUndo = []; cvRedo = []; }
+
+  function cvPush(say, undo, redo) {
+    cvUndo.push({ say: say, undo: undo, redo: redo });
+    if (cvUndo.length > 40) cvUndo.shift();
+    cvRedo = [];
+  }
+  function cvUndoOne() {
+    var e = cvUndo.pop();
+    if (!e) { toast("Nothing to undo. Every change offers its own undo on the message it prints."); return; }
+    e.undo();
+    cvRedo.push(e);
+    go();
+    toast("Undone · " + e.say);
+  }
+  function cvRedoOne() {
+    var e = cvRedo.pop();
+    if (!e) { toast("Nothing to redo."); return; }
+    e.redo();
+    cvUndo.push(e);
+    go();
+    toast("Again · " + e.say);
+  }
+
+  /* ---------------- what can be done to the picked node ----------------
+     ONE LIST, TWO RENDERINGS: the inspector lays it down the right-hand
+     column and the long-press menu lays it over the node. A test reads
+     both and fails if they differ, because two copies of one list drift
+     the first time an act is added and the drift is silent.
+
+     On a RUN the list is the run's own acts and nothing structural. A
+     run is one pass through a procedure; editing the procedure from
+     inside it would change every other run of the same workflow, which
+     is exactly the surprise the record's split is meant to prevent. */
+  function nodeActs(n, run) {
+    var out = [];
+    if (run) {
+      var st = runNodeState(run, n);
+      if (st === "active" || st === "blocked") {
+        if (n.type === "ask") out.push({ act: "step-answer", id: run.id + ":" + n.id, label: "Answer it", loud: true });
+        else out.push({ act: "step-done", id: run.id + ":" + n.id, label: "Mark done", loud: true });
+        if (n.type === "send" || n.type === "watch") {
+          out.push({ act: "step-chase", id: run.id + ":" + n.id, label: "Chased today" });
+        }
+        out.push({ act: "step-fail", id: run.id + ":" + n.id, label: "It failed" });
+      } else if (st === "done") {
+        out.push({ act: "step-reopen", id: run.id + ":" + n.id, label: "Reopen" });
+      }
+      if (n.config && n.config.assetId) {
+        var a = byId(state.assets, n.config.assetId);
+        if (a) out.push({ act: "asset-open", id: a.id, label: "About " + clip(a.name, 18) });
+      }
+      return out;
+    }
+    out.push({ act: "node-edit", id: n.id, label: "Edit" });
+    out.push({ act: "node-dup", id: n.id, label: "Duplicate" });
+    out.push({ act: "cv-join-from", id: n.id, label: "Connect…", loud: true });
+    out.push({ act: "cv-thing-here", id: n.id, label: "Add related thing…" });
+    out.push({ act: "node-cut", id: n.id, label: "Disconnect" });
+    out.push({ act: "node-del", id: n.id, label: "Remove", danger: true });
+    return out;
+  }
+  function nodeActBtn(a, cls) {
+    return '<button class="' + (cls || "btn small") + (a.loud ? " primary" : "") +
+      (a.danger ? " danger" : "") + '" data-act="' + a.act + '" data-id="' + esc(a.id) + '">' +
+      esc(a.label) + "</button>";
+  }
+
+  /* ---------------- the inspector ----------------
+     The brief's right-hand column. It says what the node IS, what it
+     holds, how it stands and WHY it stands that way — "Needs
+     configuration" with nothing attached is a badge nobody can act on. */
+  function cvInspector() {
+    var run = cvRun();
+    if (!CV.sel) {
+      return '<div class="cvi-empty"><p class="ehead">Nothing picked.</p>' +
+        '<p class="esub">' + (CV.mode === "join"
+          ? "Pick the step this one comes after — or press Escape to stop connecting."
+          : "Tap a step to see what it holds and what can be done to it.") + "</p></div>";
+    }
+    var n = byId(state.wfNodes, CV.sel);
+    if (!n) { CV.sel = ""; return cvInspector(); }
+    var t = NODE_TYPES[n.type] || NODE_TYPES.do, st = nodeStand(n, run);
+    var rows = "";
+    function row(k, v, dim) {
+      rows += "<dt>" + esc(k) + "</dt><dd" + (dim ? ' class="dim"' : "") + ">" + v + "</dd>";
+    }
+    row("Kind", esc(t.word));
+    var who = nodePeople(n).map(function (id) { return nameOf("people", id); });
+    if (who.length) row("With", esc(who.join(", ")));
+    var c = n.config || {};
+    if (c.chaseAfterDays) row("Chase after", c.chaseAfterDays + (c.chaseAfterDays === 1 ? " day" : " days"));
+    if (c.dueAt && dayOk(c.dueAt)) row("On a date", esc(plainDate(c.dueAt)));
+    if (c.join === "all") row("Waits for", "every way in");
+    if (c.path) row("Files to", "<code>" + esc(clip(c.path, 34)) + "</code>");
+    if (c.assetId) {
+      var a = byId(state.assets, c.assetId);
+      row("The thing", a ? esc(a.name) : esc(nameOf("assets", c.assetId)));
+    }
+    /* Ways in and ways out are the whole reason a canvas exists, so the
+       inspector counts them in words and names the answers. */
+    var outs = workflowEdges(n.workflowId).filter(function (e) {
+      return e.type === "sequence" && e.fromNodeId === n.id;
+    });
+    var ins = workflowEdges(n.workflowId).filter(function (e) {
+      return e.type === "sequence" && e.toNodeId === n.id;
+    });
+    if (n.type !== "thing") {
+      row("Comes after", ins.length
+        ? ins.map(function (e) { return esc(clip(nodeNameOf(e.fromNodeId), 22)); }).join(", ")
+        : '<span class="dim">nothing — it is a way in</span>');
+      row("Then", outs.length
+        ? outs.map(function (e) {
+            return esc((e.label ? "“" + e.label + "” → " : "") + clip(nodeNameOf(e.toNodeId), 20));
+          }).join("<br>")
+        : '<span class="dim">nothing — the procedure ends here</span>');
+    }
+    if (c.notes) row("Note", esc(c.notes));
+    if (n.retired) row("On the procedure", "no longer — kept because this run reached it", true);
+
+    var acts = nodeActs(n, run).map(function (a) { return nodeActBtn(a); }).join("");
+    return '<div class="cvi-head"><span class="cvi-ico" aria-hidden="true">' + (ICONS[t.ico] || ICONS.do) + "</span>" +
+      "<div><h4>" + esc(n.label) + "</h4>" +
+      '<p class="cvi-state">' + pill(st.word, st.tone) +
+      (st.why ? '<span class="dim">' + esc(st.why) + "</span>" : "") + "</p></div></div>" +
+      '<dl class="afacts">' + rows + "</dl>" +
+      (acts ? '<div class="acts cvi-acts">' + acts + "</div>"
+            : '<p class="says">Nothing to do to it from here.</p>');
+  }
+  function nodeNameOf(id) {
+    var n = byId(state.wfNodes, id);
+    return n ? n.label : "(removed)";
+  }
+
+  /* ---------------- the shell, and painting it in place ---------------- */
+
+  function canvasBlock(wf, run) {
+    var ns = cvNodes();
+    var bar = '<div class="cvbar" id="cvBar">' +
+      (run ? "" :
+        '<button class="btn small primary" data-act="cv-add">Add…</button>' +
+        '<button class="btn small' + (CV.mode === "join" ? " primary" : "") + '" data-act="cv-join">' +
+          (CV.mode === "join" ? "Connecting…" : "Connect") + "</button>" +
+        '<button class="btn small" data-act="cv-undo"' + (cvUndo.length ? "" : " disabled") +
+          ' title="' + (cvUndo.length ? esc("Undo " + cvUndo[cvUndo.length - 1].say) : "Nothing to undo") +
+          '">Undo</button>' +
+        '<button class="btn small" data-act="cv-redo"' + (cvRedo.length ? "" : " disabled") + ">Redo</button>") +
+      '<span class="cvsp"></span>' +
+      '<button class="btn small" data-act="cv-zoom" data-id="out" aria-label="Zoom out">−</button>' +
+      '<button class="btn small" data-act="cv-zoom" data-id="in" aria-label="Zoom in">+</button>' +
+      '<button class="btn small" data-act="cv-fit">Fit</button>' +
+      (run ? "" : '<button class="btn small" data-act="cv-tidy" title="Lay the steps out again. Nothing does this on its own.">Tidy</button>') +
+      "</div>";
+    var empty = !ns.length
+      ? '<div class="cvempty">' + emptyLines("Start building your workflow.",
+          "Add a step, then connect it to the thing it uses.") +
+        '<div class="acts"><button class="btn primary" data-act="cv-add">Add the first step</button></div></div>'
+      : "";
+    return '<section class="panel cvpanel">' + bar +
+      '<div class="cvbody">' +
+      '<svg id="cvSheet" class="cvsheet" tabindex="0" role="application" aria-label="' +
+        esc((run ? "Run of " : "") + (wf ? wf.name : "") + " — the steps and how they join") + '"></svg>' +
+      empty +
+      '<aside class="cvinsp" id="cvInsp"></aside></div>' +
+      /* The keys are written UNDER the sheet, not hidden in a tooltip: a
+         shortcut nobody can find is a shortcut nobody has. */
+      '<p class="cvkeys"><kbd>←</kbd><kbd>→</kbd> walk the steps · ' +
+      '<kbd>↑</kbd><kbd>↓</kbd> follow the flow · <kbd>Enter</kbd> what can be done · ' +
+      '<kbd>Esc</kbd> let go · right-click or hold a step for its menu</p></section>';
+  }
+
+  function cvPaint() {
+    var el = document.getElementById("cvSheet");
+    if (!el) return;
+    var key = cvWfId() + "/" + openRun;
+    if (CV.fitted !== key) { cvFit(); CV.fitted = key; }
+    var d = cvDraw();
+    el.setAttribute("viewBox", d.vb);
+    el.innerHTML = d.defs + d.body;
+    el.classList.toggle("joining", CV.mode === "join");
+    var insp = document.getElementById("cvInsp");
+    if (insp) insp.innerHTML = cvInspector();
+    var bar = document.getElementById("cvBar");
+    if (bar) {
+      var u = bar.querySelector('[data-act="cv-undo"]'), r = bar.querySelector('[data-act="cv-redo"]');
+      if (u) { u.disabled = !cvUndo.length; u.title = cvUndo.length ? "Undo " + cvUndo[cvUndo.length - 1].say : "Nothing to undo"; }
+      if (r) r.disabled = !cvRedo.length;
+      var j = bar.querySelector('[data-act="cv-join"]');
+      if (j) { j.classList.toggle("primary", CV.mode === "join"); j.textContent = CV.mode === "join" ? "Connecting…" : "Connect"; }
+    }
+  }
+
+  function cvWorld(ev) {
+    var el = document.getElementById("cvSheet");
+    var r = el.getBoundingClientRect();
+    return { x: CV.ox + (ev.clientX - r.left) / r.width * (r.width / CV.scale),
+             y: CV.oy + (ev.clientY - r.top) / r.height * (r.height / CV.scale) };
+  }
+  function cvCentre() {
+    var sz = cvSheetSize();
+    var at = { x: Math.round(CV.ox + sz.w / CV.scale / 2 - STEP_W / 2),
+               y: Math.round(CV.oy + sz.h / CV.scale / 2 - STEP_H / 2) };
+    /* Nudged until it is not on top of something. The centre of the view
+       does not move between two adds, so without this the second step
+       sat exactly over the first and the sheet read as holding one
+       node — which is not "no automatic rearrangement", it is a
+       drawing that lies about what the record holds. */
+    var ns = cvNodes();
+    for (var i = 0; i < 40; i++) {
+      var clash = ns.some(function (n) {
+        var b = nodeBox(n);
+        return Math.abs(b.x - at.x) < b.w * 0.7 && Math.abs(b.y - at.y) < b.h * 0.9;
+      });
+      if (!clash) break;
+      at.x += 30; at.y += 26;
+    }
+    return at;
+  }
+  /* Zoom keeping the point under the pointer UNDER the pointer. A zoom
+     that drifts the work sideways is a zoom you have to re-pan after, so
+     the screen fraction is taken before the scale changes and restored
+     after it. */
+  function cvZoom(by, at) {
+    var sz = cvSheetSize();
+    var vw = sz.w / CV.scale, vh = sz.h / CV.scale;
+    var p = at || { x: CV.ox + vw / 2, y: CV.oy + vh / 2 };
+    var fx = (p.x - CV.ox) / vw, fy = (p.y - CV.oy) / vh;
+    CV.scale = clamp(CV.scale * by, cvMinScale(), 2.4);
+    var vw2 = sz.w / CV.scale, vh2 = sz.h / CV.scale;
+    CV.ox = p.x - fx * vw2;
+    CV.oy = p.y - fy * vh2;
+    cvPaint();
+  }
+
+  /* ---------------- the sheet's own events ----------------
+     THE NODE COMES FROM THE PRESS, never from a later event. `ev.target`
+     is the <svg> itself once the pointer is captured, and the sheet's own
+     top MOVES between pointerdown and contextmenu — it is
+     `tabindex="0"`, pressing it focuses it, and the browser scrolls a
+     newly focused element into view (measured at 184 → 269px in the
+     original). A stored coordinate on a canvas is a coordinate about the
+     last frame. */
+  function cvWire() {
+    var el = document.getElementById("cvSheet");
+    if (!el || el.getAttribute("data-wired")) return;
+    el.setAttribute("data-wired", "1");
+
+    var press = null, holdTimer = null;
+
+    function nodeAt(ev) {
+      var g = ev.target && ev.target.closest ? ev.target.closest("[data-cvn]") : null;
+      return g ? byId(state.wfNodes, g.getAttribute("data-cvn")) : null;
+    }
+
+    el.addEventListener("pointerdown", function (ev) {
+      if (ev.button === 2) { press = { n: nodeAt(ev) }; return; }
+      var n = nodeAt(ev), w = cvWorld(ev);
+      press = { n: n, sx: ev.clientX, sy: ev.clientY, w: w, moved: false,
+                ox: CV.ox, oy: CV.oy,
+                nx: n ? num(n.positionX) : 0, ny: n ? num(n.positionY) : 0 };
+      el.setPointerCapture(ev.pointerId);
+      /* `preventDefault` below stops the browser focusing the sheet, so
+         every arrow key after a click went to the body and the sheet was
+         a pointer-only screen again. Focus it by hand, and with
+         `preventScroll` — focusing a tall element scrolls it into
+         view, which is the measured 184 \u2192 269px jump between
+         pointerdown and contextmenu that cost the original four
+         attempts at its menu. */
+      try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+      if (n) {
+        holdTimer = setTimeout(function () {
+          holdTimer = null;
+          if (press && !press.moved) cvMenuPick(press.n, press.sx, press.sy);
+        }, 550);
+      }
+      ev.preventDefault();
+    });
+
+    el.addEventListener("pointermove", function (ev) {
+      if (!press || press.sx == null) return;
+      var dx = ev.clientX - press.sx, dy = ev.clientY - press.sy;
+      if (!press.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      press.moved = true;
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      var r = el.getBoundingClientRect();
+      var wdx = dx / r.width * (r.width / CV.scale), wdy = dy / r.height * (r.height / CV.scale);
+      if (press.n && !openRun) {
+        press.n.positionX = Math.round(press.nx + wdx);
+        press.n.positionY = Math.round(press.ny + wdy);
+      } else if (press.n && openRun) {
+        /* A position is LAYOUT and not structure, so moving a node on a
+           run page moves the workflow's layout and does NOT bump its
+           version — the procedure has not changed. */
+        press.n.positionX = Math.round(press.nx + wdx);
+        press.n.positionY = Math.round(press.ny + wdy);
+      } else {
+        CV.ox = press.ox - wdx; CV.oy = press.oy - wdy;
+      }
+      cvPaint();
+    });
+
+    function endPress(ev) {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      if (!press) return;
+      var p = press; press = null;
+      if (p.sx == null) return;
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+      if (!p.moved) {
+        if (p.n) cvTap(p.n);
+        else if (CV.mode === "join") { CV.mode = ""; CV.from = ""; cvPaint(); }
+        else if (CV.sel) { CV.sel = ""; cvPaint(); }
+        return;
+      }
+      if (p.n) {
+        var n = p.n, from = { x: p.nx, y: p.ny }, to = { x: num(n.positionX), y: num(n.positionY) };
+        if (from.x !== to.x || from.y !== to.y) {
+          var id = n.id;
+          stamp(n);
+          cvPush("moved " + clip(n.label, 20),
+            function () { var m = byId(state.wfNodes, id); if (m) { m.positionX = from.x; m.positionY = from.y; } },
+            function () { var m = byId(state.wfNodes, id); if (m) { m.positionX = to.x; m.positionY = to.y; } });
+          save();
+          cvPaint();
+        }
+      }
+    }
+    el.addEventListener("pointerup", endPress);
+    el.addEventListener("pointercancel", endPress);
+
+    el.addEventListener("wheel", function (ev) {
+      if (!ev.ctrlKey && !ev.metaKey && Math.abs(ev.deltaY) < 2) return;
+      ev.preventDefault();
+      cvZoom(ev.deltaY < 0 ? 1.12 : 1 / 1.12, cvWorld(ev));
+    }, { passive: false });
+
+    el.addEventListener("contextmenu", function (ev) {
+      ev.preventDefault();
+      var n = (press && press.n) || nodeAt(ev);
+      if (!n) return;
+      press = null;
+      cvMenuPick(n, ev.clientX, ev.clientY);
+    });
+
+    el.addEventListener("keydown", cvKey);
+    el.addEventListener("focus", function () {
+      if (!CV.sel) {
+        var n = cvFocusNode();
+        if (n) { CV.sel = n.id; cvPanTo(n); cvPaint(); }
+      }
+    });
+  }
+
+  /* A tap SELECTS; it does not open a dialog. Every accidental tap being
+     a modal is what made the original's sheet unusable. In Connect mode
+     the first tap names the source and the second the destination,
+     which is the brief's own "select source → select destination". */
+  function cvTap(n) {
+    if (CV.mode === "join") {
+      if (!CV.from) { CV.from = n.id; CV.sel = n.id; cvPaint(); return; }
+      if (CV.from === n.id) { CV.from = ""; cvPaint(); return; }
+      cvJoinAsk(byId(state.wfNodes, CV.from), n);
+      return;
+    }
+    CV.sel = n.id;
+    cvPaint();
+  }
+
+  /* ---------------- the node menu ----------------
+     A RIGHT-CLICK IS THE SECOND RENDERING OF ONE LIST, not a second
+     list: it shows the inspector's own acts, laid down instead of
+     across. `nodeActs` is the single copy and a test reads both. */
+  var cvMenuOpen = false;
+
+  function cvMenuPick(n, x, y) {
+    if (!n) return;
+    CV.sel = n.id;
+    cvPaint();
+    /* A frame later, against a layout that has settled: the selection
+       painting can itself move the page, and a menu positioned against
+       the frame before it lands somewhere else. */
+    setTimeout(function () { cvMenu(n, x, y); }, 0);
+  }
+
+  function cvMenu(n, x, y) {
+    cvMenuClose();
+    var run = cvRun();
+    var acts = nodeActs(n, run);
+    var el = document.createElement("div");
+    el.className = "cvmenu";
+    el.id = "cvMenu";
+    el.setAttribute("role", "menu");
+    var t = NODE_TYPES[n.type] || NODE_TYPES.do;
+    el.innerHTML = '<div class="cvmhead"><b>' + esc(clip(n.label, 34)) + "</b>" +
+      '<span class="dim">' + esc(t.word) + "</span></div>" +
+      (acts.length ? acts.map(function (a) { return nodeActBtn(a, "btn cvmrow"); }).join("")
+                   : '<p class="says">Nothing to do to it from here.</p>');
+    document.body.appendChild(el);
+    var r = el.getBoundingClientRect();
+    /* A MENU AS LONG AS THE NODE CAN BE LONGER THAN THE PHONE, so it
+       scrolls rather than clipping its last rows — reachable means
+       reached, and a scroll container that hides its last child is the
+       same fault with a scrollbar drawn on it. */
+    el.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
+    el.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
+    cvMenuOpen = true;
+    var first = el.querySelector("button");
+    if (first) first.focus();
+  }
+  function cvMenuClose() {
+    var el = document.getElementById("cvMenu");
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    cvMenuOpen = false;
+  }
+
+  /* ---------------- the keyboard ----------------
+     Two axes because the sheet has two meanings. LEFT and RIGHT walk the
+     nodes in reading order, which always works and can never dead-end.
+     DOWN and UP follow the FLOW, which is what the drawing is actually
+     saying, and a dead end there is announced rather than silently
+     doing nothing. */
+  function cvReadingOrder() {
+    return cvNodes().slice().sort(function (a, b) {
+      var A = nodeBox(a), B = nodeBox(b);
+      return (A.y - B.y) || (A.x - B.x);
+    });
+  }
+  function cvFocusNode() {
+    var run = cvRun();
+    var ns = cvNodes().filter(function (n) { return n.type !== "thing"; });
+    if (!ns.length) return cvNodes()[0] || null;
+    if (run) {
+      var late = ns.filter(function (n) { return nodeStand(n, run).tone === "late"; })[0];
+      if (late) return late;
+      var live = ns.filter(function (n) { return runNodeState(run, n) === "active"; })[0];
+      if (live) return live;
+    }
+    var need = ns.filter(function (n) { return nodeNeeds(n); })[0];
+    if (need) return need;
+    return entryNodes(cvWfId())[0] || ns[0];
+  }
+  function cvKey(ev) {
+    var k = ev.key;
+    if (k === "Escape") { cvEscape(); ev.preventDefault(); return; }
+    var order = cvReadingOrder();
+    if (!order.length) return;
+    /* With nothing picked, the first key picks one rather than doing
+       nothing: the focus handler runs BEFORE the press that cleared the
+       selection finishes, so clicking empty space leaves the sheet
+       focused and empty, and every arrow after that was a key that did
+       nothing. */
+    if (!byId(state.wfNodes, CV.sel) &&
+        (k === "ArrowLeft" || k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown" || k === "Enter")) {
+      var start = cvFocusNode() || order[0];
+      CV.sel = start.id; cvPanTo(start); cvPaint();
+      ev.preventDefault();
+      if (k !== "Enter") return;
+    }
+    if (k === "ArrowLeft" || k === "ArrowRight") {
+      var i = order.findIndex(function (n) { return n.id === CV.sel; });
+      if (i < 0) i = k === "ArrowRight" ? -1 : 0;
+      var j = (i + (k === "ArrowRight" ? 1 : -1) + order.length) % order.length;
+      CV.sel = order[j].id; cvPanTo(order[j]); cvPaint();
+      ev.preventDefault(); return;
+    }
+    if (k === "ArrowDown" || k === "ArrowUp") {
+      var cur = byId(state.wfNodes, CV.sel);
+      if (!cur) { CV.sel = order[0].id; cvPaint(); ev.preventDefault(); return; }
+      var edges = workflowEdges(cvWfId()).filter(function (e) {
+        return e.type === "sequence" && (k === "ArrowDown" ? e.fromNodeId === cur.id : e.toNodeId === cur.id);
+      });
+      var next = edges.map(function (e) {
+        return byId(state.wfNodes, k === "ArrowDown" ? e.toNodeId : e.fromNodeId);
+      }).filter(Boolean);
+      if (!next.length) {
+        /* Announced through the toast, which is this app's live region
+           and therefore the only channel a screen reader hears. */
+        toast(k === "ArrowDown" ? "Nothing comes after this step." : "Nothing comes before this step.");
+        ev.preventDefault(); return;
+      }
+      var at = next.findIndex(function (n) { return n.id === CV.nextSeen; });
+      var pick = next[(at + 1) % next.length];
+      CV.nextSeen = pick.id;
+      CV.sel = pick.id; cvPanTo(pick); cvPaint();
+      if (next.length > 1) toast(numWord(next.length) + " ways " + (k === "ArrowDown" ? "on" : "in") + " — press again for the next");
+      ev.preventDefault(); return;
+    }
+    if (k === "Enter") {
+      /* Enter says "show me what I can do", and the inspector is
+         rendered AFTER the sheet in the document, so Tab alone would
+         walk away from the board rather than into it. */
+      var b = document.querySelector("#cvInsp .cvi-acts button");
+      if (b) { b.focus(); ev.preventDefault(); }
+      else toast("Nothing to do to it from here.");
+      return;
+    }
+  }
+  /* AN ESCAPE STACK IS WRITTEN ONCE. Written twice it stops stacking:
+     one press cleared the node AND left the mode. */
+  function cvEscape() {
+    if (cvMenuOpen) { cvMenuClose(); return; }
+    if (CV.mode === "join") { CV.mode = ""; CV.from = ""; cvPaint(); toast("Stopped connecting."); return; }
+    if (CV.sel) { CV.sel = ""; cvPaint(); return; }
+    var el = document.getElementById("cvSheet");
+    if (el) el.blur();
+  }
+
+  /* ---------------- laying it out, when asked ----------------
+     NOTHING DOES THIS ON ITS OWN. The brief says "No automatic smart
+     rearrangement", and it is right: a layout somebody placed by hand is
+     the one thing an auto-layout cannot know better. Tidy is a button,
+     and it is undoable like everything else. */
+  function cvLayout(wfId) {
+    var seq = workflowEdges(wfId).filter(function (e) { return e.type === "sequence"; });
+    var steps = liveNodes(wfId).filter(function (n) { return n.type !== "thing"; });
+    var depth = {}, queue = [];
+    entryNodes(wfId).forEach(function (n) { depth[n.id] = 0; queue.push(n.id); });
+    while (queue.length) {
+      var id = queue.shift();
+      seq.filter(function (e) { return e.fromNodeId === id; }).forEach(function (e) {
+        var t = byId(state.wfNodes, e.toNodeId);
+        if (!t || t.retired || t.type === "thing") return;
+        var d = depth[id] + 1;
+        if (depth[t.id] == null || d > depth[t.id]) {
+          /* The LONGEST path, so a join sits after everything that feeds
+             it rather than beside the first thing that reaches it. A
+             visited guard keeps a loop from running away. */
+          if (d > steps.length) return;
+          depth[t.id] = d; queue.push(t.id);
+        }
+      });
+    }
+    var cols = {};
+    steps.forEach(function (n) {
+      var d = depth[n.id] == null ? 0 : depth[n.id];
+      (cols[d] = cols[d] || []).push(n);
+    });
+    var out = [];
+    Object.keys(cols).sort(function (a, b) { return a - b; }).forEach(function (d) {
+      cols[d].forEach(function (n, i) {
+        out.push({ id: n.id, x: 40 + d * (STEP_W + 62), y: 40 + i * (STEP_H + 40) });
+      });
+    });
+    /* A thing is parked under the step it belongs with, because that is
+       what the association says and a thing floating in the middle of
+       the flow reads as a step. */
+    liveNodes(wfId).filter(function (n) { return n.type === "thing"; }).forEach(function (n, i) {
+      var link = workflowEdges(wfId).filter(function (e) {
+        return e.type === "association" && (e.toNodeId === n.id || e.fromNodeId === n.id);
+      })[0];
+      var host = link ? byId(state.wfNodes, link.fromNodeId === n.id ? link.toNodeId : link.fromNodeId) : null;
+      var hp = host ? out.filter(function (o) { return o.id === host.id; })[0] : null;
+      var deepest = out.reduce(function (m, o) { return Math.max(m, o.y); }, 40);
+      out.push({ id: n.id,
+                 x: hp ? hp.x + 14 : 40 + i * (THING_W + 30),
+                 y: hp ? hp.y + STEP_H + 74 : deepest + STEP_H + 110 });
+    });
+    return out;
+  }
+
+  function cvApplyLayout(wfId, say) {
+    var before = liveNodes(wfId).concat(workflowNodes(wfId).filter(function (n) { return n.retired; }))
+      .map(function (n) { return { id: n.id, x: num(n.positionX), y: num(n.positionY) }; });
+    var after = cvLayout(wfId);
+    function put(list) {
+      list.forEach(function (o) {
+        var n = byId(state.wfNodes, o.id);
+        if (n) { n.positionX = o.x; n.positionY = o.y; }
+      });
+    }
+    put(after);
+    cvPush(say, function () { put(before); }, function () { put(after); });
+    CV.fitted = "";
+    go();
+    toast(cap(say) + " · Undo", cvUndoOne);
+  }
+
   function renderWorkflows() {
     if (openRun) return renderRun();
     if (openWf) return renderWorkflow();
@@ -2686,13 +3841,21 @@
         '<button class="btn" data-act="wf-edit" data-id="' + w.id + '">Edit</button>' +
         '<button class="btn primary" data-act="run-start" data-id="' + w.id + '">Run it</button></div>') +
       '<p class="says">Version ' + (num(w.version) || 1) + " · " +
-        (w.projectId ? "part of " + esc(nameOf("projects", w.projectId)) : "in no project") +
-        " · drawn as a list of steps for now; the canvas is the next piece of the rebuild.</p>" +
+        (w.projectId ? "part of " + esc(nameOf("projects", w.projectId)) : "in no project") + "</p>" +
+      canvasBlock(w, null) +
+      /* THE SHEET IS THE SCREEN AND THE WORDS FOLD AWAY UNDER IT. One
+         graph, two renderings: the canvas says where the procedure
+         branches and the list says what happens in what order, and the
+         list is the one a keyboard reads and a phone can scan. The fold
+         remembers nothing, so a workflow always opens on the drawing. */
+      '<details class="fold"><summary>The same steps written out' +
+        (order.length ? " — " + numWord(order.length) + " " + plural(order.length, "step") : "") +
+        "</summary>" +
       panel("The steps, in order", stepBody,
         '<div class="acts"><button class="btn" data-act="node-add" data-id="' + w.id + '">Add a step</button>' +
         '<button class="btn" data-act="edge-add" data-id="' + w.id + '">Join two steps</button>' +
         '<button class="btn" data-act="thing-add" data-id="' + w.id + '">Add a thing</button></div>') +
-      (thingBody ? panel("Things it is done with", thingBody) : "") +
+      (thingBody ? panel("Things it is done with", thingBody) : "") + "</details>" +
       (runs.length ? panel("Runs of it", '<div class="rows">' + runs.map(runRow).join("") + "</div>") : "");
   }
 
@@ -2753,7 +3916,10 @@
         plural(s.edits, "time") + " since this run started (version " + (num(run.workflowVersion) || 1) +
         " then, version " + (num(run.workflowVersion) + s.edits) + " now). Steps this run has already entered are kept whatever happens to the procedure.</p>"
       : "";
-    return head + stand + drift + panel("The steps", body || emptyLines("This run has no steps.", "Its procedure is empty."));
+    return head + stand + drift + canvasBlock(byId(state.workflows, run.workflowId), run) +
+      '<details class="fold"><summary>The same steps written out, with their controls</summary>' +
+      panel("The steps", body || emptyLines("This run has no steps.", "Its procedure is empty.")) +
+      "</details>";
   }
 
   /* ============================================================
@@ -2885,8 +4051,8 @@
         '<p class="says">This workspace is kept in this browser under its own name, <code>mashghal2.v1</code>. It is a different book from the original app’s — loading the example here cannot touch that one.</p>') +
       panel("What is built, and what is not",
         '<p class="says">This is the round-3 rebuild. The workspace is one set of canonical records — jobs, projects, people, actions, things, workflows with their steps, lines, runs and run steps, dates, reports and stretches of time — with one derived selector per question, and every screen is a view over it. Nothing on any screen is stored, and nothing on one is computed there.</p>' +
-        '<p class="says">Built: Home, Projects with their five pages, Jobs, Workflows with runs, Actions, Assets in its six sections including the Library, and Schedule.</p>' +
-        '<p class="says">Still to come, in this order: the node canvas, Outputs, and the command bar. Nothing is hidden behind a control that does nothing — a section that is not built is not on the bar.</p>' +
+        '<p class="says">Built: Home, Projects with their five pages, Jobs, Workflows with runs and the node canvas, Actions, Assets in its six sections including the Library, and Schedule.</p>' +
+        '<p class="says">Still to come, in this order: Outputs, and the command bar. Nothing is hidden behind a control that does nothing — a section that is not built is not on the bar.</p>' +
         '<p class="says">The original app is untouched and still holds your work: <a href="../mashghal/">open Mashghal</a>.</p>' +
         '<p class="says dim">Build ' + esc(BUILD) + "</p>");
   }
@@ -3389,6 +4555,11 @@
   function clearOpen() {
     openProj = ""; openWf = ""; openRun = ""; openAsset = ""; openPerson = ""; openJob = "";
     projPage = "overview"; dayOf = "";
+    /* Every tab lands on its list, and the sheet lets go with it: a
+       remembered pan and a picked node mean the screen is different
+       depending on what you did ten minutes ago. */
+    CV.sel = ""; CV.mode = ""; CV.from = ""; CV.nextSeen = ""; CV.fitted = "";
+    cvMenuClose();
   }
 
   function railPaint() {
@@ -3694,7 +4865,12 @@
 
   addActions({
     /* --- workflows --- */
-    "wf-open": function (id) { view = "workflows"; clearOpen(); openWf = id; render(); },
+    "wf-open": function (id) {
+      cvMenuClose();
+      view = "workflows"; clearOpen();
+      openWf = id;
+      render();
+    },
     "wf-back": function () { clearOpen(); render(); },
     "wf-add": function (id) {
       openModal({
@@ -3742,10 +4918,13 @@
     /* --- nodes and edges --- */
     "node-add": function (id) { nodeDialog(id, null); },
     "node-edit": function (id) {
+      cvMenuClose();
       var n = byId(state.wfNodes, id); if (!n) return;
+      if (n.type === "thing") { thingEditDialog(n); return; }
       nodeDialog(n.workflowId, n);
     },
     "node-del": function (id) {
+      cvMenuClose();
       var n = byId(state.wfNodes, id); if (!n) return;
       var entered = state.runNodes.filter(function (rn) { return rn.nodeId === n.id; });
       var edges = state.wfEdges.filter(function (e) {
@@ -3767,19 +4946,35 @@
             (edges.length ? numWord(edges.length) + " " + plural(edges.length, "line") + " to and from it " + (edges.length === 1 ? "goes" : "go") + " too." : "Nothing is joined to it."),
         confirmLabel: retire ? "Retire it" : "Remove it"
       }, function () {
-        var keptEdges = state.wfEdges.slice();
-        state.wfEdges = state.wfEdges.filter(function (e) {
-          return e.fromNodeId !== n.id && e.toNodeId !== n.id;
-        });
+        var cutIds = edges.map(function (e) { return e.id; });
+        var w2 = byId(state.workflows, n.workflowId);
+        var ver = w2 ? num(w2.version) || 1 : 1;
+        state.wfEdges = state.wfEdges.filter(function (e) { return cutIds.indexOf(e.id) < 0; });
         if (retire) { n.retired = true; stamp(n); }
         else state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== n.id; });
-        bumpWorkflow(n.workflowId);
+        if (w2) { w2.version = ver + 1; stamp(w2); }
+        var say = (retire ? "retired " : "removed ") + clip(n.label, 22);
+        /* The same one undo the toolbar reads. The stack holds ids and
+           values, never a record object, so putting this back is a
+           lookup that no-ops if the book has been replaced underneath
+           it — which is the whole reason a canvas may have a stack at
+           all when the rest of the app deliberately does not. */
+        cvPush(say,
+          function () {
+            edges.forEach(function (e) { if (!byId(state.wfEdges, e.id)) state.wfEdges.push(e); });
+            if (retire) { var r = byId(state.wfNodes, n.id); if (r) { r.retired = false; stamp(r); } }
+            else if (!byId(state.wfNodes, n.id)) state.wfNodes.push(n);
+            var x2 = byId(state.workflows, n.workflowId); if (x2) { x2.version = ver; stamp(x2); }
+          },
+          function () {
+            state.wfEdges = state.wfEdges.filter(function (e) { return cutIds.indexOf(e.id) < 0; });
+            if (retire) { var r2 = byId(state.wfNodes, n.id); if (r2) { r2.retired = true; stamp(r2); } }
+            else state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== n.id; });
+            var x3 = byId(state.workflows, n.workflowId); if (x3) { x3.version = ver + 1; stamp(x3); }
+          });
+        if (CV.sel === n.id) CV.sel = "";
         go();
-        toast((retire ? "Retired " : "Removed ") + clip(n.label, 24), function () {
-          state.wfEdges = keptEdges;
-          if (retire) { n.retired = false; stamp(n); }
-          else state.wfNodes.push(n);
-        });
+        toast(cap(say) + " \u00b7 Undo", cvUndoOne);
       });
     },
     "thing-add": function (id) { thingDialog(id); },
@@ -3829,7 +5024,12 @@
     },
 
     /* --- runs --- */
-    "run-open": function (id) { view = "workflows"; clearOpen(); openRun = id; render(); },
+    "run-open": function (id) {
+      cvMenuClose();
+      view = "workflows"; clearOpen();
+      openRun = id;
+      render();
+    },
     "run-back": function () { clearOpen(); render(); },
     "run-start": function (id, el) {
       var w = byId(state.workflows, id);
@@ -4040,7 +5240,19 @@
                     { value: "all", label: "Yes — hold it until every way in is done" }] },
         { key: "notes", label: "Notes", type: "textarea", span: true, more: true,
           value: n && n.config ? n.config.notes || "" : "" }
-      ],
+      /* THE JOIN IS ASKED FOR, NEVER MADE FOR YOU. The brief is explicit
+         — "Do not automatically connect it", "no hidden
+         auto-connections", "the user owns the procedure" — and it is
+         right: a step the app joined to whatever happened to be added
+         last sits in a flow nobody decided on. So it defaults to
+         nothing, and the picker makes saying otherwise one tap. */
+      ].concat(n ? [] : [{
+        key: "after", label: "Comes after", type: "select", span: true, value: "",
+        options: [{ value: "", label: "— nothing: put it on its own —" }].concat(
+          liveNodes(wfId).filter(function (x) { return x.type !== "thing"; })
+            .map(function (x) { return { value: x.id, label: x.label }; })),
+        hint: "Nothing is joined for you. Say what it follows here, or draw the line on the sheet afterwards."
+      }]),
       validate: function (v) {
         if (!v.label.trim()) return "It needs to say what happens.";
         if (v.dueAt && !dayOk(v.dueAt)) return "“" + v.dueAt + "” is not a date that exists. Write it as YYYY-MM-DD.";
@@ -4060,26 +5272,45 @@
           return;
         }
         var seq = liveNodes(wfId).filter(function (x) { return x.type !== "thing"; });
+        /* AT THE CENTRE OF WHAT IS IN VIEW, which is the brief's own
+           rule and the reason `autoLayout` is not called here: adding
+           one step to a forty-step procedure must not throw away every
+           position somebody placed by hand, and on a panned sheet a
+           grid slot puts the new step off screen. */
+        var at = document.getElementById("cvSheet")
+          ? cvCentre()
+          : { x: 40 + (seq.length % 4) * (STEP_W + 44), y: 40 + Math.floor(seq.length / 4) * (STEP_H + 76) };
         var node = stamp({ id: uid(), workflowId: wfId, type: v.type, label: v.label.trim(),
-          positionX: 40 + (seq.length % 4) * 220, positionY: 40 + Math.floor(seq.length / 4) * 140,
-          config: cfg, retired: false });
+          positionX: at.x, positionY: at.y, config: cfg, retired: false });
         state.wfNodes.push(node);
-        /* A new step is JOINED TO THE LAST ONE, because a procedure is a
-           sequence and a step floating free is almost never what was
-           meant — and the list says so out loud when one is. */
-        var last = seq[seq.length - 1];
+        var after = v.after ? byId(state.wfNodes, v.after) : null;
         var edge = null;
-        if (last) {
-          edge = stamp({ id: uid(), workflowId: wfId, fromNodeId: last.id, toNodeId: node.id,
+        if (after) {
+          edge = stamp({ id: uid(), workflowId: wfId, fromNodeId: after.id, toNodeId: node.id,
             type: "sequence", label: "" });
           state.wfEdges.push(edge);
         }
-        bumpWorkflow(wfId); go();
-        toast("Added " + clip(node.label, 26) + (last ? " after " + clip(last.label, 20) : " as the way in"),
+        var w2 = byId(state.workflows, wfId);
+        var ver = w2 ? num(w2.version) || 1 : 1;
+        if (w2) { w2.version = ver + 1; stamp(w2); }
+        var say = "added " + clip(node.label, 24) + (after ? " after " + clip(after.label, 18) : " on its own");
+        /* ONE UNDO WITH TWO ROUTES: the toast's button and the canvas
+           toolbar both call `cvUndoOne()` and pop the same stack, so the
+           two can never disagree about what the last change was. */
+        cvPush(say,
           function () {
             state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== node.id; });
             if (edge) state.wfEdges = state.wfEdges.filter(function (x) { return x.id !== edge.id; });
+            var x2 = byId(state.workflows, wfId); if (x2) { x2.version = ver; stamp(x2); }
+          },
+          function () {
+            if (!byId(state.wfNodes, node.id)) state.wfNodes.push(node);
+            if (edge && !byId(state.wfEdges, edge.id)) state.wfEdges.push(edge);
+            var x2 = byId(state.workflows, wfId); if (x2) { x2.version = ver + 1; stamp(x2); }
           });
+        CV.sel = node.id;
+        go();
+        toast(cap(say) + " \u00b7 Undo", cvUndoOne);
       }
     });
   }
@@ -4088,9 +5319,14 @@
      into the registry — and the line it is joined by is an ASSOCIATION
      and never a sequence, because nothing waits on a reference
      photograph and a run does not advance through it. */
-  function thingDialog(wfId) {
+  function thingDialog(wfId, at) {
     var wf = byId(state.workflows, wfId); if (!wf) return;
     var steps = nodeOptions(wfId).filter(function (o) { return o.label.indexOf("(Thing)") < 0; });
+    /* Reached off a picked step, that step is already the answer: asked
+       for the thing and then asked again which step it belongs with,
+       nobody would draw the line. */
+    var host = at && byId(state.wfNodes, at);
+    if (host && host.type === "thing") host = null;
     openModal({
       title: "Add a thing to " + clip(wf.name, 20),
       message: "A person, a file, a device, a place. It is joined by an <b>association</b> line, which says nothing about order — so it belongs with a step without coming before it.",
@@ -4099,6 +5335,7 @@
         { key: "label", label: "…or its name", value: "",
           hint: "Only needed if it is not in Assets yet." },
         { key: "at", label: "Belongs with which step", type: "select",
+          value: host ? host.id : "",
           options: [{ value: "", label: "— on its own —" }].concat(steps) }
       ],
       validate: function (v) {
@@ -4107,9 +5344,16 @@
       confirmLabel: "Add it",
       onConfirm: function (v) {
         var a = v.assetId ? byId(state.assets, v.assetId) : null;
+        /* Under the step it belongs with when there is one, so the
+           association reads as what it is; at the centre of the view
+           otherwise, like every other thing added to a sheet. */
+        var anchor = v.at ? byId(state.wfNodes, v.at) : null;
+        var pos = anchor
+          ? { x: num(anchor.positionX) + 14, y: num(anchor.positionY) + STEP_H + 74 }
+          : document.getElementById("cvSheet") ? cvCentre() : { x: 60, y: 260 };
         var node = stamp({ id: uid(), workflowId: wfId, type: "thing",
           label: a ? a.name : v.label.trim(),
-          positionX: 60, positionY: 260,
+          positionX: pos.x, positionY: pos.y,
           config: { assetId: v.assetId, personId: "" }, retired: false });
         state.wfNodes.push(node);
         var edge = null;
@@ -4118,14 +5362,249 @@
             type: "association", label: "" });
           state.wfEdges.push(edge);
         }
-        bumpWorkflow(wfId); go();
-        toast("Added " + clip(node.label, 26), function () {
-          state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== node.id; });
-          if (edge) state.wfEdges = state.wfEdges.filter(function (x) { return x.id !== edge.id; });
-        });
+        /* An association is not structure a run walks, so it does NOT
+           bump the version: a run reaching this workflow has not had
+           its sequence changed by a reference photograph being added. */
+        var say = "added " + clip(node.label, 24) + (anchor ? " beside " + clip(anchor.label, 16) : "");
+        cvPush(say,
+          function () {
+            state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== node.id; });
+            if (edge) state.wfEdges = state.wfEdges.filter(function (x) { return x.id !== edge.id; });
+          },
+          function () {
+            if (!byId(state.wfNodes, node.id)) state.wfNodes.push(node);
+            if (edge && !byId(state.wfEdges, edge.id)) state.wfEdges.push(edge);
+          });
+        CV.sel = node.id;
+        go();
+        toast(cap(say) + " \u00b7 Undo", cvUndoOne);
       }
     });
   }
+
+  /* NAME THE RECORD, NOT ITS TYPE, and do not offer a thing the five
+     step acts: `nodeDialog` would have let "Reference photo" be turned
+     into a Send, which is not an edit, it is a different node. A thing
+     is a name and, optionally, which registry entry it stands for. */
+  function thingEditDialog(n) {
+    openModal({
+      title: "Edit " + clip(n.label, 26),
+      fields: [
+        { key: "label", label: "What it is called", span: true, value: n.label },
+        { key: "assetId", label: "Which registry entry it stands for", type: "select",
+          value: (n.config || {}).assetId || "",
+          options: assetOptions("— nothing: it is just named here —"),
+          hint: "A node is a COPY carrying the id, never a pointer into Assets: renaming an entry next year must not rewrite a run closed last year." }
+      ],
+      validate: function (v) { return v.label.trim() ? "" : "It needs a name."; },
+      onConfirm: function (v) {
+        var before = { label: n.label, assetId: (n.config || {}).assetId || "" };
+        var id = n.id;
+        n.label = v.label.trim();
+        n.config = n.config || {};
+        n.config.assetId = v.assetId;
+        stamp(n);
+        cvPush("renamed " + clip(before.label, 20),
+          function () {
+            var m = byId(state.wfNodes, id);
+            if (m) { m.label = before.label; m.config = m.config || {}; m.config.assetId = before.assetId; stamp(m); }
+          },
+          function () {
+            var m = byId(state.wfNodes, id);
+            if (m) { m.label = v.label.trim(); m.config = m.config || {}; m.config.assetId = v.assetId; stamp(m); }
+          });
+        go();
+        toast("Saved \u00b7 Undo", cvUndoOne);
+      }
+    });
+  }
+
+  /* ---------------- joining two nodes ----------------
+     "Connect → select source → select destination → choose edge type if
+     ambiguous." It is only ambiguous between two STEPS: a step and a
+     thing can only be an association, because nothing waits on a thing
+     and a run does not advance through one — so that case is not a
+     question, it is just done. */
+  function cvJoin(from, to, kind, label) {
+    var e = stamp({ id: uid(), workflowId: from.workflowId, fromNodeId: from.id,
+      toNodeId: to.id, type: kind, label: String(label || "").trim() });
+    state.wfEdges.push(e);
+    var w = byId(state.workflows, from.workflowId);
+    var ver = w ? num(w.version) || 1 : 1;
+    if (kind === "sequence" && w) { w.version = ver + 1; stamp(w); }
+    var say = "joined " + clip(from.label, 16) + " to " + clip(to.label, 16);
+    cvPush(say,
+      function () {
+        state.wfEdges = state.wfEdges.filter(function (x) { return x.id !== e.id; });
+        var x = byId(state.workflows, from.workflowId);
+        if (x && kind === "sequence") { x.version = ver; stamp(x); }
+      },
+      function () {
+        if (!byId(state.wfEdges, e.id)) state.wfEdges.push(e);
+        var x = byId(state.workflows, from.workflowId);
+        if (x && kind === "sequence") { x.version = ver + 1; stamp(x); }
+      });
+    CV.mode = ""; CV.from = "";
+    go();
+    toast(cap(say) + " · Undo", cvUndoOne);
+  }
+
+  function cvJoinAsk(from, to) {
+    if (!from || !to) return;
+    var stepPair = from.type !== "thing" && to.type !== "thing";
+    if (!stepPair) {
+      var bad = cvCanJoin(from, to, "association");
+      if (bad) { toast(bad); CV.from = ""; CV.mode = ""; cvPaint(); return; }
+      cvJoin(from, to, "association", "");
+      return;
+    }
+    openModal({
+      title: "Join " + clip(from.label, 16) + " to " + clip(to.label, 16),
+      message: "A <b>sequence</b> line says the second comes after the first and a run walks it. An <b>association</b> line says the two belong together and means nothing about order.",
+      fields: [
+        { key: "type", label: "Which kind of line", type: "select", value: "sequence",
+          options: Object.keys(EDGE_TYPES).map(function (k) {
+            return { value: k, label: cap(k) + " — " + EDGE_TYPES[k] };
+          }) },
+        { key: "label", label: "The answer that takes this way out", value: "",
+          placeholder: from.type === "ask" ? "yes" : "",
+          hint: from.type === "ask"
+            ? "“" + clip(from.label, 22) + "” is a decision, so each way out needs the answer that takes it."
+            : "Only for a decision. Leave it blank." }
+      ],
+      validate: function (v) {
+        var bad2 = cvCanJoin(from, to, v.type);
+        if (bad2) return bad2;
+        if (from.type === "ask" && v.type === "sequence" && !v.label.trim()) {
+          return "A decision's way out needs the answer that takes it, or the run has no way to choose.";
+        }
+        return "";
+      },
+      confirmLabel: "Join them",
+      onConfirm: function (v) { cvJoin(from, to, v.type, v.label); },
+      onCancel: function () { CV.from = ""; CV.mode = ""; cvPaint(); }
+    });
+  }
+
+  addActions({
+    /* --- the toolbar --- */
+    "cv-add": function () {
+      if (!cvWfId()) return;
+      /* THE PALETTE IS TWO DOORS, not five hardcoded headings. The brief
+         lists Software, Files, URLs, GIS tools, Hardware, Human action —
+         two of those are not kinds at all ("GIS tools" is a topic), and
+         a fixed five would be wrong the first time somebody records a
+         sixth, which every vocabulary in this app invites. What a node
+         actually is here is a STEP (five acts) or a THING (the registry,
+         grouped by its own six sections), so those are the doors. */
+      openModal({
+        title: "Add to the sheet",
+        message: "A <b>step</b> is something that happens — a cut-corner rectangle. A <b>thing</b> is something the work is done with or made of — an oval. Nothing is joined for you either way.",
+        fields: [{
+          key: "what", label: "What are you adding", type: "select",
+          options: [{ value: "step", label: "A step — do, send, watch, decide, file" },
+                    { value: "thing", label: "A thing — a person, a file, a device, a place" }]
+        }],
+        confirmLabel: "Next",
+        onConfirm: function (v) {
+          if (v.what === "thing") thingDialog(cvWfId(), CV.sel || "");
+          else nodeDialog(cvWfId(), null);
+        }
+      });
+    },
+    "cv-join": function () {
+      if (CV.mode === "join") { CV.mode = ""; CV.from = ""; cvPaint(); return; }
+      if (cvNodes().length < 2) {
+        toast("A line joins two nodes, so there have to be two of them.");
+        return;
+      }
+      CV.mode = "join"; CV.from = "";
+      cvPaint();
+      toast("Pick the step it comes from, then the one it goes to. Escape to stop.");
+    },
+    "cv-join-from": function (id) {
+      cvMenuClose();
+      CV.mode = "join"; CV.from = id; CV.sel = id;
+      cvPaint();
+      toast("Now pick what it joins to.");
+    },
+    "cv-thing-here": function (id) {
+      cvMenuClose();
+      thingDialog(cvWfId(), id);
+    },
+    "cv-undo": function () { cvMenuClose(); cvUndoOne(); },
+    "cv-redo": function () { cvMenuClose(); cvRedoOne(); },
+    "cv-zoom": function (id) { cvZoom(id === "in" ? 1.2 : 1 / 1.2); },
+    "cv-fit": function () { cvFit(); cvPaint(); },
+    "cv-tidy": function () {
+      if (!cvWfId()) return;
+      cvApplyLayout(cvWfId(), "laid the sheet out again");
+    },
+
+    /* --- the two acts the menu needed that did not exist --- */
+    /* DUPLICATE COPIES THE NODE AND NOT ONE EDGE. The brief says so and
+       it is right: a copy of a step is a step you are about to place
+       somewhere else in the sequence, so inheriting its predecessors
+       would put it in a flow you have not decided on yet. It also clears
+       every run mark, because a copy of a finished step has not been
+       done. */
+    "node-dup": function (id) {
+      cvMenuClose();
+      var n = byId(state.wfNodes, id); if (!n) return;
+      var copy = stamp({
+        id: uid(), workflowId: n.workflowId, type: n.type,
+        label: n.label + " (copy)",
+        positionX: num(n.positionX) + 28, positionY: num(n.positionY) + 34,
+        config: JSON.parse(JSON.stringify(n.config || {})), retired: false
+      });
+      state.wfNodes.push(copy);
+      var w = byId(state.workflows, n.workflowId);
+      var ver = w ? num(w.version) || 1 : 1;
+      if (w) { w.version = ver + 1; stamp(w); }
+      cvPush("copied " + clip(n.label, 20),
+        function () {
+          state.wfNodes = state.wfNodes.filter(function (x) { return x.id !== copy.id; });
+          var x = byId(state.workflows, n.workflowId); if (x) { x.version = ver; stamp(x); }
+        },
+        function () {
+          if (!byId(state.wfNodes, copy.id)) state.wfNodes.push(copy);
+          var x = byId(state.workflows, n.workflowId); if (x) { x.version = ver + 1; stamp(x); }
+        });
+      CV.sel = copy.id;
+      go();
+      toast("Copied · nothing is joined to it · Undo", cvUndoOne);
+    },
+    /* DISCONNECT cuts every line touching the node, says how many as a
+       word, and refuses BY NAME when there are none. Neither this nor
+       Duplicate asks for a confirmation: both are reversible and the
+       undo is on the message, which is this app's rule for a routine
+       act. */
+    "node-cut": function (id) {
+      cvMenuClose();
+      var n = byId(state.wfNodes, id); if (!n) return;
+      var cut = state.wfEdges.filter(function (e) {
+        return e.fromNodeId === n.id || e.toNodeId === n.id;
+      });
+      if (!cut.length) { toast("Nothing is joined to " + clip(n.label, 24) + "."); return; }
+      var ids = cut.map(function (e) { return e.id; });
+      var w = byId(state.workflows, n.workflowId);
+      var ver = w ? num(w.version) || 1 : 1;
+      state.wfEdges = state.wfEdges.filter(function (e) { return ids.indexOf(e.id) < 0; });
+      if (w) { w.version = ver + 1; stamp(w); }
+      var say = "cut " + numWord(cut.length) + " " + plural(cut.length, "line") + " off " + clip(n.label, 18);
+      cvPush(say,
+        function () {
+          cut.forEach(function (e) { if (!byId(state.wfEdges, e.id)) state.wfEdges.push(e); });
+          var x = byId(state.workflows, n.workflowId); if (x) { x.version = ver; stamp(x); }
+        },
+        function () {
+          state.wfEdges = state.wfEdges.filter(function (e) { return ids.indexOf(e.id) < 0; });
+          var x = byId(state.workflows, n.workflowId); if (x) { x.version = ver + 1; stamp(x); }
+        });
+      go();
+      toast(cap(say) + " · Undo", cvUndoOne);
+    }
+  });
 
   addActions({
     /* --- assets --- */
@@ -4206,6 +5685,7 @@
            hand-copying a key list at a second site is how Coffer lost
            grants out of a restored backup. */
         state = APP.hydrate(raw, blank());
+        cvClearUndo();
         clearOpen(); go();
         toast("Restored.");
       });
@@ -4214,6 +5694,7 @@
       var before = emptyBook() ? null : JSON.parse(JSON.stringify(state));
       function load() {
         state = sampleData();
+        cvClearUndo();
         clearOpen(); view = "home"; go(); railPaint();
         toast("Example loaded", before ? function () { state = APP.hydrate(before, blank()); clearOpen(); } : null);
       }
@@ -4231,7 +5712,7 @@
         message: "All " + counts + " records in this workspace go, on this computer. It cannot be undone, and it cannot be recovered from anywhere else — this book is kept here and nowhere else. Save a copy first if you want one.",
         confirmLabel: "Erase it all", cancelLabel: "Keep it"
       }, function () {
-        state = blank(); clearOpen(); view = "home"; go(); railPaint();
+        state = blank(); cvClearUndo(); clearOpen(); view = "home"; go(); railPaint();
         toast("Erased.");
       });
     }
@@ -4928,6 +6409,30 @@
      needs wiring by hand. The caret is put back where it was, because a
      re-render on every keystroke otherwise sends it to the end of the
      line and typing a word in the middle becomes impossible. */
+  /* The node menu is a floating card rather than a dialog: no scrim, no
+     focus trap, so it has to close on the gestures a card closes on. And
+     the Escape STACK is written once, in `cvEscape()` — written twice it
+     stops stacking, and one press cleared the node AND left the mode. */
+  function cvWireDoc() {
+    if (document.body.getAttribute("data-cvdoc")) return;
+    document.body.setAttribute("data-cvdoc", "1");
+    document.addEventListener("pointerdown", function (ev) {
+      if (!cvMenuOpen) return;
+      if (ev.target.closest && ev.target.closest("#cvMenu")) return;
+      cvMenuClose();
+    }, true);
+    window.addEventListener("scroll", function () { if (cvMenuOpen) cvMenuClose(); }, true);
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Escape") return;
+      /* The overlay owns Escape while a dialog is up: the shared runtime
+         installs its own handler and this one must not fight it. */
+      if (document.getElementById("overlay") && document.getElementById("overlay").children.length) return;
+      if (!cvMenuOpen && !CV.sel && CV.mode !== "join") return;
+      cvEscape();
+      ev.preventDefault();
+    });
+  }
+
   function wireLibSearch() {
     var el = document.getElementById("libQ");
     if (!el) return;
@@ -4971,8 +6476,8 @@
     hydrate: adoptState,
     renderView: renderView,
     onTabChange: function () { clearOpen(); projTab = "projects"; projFilter = ""; },
-    afterRender: function () { railPaint(); wireLibSearch(); },
-    afterBoot: function () { paintTheme(); railPaint(); },
+    afterRender: function () { railPaint(); wireLibSearch(); cvWire(); cvPaint(); },
+    afterBoot: function () { paintTheme(); railPaint(); cvWireDoc(); },
     actions: ACTIONS
   };
 
