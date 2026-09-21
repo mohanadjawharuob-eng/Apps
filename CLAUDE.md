@@ -3721,3 +3721,265 @@ keeping:
 - **A press on empty space picks NOTHING**, and asserting that a click focuses
   the sheet *and* picks a node was asserting the opposite of the rule. Letting
   go has to mean letting go; the keyboard's first key is what picks one.
+
+## mashghal2 rebuilt again, on two nouns
+
+Its owner said the round-3 rebuild did not feel right, and then agreed with
+all four readings of why: **it had no point of view · there was too much to
+learn · it looked generic · it was wrong about my work.** Three of those four
+are one fault with one cause, and the cause is the one the section above
+already names — except that the section above only diagnosed the *grading*.
+The deeper half is this:
+
+> **Asking "what does this app already have that answers this?" is discipline
+> once and a policy never.** Seven rounds of it against documents describing a
+> different app meant the record grew A LIST PER FEATURE and the bar grew A TAB
+> PER LIST. Jobs, projects, workflows, wfNodes, wfEdges, runs, runNodes,
+> actions, assets, people, personLinks, schedule, reports, timeEntries —
+> **fourteen nouns for one person's work**, each of them a table whose name the
+> reader had to learn before they could find anything. That is the whole of
+> "too much to learn", and most of "no point of view".
+
+All fourteen are the same two things.
+
+- **A CARD** is anything with a name: a project, a step, somebody you are
+  waiting on, a deadline, a laptop, a site, a scholarship.
+- **A LINK** is either **then** (this comes after that) or **with** (these
+  belong together, in no particular order). The two edge kinds survive from
+  rev-1 unchanged, because that distinction is the one thing the model rests
+  on.
+
+**A CARD OPTS INTO BEHAVIOUR RATHER THAN HAVING A TYPE**, and the behaviours
+compose: it waits on someone · has a day · files the work away · holds other
+cards · opens something · comes round again. A card that waits can be late. A
+card that files is what *unfiled* means. A card that holds is a project — or a
+site, or a job, or a thesis — **by the same mechanism**, so the app never has
+to know which. That is the whole of *"it was wrong about my work"*: the only
+thing the app knows about a card's kind is the word its owner typed into it.
+
+**NOT ONE OF THE SIX BEHAVIOURS IS STORED.** Four are read off the field that
+carries them — a day makes a card dated, a name makes it waiting, an interval
+makes it repeat, a path makes it openable — so there is no flag that can
+disagree with the field beside it. The two with no field of their own are the
+only thing stated, as one `role`, for exactly the reason `parked` is stated on
+a project in the original: from the outside, a project holding nothing and a
+card holding nothing are the same thing and no derivation can tell them apart.
+
+**And the sections are gone**, which is what pays for the rest. There is no
+table to navigate to, because there is one list of cards: **a screen is a
+QUESTION over it.** Four of them — Now (what needs me) · Sheet (how does this
+work go) · Index (what have I got) · Ask (anything else) — with Settings on the
+gear, and each is the one rendering its question deserves. What is late is a
+list, because that is a list. How a piece of work goes is a drafting sheet,
+because that is a shape.
+
+**Containment is one stated forward pointer and the reverse is walked**
+(`c.in`, with `heldBy`/`trailOf`/`underneath` derived), the same discipline as
+the old app's `atId` — and deliberately NOT a link, because a step comes AFTER
+another step and a sherd is FOUND AT a site, and conflating them would list
+the site among the things the step follows.
+
+### The ladder, and the two ways it broke
+
+Ten rungs, and they **partition**: `late · due again · not filed · today ·
+yours to do · waiting · blocked · not yet due · done`, plus `thing` for a card
+that is not work at all. Nothing about it is stored. Two faults, both found by
+reading the rendered screen rather than by any assertion:
+
+- **A HOLDER'S RUNG IS THE WORST OF WHAT IT HOLDS**, and its own missed date
+  if that is worse. Read off its own fields alone, a project holding a late
+  step printed *"Yours to do — nothing is in the way"* on its row and *"Late"*
+  on its own page twelve pixels apart. Two answers to one question, which is
+  the fault this whole rebuild is about, at the size of one card.
+- **THE LADDER IS OVER WORK, AND A HOLDER IS NOT WORK.** Counted, the sample's
+  two late steps read *"five things are late"* — three of them being the
+  containers of the other two. Now answers *what needs me*, and a project does
+  not need you: the step inside it does. So the tiles and the sections are one
+  walk over `workCards()`, the whole book is that plus the holders, and
+  Settings' own sentence says so rather than inviting a reader to add the
+  parts and find they do not reach the total.
+- **A SAVED QUESTION MAY NOT DISAGREE WITH A TILE.** `late` in the lens
+  language matched every card on the late rung while Now counted only work, so
+  the sample's own saved question answered **five under a tile reading two**.
+  Every term naming a rung is marked `rung: true` and wrapped to read the
+  screen's walk, and there is a test that compares the two figures.
+- **THE HEADLINE COUNTS EXACTLY WHAT THE TILES SHOW.** It counted late + due +
+  unfiled beside four tiles showing late, unfiled, today and yours-to-do —
+  four figures that add to something other than the sentence above them. There
+  is a tile per counted rung now, and the sentence names what it counted.
+
+### Every word on the ladder has to fit a card on the sheet
+
+*"Waiting on earlier work"* is about 130px of small caps against a 158px card,
+so on the drawing it ran out of both sides of the card and straight through
+the kind word beside it. Shortening the sheet's copy alone would be **two
+vocabularies for one ladder**, so the ladder's own words are short and the
+SENTENCE beside them carries the rest: **Blocked** over *"After Fix their
+notes."* says more than the long pill did.
+
+### The look: a drafting sheet, and one colour channel
+
+Paper-first with a real drafting-table dark, because a drafting sheet is
+paper. Square corners at 2px, **hairlines instead of fills**, one 2px rule
+under every heading, small-caps letterspaced annotations everywhere a label
+appears, a survey grid that pans and zooms with the work, and a **title block
+at the foot of every screen** the way every site drawing has one — which is
+also the honest home for the build string.
+
+**THE MODEL EARNED A SECOND COLOUR CHANNEL BACK.** The old app spent nine hues
+on identity and four on state and had to keep them rigidly apart. Here a
+card's kind is **a word its owner typed**, so a hue the app assigned to a word
+it has never heard of would be decoration dressed as meaning: identity is a
+glyph and a word, full stop, which frees every hue for state. Oxide is late,
+brass is drift, verdigris is in hand — and **waiting still carries no colour at
+all**, because a card waiting three days against a five-day chase is not a
+problem. There is deliberately no `.n-calm` on the sheet for the same reason.
+
+**`--receded` IS NOT A TEXT COLOUR, for the fifth time — and this time it was
+deleted.** It measured 2.63:1 on the kind word, the section counts and the
+breadcrumb separator, all of which a reader has to read. Solving it for 4.6:1
+landed **within one point of `--faint`**, which is the answer: a fifth grey
+whose only honest value is the fourth one's does not exist. Dimmer is not the
+same as invisible.
+
+### What reading the rendered screens found
+
+Fourteen faults, not one of them visible to an assertion. The two model ones
+are above; these are the rest, and each is a class:
+
+- **THE THEME WAS IN TWO PLACES AND THEY DISAGREED AT ONCE.** `settings.theme`
+  lived in the book beside a pre-paint reader that has to read `localStorage`,
+  because the main script has not loaded yet — so the reader stamped
+  `data-theme` before the first paint and `paintTheme()` then REMOVED it, the
+  freshly loaded book saying nothing. **Which theme this laptop shows is a
+  fact about the laptop**, like sync config, not part of the record; it lives
+  in `localStorage` alone now. The tell was in the harness: both themes
+  measured identically.
+- **A SUB-LINE IS A LINE.** Left inline it ran straight on from the kind word:
+  *"Renew the visa VISAIts day was Sep 17"* — two facts welded into one word.
+- **A count of nought is not worth a clause**, and a sentence about nothing
+  should not be printed: *"2 cards · 0 lines"*, *"0 cards and 0 lines in the
+  book"*, *"Of the cards, 0 are not work and 0 are open"*.
+- **A small count in prose is a WORD**; a figure in a tile, a heading or a
+  **title block** stays a figure. The prose scan reads the screen with the
+  title block removed, because a drawing's metadata strip is a figure strip.
+- **The verb follows the count that is the SUBJECT**, not the noun beside it:
+  *"one of the seven pieces of work in it ARE done"*.
+- **"nought of the three"** and **"three of the three … are done"** under the
+  word *Done* are both the arithmetic showing through the sentence.
+- **THE PILL CARRIES THE WORD, so the sentence beside it does not.** Every
+  surface that printed a holder's standing printed its pill too: *"LATE  Late ·
+  one of the seven…"*.
+- **Two figures side by side must name their bases.** *"What it holds: 9"* over
+  *"1 of 7 done"* is two counts a reader can see disagree; nine are the cards
+  in it and seven are the ones that can come due, so the sentence says which.
+- **A holder is not marked done.** Its standing is the standing of what is in
+  it, so a stated `done` on the project itself would be a fact arguing with a
+  derived one, with six open steps underneath it. Opening its sheet is the
+  loud act instead.
+- **"Look at it" is not offered on the page you are looking at**, and there is
+  no second *"Open its sheet"* below the list when the header already carries
+  it — the same action twice with one dressed as a choice.
+- **THE TRAIL ENDS AT THE PARENT.** Its last crumb was the current sheet's own
+  name, an inch above the heading that says it — a duplicate *and* a control
+  that goes where you already are. At the top there is no crumb row at all,
+  because its one crumb would be the heading.
+- **A picker whose first answer is always refused.** The link dialog opened on
+  whichever end was first in sheet order, which was usually one already
+  joined, so pressing *Draw it* got a refusal. It opens on an end it can
+  actually join.
+- **Two sentences may not run together**: *"With N. Haddad and L. Mroueh three
+  days"* read as a sentence that had lost a word.
+- **A name can end in a question mark**, and *"Do we go round again?."* is a
+  sentence that lost an argument with its own punctuation.
+- **A reference table's left column is a literal you TYPE**, so it is mono at
+  its own case: small-capped by the facts table's label style, `in:name` read
+  as `IN:NAME` and stopped looking like something to type.
+- **A fold's count has to be true.** *"What it does — six fields"* held seven,
+  because a note is not a behaviour; the note came out of the fold, which also
+  made it the one thing anybody actually types on the visible half.
+- **The sample's own first saved question answered nothing.** *"Who am I
+  chasing"* returned nought, because the one card that waits on a person was
+  blocked by a `then` line joining it to your own writing — a line that should
+  never have been drawn. A feature with no representation in the sample cannot
+  be shown to anybody, and neither can one the sample accidentally suppresses.
+
+### Driving it found five more, and four are about a canvas
+
+- **`fill: none` IS NOT HIT-TESTABLE**, and a dashed frame with a hollow middle
+  is most of a holder's area — so a press inside one went straight through to
+  the grid and panned the sheet instead of picking the card. `pointer-events:
+  all` keeps the frame hollow and makes its interior answer a press, which is
+  the whole reason the property exists.
+- **THE `<svg>` IS MOUNTED ONCE AND ONLY ITS CONTENTS ARE REDRAWN.** Rebuilding
+  the box's `innerHTML` per frame destroyed the element holding the **pointer
+  capture** on the FIRST move of a drag — so the card never moved, `pointerup`
+  never fired on the live element, and the sheet read as a drawing that could
+  be looked at and nothing more. It took the keyboard focus with it too. The
+  viewBox is an attribute and the cards are the contents; neither needs a new
+  element.
+- **PICKING A CARD MAY NOT MOVE THE SHEET UNDER THE FINGER.** The strip is in
+  the flow rather than floating, so it grows the moment a card is picked —
+  which pushed every card down by the height of a row of buttons, and the next
+  press landed on the grid or on a different card. A stated `min-height` is the
+  fix: the empty strip is already as tall as the picked one. (The test learned
+  the same rule from the other side: **a stored coordinate on a canvas is a
+  coordinate about the last frame**, so it measures the node again immediately
+  before each press.)
+- **A CARD WITH NO POSITION HAS NEVER BEEN PLACED**, so placing it is not a
+  re-layout. *"Nothing re-lays-out on its own"* is about throwing away a
+  position somebody chose; seeding one nobody has chosen is the opposite, and
+  without it the sample drew every card on top of every other at the origin —
+  a sheet that looked like it held one card. An unplaced card among placed ones
+  is nudged clear rather than re-ranking the sheet.
+- **`fitted` starts as null and not `""`**, because the top sheet's own id IS
+  `""` — so an empty string there meant the first sheet anybody opened was
+  never fitted at all.
+- **A SHORT GRAPH IS NOT CENTRED IN A TALL VIEW.** One row of cards in a 580px
+  box put a quarter of a screen of blank grid above the work and another
+  quarter below it, which reads as the work having been lost.
+- **Moving a card picks it**, so the strip names what you just moved.
+
+### And two the phone found
+
+- **`align-items: flex-start` IS THE CROSS AXIS, AND IN A COLUMN THAT IS
+  HORIZONTAL** — so `main` sized itself to its own content and a 320px screen
+  scrolled sideways by fourteen pixels. `align-items: stretch` in the phone
+  query.
+- **An absolutely positioned badge needs a positioned ancestor.** `.tab` was
+  not positioned, so the late count on the FIRST tab resolved against the page
+  and was drawn ten pixels past the right edge of a 320px screen.
+- **The rail's order is stated**, because `.railtop` is `display: contents` on
+  a laptop and its children are therefore the rail's own flex items — so the
+  footer, second in the markup for the phone's top row, sat second in the
+  column with `margin-top: auto` pushing everything after it down.
+
+### The old book is offered, never read
+
+`mashghal2.v1` is w3's book and holds a different shape. It is not read, not
+written and not lost: it is **offered**, once, and imported only on a tap. The
+import is **additive** — nothing here is replaced and the old key is never
+written to, so w3's book stays exactly where it is — and it is **lossy and
+says so before it runs**, naming what it cannot carry. Time logged against a
+claimant is the one thing with no card shape: hours are a sum over stretches,
+not a thing with a name, and inventing a card per stretch would put six
+hundred rows in the Index to say what one figure says.
+
+### The tests
+
+`w4.js` (30, the ladder partitions and the screens answer their questions) ·
+`w4b.js` (34, driving the sheet: drag, undo, redo, the menu against the strip,
+the keyboard, descending into a holder, removal keeping what was filed under
+it) · `w4c.js` (58, the phone at 390/360/320, the focus ring on every
+control, a book where every countable thing is exactly one, and the sheet's
+own words at every state tone in both themes) · `look4.js` (60, every run of
+text on every screen in both themes, at rest AND under the pointer, with
+`fill` read for SVG text only) · `twoapps.js` (11, the clone and the original
+cannot see each other's book).
+
+Two harness rules this round re-earned. **`\uXXXX` in a bash heredoc is
+sometimes decoded and sometimes not**, so half the source files hold a real em
+dash and half hold the six-character escape — build a match string with the
+real character (`D = "—"` and concatenate) and never type the escape.
+And **a batch of replacements that asserts halfway through and writes at the
+end loses every earlier edit**: save after each one.
