@@ -3577,3 +3577,147 @@ because each is a harness fault that reported an app fault:
   regression: the Library's rows became `.arow` with a Copy button beside the
   name, so `.drow[data-act="asset-open"]` stopped matching. Fix it in the same
   change.
+
+### The canvas, and the one undo it is allowed to have
+
+`mashghal2/` draws a workflow as a sheet at **w3**. It is ArcGIS
+ModelBuilder on purpose — a cut-corner rectangle is a process and an oval is
+data, the vocabulary its owner reads professionally — and **the list is not
+replaced**: one graph, two renderings, with the written-out steps behind a
+fold under the sheet, which is the rendering a keyboard reads and a phone can
+scan.
+
+**THE BRIEF'S THREE CANVAS RULES ARE ALL RULES AGAINST BEING CLEVER, and each
+one changed code rather than being agreed with.**
+
+- *"node appears at current viewport center. Do not automatically connect
+  it."* So `nodeDialog` **asks** what a step comes after, defaulting to
+  nothing, where it used to join the new step to whatever was added last. A
+  hidden auto-connection is a procedure the app wrote, and a visible
+  pre-filled picker is neither hidden nor automatic.
+- *"No automatic smart rearrangement."* Tidy is a button. Nothing calls a
+  layout on its own, so adding one step to a forty-step procedure cannot
+  throw away positions somebody placed by hand.
+- *"The user owns the procedure."* Nothing infers a dependency and nothing
+  draws an edge the record does not hold.
+
+**ONE UNDO WITH TWO ROUTES, and what makes it safe is what the stack HOLDS.**
+This app's standing rule is that the undo is the toast's, with no stack,
+because the example, a restored copy and erasing everything all **replace**
+state and a closure captured before that would mutate records the book no
+longer has. The brief asks for Undo and Redo on the toolbar. Both are true at
+once because every entry in `cvUndo` closes over **ids and values, never a
+record object** — putting one back is a lookup that no-ops if the thing is
+gone — and the stack is dropped in the three named places that swap the book,
+rather than being hoped about. The toast's Undo button calls the same
+`cvUndoOne()` the toolbar does and pops the same stack: *two undos for one act
+is the fault two copies of one list is.*
+
+**ONE LADDER, TWO RENDERINGS, in three more places.**
+
+- `nodeStand(n, run)` gives the canvas footer and the run page's list the same
+  word, so the sheet cannot say a step is Waiting while the words under it say
+  Running. The words are the brief's own seven — Needs configuration · Ready ·
+  Running · Waiting · Blocked · Complete · Failed — plus **Skipped**, because
+  a branch not taken is a real state and calling it Complete would be a lie.
+- `nodeActs(n, run)` is one list the inspector lays across and the right-click
+  menu lays down, with a test that reads both and fails if the strings differ.
+  On a **run** it is the run's own acts and nothing structural: editing the
+  procedure from inside one pass through it would change every other run of
+  the same workflow, which is the surprise the record's split exists to
+  prevent.
+- **"Needs configuration" names what is missing** — a send with nobody to send
+  it to, a decision with fewer than two ways out, a filing step with nowhere
+  to file. A badge nobody can act on is a conclusion with nothing attached.
+
+**A BACK EDGE IS A DFS STACK TEST**, still, and the **arc over the top** is
+how a loop reads rather than a hue: colour is the state channel and a path is
+not a state. What a run actually DID is derived and inked — the source done
+and the target entered — so the sheet says which way it went without storing
+a second record of it.
+
+**A POSITION IS LAYOUT AND NOT STRUCTURE**, so moving a node does not bump the
+workflow's version and a drag on a run page does not claim the procedure
+changed. Adding, joining, cutting and removing do bump it, and the undo
+restores the version with the change.
+
+#### What driving it and looking at it found
+
+- **TWO RECORDS OF ONE FACT, and it had already drifted.** `CV.wf` sat beside
+  `openWf` and five sites set one without the other, so the sheet came up
+  empty straight after creating a workflow. The canvas reads
+  `openWf`/`openRun` through `cvWfId()`/`cvRun()` and stores neither. *This is
+  the same fault the whole rebuild is about, at the size of one variable.*
+- **`preventDefault` ON POINTERDOWN STOPS THE BROWSER FOCUSING THE SHEET.** So
+  every arrow key after a click went to the body and the canvas was a
+  pointer-only screen again — the exact thing the keyboard work was for. It is
+  focused by hand now, with `preventScroll`, which also removes the measured
+  184 → 269px jump between `pointerdown` and `contextmenu` that cost the
+  original four attempts at its menu. The node still comes from **the press**;
+  that rule did not stop being true, it stopped being the only problem.
+- **The first arrow key has to be able to pick a node.** The `focus` handler
+  fires *before* the press that cleared the selection finishes, so clicking
+  empty space left the sheet focused with nothing picked and every arrow after
+  that doing nothing.
+- **TWO NODES ADDED IN A ROW LANDED ON TOP OF EACH OTHER**, because the centre
+  of the view does not move between two adds. The sheet read as holding one
+  node, which is not "no automatic rearrangement" — it is a drawing that lies
+  about what the record holds. `cvCentre()` nudges until it is clear.
+- **A FORWARD EDGE TO A NODE THAT IS NOT TO THE RIGHT ROUTED BACKWARDS.** A
+  decision and the step it branches to share an x, so the line left the
+  source's right edge, swung out past it and came back left — a drawing saying
+  the flow goes the wrong way. Which ports a line uses is geometry, not a
+  constant: side to side when the target really is to the right, top to bottom
+  when it is below.
+- **THE PHONE OPENED ON EMPTY GRID, for two separate reasons.** A page header
+  whose buttons squeezed `.ph-main` to about 110px wrapped the title to three
+  lines and its one-line description to four, putting the sheet 480px down an
+  800px screen — 300px of header, now 150, with the title taking the width and
+  the buttons the line under it. And **the fit centred a short graph in a tall
+  view**: the floor pins the zoom, so the spare room in an axis is room
+  nothing can use, and half a phone of blank sheet above the first step reads
+  as the work being lost. A floored fit anchors on the step that matters and
+  is then pulled back so the view never shows more empty sheet than work.
+- **`--receded` IS NOT A TEXT COLOUR, the fourth time.** The chevron on a row
+  measured 3.35:1 dark and 2.46:1 light, and it is the only thing on the row
+  saying the row opens something.
+- **The menu's Remove wore a box no other row had**, because the base
+  `.btn.danger` border won on equal specificity against `.cvmenu .cvmrow`.
+  Two renderings of one list may not disagree about what its rows mean, and
+  that includes what they are wearing.
+
+#### Measuring a drawing, and the one way the harness lies about it
+
+**MEASURE THE TEXT ON A NEW DRAWING YOURSELF.** A contrast walk written before
+the canvas existed does not know it is there: `look2.js` reads `style.color`,
+and SVG text is coloured by `fill`, so every word on the sheet was skipped and
+the walk still passed. *"Nothing found" is not "nothing wrong."*
+
+The trap in fixing it is the one already recorded: **CSS `fill` applies to
+every element and its initial value is black**, so reading `fill` on an HTML
+`<p>` measures black text and reports a ratio that **inverts between the two
+themes** — which is the tell that the harness is wrong and not the app. So
+`fill` is read for SVG `text` only, and the ground is the shape behind the
+label (a node's own fill, a label's mask, or the sheet) rather than an
+ancestor's background.
+
+`cvlook.js` then prints the sheet's own numbers at **every one of the seven
+state tones**, because the first two sheets it visited happened to show only
+two of them and *a state colour nobody measured is a state colour nobody has
+checked* — the alarm one most of all. All seven clear 4.5:1 in both themes;
+the tightest is 5.02:1. Its failure stop is written to be **idempotent**, since
+the record persists between the two theme passes and a stop that only works
+the first time reports a fault on the second.
+
+`cv.js` is the driving test — 59 assertions on drag, undo, redo, Connect, the
+refusal, the loop, the menu against the inspector, the keyboard, a run's own
+acts, Tidy and 390px. Two things it got wrong about itself first, both worth
+keeping:
+
+- **A test can pick a bad subject.** Connecting two steps failed because the
+  two it chose overlapped after a drag, so a press at one node's centre was a
+  press on the other — the app behaving correctly. It runs on the sample's
+  laid-out sheet now.
+- **A press on empty space picks NOTHING**, and asserting that a click focuses
+  the sheet *and* picks a node was asserting the opposite of the rule. Letting
+  go has to mean letting go; the keyboard's first key is what picks one.
