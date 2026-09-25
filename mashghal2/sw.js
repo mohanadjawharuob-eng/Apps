@@ -1,5 +1,5 @@
 /* Offline shell for Mashghal. Scope: /Apps/mashghal2/ */
-var CACHE = 'pwa-mashghal2-v4';
+var CACHE = 'pwa-mashghal2-v5';
 var PRECACHE = [
   "./",
   "../icons/mashghal-192.png",
@@ -31,10 +31,13 @@ self.addEventListener('activate', function (e) {
       .then(function (keys) {
         return Promise.all(keys.map(function (k) {
           // Only tidy up this app's own older caches. The sibling apps share an
-          // origin, so a blanket delete would wipe their offline copies. Mashghal
-          // has never lived under /deep/apps/, so there is no legacy prefix here.
+          // origin, so a blanket delete would wipe their offline copies — and the
+          // prefix has to be this clone's own: 'pwa-mashghal-' matches the
+          // ORIGINAL app's caches and never matches 'pwa-mashghal2-', so the
+          // rule as first written both threatened the wrong app's offline copy
+          // and never cleared one of this app's own.
           if (k === CACHE) return null;
-          return k.indexOf('pwa-mashghal-') === 0 ? caches.delete(k) : null;
+          return k.indexOf('pwa-mashghal2-') === 0 ? caches.delete(k) : null;
         }));
       })
       .then(function () { return self.clients.claim(); })
@@ -90,7 +93,7 @@ self.addEventListener('fetch', function (e) {
             settled = true;
             resolve(hit || new Response(
               '<!doctype html><meta charset=utf-8><title>Mashghal</title>' +
-              '<body style="margin:0;background:#1b1e24;color:#e9e5dd;font:15px system-ui;' +
+              '<body style="margin:0;background:#0b1220;color:#e7ecf4;font:15px system-ui;' +
               'display:grid;place-items:center;height:100vh"><p>Offline, and this device has no copy yet.</p>',
               { headers: { 'Content-Type': 'text/html' } }
             ));

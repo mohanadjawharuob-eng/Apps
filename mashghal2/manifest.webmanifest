@@ -1,14 +1,14 @@
 {
   "id": "/Apps/mashghal2/",
-  "name": "Mashghal — a card and a link",
+  "name": "Mashghal — My Career & Work Hub",
   "short_name": "Mashghal",
-  "description": "One noun and one relation: a card is anything with a name, a link says then or with",
+  "description": "Career, work and knowledge as connected views of one professional record — with a bibliography you can export",
   "display": "standalone",
   "orientation": "portrait-primary",
   "start_url": "./",
   "scope": "./",
-  "background_color": "#efe9dc",
-  "theme_color": "#f2ede2",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
   "icons": [
     {
       "src": "../icons/mashghal-192.png",
