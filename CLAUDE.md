@@ -2836,6 +2836,143 @@ to visit.* 72 checks: every run of text in both themes, at rest and under the
 pointer, 390px with nothing past the edge, the last problem row reachable
 inside the scrolled box, and the app's own focus ring on every control.
 
+## Where your stuff is, and the other shape
+
+Four things asked for at once: *"can we make things in a different form than
+a list? also can you like make it more interactive? adding the ability to
+store path and places where documents are linked to these, also don't forget
+to make a directory tab that can be used to hook files and links and stuff in
+it yk sort like a universal Telephone directory for where i have my stuff."*
+
+### The path is a field, and the Directory is a question
+
+**WHERE THE DOCUMENTS ARE IS A FIELD, NOT A NOUN.** `asset`, `output` and the
+Library already carried `path` and `url`; every other record now does too,
+through `docFields(rec, what)` written **once** in the model, because eleven
+dialogs ask for the same pair and a copy per dialog would drift on the first
+rewording. A project's folder is a fact about that project, the same as its
+dates. `openHandle()` stays the one place that decides what “open”
+means, so nothing grew a button that cannot do what it says.
+
+**AND THE DIRECTORY IS NOT A NEW LIST.** That is the whole design, and it is
+the rule this rebuild exists to enforce: a screen is a QUESTION over the one
+record. So it is the **stated** half — `state.assets`, a bookmark, a drive,
+a folder that belongs to no one project — plus the **derived** half, every
+other record carrying a path or a link. A project's folder therefore cannot
+be in the Directory and missing from the project, and renaming the project
+renames its entry. A second “locations” list pointing back at records
+would be two things to keep in step, which is the fault that cost this app a
+whole rewrite.
+
+**THE CHIPS ARE `openHandle()`'S OWN LADDER**, not a second reading of it:
+**Links** (a url, which really opens) · **Files and folders** (a path, which
+is copy-only) · **Nothing to open** (a device, a shelf). So they partition
+the list, All is their sum, and the chip a row sits under can never disagree
+with the button on it. A record carrying both shows under Links, because the
+url is the one that opens — and the row prints the path anyway. There is a
+test that adds the chips up against a walk of the record.
+
+**On the Directory the row IS the open control**, and that is the only screen
+in the app where a row does not navigate: it is a launcher, and row → page →
+“Open the link” is two taps to do the one thing. The chevron beside it
+still reaches the record, and a row with nothing to open is already opened by
+itself, so it carries no chevron — the same action twice with one dressed as
+a choice.
+
+### A list and a grid are two questions, so the shape is a SETTING
+
+A list answers *what is next*; a grid of cards answers *what have I got*.
+Twenty skills in five groups read as a column of identical rows, which is what
+its owner said. `shapedOf(kind, list, opts)` is the one place that decides,
+so no screen can draw cards while the switch says rows, and `cardOf` reads
+`recName`, `standOf` and `saysOf` exactly as `rowOf` does — a card and a row
+cannot disagree about a record.
+
+**It is `settings.shape`, not view state**, against this app's usual rule that
+a tab lands on its list: it is how you like to READ, not where you have
+navigated, so surviving a reload is the entire point. Same argument Field mode
+won in the app this replaces. **What you typed into a sift box is the
+opposite** and resets on a tab press, or the Directory opens on four of forty
+entries with the reason two screens up.
+
+**A card is a `<div>` with a full-bleed `<button>` inside it.** A card that can
+be opened AND carries its own controls cannot be one button — the same trick
+`.rowpair` uses one level down. State stays in its one channel: a pill with a
+word and the card's left edge, never a coloured card.
+
+**Past about eight entries a sift box appears** beside the switch. It reads the
+name and everything already on the row (the group, the organisation, the note,
+the path), so typing part of a folder finds the project it belongs to, and it
+says **how many of how many** matched — a list silently shortened reads as
+records having gone missing.
+
+### Five faults, and each is a rule
+
+- **THIS APP PASSES ONE ARGUMENT AND THE SECOND IS THE ELEMENT.** The runtime
+  dispatches `APP.actions[name](el.getAttribute("data-id"), el)`, so a
+  `data-v` attribute — which Coffer uses and this app does not — is read
+  by nothing: the handler got the BUTTON where it expected a word.
+  `settings.shape` never left “rows”, and `dirFacet` was set to an
+  element, which then took the whole Directory down on
+  `DIR_FACETS.filter(...)[0].word`. One spelling, the app's own. **And a facet
+  this app has no word for may not take the page down**: it is cleared rather
+  than read straight into `.word`.
+- **SAY IT ONCE, and `cardFacts` was saying everything twice.** A skill read
+  *“One project, one training, one workflow, one library entry and two
+  outputs”* and then *“seven links”*; a training read *“· February
+  2025”* then *“February 2025”*; a Directory card printed where it
+  points in its sub-line and again in its strip. `saysOf` is thorough, so the
+  only thing a card can add that a row cannot is **where the files are** —
+  which is the one fact this round exists to carry. The strip is that and
+  nothing else. The row had the same fault one level up: it printed the kind
+  word that the section heading above it already carried.
+- **A CLIP IN CHARACTERS IS NOT A CLIP IN PIXELS.** `clip(path, 42)` is the
+  right guard against a 300-character path and no guard at all against a
+  42-character one in a 240px card — it overflowed and was cut
+  mid-character with nothing saying so. The cell ellipsises; the clip stays
+  for the other case.
+- **A SIFT BOX IS NOT A HERO.** At `flex: 1 1 11rem` it grew to 1200px on a
+  laptop: a search field wider than the list it sifts. `flex: 0 1 22rem`.
+- **AN EMPTY CHIP SAYS SO BEFORE THE SIFT BOX IS DRAWN.** Putting the sift
+  guard first meant a chip holding nothing returned with the box's own
+  message, which is empty when nothing is typed — so the screen rendered a
+  heading and then nothing at all. The durable half of that fix is in
+  `siftSays` itself rather than in three call sites: a caller that returns on
+  “nothing shown” is always handed something to print.
+
+Two more the reading found, both pre-existing and neither visible to an
+assertion: **“1 of three actions on it are done”** — a digit beside a
+spelled-out count, and a plural verb after a subject of one; the subject is
+what is DONE, so one done takes “is”. And **a scroll container that is
+Tab-focusable needs the app's own ring**, which is how `.impprev` and then
+every new control here went into the one focus-ring rule the day they were
+written.
+
+**A SECOND CALLER MOVED AN ANSWER.** The finder's *where is a document* shape
+read `state.lib` alone, which was the whole of “where is my stuff” while
+only a library place could carry a path. It reads `directory()` now — the
+same walk that screen uses — so the answer and the screen cannot disagree.
+And the Directory is a tab with **no pages inside it**, so `findSects()`,
+which walks `PAGES`, could not see it: a screen findable only by somebody who
+already knows it is there is not a route.
+
+**The example carries paths and links now**, on a project, a role, a training,
+a workflow and a library entry, with one record holding **both** — because
+the Directory is derived, so without them the one book anybody is ever shown
+opened it on four pieces of equipment. *A feature with no representation in
+the sample is a feature nobody can be shown.*
+
+**`m5dir.js`** (98: the tab, the chips against a walk of the record, a path is
+never an href, the row opens what it says, the chevron, the sift box keeping
+its caret, the switch reaching the record and surviving a reload, the two
+document fields on ten dialogs, and a path written on a project turning up in
+the Directory) and **`m5dirlook.js`** (418: every run of text on the new
+surfaces in both shapes and both themes, at rest and under the pointer, at
+1400/390/320px, nothing past the edge, six tabs on one row, the app's own
+focus ring). And **`m5phone.js` now NAMES the six tabs** rather than counting
+five — *name a tab, never count one*, one level up: the count broke the day
+the Directory landed and said only that the number had moved.
+
 ## What an audit of the running app found
 
 Eleven of these came out of driving the real interface rather than reading the

@@ -47,6 +47,29 @@ output). The one human-readable list says in its own header that it is *not*
 APA, MLA, Chicago or Harvard, because a hand-rolled named style is a plausible
 wrong answer and this app would rather show a visible limit.
 
+## Where your stuff is
+
+Every record can say where its documents live — `path` for a folder or file
+on the machine, `url` for a link — and the **Directory** tab is every one of
+those in one place. It is **derived, not a list you maintain**: it fills
+itself from those fields plus `state.assets`, which is the stated half (a
+drive, a bookmark, a folder belonging to no project). So a project's folder
+cannot be in the Directory and missing from the project.
+
+Its chips are `openHandle()`'s own ladder — **Links** open, **Files and
+folders** are copy-only because a page served over https may not open a local
+file, **Nothing to open** is a device or a place — so they partition the list
+and All is their sum. On this one screen the row *is* the open control, which
+is the only place in the app where a row does not navigate.
+
+## Two shapes, one switch
+
+Every list draws as rows or as cards, and the switch sits above the list. A
+list answers *what is next*; cards answer *what have I got*. It is
+`settings.shape` — **a setting, not view state** — because it is how you
+like to read rather than where you have navigated, so it survives a reload.
+What you type into a sift box is the opposite and resets on a tab press.
+
 ## Feeding it from a file
 
 Typing a career in one record at a time is the honest way to build one and a

@@ -521,6 +521,8 @@ color-scheme: light;
   .bcrumb:focus-visible, .chip:focus-visible, .tevt:focus-visible,
   .pcard:focus-visible, .mrow:focus-visible, summary:focus-visible,
   .panel.wide:focus-visible, .dact:focus-visible, .impprev:focus-visible,
+  .cardhit:focus-visible, .diropen:focus-visible, .dirgo:focus-visible,
+  .shapebtn:focus-visible,
   input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: 2px solid var(--blue); outline-offset: 2px;
   }
@@ -664,6 +666,119 @@ color-scheme: light;
   .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .tbl th { text-align: left; padding: 0.35rem 0.6rem 0.35rem 0; border-bottom: 1px solid var(--rule); }
   .tbl td { padding: 0.4rem 0.6rem 0.4rem 0; border-bottom: 1px solid var(--rule-soft); overflow-wrap: anywhere; }
+  /* ---- CARDS: THE OTHER SHAPE ----
+
+     A list answers "what is next" and a grid answers "what have I got" —
+     twenty skills in five groups, nine pieces of training, thirteen
+     projects. Both readings are real, so neither replaces the other and
+     which one you get is a SETTING rather than view state: it is how you
+     like to read, not where you have navigated to.
+
+     The card is a <div> with a full-bleed <button> inside it, because a
+     card that can be opened AND carries its own controls cannot be one
+     button — the same trick `.rowpair` uses one level down. */
+
+  .cards {
+    display: grid; gap: 0.7rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(15.5rem, 100%), 1fr));
+  }
+  .card {
+    display: flex; flex-direction: column; min-width: 0;
+    border: 1px solid var(--rule); border-radius: 12px; background: var(--raised);
+    overflow: hidden; transition: var(--t);
+  }
+  .card:hover { border-color: var(--rule-strong); }
+  /* State stays in the one channel it is allowed: a pill with a word, and
+     the card's left edge. Never a coloured card. */
+  .card.e-late  { box-shadow: inset 3px 0 0 var(--oxide); }
+  .card.e-drift { box-shadow: inset 3px 0 0 var(--brass); }
+  .card.e-hand  { box-shadow: inset 3px 0 0 var(--sage); }
+  .cardhit {
+    appearance: none; -webkit-appearance: none; background: none; border: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 0.3rem; min-width: 0;
+    padding: 0.7rem 0.75rem; flex: 1 1 auto; transition: var(--t);
+  }
+  .cardhit:hover { background: var(--surface); }
+  .cardtop { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+  .cardtop .nm {
+    font-family: var(--disp); font-size: var(--fs-md); color: var(--ink);
+    min-width: 0; overflow-wrap: anywhere;
+  }
+  .cardhit .sub {
+    font-size: var(--fs-sm); color: var(--faint); line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .cardfacts {
+    display: flex; flex-wrap: wrap; gap: 0.3rem 0.45rem; margin-top: 0.1rem;
+    min-width: 0; max-width: 100%;
+  }
+  .cardfacts > span {
+    font-size: var(--fs-xs); color: var(--dim); font-family: var(--mono);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%; min-width: 0;
+  }
+  .cardfoot {
+    display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+    padding: 0.45rem 0.6rem; border-top: 1px solid var(--rule-soft);
+    background: var(--sunken);
+  }
+  .cardfoot .grow { flex: 1 1 0; min-width: 0; }
+
+  /* ---- the shape switch, and the box that sifts a long page ---- */
+
+  .shaperow {
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    margin: 0.2rem 0 0.7rem;
+  }
+  .sift {
+    flex: 0 1 22rem; min-width: 0; font: inherit; font-size: var(--fs-sm);
+    padding: 0.4rem 0.6rem; border-radius: 9px; border: 1px solid var(--rule);
+    background: var(--raised); color: var(--ink);
+  }
+  .sift::placeholder { color: var(--faint); }
+  .shapeset { display: flex; gap: 0.2rem; }
+  .shapebtn {
+    appearance: none; background: none; border: 1px solid transparent;
+    border-radius: 8px; padding: 0.3rem 0.4rem; cursor: pointer;
+    color: var(--faint); display: grid; place-items: center; transition: var(--t);
+  }
+  .shapebtn:hover { color: var(--ink); border-color: var(--rule); }
+  .shapebtn[aria-pressed="true"] {
+    color: var(--ink); border-color: var(--rule-strong); background: var(--raised);
+  }
+  .siftsays { font-size: var(--fs-xs); color: var(--faint); }
+
+  /* ---- the Directory: the row IS the open control ---- */
+
+  .dirline {
+    display: flex; align-items: stretch; gap: 0; min-width: 0;
+    border: 1px solid var(--rule); border-radius: 10px; background: var(--raised);
+    overflow: hidden; transition: var(--t);
+  }
+  .dirline:hover { border-color: var(--rule-strong); }
+  .dirline + .dirline { margin-top: 0.4rem; }
+  .diropen {
+    appearance: none; background: none; border: 0; font: inherit; color: inherit;
+    text-align: left; cursor: pointer; display: flex; align-items: center;
+    gap: 0.55rem; padding: 0.55rem 0.7rem; flex: 1 1 0; min-width: 0;
+    text-decoration: none; transition: var(--t);
+  }
+  .diropen:hover { background: var(--surface); }
+  .diropen .grow { flex: 1 1 0; min-width: 0; }
+  .diropen .nm { display: block; }
+  .dirwhere {
+    display: block; font-family: var(--mono); font-size: var(--fs-xs);
+    color: var(--dim); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 100%;
+  }
+  .dirgo {
+    appearance: none; background: none; border: 0; border-left: 1px solid var(--rule-soft);
+    color: var(--faint); cursor: pointer; padding: 0 0.5rem; display: grid;
+    place-items: center; transition: var(--t);
+  }
+  .dirgo:hover { color: var(--ink); background: var(--surface); }
+
   .impprev {
     max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
     margin-top: 0.8rem;
@@ -1143,7 +1258,7 @@ color-scheme: light;
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w6 · 25 Sep 2026";
+  var BUILD = "w7 · 25 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -1202,7 +1317,7 @@ color-scheme: light;
       /* ---- THE RELATIONSHIP LAYER ---- */
       links: [],       // {id,rel,a,b,note}    a and b are "kind:id"
 
-      settings: { owner: "", offered: false },
+      settings: { owner: "", offered: false, shape: "rows" },
       forgotten: {}    // id -> name, so a removed record still reads
     };
   }
@@ -1230,12 +1345,50 @@ color-scheme: light;
     var t = raw.settings || {};
     s.settings.owner = typeof t.owner === "string" ? t.owner : "";
     s.settings.offered = !!t.offered;
+    /* WHICH SHAPE A LIST IS DRAWN IN IS A SETTING, NOT VIEW STATE, against
+       this app's usual rule that a tab lands on its list. Everything else
+       mode-ish resets because it is about where you have navigated; this is
+       about how you like to READ, so surviving a reload is the whole point.
+       The same argument Field mode won in the app this replaces. */
+    s.settings.shape = t.shape === "cards" ? "cards" : "rows";
     /* THE THEME IS NOT IN THE BOOK. It lived in `settings.theme` beside a
        pre-paint reader that has to read `localStorage`, because the main
        script has not loaded yet — two sources of truth for one fact, and
        they disagreed at once. Which theme this screen shows is a fact about
        the screen, like which device you are on, not part of the record. */
     return s;
+  }
+
+  /* ============================================================
+     WHERE THE DOCUMENTS ARE IS A FIELD, NOT A NOUN.
+
+     Asked for "the ability to store path and places where documents are
+     linked to these", the shape that does not unravel the model is the one
+     `asset`, `output` and the Library already had: `path` and `url` on the
+     record itself. A project's folder is a fact about that project, the
+     same as its dates — a second list of "locations" pointing back at
+     records would be two things to keep in step, which is the fault this
+     whole rebuild exists to correct.
+
+     `openHandle()` stays the ONE place that decides what "open" means, so
+     nothing here grows a button that cannot do what it says.
+     ============================================================ */
+  var DOC_KINDS = ["role", "job", "education", "training", "project", "workflow",
+    "output", "person", "asset", "lib", "portfolio", "cv"];
+  function hasDoc(rec) { return !!(rec && (rec.path || rec.url)); }
+  /* The two document fields, written once because eleven dialogs ask for
+     them and a copy per dialog would drift on the first wording change. */
+  function docFields(rec, what) {
+    rec = rec || {};
+    return [
+      { key: "path", label: "Where its files are", value: rec.path || "", span: true,
+        more: true,
+        hint: "A folder or a file on this machine \u2014 " +
+          "C:\\Work\\" + (what || "this") + ". A page served over https may not open " +
+          "a local file, so it is copy-only and the screen says so where it is true." },
+      { key: "url", label: "A link", value: rec.url || "", span: true, more: true,
+        hint: "A Drive folder, a shared document, a site. This one really does open." }
+    ];
   }
 
   /* ============================================================
@@ -1280,6 +1433,9 @@ color-scheme: light;
 
   /* One more glyph, for a row that is a question rather than a record. */
   G.ask = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.2"/><path d="M8 7.8a2 2 0 1 1 2.6 1.9c-.5.2-.8.6-.8 1.1v.5"/><path d="M10 14.2h.01"/></svg>';
+
+  /* A ring binder: the Directory is a book of where things are. */
+  G.dir = '<svg viewBox="0 0 22 22" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11.5v15H6a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8.2 3.5v15"/><path d="M11 7.6h4M11 11h4"/></svg>';
 
   var KINDS = {
     /* CAREER */
@@ -2725,6 +2881,8 @@ color-scheme: light;
   var back = [];        // where Back goes, one push per navigation
   var libTopic = "";    // the Library's topic lens
   var projFilter = "";  // the Projects chip
+  var sift = {};        // page key -> what is typed in its sift box
+  var dirFacet = "";    // the Directory's chip
 
   var PAGES = {
     career: [
@@ -2842,6 +3000,153 @@ color-scheme: light;
       esc(opts.cutWord || "Take it out") + '" title="' +
       esc(opts.cutWord || "Take it out") + '">\u00d7</button></div>';
   }
+  /* ---------------- THE OTHER SHAPE ----------------
+
+     A list is the right rendering of "what is next" and a poor one of
+     "what have I got": twenty skills in five groups read as a column of
+     identical rows, which is what its owner said in as many words. A grid
+     of cards gives every entry a shape of its own and puts five or six on
+     a screen instead of one and a half.
+
+     ONE BUILDER, so a card and a row cannot disagree about a record. Both
+     read `recName`, `standOf` and `saysOf`; the card adds a facts strip and
+     a footer, which is room a row does not have. */
+  function cardOf(kind, rec, opts) {
+    opts = opts || {};
+    var r = ref(kind, rec.id);
+    var st = opts.stand || standOf(kind, rec);
+    var sub = opts.says != null ? opts.says : saysOf(kind, rec, opts);
+    var edge = st && st.tone && st.tone !== "done" && st.tone !== "calm"
+      ? " e-" + st.tone : "";
+    var foot = [];
+    if (st && st.word) {
+      foot.push('<span class="pill p-' + st.tone + '">' + esc(st.word) + "</span>");
+    }
+    (opts.foot || []).forEach(function (h) { foot.push(h); });
+    return '<div class="card' + edge + '">' +
+      '<button class="cardhit" data-act="open" data-id="' + esc(r) + '" title="' +
+      esc(recName(rec, kind)) + '">' +
+      '<span class="cardtop">' + itile(kind, rec) +
+      '<span class="nm">' + esc(recName(rec, kind)) + "</span></span>" +
+      (sub ? '<span class="sub">' + (opts.rawSays ? sub : esc(sub)) + "</span>" : "") +
+      ((opts.facts || []).length
+        ? '<span class="cardfacts">' + opts.facts.map(function (f) {
+            return "<span>" + esc(f) + "</span>"; }).join("") + "</span>"
+        : "") +
+      "</button>" +
+      (foot.length ? '<div class="cardfoot">' + foot.join("") + "</div>" : "") +
+      "</div>";
+  }
+  /* The mono strip along a card's foot: the two or three facts a row puts
+     in its sub-line and a card has room to set apart. Written once, so a
+     card of a project on one screen matches a card of a project on
+     another, and a path appearing here is the same path the Directory
+     lists. */
+  function cardFacts(kind, rec) {
+    if (!hasDoc(rec)) return [];
+    return [clip((rec.url || rec.path).replace(/^https?:\/\//, ""), 42)];
+  }
+  function cardsOf(kind, list, opts) {
+    return '<div class="cards">' + list.map(function (rec) {
+      return cardOf(kind, rec, typeof opts === "function" ? opts(rec) : opts);
+    }).join("") + "</div>";
+  }
+  /* THE ONE PLACE THAT DECIDES WHICH SHAPE A LIST TAKES, so no screen can
+     draw cards while the switch says rows. */
+  function shapeNow() { return state.settings.shape === "cards" ? "cards" : "rows"; }
+  function shapedOf(kind, list, opts) {
+    if (shapeNow() !== "cards") return rowsOf(kind, list, opts);
+    return cardsOf(kind, list, function (rec) {
+      var o = {};
+      Object.keys(opts || {}).forEach(function (k) { o[k] = opts[k]; });
+      if (!o.facts) o.facts = cardFacts(kind, rec);
+      return o;
+    });
+  }
+  G.rows = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 6h13M3.5 10h13M3.5 14h13"/></svg>';
+  G.grid = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.2" y="3.2" width="6" height="6" rx="1.2"/><rect x="10.8" y="3.2" width="6" height="6" rx="1.2"/><rect x="3.2" y="10.8" width="6" height="6" rx="1.2"/><rect x="10.8" y="10.8" width="6" height="6" rx="1.2"/></svg>';
+
+  /* THE SWITCH AND THE SIFT BOX SIT IN ONE ROW, because both are about how
+     to read the list under them rather than about the record. The box only
+     appears past a threshold: a filter over three rows is a control that
+     answers a question nobody has. */
+  function shapeRow(key, n, what) {
+    var typed = sift[key] || "";
+    var box = "";
+    if (n > 7 || typed) {
+      box = '<input class="sift" id="sift-' + esc(key) + '" type="search" ' +
+        'placeholder="Sift ' + esc(countWords(n, what[0], what[1])) + '\u2026" ' +
+        'value="' + esc(typed) + '" data-sift="' + esc(key) + '" ' +
+        'aria-label="Sift the list by name" />';
+    }
+    return '<div class="shaperow">' + box +
+      '<span class="grow"></span>' +
+      '<div class="shapeset" role="group" aria-label="How to draw the list">' +
+      '<button class="shapebtn" data-act="shape" data-id="rows" aria-pressed="' +
+      (shapeNow() === "rows") + '" title="As a list" aria-label="As a list">' +
+      G.rows + "</button>" +
+      '<button class="shapebtn" data-act="shape" data-id="cards" aria-pressed="' +
+      (shapeNow() === "cards") + '" title="As cards" aria-label="As cards">' +
+      G.grid + "</button></div></div>";
+  }
+  /* Sifting reads the NAME and the words already on the row, so typing a
+     path finds the project that folder belongs to. It says how many of how
+     many, because a list silently shortened reads as records having gone. */
+  function sifted(key, kind, list) {
+    var q = String(sift[key] || "").trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(function (rec) {
+      return [recName(rec, kind), rec.group, rec.org, rec.kind, rec.note,
+        rec.path, rec.url, rec.place, rec.basis, rec.outcome]
+        .filter(Boolean).join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  function siftSays(key, shown, all, what) {
+    if (!shown && !all) {
+      return '<div class="panel"><p class="says">Nothing here yet.</p></div>';
+    }
+    if (!String(sift[key] || "").trim()) return "";
+    if (!shown) {
+      return '<div class="panel"><p class="says">Nothing here matches \u201c' +
+        esc(sift[key]) + "\u201d. " + countWords(all, what[0], what[1]) +
+        " in all \u2014 clear the box to see " +
+        (all === 1 ? "it" : "them") + " again.</p></div>";
+    }
+    return '<p class="siftsays">' + shown + " of " +
+      esc(countWords(all, what[0], what[1])) + " match \u201c" +
+      esc(sift[key]) + "\u201d.</p>";
+  }
+
+  /* WHERE ITS DOCUMENTS ARE, as a facts row, through the one function that
+     decides what "open" means \u2014 so the row can never offer a button
+     that does nothing. */
+  function docRows(rec) {
+    var out = [];
+    if (rec.url) {
+      out.push(["A link", '<a href="' + esc(rec.url) + '" target="_blank" ' +
+        'rel="noopener">' + esc(clip(rec.url.replace(/^https?:\/\//, ""), 56)) + "</a>"]);
+    }
+    if (rec.path) {
+      out.push(["Where its files are",
+        '<span class="dirwhere" style="white-space:normal">' + esc(rec.path) + "</span>"]);
+    }
+    return out;
+  }
+  /* The buttons for it, for a record page's own header. A path is COPY
+     ONLY and the screen says why, because a page served over https may not
+     navigate to file:///C:/… — every browser blocks it and Chrome blocks
+     it silently, so a control that quietly did nothing would be worse than
+     no control. */
+  function docActs(kind, rec) {
+    var out = "";
+    if (rec.url) {
+      out += '<a class="btn" href="' + esc(rec.url) + '" target="_blank" rel="noopener">' +
+        "Open the link</a>";
+    }
+    if (rec.path) out += btn("doc-copy", ref(kind, rec.id), "Copy the path");
+    return out;
+  }
+
   G.chev = '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 5.5l5 4.5-5 4.5"/></svg>';
 
   function rowsOf(kind, list, opts) {
@@ -2978,8 +3283,13 @@ color-scheme: light;
 
   /* A COUNT PAIR STILL HAS TO AGREE WITH ITSELF. "0 of 1 actions done"
      read a plural noun off the total while the number beside it was one. */
+  /* A SMALL COUNT IN PROSE IS A WORD, AND THE VERB FOLLOWS THE COUNT THAT
+     IS THE SUBJECT. It read "1 of three actions on it are done" \u2014 a
+     digit beside a spelled-out count, and a plural verb after a subject of
+     one. The subject is what is DONE, so one done takes "is". */
   function ofWords(done, total, one, many) {
-    return done + " of " + total + " " + (total === 1 ? one : many) + " done";
+    return numWord(done) + " of " + numWord(total) + " " +
+      (total === 1 ? one : many) + (done === 1 ? " is" : " are") + " done";
   }
   /* A `says` is a SENTENCE on its own and a CLAUSE inside a sub-line, so the
      full stop comes off when it is being joined to something else. */
@@ -3134,11 +3444,21 @@ color-scheme: light;
         }
       }
     }
-    out.push(rowsOf("lib", list.slice().sort(byName), { kindw: "" }));
+    /* AN EMPTY CHIP SAYS SO BEFORE THE SIFT BOX IS DRAWN. Left after it,
+       a chip holding nothing returned with the sift box's own message —
+       which is empty when nothing is typed — so the screen rendered a
+       heading and then nothing at all. */
     if (!list.length) {
       out.push('<div class="panel">' + emptyLines("Nothing on that chip.",
         "The counts beside each chip say where the entries are.") + "</div>");
+      return out.join("");
     }
+    out.push(shapeRow("lib", list.length, LIST_WORDS.lib));
+    var shown = sifted("lib", "lib", list);
+    var says = siftSays("lib", shown.length, list.length, LIST_WORDS.lib);
+    if (!shown.length) { out.push(says); return out.join(""); }
+    if (says) out.push(says);
+    out.push(shapedOf("lib", shown.slice().sort(byName), { kindw: "" }));
     return out.join("");
   }
   function byName(a, b) { return String(a.name).localeCompare(String(b.name)); }
@@ -3455,11 +3775,17 @@ color-scheme: light;
         : "Press New " + word.toLowerCase() + ".") + "</div>");
       return out.join("");
     }
-    if (kind === "skill") out.push(skillsList(list));
-    else if (kind === "role") out.push(rolesList(list));
-    else {
-      out.push(rowsOf(kind, list.slice().sort(byDateDesc), {}));
-    }
+    var word2 = { role: ["role", "roles"], education: ["piece of education",
+      "pieces of education"], training: ["training", "trainings"],
+      skill: ["skill", "skills"] }[kind];
+    out.push(shapeRow("career-" + kind, list.length, word2));
+    var shown = sifted("career-" + kind, kind, list);
+    var says = siftSays("career-" + kind, shown.length, list.length, word2);
+    if (!shown.length) { out.push(says); return out.join(""); }
+    if (says) out.push(says);
+    if (kind === "skill") out.push(skillsList(shown));
+    else if (kind === "role") out.push(rolesList(shown));
+    else out.push(shapedOf(kind, shown.slice().sort(byDateDesc), {}));
     return out.join("");
   }
   function byDateDesc(a, b) {
@@ -3474,18 +3800,22 @@ color-scheme: light;
      was at. Work under no employer keeps its own heading rather than being
      hidden — a role on your own account is a real role. */
   function rolesList(list) {
-    var out = [], seen = {};
+    var out = [], seen = {}, inList = {};
+    list.forEach(function (r) { inList[r.id] = 1; });
     state.jobs.forEach(function (j) {
-      var rs = jobRoles(j.id);
+      /* SIFTING NARROWS WHAT IS DRAWN, NOT WHAT IS GROUPED. Left reading
+         `jobRoles(j.id)` whole, typing in the box shortened the count on
+         the heading and not the rows under it. */
+      var rs = jobRoles(j.id).filter(function (r) { return inList[r.id]; });
       if (!rs.length) return;
       rs.forEach(function (r) { seen[r.id] = 1; });
       out.push(sectHead(j.name, rs.length));
-      out.push(rowsOf("role", rs.slice().sort(byDateDesc), { knows: { job: 1 } }));
+      out.push(shapedOf("role", rs.slice().sort(byDateDesc), { knows: { job: 1 } }));
     });
     var loose = list.filter(function (r) { return !seen[r.id]; });
     if (loose.length) {
       out.push(sectHead("Under no employer", loose.length));
-      out.push(rowsOf("role", loose.slice().sort(byDateDesc), {}));
+      out.push(shapedOf("role", loose.slice().sort(byDateDesc), {}));
     }
     return out.join("");
   }
@@ -3517,8 +3847,8 @@ color-scheme: light;
         "exists not to be.</p></div>");
     }
     order.forEach(function (g) {
-      out.push(sectHead(g === "—" ? "No group said" : g, by[g].length));
-      out.push(rowsOf("skill", by[g].slice().sort(function (a, b) {
+      out.push(sectHead(g === "\u2014" ? "No group said" : g, by[g].length));
+      out.push(shapedOf("skill", by[g].slice().sort(function (a, b) {
         var d = skillEvidenceCount(b.id) - skillEvidenceCount(a.id);
         return d || String(a.name).localeCompare(String(b.name));
       }), {}));
@@ -3647,6 +3977,7 @@ color-scheme: light;
           esc(spanWords(r.startedOn, r.endedOn)), r.place ? esc(r.place) : ""]
           .filter(Boolean).join(" · "),
         btn("role-edit", r.id, "Edit", "btn primary") +
+        docActs("role", r) +
         btn("link-add", ref("role", r.id), "Link it to…") +
         btn("proj-add", r.id, "New project under it") +
         btn("role-del", r.id, "Remove", "btn danger"))];
@@ -3660,7 +3991,7 @@ color-scheme: light;
       ["Where", r.place ? esc(r.place) : unsaid()],
       ["Responsibilities", r.duties
         ? '<span style="white-space:pre-wrap">' + esc(r.duties) + "</span>" : unsaid()]
-    ]));
+    ].concat(docRows(r))));
     out.push(notePanel(r));
 
     out.push(sectHead("Projects under it", projects.length));
@@ -3697,6 +4028,7 @@ color-scheme: light;
     var out = [crumbTo("work", "jobs", "Employers"),
       pageHeadOf(j.name, [j.kind, j.place].filter(Boolean).map(esc).join(" · "),
         btn("job-edit", j.id, "Edit", "btn primary") +
+        docActs("job", j) +
         btn("role-add", j.id, "New role here") +
         btn("proj-add-job", j.id, "New project here") +
         btn("job-del", j.id, "Remove", "btn danger"))];
@@ -3705,7 +4037,7 @@ color-scheme: light;
       ["Where", j.place ? esc(j.place) : unsaid()],
       ["Site", j.url ? '<a href="' + esc(j.url) + '" target="_blank" rel="noopener">' +
         esc(clip(j.url, 56)) + "</a>" : unsaid()]
-    ]));
+    ].concat(docRows(j))));
     out.push(notePanel(j));
     /* AN EMPLOYER HOLDS ROLES AND PROJECTS, AND THEY ARE DIFFERENT
        QUESTIONS. One organisation has several roles over years and several
@@ -3734,6 +4066,7 @@ color-scheme: light;
       pageHeadOf(e.name,
         [e.org, spanWords(e.startedOn, e.endedOn)].filter(Boolean).map(esc).join(" · "),
         btn("edu-edit", e.id, "Edit", "btn primary") +
+        docActs("education", e) +
         btn("link-add", ref("education", e.id), "Link it to…") +
         btn("edu-del", e.id, "Remove", "btn danger"))];
     /* ONLY THE ROWS THAT CAN HAVE A VALUE. "Award — not said" and
@@ -3744,7 +4077,7 @@ color-scheme: light;
       ["Where", e.org ? esc(e.org) : unsaid()],
       ["When", esc(spanWords(e.startedOn, e.endedOn)) || unsaid()],
       ["Result", e.result ? esc(e.result) : unsaid()]
-    ]));
+    ].concat(docRows(e))));
     out.push(notePanel(e));
     var sk = ofKind(both(ref("education", e.id)), "skill").filter(recOf);
     if (sk.length) { out.push(sectHead("Skills it taught", sk.length)); out.push(refRows(sk)); }
@@ -3762,7 +4095,8 @@ color-scheme: light;
     var cert = (t.ref || "").trim();
     var certLink = /^https?:\/\//i.test(cert);
     var acts = btn("train-edit", t.id, "Edit", "btn primary") +
-      btn("link-add", ref("training", t.id), "Link a skill it taught…");
+      docActs("training", t) +
+        btn("link-add", ref("training", t.id), "Link a skill it taught…");
     if (cert && certLink) {
       acts += '<a class="btn" href="' + esc(cert) + '" target="_blank" rel="noopener">' +
         "Open the certificate</a>";
@@ -3787,7 +4121,7 @@ color-scheme: light;
             : '<span style="font-family:var(--mono);font-size:var(--fs-xs)">' +
               esc(cert) + "</span>")
         : unsaid("not recorded")]
-    ]));
+    ].concat(docRows(t))));
     out.push(notePanel(t));
     /* TRAINING → SKILL → PROJECT → EVIDENCE is the chain the plan asks
        for, and this is its first link. */
@@ -3931,9 +4265,15 @@ color-scheme: light;
         "Press " + btnWord(head[2]) + ".") + "</div>");
       return out.join("");
     }
-    if (kind === "project") out.push(projectsList(list));
-    else if (kind === "output") out.push(outputsList(list));
-    else out.push(rowsOf(kind, list.slice().sort(byName), {}));
+    var word2 = LIST_WORDS[LIST_FOR[kind]] || ["entry", "entries"];
+    out.push(shapeRow("work-" + kind, list.length, word2));
+    var shown = sifted("work-" + kind, kind, list);
+    var says = siftSays("work-" + kind, shown.length, list.length, word2);
+    if (!shown.length) { out.push(says); return out.join(""); }
+    if (says) out.push(says);
+    if (kind === "project") out.push(projectsList(shown));
+    else if (kind === "output") out.push(outputsList(shown));
+    else out.push(shapedOf(kind, shown.slice().sort(byName), {}));
     return out.join("");
   }
 
@@ -3983,7 +4323,7 @@ color-scheme: light;
         "The counts beside each chip say where the projects are.") + "</div>");
       return out.join("");
     }
-    out.push(rowsOf("project", show, {}));
+    out.push(shapedOf("project", show, {}));
     return out.join("");
   }
 
@@ -3998,7 +4338,7 @@ color-scheme: light;
     });
     order.forEach(function (y) {
       out.push(sectHead(y, by[y].length));
-      out.push(rowsOf("output", by[y], {}));
+      out.push(shapedOf("output", by[y], {}));
     });
     return out.join("");
   }
@@ -4124,6 +4464,7 @@ color-scheme: light;
         btn("act-add-proj", p.id, "New action") +
         btn("out-add-proj", p.id, "New output") +
         btn("run-add", p.id, "Run a workflow") +
+        docActs("project", p) +
         btn("link-add", ref("project", p.id), "Link it to…") +
         btn("hours-add-proj", p.id, "Log time") +
         btn("proj-del", p.id, "Remove", "btn danger"))];
@@ -4134,8 +4475,12 @@ color-scheme: light;
       '<span class="says" style="flex:1 1 12rem">' +
       esc(st.says || "Nothing needs attention on it.") + "</span></div>" +
       (pr.total ? '<div style="margin-top:0.6rem">' + meterOf(pr.pct, st.tone) +
-        '<p class="says">' + pr.done + " of " + countWords(pr.total, "action", "actions") +
-        " on it " + (pr.total === 1 ? "is" : "are") + " done. That is the only percentage " +
+        /* A DIGIT BESIDE A SPELLED-OUT COUNT, and a verb following the
+           wrong one of the two: it read "1 of three actions on it are
+           done". The subject is what is DONE. */
+        '<p class="says">' + cap(numWord(pr.done)) + " of " +
+        countWords(pr.total, "action", "actions") +
+        " on it " + (pr.done === 1 ? "is" : "are") + " done. That is the only percentage " +
         "in this app, and it is a count of what you marked — not a prediction.</p></div>"
         : "") + "</div>");
 
@@ -4154,7 +4499,7 @@ color-scheme: light;
       mins ? ["Time logged", esc(hm(mins)) + " across " +
         esc(countWords(state.hours.filter(function (h) { return h.projectId === p.id; }).length,
           "entry", "entries"))] : null
-    ]) + "</div>");
+    ].concat(docRows(p))) + "</div>");
     out.push(notePanel(p));
 
     /* WHAT TO DO NEXT, and then WHAT CAME OUT OF IT — the two ends of a
@@ -4229,8 +4574,10 @@ color-scheme: light;
         btn("wf-edit", w.id, "Edit", "btn primary") +
         btn("wf-step", w.id, "Add a step") +
         btn("run-add-wf", w.id, "Run it on a project") +
+        docActs("workflow", w) +
         btn("link-add", ref("workflow", w.id), "Link it to…") +
         btn("wf-del", w.id, "Remove", "btn danger"))];
+    if (hasDoc(w)) out.push(factRows(docRows(w)));
     out.push(notePanel(w));
 
     out.push(sectHead("The procedure", steps.length));
@@ -4354,13 +4701,14 @@ color-scheme: light;
     var out = [crumbTo("work", "people", "People"),
       pageHeadOf(p.name, [p.role, p.org].filter(Boolean).map(esc).join(" · "),
         btn("person-edit", p.id, "Edit", "btn primary") +
+        docActs("person", p) +
         btn("link-add", ref("person", p.id), "Link it to…") +
         btn("person-del", p.id, "Remove", "btn danger"))];
     out.push(factRows([
       ["What they do", p.role ? esc(p.role) : unsaid()],
       ["Where", p.org ? esc(p.org) : unsaid()],
       ["Email", p.email ? '<a href="mailto:' + esc(p.email) + '">' + esc(p.email) + "</a>" : unsaid()]
-    ]));
+    ].concat(docRows(p))));
     out.push(notePanel(p));
     /* WHAT IS OUTSTANDING WITH THEM is derived from the actions that name
        them, so it can never disagree with the Actions page. */
@@ -4420,7 +4768,8 @@ color-scheme: light;
       acts3 += '<a class="btn" href="' + esc(h.href) + '" target="_blank" rel="noopener">' +
         esc(h.label) + "</a>";
     } else if (h.label) acts3 += btn("out-copy", o.id, h.label);
-    acts3 += btn("link-add", ref("output", o.id), "Link it to…") +
+    acts3 += docActs("output", o) +
+        btn("link-add", ref("output", o.id), "Link it to…") +
       (cites.length ? btn("out-bib", o.id, "Its bibliography") : "") +
       btn("out-del", o.id, "Remove", "btn danger");
     var out = [crumbTo("work", "outputs", "Outputs"),
@@ -4438,7 +4787,7 @@ color-scheme: light;
         esc(o.path) + "</span>"] : null,
       o.url ? ["Link", '<a href="' + esc(o.url) + '" target="_blank" rel="noopener">' +
         esc(clip(o.url, 56)) + "</a>"] : null
-    ]));
+    ].concat(docRows(o))));
     out.push(notePanel(o));
     if (cites.length) {
       out.push(sectHead("What it cites", cites.length));
@@ -4532,8 +4881,10 @@ color-scheme: light;
     var out = [crumbTo("show", "portfolio", "Portfolio"),
       pageHeadOf(i.name, esc(i.on ? partDate(i.on) : "") ,
         btn("port-edit", i.id, "Edit", "btn primary") +
+        docActs("portfolio", i) +
         btn("port-pick", i.id, "Point it at…") +
         btn("port-del", i.id, "Remove", "btn danger"))];
+    if (hasDoc(i)) out.push(factRows(docRows(i)));
     out.push(notePanel(i));
     out.push(sectHead("What it shows", ev.length));
     if (ev.length) {
@@ -4612,6 +4963,7 @@ color-scheme: light;
     var out = [crumbTo("show", "cvs", "CVs"),
       pageHeadOf(c.name, esc(c.aim || "No aim stated."),
         btn("cv-edit", c.id, "Edit", "btn primary") +
+        docActs("cv", c) +
         btn("cv-pick", c.id, "Put something in it") +
         (picks.length ? btn("cv-build", c.id, "Write it out") : "") +
         btn("cv-del", c.id, "Remove", "btn danger"))];
@@ -5083,6 +5435,13 @@ color-scheme: light;
     rows.push({ k: "page", tab: "settings", page: "", name: "Settings",
       key: "settings theme dark light erase wipe export backup version shortcuts owner",
       says: "the theme, your name, the record, and erasing it" });
+    /* The Directory is a tab with no pages inside it, so it is not in
+       `PAGES` and the walk above cannot see it. A screen findable only by
+       somebody who already knows it is there is not a route. */
+    rows.push({ k: "page", tab: "dir", page: "", name: "Directory",
+      key: "directory where files folders links paths stuff drives bookmarks " +
+        "shortcuts repo locations",
+      says: "every link and every path in the book, in one place" });
     rows.push({ k: "page", tab: "home", page: "", name: "Home",
       key: "home start dashboard", says: "the four questions at once" });
     return rows;
@@ -5107,6 +5466,8 @@ color-scheme: light;
     { act: "out-add", label: "New output", key: "new output add output deliverable" },
     { act: "cv-add", label: "New CV", key: "new cv add cv resume" },
     { act: "port-add", label: "New portfolio item", key: "new portfolio add portfolio" },
+    { act: "asset-add", label: "New Directory entry \u2014 a drive, a folder, a bookmark",
+      key: "new entry directory bookmark drive folder shortcut path link add" },
     { act: "import-json", label: "Feed the book from a file",
       key: "import json feed file cv resume load data paste bulk" },
     { act: "theme", label: "Switch the theme", key: "theme dark light switch" }
@@ -5234,19 +5595,28 @@ color-scheme: light;
           rows: outs.map(function (o) { return recHit("output", o); }),
           go: { act: "open", id: ref("project", p.id), label: "Open the project" } };
       } },
+    /* A SECOND CALLER MOVED THIS ANSWER. It read `state.lib` alone, which
+       was the whole of "where is my stuff" while only a library place
+       could carry a path. Now that every record can, the honest answer is
+       the Directory \u2014 and it reads `directory()`, the same walk that
+       screen uses, so the answer and the screen cannot disagree. */
     { shape: "where is a document",
       re: /\bwhere (?:is|are|do i keep|did i put)\s+(.+)$/i,
       grab: 1, run: function (name) {
-        var hits = state.lib.filter(function (e) {
-          return (e.name || "").toLowerCase().indexOf(name.toLowerCase()) >= 0 ||
-            (e.path || "").toLowerCase().indexOf(name.toLowerCase()) >= 0;
+        var q = name.toLowerCase();
+        var hits = directory().filter(function (e) {
+          return [recName(e.rec, e.kind), e.rec.path, e.rec.url, e.rec.place]
+            .filter(Boolean).join(" ").toLowerCase().indexOf(q) >= 0;
         });
         return { head: hits.length ? cap(countWords(hits.length, "entry", "entries")) +
-            " matching “" + name + "”." : "Nothing in the library matches “" +
-            name + "”.",
-          says: hits.length ? "a place carries the folder, the file or the link"
-            : "a place is a library entry — press “New place” to record one",
-          rows: hits.map(function (e) { return recHit("lib", e); }) };
+            " in the Directory match \u201c" + name + "\u201d."
+          : "Nothing in the Directory matches \u201c" + name + "\u201d.",
+          says: hits.length
+            ? "the Directory is every path and every link in the book, whatever " +
+              "record carries it"
+            : "write a path or a link onto any record and it appears in the Directory",
+          rows: hits.slice(0, 8).map(function (e) { return recHit(e.kind, e.rec); }),
+          go: { act: "tab-dir", id: "", label: "Open the Directory" } };
       } },
     { shape: "what I can show somebody",
       re: /\b(portfolio|what can i show|show somebody|show someone)\b/i,
@@ -5660,6 +6030,7 @@ color-scheme: light;
   var GUIDE_PARTS = [
     { id: "g-start", word: "Start here" },
     { id: "g-shape", word: "How it is put together" },
+    { id: "g-read", word: "Reading a long list" },
     { id: "g-career", word: "Career" },
     { id: "g-work", word: "Work" },
     { id: "g-lib", word: "The library" },
@@ -5668,6 +6039,7 @@ color-scheme: light;
     { id: "g-show", word: "Portfolio and CVs" },
     { id: "g-ask", word: "Finding and asking" },
     { id: "g-keys", word: "The keyboard" },
+    { id: "g-dir", word: "Where your stuff is" },
     { id: "g-feed", word: "Filling it from a file" },
     { id: "g-record", word: "Your record" }
   ];
@@ -5748,6 +6120,22 @@ color-scheme: light;
         "any of them.") + "</div>"));
 
     /* ---------------- career ---------------- */
+    out.push(gp("g-read", "Reading a long list",
+      '<div class="panel"><p class="says">Every list in the app can be drawn two ' +
+      "ways, and the switch sits at the top right of the list itself. A list " +
+      "answers <em>what is next</em>; cards answer <em>what have I got</em>. " +
+      "Twenty skills in five groups read better as cards; four actions read " +
+      "better as rows.</p>" +
+      gnote("It is <b>one choice for the whole app</b> and it survives a reload, " +
+        "because it is about how you like to read rather than where you have " +
+        "navigated to. Everything else mode-ish in here resets.") +
+      gnote("Past about eight entries a <b>sift box</b> appears beside the switch. " +
+        "It reads the name and everything already on the row \u2014 the group, the " +
+        "organisation, the note, the path \u2014 so typing part of a folder finds " +
+        "the project it belongs to. It says how many of how many matched, because " +
+        "a list silently shortened reads as records having gone missing.") +
+      "</div>"));
+
     out.push(gp("g-career", "Career — who you are professionally",
       '<div class="growlist">' +
       grow("Career → Profile → Edit", "Your profile",
@@ -5987,6 +6375,34 @@ color-scheme: light;
       }).join("") + "</tbody></table></div>"));
 
     /* ---------------- the record ---------------- */
+    out.push(gp("g-dir", "Where your stuff is",
+      '<div class="panel"><p class="says">Every record can say where its ' +
+      "documents live: a folder on this machine, a link, or both. The " +
+      "<b>Directory</b> tab is then every one of those in one place \u2014 which " +
+      "is the answer to \u201cwhere did I put the Tripoli data\u201d without " +
+      "remembering which project it was under.</p>" +
+      '<div class="page-acts" style="margin-top:0.7rem">' +
+      btn("tab-dir", "", "Open the Directory", "btn primary") +
+      btn("asset-add", "", "New entry") + "</div>" +
+      gnote("The two fields are on <b>every</b> edit dialog, under the fold: " +
+        "<b>Where its files are</b> and <b>A link</b>. A role, a degree, a piece of " +
+        "training, a project, a workflow, an output, a person, a portfolio piece, " +
+        "a CV \u2014 all of them.") +
+      gnote("<b>The Directory is not a list you maintain.</b> It fills itself from " +
+        "those fields, so a project folder cannot be in the Directory and missing " +
+        "from the project, and renaming the project renames its entry. Press " +
+        "<b>New entry</b> only for something that belongs to no record at all \u2014 " +
+        "a drive on a shelf, a bookmark, a shared folder.") +
+      gnote("<b>The chips are what tapping a row DOES</b>, not what kind of record " +
+        "it is: <b>Links</b> open, <b>Files and folders</b> are copy-only, and " +
+        "<b>Nothing to open</b> is a device or a place. A page served over https is " +
+        "not allowed to open a file on your computer \u2014 every browser refuses " +
+        "and Chrome refuses silently \u2014 so a path is handed to you to paste " +
+        "rather than drawn as a link that would do nothing.") +
+      gnote("On the Directory the row itself is the open control, which is the only " +
+        "place in the app where a row does not open a page. The chevron beside it " +
+        "still does.") + "</div>"));
+
     out.push(gp("g-feed", "Filling it from a file",
       '<div class="panel"><p class="says">Typing a career in one record at a time is ' +
       "the honest way to build it and a poor way to <em>start</em> one. So the book " +
@@ -6188,11 +6604,11 @@ color-scheme: light;
         { key: "site", label: "Link", value: j ? j.site : "", more: true },
         { key: "note", label: "Note", value: j ? j.note : "", type: "textarea", rows: 3,
           span: true, more: true }
-      ],
+      ].concat(docFields(j, "this employer")),
       validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
       onConfirm: function (v) {
         var rec = j || put("job", { id: uid() });
-        ["name", "kind", "place", "site", "note"].forEach(function (k) {
+        ["name", "kind", "place", "site", "note", "path", "url"].forEach(function (k) {
           rec[k] = (v[k] || "").trim();
         });
         stamp(rec);
@@ -6223,14 +6639,14 @@ color-scheme: light;
         { key: "note", label: "What the role was", value: r ? r.note : "", type: "textarea",
           rows: 4, span: true, more: true,
           hint: "This is what a CV prints under the title. Plain sentences." }
-      ],
+      ].concat(docFields(r, "this role")),
       validate: function (v) {
         if (!v.name.trim()) return "It needs a title.";
         return badDates(v, [["startedOn", "Started"], ["endedOn", "Ended"]]);
       },
       onConfirm: function (v) {
         var rec = r || put("role", { id: uid() });
-        ["name", "jobId", "startedOn", "endedOn", "place", "basis", "note"]
+        ["name", "jobId", "startedOn", "endedOn", "place", "basis", "note", "path", "url"]
           .forEach(function (k) { rec[k] = (v[k] || "").trim(); });
         stamp(rec);
         saveGo(r ? "Saved" : "Added " + rec.name);
@@ -6253,14 +6669,14 @@ color-scheme: light;
           hint: "A grade, a classification, “in progress” — or nothing." },
         { key: "note", label: "Note", value: e ? e.note : "", type: "textarea", rows: 3,
           span: true, more: true }
-      ],
+      ].concat(docFields(e, "this degree")),
       validate: function (v) {
         if (!v.name.trim()) return "It needs a name.";
         return badDates(v, [["startedOn", "Started"], ["endedOn", "Ended"]]);
       },
       onConfirm: function (v) {
         var rec = e || put("education", { id: uid() });
-        ["name", "org", "startedOn", "endedOn", "result", "note"].forEach(function (k) {
+        ["name", "org", "startedOn", "endedOn", "result", "note", "path", "url"].forEach(function (k) {
           rec[k] = (v[k] || "").trim();
         });
         stamp(rec);
@@ -6289,14 +6705,14 @@ color-scheme: light;
         { key: "ref", label: "Certificate number or link", value: t ? t.ref : "", more: true },
         { key: "note", label: "Note", value: t ? t.note : "", type: "textarea", rows: 3,
           span: true, more: true }
-      ],
+      ].concat(docFields(t, "this training")),
       validate: function (v) {
         if (!v.name.trim()) return "It needs a name.";
         return badDates(v, [["on", "When"]]);
       },
       onConfirm: function (v) {
         var rec = t || put("training", { id: uid() });
-        ["name", "org", "on", "kind", "ref", "note"].forEach(function (k) {
+        ["name", "org", "on", "kind", "ref", "note", "path", "url"].forEach(function (k) {
           rec[k] = (v[k] || "").trim();
         });
         rec.hours = v.hours || "";
@@ -6371,14 +6787,14 @@ color-scheme: light;
           "override the status."),
         { key: "note", label: "What it is", value: p ? p.note : "", type: "textarea",
           rows: 4, span: true, more: true }
-      ],
+      ].concat(docFields(p, "this project")),
       validate: function (v) {
         if (!v.name.trim()) return "It needs a name.";
         return badDates(v, [["startedOn", "Started"], ["endedOn", "Due or ended"]]);
       },
       onConfirm: function (v) {
         var rec = p || put("project", { id: uid() });
-        ["name", "jobId", "roleId", "status", "startedOn", "endedOn", "note"]
+        ["name", "jobId", "roleId", "status", "startedOn", "endedOn", "note", "path", "url"]
           .forEach(function (k) { rec[k] = (v[k] || "").trim(); });
         stamp(rec);
         saveGo(p ? "Saved" : "Added " + rec.name);
@@ -6398,11 +6814,11 @@ color-scheme: light;
           hint: "Your own word — Processing, Survey, Analysis, Admin." },
         { key: "note", label: "What it is for", value: w ? w.note : "", type: "textarea",
           rows: 3, span: true }
-      ],
+      ].concat(docFields(w, "this workflow")),
       validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
       onConfirm: function (v) {
         var rec = w || put("workflow", { id: uid(), steps: [] });
-        ["name", "kind", "note"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
+        ["name", "kind", "note", "path", "url"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
         if (!rec.steps) rec.steps = [];
         stamp(rec);
         saveGo(w ? "Saved" : "Added " + rec.name);
@@ -6519,11 +6935,11 @@ color-scheme: light;
         { key: "email", label: "Email", value: p ? p.email : "", more: true },
         { key: "note", label: "Note", value: p ? p.note : "", type: "textarea", rows: 3,
           span: true, more: true }
-      ],
+      ].concat(docFields(p, "this person")),
       validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
       onConfirm: function (v) {
         var rec = p || put("person", { id: uid() });
-        ["name", "role", "org", "email", "note"].forEach(function (k) {
+        ["name", "role", "org", "email", "note", "path", "url"].forEach(function (k) {
           rec[k] = (v[k] || "").trim();
         });
         stamp(rec);
@@ -6653,14 +7069,14 @@ color-scheme: light;
         { key: "note", label: "What it is", value: i ? i.note : "", type: "textarea",
           rows: 4, span: true,
           hint: "One paragraph, in your words. The facts come from the records behind it." }
-      ],
+      ].concat(docFields(i, "this piece")),
       validate: function (v) {
         if (!v.name.trim()) return "It needs a name.";
         return badDates(v, [["on", "When"]]);
       },
       onConfirm: function (v) {
         var rec = i || put("portfolio", { id: uid() });
-        ["name", "on", "note"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
+        ["name", "on", "note", "path", "url"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
         stamp(rec);
         saveGo(i ? "Saved" : "Added " + rec.name);
       }
@@ -6680,11 +7096,11 @@ color-scheme: light;
           hint: "It is not printed in the document — it is how you tell two CVs apart." },
         { key: "note", label: "Note", value: c ? c.note : "", type: "textarea", rows: 3,
           span: true, more: true }
-      ],
+      ].concat(docFields(c, "this CV")),
       validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
       onConfirm: function (v) {
         var rec = c || put("cv", { id: uid() });
-        ["name", "aim", "note"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
+        ["name", "aim", "note", "path", "url"].forEach(function (k) { rec[k] = (v[k] || "").trim(); });
         stamp(rec);
         saveGo(c ? "Saved" : "Added " + rec.name);
       }
@@ -7339,22 +7755,22 @@ color-scheme: light;
      rather than dropped — a typo like `startOn` for `startedOn` would
      otherwise cost somebody a date they thought they had given. */
   var IMP_KINDS = [
-    { kind: "job", word: "Employers", key: "jobs", fields: ["name", "kind", "place", "site", "note"] },
+    { kind: "job", word: "Employers", key: "jobs", fields: ["name", "kind", "place", "site", "note", "path", "url"] },
     { kind: "role", word: "Roles", key: "roles", fields: ["name", "job", "startedOn", "endedOn",
-      "place", "basis", "note"], refs: { job: "job" },
+      "place", "basis", "note", "path", "url"], refs: { job: "job" },
       dates: [["startedOn", "part"], ["endedOn", "part"]] },
     { kind: "education", word: "Education", key: "education", fields: ["name", "org", "startedOn",
-      "endedOn", "result", "note"],
+      "endedOn", "result", "note", "path", "url"],
       dates: [["startedOn", "part"], ["endedOn", "part"]] },
     { kind: "training", word: "Training", key: "training", fields: ["name", "org", "on", "hours",
-      "kind", "ref", "note"], dates: [["on", "part"]] },
+      "kind", "ref", "note", "path", "url"], dates: [["on", "part"]] },
     { kind: "skill", word: "Skills", key: "skills", fields: ["name", "group", "level", "note"],
       words: { level: "SKILL_LEVELS" } },
     { kind: "project", word: "Projects", key: "projects", fields: ["name", "job", "role", "status",
-      "startedOn", "endedOn", "note"], refs: { job: "job", role: "role" },
+      "startedOn", "endedOn", "note", "path", "url"], refs: { job: "job", role: "role" },
       dates: [["startedOn", "part"], ["endedOn", "part"]],
       words: { status: "PROJ_STATUS" } },
-    { kind: "workflow", word: "Workflows", key: "workflows", fields: ["name", "kind", "note", "steps"] },
+    { kind: "workflow", word: "Workflows", key: "workflows", fields: ["name", "kind", "note", "steps", "path", "url"] },
     { kind: "run", word: "Runs", key: "runs", fields: ["workflow", "project", "startedOn",
       "endedOn", "outcome", "note"], refs: { workflow: "workflow", project: "project" },
       dates: [["startedOn", "part"], ["endedOn", "part"]], noName: true },
@@ -7362,7 +7778,7 @@ color-scheme: light;
       "waitOn", "chaseDays", "chasedOn", "doneAt", "note"], refs: { project: "project" },
       dates: [["when", "part"], ["chasedOn", "part"], ["doneAt", "part"]],
       words: { kind: "ACTION_KINDS" } },
-    { kind: "person", word: "People", key: "people", fields: ["name", "role", "org", "email", "note"] },
+    { kind: "person", word: "People", key: "people", fields: ["name", "role", "org", "email", "note", "path", "url"] },
     { kind: "asset", word: "Equipment", key: "assets", fields: ["name", "kind", "state", "place",
       "lastUsedOn", "path", "url", "note"], dates: [["lastUsedOn", "part"]],
       words: { state: "THING_STATES" } },
@@ -7370,9 +7786,9 @@ color-scheme: light;
       "path", "url", "note"], refs: { project: "project" }, dates: [["on", "part"]] },
     { kind: "lib", word: "Library", key: "library", fields: ["name", "kind", "lang", "body", "path",
       "url", "topics", "from", "note", "cite"] },
-    { kind: "portfolio", word: "Portfolio", key: "portfolio", fields: ["name", "on", "note"],
+    { kind: "portfolio", word: "Portfolio", key: "portfolio", fields: ["name", "on", "note", "path", "url"],
       dates: [["on", "part"]] },
-    { kind: "cv", word: "CVs", key: "cvs", fields: ["name", "aim", "note"] },
+    { kind: "cv", word: "CVs", key: "cvs", fields: ["name", "aim", "note", "path", "url"] },
     { kind: "hours", word: "Hours", key: "hours", fields: ["project", "on", "minutes", "note"],
       refs: { project: "project" }, dates: [["on", "day"]], noName: true }
   ];
@@ -8020,6 +8436,10 @@ color-scheme: light;
       var v = String(m.row[pair[0]] || "").trim();
       if (v) bits.push(partDate(v));
     });
+    /* WHERE IT POINTS IS THE ONE THING THE PREVIEW DID NOT SAY, and on a
+       file written to carry paths it is the whole reason for the import. */
+    var to = String(m.row.url || m.row.path || "").trim();
+    if (to) bits.push(clip(to.replace(/^https?:\/\//, ""), 40));
     if (K.kind === "lib" && m.row.kind) bits.unshift(m.row.kind);
     if (K.kind === "skill" && m.row.group) bits.unshift(m.row.group);
     if (m.row.org) bits.unshift(m.row.org);
@@ -8133,6 +8553,212 @@ color-scheme: light;
   ].join("\n");
 
   /* ============================================================
+     THE DIRECTORY.
+
+     Asked for, in its owner's words, "a directory tab that can be used to
+     hook files and links and stuff in it — sort of like a universal
+     telephone directory for where I have my stuff."
+
+     IT IS NOT A NEW LIST. That is the whole design, and it is the rule
+     this rebuild exists to enforce: a screen is a QUESTION over the one
+     record, never a table of its own. So the Directory is
+
+       the STATED half   — `state.assets`, a bookmark, a drive, a folder or
+                            a device that belongs to no one project, and
+       the DERIVED half  — every other record in the book that carries a
+                            `path` or a `url`.
+
+     Which means a project's folder cannot be in the Directory and missing
+     from the project, and renaming the project renames its entry here. A
+     second "locations" list pointing back at records would be two things
+     to keep in step — the fault that cost this app a whole rewrite.
+
+     `openHandle()` stays the one place that decides what "open" means, and
+     the chips are ITS OWN LADDER rather than a second reading of it:
+
+       Links              a `url`, which really does open
+       Files and folders  a `path` and no url, which is copy-only
+       Nothing to open    neither — a device, a place, a shelf
+
+     So the chips PARTITION the list and All is their sum, and the chip a
+     row sits under can never disagree with the button on it.
+     ============================================================ */
+
+  var DIR_FACETS = [
+    { id: "link", word: "Links",
+      says: "A url. Tapping it opens it, and it works with nothing installed." },
+    { id: "file", word: "Files and folders",
+      says: "A path on this machine. A page served over https may not open a local " +
+        "file — every browser refuses and Chrome refuses silently — so the " +
+        "path is handed to you to paste into Explorer or Finder." },
+    { id: "none", word: "Nothing to open",
+      says: "A device, a shelf, a place. It is still where something of yours is, " +
+        "which is why it is listed rather than hidden." }
+  ];
+  function dirFacetOf(rec) {
+    if (rec.url) return "link";
+    if (rec.path) return "file";
+    return "none";
+  }
+
+  /* One walk, so the count on a chip and the rows under it come from the
+     same pass. Equipment is listed whether or not it has anything to open,
+     because a laptop IS where something of yours is; every other kind has
+     to carry a path or a link to be an entry at all. */
+  function directory() {
+    var out = [];
+    DOC_KINDS.forEach(function (k) {
+      live(listOf(k)).forEach(function (rec) {
+        if (k !== "asset" && !hasDoc(rec)) return;
+        out.push({ kind: k, rec: rec, r: ref(k, rec.id),
+          facet: dirFacetOf(rec), handle: openHandle(rec) });
+      });
+    });
+    return out.sort(function (a, b) {
+      var ka = KINDS[a.kind].many, kb = KINDS[b.kind].many;
+      if (ka !== kb) return ka.localeCompare(kb);
+      return String(recName(a.rec, a.kind)).localeCompare(String(recName(b.rec, b.kind)));
+    });
+  }
+  function dirCounts() {
+    var by = { link: 0, file: 0, none: 0 };
+    directory().forEach(function (e) { by[e.facet]++; });
+    return by;
+  }
+
+  /* THE ROW IS THE OPEN CONTROL, and this is the only screen in the app
+     where a row does not navigate. The Directory is a launcher — its owner
+     asked for somewhere to find where their stuff is — and row, then page,
+     then "Open the link" is two taps to do the one thing. The chevron
+     beside it is how you still reach the record, so nothing is lost. */
+  function dirRow(e) {
+    var name = recName(e.rec, e.kind);
+    var where = e.rec.url ? e.rec.url.replace(/^https?:\/\//, "") : (e.rec.path || "");
+    var inside = itile(e.kind, e.rec) +
+      '<span class="grow"><span class="nm">' + esc(name) + "</span>" +
+      (where ? '<span class="dirwhere" title="' + esc(where) + '">' + esc(where) +
+        "</span>" : '<span class="sub">' + esc(dirSays(e)) + "</span>") + "</span>";
+    var main = e.rec.url
+      ? '<a class="diropen" href="' + esc(e.rec.url) + '" target="_blank" rel="noopener" ' +
+        'title="Open ' + esc(name) + '">' + inside + "</a>"
+      : e.rec.path
+        ? '<button class="diropen" data-act="doc-copy" data-id="' + esc(e.r) +
+          '" title="Copy the path to ' + esc(name) + '">' + inside + "</button>"
+        : '<button class="diropen" data-act="open" data-id="' + esc(e.r) +
+          '" title="' + esc(name) + '">' + inside + "</button>";
+    /* A record with nothing to open is already opened by its own row, so a
+       second control beside it would be the same action twice with one of
+       them dressed as a choice. */
+    var go = e.facet === "none" ? "" :
+      '<button class="dirgo" data-act="open" data-id="' + esc(e.r) +
+      '" title="About ' + esc(name) + '" aria-label="About ' + esc(name) + '">' +
+      G.chev + "</button>";
+    return '<div class="dirline">' + main + go + "</div>";
+  }
+  /* WHAT THE THING IS, never where it points \u2014 the row prints the
+     location in mono under the name and the card prints it in its own
+     strip, so a sub-line carrying it as well said the same thing twice. */
+  function dirSays(e) {
+    var bits = [];
+    if (e.kind === "lib") bits.push((LIB_KINDS[e.rec.kind] || {}).word || e.rec.kind);
+    else if (e.rec.kind) bits.push(e.rec.kind);
+    if (e.rec.place) bits.push(e.rec.place);
+    if (e.rec.org) bits.push(e.rec.org);
+    if (!bits.length) bits.push(KINDS[e.kind].word);
+    return bits.join(" \u00b7 ");
+  }
+  /* The card form of the same entry, so the shape switch works here too.
+     The open control moves into the footer, because a card cannot be one
+     button and carry its own controls. */
+  function dirCard(e) {
+    var name = recName(e.rec, e.kind);
+    var where = e.rec.url ? e.rec.url.replace(/^https?:\/\//, "") : (e.rec.path || "");
+    var open = e.rec.url
+      ? '<a class="btn tiny" href="' + esc(e.rec.url) + '" target="_blank" ' +
+        'rel="noopener">Open the link</a>'
+      : e.rec.path ? btn("doc-copy", e.r, "Copy the path", "btn tiny") : "";
+    return cardOf(e.kind, e.rec, {
+      says: dirSays(e),
+      facts: where ? [clip(where, 42)] : [],
+      foot: open ? [open] : [],
+      stand: { word: "", tone: "" }
+    });
+  }
+
+  function renderDir() {
+    var all = directory(), by = dirCounts();
+    /* SIX LINES OF BLURB WRAPS AROUND ITS OWN BUTTON ON A PHONE, which put
+       "New entry" vertically centred in the middle of a paragraph. The
+       header is shared by every screen, so the copy gives way rather than
+       the layout. */
+    var out = [pageHeadOf("Directory",
+      "Every link and every path in the book, whatever record carries it, " +
+      "grouped by what tapping it does.",
+      btn("asset-add", "", "New entry", "btn primary"))];
+
+    if (!all.length) {
+      out.push('<div class="panel">' + emptyLines(
+        "Nothing in the Directory yet.",
+        "It fills itself: write a path or a link onto any record — a project, a " +
+        "training, an output, a library entry — and it appears here. Press " +
+        "New entry for something that belongs to no record at all, like a drive or " +
+        "a bookmark.") + "</div>");
+      return out.join("");
+    }
+
+    /* A FIGURE MAY NEVER DISAGREE WITH ITS OWN PARTS, so the chips are one
+       walk and All is their sum, and there is a test that adds them up. */
+    var chips = ['<button class="chip" data-act="dir-facet" data-id="" aria-pressed="' +
+      (!dirFacet) + '">All <span class="n">' + all.length + "</span></button>"];
+    DIR_FACETS.forEach(function (f) {
+      if (!by[f.id]) return;
+      chips.push('<button class="chip" data-act="dir-facet" data-id="' + f.id +
+        '" aria-pressed="' + (dirFacet === f.id) + '">' + esc(f.word) +
+        ' <span class="n">' + by[f.id] + "</span></button>");
+    });
+    out.push('<div class="chips">' + chips.join("") + "</div>");
+
+    var f = DIR_FACETS.filter(function (x) { return x.id === dirFacet; })[0];
+    if (dirFacet && !f) dirFacet = "";   /* a facet this app has no word for */
+    var live1 = f ? all.filter(function (e) { return e.facet === f.id; }) : all;
+    /* THE CHIP SAYS WHAT IT MEANS, once, above its own list rather than on
+       every row: the reason a path is copy-only is twenty words and they
+       were printed four times per screen in the app this replaces. */
+    if (f) {
+      out.push('<div class="panel"><span class="label">' + esc(f.word) + "</span>" +
+        '<p class="says">' + esc(f.says) + "</p></div>");
+    }
+
+    out.push(shapeRow("dir", live1.length, ["entry", "entries"]));
+    var q = String(sift.dir || "").trim().toLowerCase();
+    var shown = !q ? live1 : live1.filter(function (e) {
+      return [recName(e.rec, e.kind), e.rec.path, e.rec.url, e.rec.place, e.rec.kind,
+        e.rec.note, KINDS[e.kind].word].filter(Boolean).join(" ")
+        .toLowerCase().indexOf(q) >= 0;
+    });
+    var says = siftSays("dir", shown.length, live1.length, ["entry", "entries"]);
+    if (!shown.length) { out.push(says); return out.join(""); }
+    if (says) out.push(says);
+
+    /* Grouped by the record it belongs to, in the reader's word for it, so
+       the answer to "where is the Tripoli folder" is under Projects and
+       not in one undifferentiated column of 40 links. */
+    var by2 = {}, order = [];
+    shown.forEach(function (e) {
+      var g = KINDS[e.kind].many;
+      if (!by2[g]) { by2[g] = []; order.push(g); }
+      by2[g].push(e);
+    });
+    order.forEach(function (g) {
+      out.push(sectHead(g, by2[g].length));
+      out.push(shapeNow() === "cards"
+        ? '<div class="cards">' + by2[g].map(dirCard).join("") + "</div>"
+        : by2[g].map(dirRow).join(""));
+    });
+    return out.join("");
+  }
+
+  /* ============================================================
      THE EXAMPLE.
 
      It is the thing people are shown the app with, so it has to EXERCISE
@@ -8195,6 +8821,7 @@ color-scheme: light;
         "employer because that is what holds the role." });
 
     put2("role", "gis", { name: "GIS analyst", jobId: id.aub, startedOn: "2024-02",
+      path: "D:\\Work\\AUB",
       endedOn: "", place: "Beirut", basis: "Part time",
       note: "Spatial data for the coastal survey programme: acquisition, processing, " +
         "and the standards everybody else's deliverables have to meet." });
@@ -8217,6 +8844,7 @@ color-scheme: light;
       result: "", note: "" });
 
     put2("training", "photog", { name: "Close-range photogrammetry for heritage",
+      url: "https://example.org/cyark-certificate",
       org: "CyArk", on: "2024-06", hours: 32, kind: "Workshop", ref: "", note: "" });
     put2("training", "diver", { name: "Scientific diver \u2014 CMAS two star",
       org: "Lebanese Diving Federation", on: "2023-05", hours: "", kind: "Licence",
@@ -8246,10 +8874,12 @@ color-scheme: light;
     /* ---- projects ---- */
     put2("project", "anfeh", { name: "Anfeh harbour survey", jobId: id.hff,
       roleId: id.fellow, status: "active", startedOn: "2025-10", endedOn: D(64),
+      path: "D:\\Work\\Anfeh", url: "https://drive.google.com/drive/folders/example-anfeh",
       note: "Bathymetry, an orthophoto of the quay face, and a publication-standard " +
         "site plan of the Roman harbour works." });
     put2("project", "coastal", { name: "Coastal survey data standards", jobId: id.aub,
       roleId: id.gis, status: "active", startedOn: "2024-03", endedOn: "",
+      path: "D:\\Work\\Standards",
       note: "One naming rule, one metadata sheet and one CRS for every deliverable the " +
         "programme produces." });
     put2("project", "tripoli", { name: "Tripoli port geomorphology", jobId: id.aub,
@@ -8265,6 +8895,7 @@ color-scheme: light;
 
     /* ---- workflows, and the runs that make them evidence ---- */
     put2("workflow", "wf_ortho", { name: "Orthophoto from a photo set",
+      path: "D:\\Work\\Templates\\ortho",
       kind: "Processing",
       note: "Metashape end to end, with the control and the report steps that make the " +
         "result usable by somebody else.",
@@ -8676,6 +9307,7 @@ color-scheme: light;
       pageAt[p[0]] = p[1]; openRec = ""; render();
     },
     "tab-library": function () { goPage("library", ""); },
+    "tab-dir": function () { goPage("dir", ""); },
     "tab-show": function () { goPage("show", ""); },
     "tab-career-page": function (idv) { goPage("career", idv); },
     "tab-work-page": function (idv) { goPage("work", idv); },
@@ -8932,6 +9564,23 @@ color-scheme: light;
     "asset-edit": function (idv) { var r = needRec("asset", idv); if (r) assetDialog(r); },
     "asset-del": function (idv) {
       var r = needRec("asset", idv); if (r) removeRec("asset", r);
+    },
+    /* WHICH SHAPE A LIST TAKES IS ONE CHOICE IN ONE PLACE, app-wide, so
+       two screens can never be drawn differently for the same reason. */
+    "shape": function (idv) {
+      state.settings.shape = idv === "cards" ? "cards" : "rows";
+      save(); render();
+    },
+    "dir-facet": function (idv) { dirFacet = idv || ""; render(); },
+    /* One copy handler for every kind, because the path lives on the
+       record and `openHandle()` already decided a path is copy-only. */
+    "doc-copy": function (idv) {
+      var rec = recOf(idv);
+      if (!rec) return toast("That record is gone.");
+      if (!rec.path && !rec.url) return toast("Nothing recorded to copy.");
+      copyOut(rec.path || rec.url, rec.path
+        ? "Copied the path \u2014 paste it into Explorer or Finder"
+        : "Copied the link");
     },
     "asset-copy": function (idv) {
       var r = needRec("asset", idv); if (!r) return;
@@ -9299,6 +9948,7 @@ color-scheme: light;
       { id: "career", label: "Career", ico: G.role },
       { id: "work", label: "Work", ico: G.project },
       { id: "library", label: "Library", ico: G.method },
+      { id: "dir", label: "Directory", ico: G.dir },
       { id: "show", label: "Show", ico: G.portfolio }
     ],
     blank: blank,
@@ -9309,7 +9959,13 @@ color-scheme: light;
          looked at means the tab shows a different screen depending on what
          you did ten minutes ago, which is the trap the app this replaces
          fell into with its Horizon tab. */
-      openRec = ""; back = []; libTopic = ""; projFilter = "";
+      openRec = ""; back = []; libTopic = ""; projFilter = ""; dirFacet = "";
+      /* A SIFT BOX IS A NARROWING, NOT A SETTING. Left standing across a
+         tab press, the Directory would open on four of forty entries with
+         a box two screens up saying why — which reads as the record having
+         lost things. The SHAPE survives, because that is how you read;
+         what you typed to find one entry does not. */
+      sift = {};
     },
     renderView: function (v) {
       if (v === "settings") return renderSettings();
@@ -9321,10 +9977,32 @@ color-scheme: light;
       if (v === "career") return renderCareer();
       if (v === "work") return renderWork();
       if (v === "library") return renderLibrary();
+      if (v === "dir") return renderDir();
       if (v === "show") return renderShow();
       return renderHome();
     },
-    afterRender: function () { railWork(); },
+    afterRender: function () {
+      railWork();
+      /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS.
+         Every keystroke re-renders the list under it, which builds a fresh
+         <input> — so without putting the focus and the selection back, the
+         box loses the cursor on the first letter and is unusable. */
+      var boxes = document.querySelectorAll("[data-sift]");
+      for (var i = 0; i < boxes.length; i++) {
+        (function (box) {
+          box.addEventListener("input", function () {
+            var key = box.getAttribute("data-sift"), at = box.selectionStart;
+            sift[key] = box.value;
+            render();
+            var again = document.querySelector('[data-sift="' + key + '"]');
+            if (again) {
+              again.focus();
+              try { again.setSelectionRange(at, at); } catch (e) {}
+            }
+          });
+        })(boxes[i]);
+      }
+    },
     afterBoot: function () {
       paintTheme();
       wireKeys();
