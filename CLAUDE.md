@@ -4295,3 +4295,67 @@ dash and half hold the six-character escape — build a match string with the
 real character (`D = "—"` and concatenate) and never type the escape.
 And **a batch of replacements that asserts halfway through and writes at the
 end loses every earlier edit**: save after each one.
+
+## mashghal2 follows you: sync and snapshots (w8)
+
+Asked "how do we make it more alive and working", the owner chose *working
+first*: a book that lives in one browser is a book one cleared cache away from
+gone. `m5/21-sync.js` is the original app's engine **ported, not rebuilt** —
+sealed with PBKDF2 + AES-GCM, gzipped first, merged per record, tombstones for
+deletes, pull-merge-push as one act, a 4s debounce, a 90s heartbeat — because a
+second engine written from memory would be the plausible wrong answer. What
+changed is what the port had to learn:
+
+- **HOW THE BOOK IS REACHED LIVES OUTSIDE THE BOOK.** The original kept the gist
+  id and device name in `state.settings`, so every act that REPLACES the book —
+  the example, a restore, erasing — switched sync off, and it took a patch at
+  each site. Here `mashghal2.sync.cfg` sits beside the token and passphrase in
+  the vault (`localStorage`, or `sessionStorage` on a borrowed machine), so no
+  replace can reach it and no backup can carry it.
+- **A WHOLESALE REPLACE NEVER WRITES A TOMBSTONE.** Change tracking diffs
+  against a snapshot and a vanished id becomes a tombstone, which is right for a
+  delete and catastrophic for a replace: the example over a synced book would
+  read as every real record deleted, everywhere. `snapOf` remembers which state
+  object the snapshot was taken of; a different one rebuilds it instead.
+- **A MERGED-IN RECORD IS NOT A LOCAL EDIT.** The port re-diffed after the merge,
+  so every record a device merely *received* was re-stamped "now" — which lets a
+  copy passed along outrank an edit a third device made in between. After a
+  merge the snapshot is rebuilt, never diffed; the test asserts a received
+  record keeps the sender's stamp.
+- **AN EMPTY PROFILE IS NOT A NEWER ONE.** The profile is one record, stamped as
+  a whole. Stamped at boot, a phone joining for the first time carried a blank
+  profile newer than the real one and **blanked the owner's name on every
+  device**. A profile nobody has written in stays unstamped.
+- **A RECORD THAT IS HERE IS NOT DELETED** (`revived()`). A merge never leaves a
+  tombstoned record in a list, so one present beside its tombstone was brought
+  back — by an Undo, or a snapshot put back — and is stamped now. Without it,
+  putting a snapshot back on a synced book could never undo a bad delete, the one
+  job a snapshot has: the tombstone from the other device was newer than the
+  restored copy. Both restores go through `adoptRestored()`, which carries the
+  current tombstones in so this rule can see them.
+
+Four refusals, each stated rather than discovered: **the example is refused on
+a synced book** (invented records would travel to every device as yours);
+**Erase says a synced book comes back**, and points at Wipe; **the original
+app's gist is named and refused** (`mashghal.json`, a different shape of
+book); and **a wrong passphrase changes nothing**, here or in the gist.
+
+**Wipe this device sends nothing to GitHub** — the test counts requests after
+the click and fails on one — and says in the dialog that wiping does not revoke
+the token. **Reading never creates**: listing snapshots straight after a wipe
+re-opened IndexedDB and put an empty `mashghal2-backups` back, so a read aborts
+the upgrade.
+
+**Every app-level write goes through `commit()`** (`stampRecords(); save();
+syncSoon(); bkMaybe();`), because the runtime's `save()` must stay
+byte-identical across five apps. A bare `save()` in app code is a write that
+does not sync until the heartbeat notices.
+
+`m5sync.js` (47): five browser contexts over one fake gist held in the script —
+setup makes a sealed, compressed gist with no token, passphrase or name in it;
+a second device joins and gets the book and the profile; offline edits on two
+devices both survive; the newer edit of one record wins; a delete stays
+deleted; the example refused; an erased synced book comes back without touching
+the other; a wrong passphrase; the original's gist; a snapshot put back travels
+past the tombstone; wipe clears every sync key and the database with no request;
+a borrowed machine keeps its secrets in `sessionStorage` only.

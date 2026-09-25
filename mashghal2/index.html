@@ -1137,6 +1137,16 @@ color-scheme: light;
     .grow-row { flex-direction: column; gap: 0.25rem; }
     .gwhere { flex: none; }
   }
+
+  /* THE DOT IS GREEN ONLY WHEN THE BOOK REALLY REACHES ANOTHER DEVICE.
+     Green means healthy state and nothing else, so "this browser only" is a
+     hollow ring in the neutral ink rather than a red one: it is not wrong,
+     it is just not travelling. */
+  .syncdot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%;
+    border: 1px solid var(--faint); margin-right: 0.35rem; vertical-align: 0.05rem; }
+  .syncdot.on { background: var(--sage); border-color: var(--sage); }
+  code.lit { font-family: var(--mono, ui-monospace, monospace); font-size: 0.85em;
+    overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -1258,7 +1268,7 @@ color-scheme: light;
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w7 · 25 Sep 2026";
+  var BUILD = "w8 · 25 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -1318,14 +1328,16 @@ color-scheme: light;
       links: [],       // {id,rel,a,b,note}    a and b are "kind:id"
 
       settings: { owner: "", offered: false, shape: "rows" },
-      forgotten: {}    // id -> name, so a removed record still reads
+      forgotten: {},   // id -> name, so a removed record still reads
+      tombstones: {},  // id -> when it was deleted, so sync cannot resurrect it
+      devices: {}      // device id -> {name, at, borrowed} — who last wrote
     };
   }
 
   var STATE_LISTS = ["education", "jobs", "roles", "training", "skills",
     "projects", "workflows", "runs", "actions", "people", "assets",
     "outputs", "hours", "lib", "portfolio", "cvs", "links"];
-  var STATE_MAPS = ["forgotten"];
+  var STATE_MAPS = ["forgotten", "tombstones", "devices"];
 
   var PROFILE_KEYS = ["name", "headline", "fields", "interests",
     "email", "phone", "site", "place", "summary"];
@@ -1341,6 +1353,9 @@ color-scheme: light;
       PROFILE_KEYS.forEach(function (k) {
         if (typeof raw.profile[k] === "string") s.profile[k] = raw.profile[k];
       });
+      /* The profile is one record rather than a list, so it carries its own
+         stamp and merges newer-wins as a whole. */
+      if (typeof raw.profile.updatedAt === "string") s.profile.updatedAt = raw.profile.updatedAt;
     }
     var t = raw.settings || {};
     s.settings.owner = typeof t.owner === "string" ? t.owner : "";
@@ -5433,8 +5448,9 @@ color-scheme: light;
         "add everything what goes where",
       says: "every record, where it lives, and what to link it to" });
     rows.push({ k: "page", tab: "settings", page: "", name: "Settings",
-      key: "settings theme dark light erase wipe export backup version shortcuts owner",
-      says: "the theme, your name, the record, and erasing it" });
+      key: "settings theme dark light erase wipe export backup version shortcuts owner " +
+        "sync gist phone laptop devices other device snapshot snapshots restore borrowed",
+      says: "the theme, your name, sync, snapshots, and erasing it" });
     /* The Directory is a tab with no pages inside it, so it is not in
        `PAGES` and the walk above cannot see it. A screen findable only by
        somebody who already knows it is there is not a route. */
@@ -5896,6 +5912,45 @@ color-scheme: light;
      be searchable.
      ============================================================ */
 
+  /* The sync card says what it is doing in words, and every fact on it is
+     read from the vault or the book \u2014 never a token or a passphrase. */
+  function syncCard() {
+    if (!syncOn()) {
+      return '<div class="panel"><p class="nm">' + esc(syncWords()) + "</p>" +
+        '<p class="says">Turn it on and the book follows you: the laptop, the phone ' +
+        "and a borrowed machine all read the same one. It is sealed here with a " +
+        "passphrase only you know and kept in a secret gist on your GitHub account, " +
+        "so there is no server and no account with anybody else. It syncs by itself " +
+        "a few seconds after a change, and every minute and a half while open.</p>" +
+        '<div class="page-acts" style="margin-top:0.6rem">' +
+        btn("sync-setup", "", "Set up sync", "btn primary") + "</div></div>";
+    }
+    var cfg = syncCfg(), me = deviceId();
+    var devs = Object.keys(state.devices || {}).map(function (id) {
+      var d = state.devices[id]; return { id: id, name: d.name, at: d.at, borrowed: d.borrowed };
+    }).sort(function (a, z) { return a.at < z.at ? 1 : -1; });
+    return '<div class="panel"><p class="nm">' + esc(syncWords()) + "</p>" +
+      '<p class="says">Sealed with your passphrase before it leaves; GitHub holds ' +
+      "characters it cannot read. The gist id, to paste on another device: " +
+      '<code class="lit">' + esc(cfg.gistId) + "</code></p>" +
+      (devs.length ? '<div class="rows" style="margin-top:0.5rem">' + devs.map(function (d) {
+        return '<div class="row flat"><span class="grow"><span class="nm">' +
+          esc(d.name || "unnamed device") + (d.id === me ? " \u2014 this one" : "") +
+          '</span><span class="sub">Last wrote ' + esc(stampWhen(d.at)) +
+          (d.borrowed ? " \u00b7 a borrowed machine" : "") + "</span></span></div>";
+      }).join("") + "</div>" : "") +
+      '<div class="page-acts" style="margin-top:0.6rem">' +
+      btn("sync-now", "", "Sync now", "btn primary") +
+      btn("sync-setup", "", "Change sync") +
+      btn("sync-wipe", "", "Wipe this device", "btn danger") + "</div>" +
+      '<p class="says" style="margin-top:0.5rem">' + (borrowed()
+        ? "This is marked as a borrowed machine: the book, the token and the " +
+          "passphrase go when this tab closes. "
+        : "") + "Wiping takes the book, the token, the passphrase and the snapshots " +
+      "off this browser and sends nothing to GitHub, so the gist and your other " +
+      "devices keep everything.</p></div>";
+  }
+
   function renderSettings() {
     var out = [pageHeadOf("Settings",
       "The theme, your name, and the record itself.", "")];
@@ -5942,11 +5997,29 @@ color-scheme: light;
         "somebody.</p>"
       : '<p class="says">Nothing in it yet.</p>') + "</div>");
 
+    out.push(sectHead("Your book on other devices", null));
+    out.push(syncCard());
+
+    out.push(sectHead("Snapshots on this device", null));
+    out.push('<div class="panel"><p class="says" id="bkSub">Reading them\u2026</p>' +
+      '<p class="says">Sync carries the book as it is NOW \u2014 so a mistake travels ' +
+      "too, promptly and to every device. A snapshot keeps the book as it WAS, which " +
+      "is the only thing that helps after a bad delete. The last ten are kept, at " +
+      "most four a day, and putting one back takes a snapshot first so that is " +
+      "undoable too." + (syncOn() ? " On a synced book, putting one back brings back " +
+        "what was deleted since; what another device changed since comes back with " +
+        "the next sync, because a restore may never lose work." : "") + "</p>" +
+      '<div id="bkList"></div>' +
+      '<div class="page-acts" style="margin-top:0.6rem">' +
+      btn("bk-now", "", "Take one now") + "</div></div>");
+
     out.push(sectHead("The record", null));
-    out.push('<div class="panel"><p class="says">It lives in this browser under one key ' +
-      "and goes nowhere else. There is no account, no server and no sync in this build " +
-      "— so a backup is the only way it reaches another machine, and the app says so " +
-      "rather than implying otherwise.</p>" +
+    out.push('<div class="panel"><p class="says">It lives in this browser under one key. ' +
+      (syncOn() ? "It also travels, sealed, to your other devices \u2014 the card above " +
+        "says how. " : "It reaches another machine only by sync, above, or by a backup " +
+        "file. ") +
+      "A backup file is yours to keep anywhere; it carries the book and nothing " +
+      "that unlocks the sync.</p>" +
       '<div class="page-acts" style="margin-top:0.6rem">' +
       btn("backup", "", "Back it up", "btn primary") +
       btn("restore", "", "Restore a backup") +
@@ -5994,9 +6067,11 @@ color-scheme: light;
       "<li><strong>It does not notify.</strong> A browser cannot send mail and nothing " +
       "runs while the app is shut, so what is late is waiting when you open it. " +
       "Implying otherwise would be worse than the limit.</li>" +
-      "<li><strong>It fetches nothing.</strong> No fonts, no libraries, no service. " +
-      "Which is why it opens on a plane, and why the bibliography is formatted here " +
-      "rather than by asking a service to do it.</li></ul></div>");
+      "<li><strong>It fetches nothing it needs to run.</strong> No fonts, no " +
+      "libraries, no service. Which is why it opens on a plane, and why the " +
+      "bibliography is formatted here rather than by asking a service to do it. The " +
+      "one thing it ever sends is your sealed book, to your own gist, and only once " +
+      "you turn sync on.</li></ul></div>");
 
     out.push(sectHead("This build", null));
     out.push('<div class="panel"><p class="says" style="font-family:var(--mono)">' +
@@ -6041,6 +6116,7 @@ color-scheme: light;
     { id: "g-keys", word: "The keyboard" },
     { id: "g-dir", word: "Where your stuff is" },
     { id: "g-feed", word: "Filling it from a file" },
+    { id: "g-sync", word: "Your book on every device" },
     { id: "g-record", word: "Your record" }
   ];
 
@@ -6403,6 +6479,32 @@ color-scheme: light;
         "place in the app where a row does not open a page. The chevron beside it " +
         "still does.") + "</div>"));
 
+    out.push(gp("g-sync", "Your book on every device",
+      '<div class="panel"><p class="says">Until sync is on, the book lives in this ' +
+      "browser and nowhere else \u2014 a cleared browser takes it with it. Sync puts " +
+      "it on every device you use; snapshots keep earlier versions on this one.</p>" +
+      '<div class="page-acts" style="margin-top:0.7rem">' +
+      btn("settings", "", "Open Settings", "btn primary") + "</div>" +
+      gnote("<b>Set up sync</b> on the first device with a GitHub token that can " +
+        "reach gists and a passphrase you will remember. Leave the gist id blank and " +
+        "one is made; the card then prints its id. On the phone, <b>Set up sync</b> " +
+        "again with the same token, the same passphrase and that id.") +
+      gnote("After that nothing needs pressing: it syncs a few seconds after a change, " +
+        "every minute and a half while open, and when you come back to the tab. " +
+        "<b>Sync now</b> is there for when you want to see it happen.") +
+      gnote("The book is sealed here before it leaves, so the gist holds characters " +
+        "nobody can read without the passphrase. Lose the passphrase and the gist is " +
+        "unreadable \u2014 there is no recovery, on purpose. The token and the " +
+        "passphrase never go into the book, a backup or the gist.") +
+      gnote("On a machine that is not yours, answer \u201cIs this your own " +
+        "machine?\u201d with \u201cNo\u201d and everything goes when the " +
+        "tab closes. Leaving early? " +
+        "<b>Wipe this device</b> clears this browser and sends nothing to GitHub, so " +
+        "your book is safe everywhere else.") +
+      gnote("A snapshot is taken by itself after a change, at most four a day, and " +
+        "the last ten are kept. <b>Put this back</b> returns the book to one of them; " +
+        "<b>Take one now</b> before anything you are unsure of.") + "</div>"));
+
     out.push(gp("g-feed", "Filling it from a file",
       '<div class="panel"><p class="says">Typing a career in one record at a time is ' +
       "the honest way to build it and a poor way to <em>start</em> one. So the book " +
@@ -6496,7 +6598,7 @@ color-scheme: light;
     listOf(kind).push(stamp(rec));
     return rec;
   }
-  function saveGo(msg, undo) { save(); render(); if (msg) toast(msg, undo); }
+  function saveGo(msg, undo) { commit(); render(); if (msg) toast(msg, undo); }
 
   /* A removal takes its links with it, because a link naming a record that
      is gone is a line to nowhere — and the undo puts both back. */
@@ -7452,7 +7554,7 @@ color-scheme: light;
             " still missing something an export needs \u2014 the references page names " +
             "which, so nothing goes out half-formed without saying so.");
         }
-        save();
+        commit();
         openModal({
           title: "Read in",
           message: msg.map(esc).join(" "),
@@ -8759,6 +8861,770 @@ color-scheme: light;
   }
 
   /* ============================================================
+     THE BOOK ON EVERY DEVICE, AND A HISTORY OF IT ON THIS ONE.
+
+     Ported from the original app, where it was built and tested over many
+     rounds (`mashghal/index.html`, the sync and backup blocks) — not
+     rebuilt, because a second engine written from memory would be the
+     plausible wrong answer this repo refuses. What changed is named:
+
+       THE HOW-TO-REACH-IT LIVES OUTSIDE THE BOOK. The original kept the
+       gist id, the device name and the borrowed flag in `state.settings`,
+       so every act that REPLACES the book — the example, a restore, erasing
+       — took sync with it and switched it off silently; it needed a patch at
+       each of those sites and one was missed once. Here the configuration
+       lives beside the token, in the vault, and no replace can reach it. A
+       backup cannot carry the gist id for the same reason.
+
+       A WHOLESALE REPLACE NEVER WRITES A TOMBSTONE. Change tracking is a diff
+       against a snapshot of the last-seen records, and a record that
+       vanished becomes a tombstone — which is right for a delete and
+       catastrophic for a replace: loading the example over a synced book
+       would read as every real record deleted, and the next sync would
+       delete it everywhere. So the snapshot remembers WHICH state object it
+       was taken of, and a different object rebuilds it instead of diffing.
+
+       IT REFUSES ANOTHER APP'S GIST. The owner may already hold a gist from
+       the original app; pasting that id here would merge two different
+       shapes of book. The payload carries `app`, and a gist without this
+       app's file or marker is named and refused.
+
+     Nothing here reaches `state` except the book itself: the token, the
+     passphrase and the configuration live in their own keys, so a backup,
+     an export and the gist all carry none of them.
+     ============================================================ */
+
+  var SYNC_APP = "mashghal2-hub";
+  var SYNC_LISTS = STATE_LISTS;          // one place decides what travels
+  var GIST_FILE = "mashghal2-book.json";
+  var OLD_GIST_FILE = "mashghal.json";    // the original app's, never merged
+  var TOK_KEY = "mashghal2.sync.token";
+  var PASS_KEY = "mashghal2.sync.pass";
+  var CFG_KEY = "mashghal2.sync.cfg";
+  var DEV_KEY = "mashghal2.sync.device";
+  var BORROW_KEY = "mashghal2.sync.borrowed";
+
+  var snap = {};          // id -> the record as last stamped
+  var snapOf = null;      // the state object `snap` was taken of
+  var syncing = false, syncFail = "";
+
+  /* ---------------- the vault ----------------
+
+     On a machine that is not yours, nothing may outlive the tab: the
+     borrowed flag lives in sessionStorage, and while it is set every secret
+     and the configuration live there too. */
+  function borrowed() {
+    try { return window.sessionStorage.getItem(BORROW_KEY) === "1"; } catch (e) { return false; }
+  }
+  function vault() {
+    try { return borrowed() ? window.sessionStorage : window.localStorage; }
+    catch (e) { return null; }
+  }
+  function secret(k) {
+    try { var v = vault(); return v ? (v.getItem(k) || "") : ""; } catch (e) { return ""; }
+  }
+  function setSecret(k, v) { try { var s = vault(); if (s) s.setItem(k, v); } catch (e) {} }
+  function dropSecrets() {
+    [window.localStorage, window.sessionStorage].forEach(function (s) {
+      try {
+        [TOK_KEY, PASS_KEY, CFG_KEY, BORROW_KEY].forEach(function (k) { s.removeItem(k); });
+      } catch (e) {}
+    });
+  }
+  function deviceId() {
+    var s = vault(), id = "";
+    try { id = (s && s.getItem(DEV_KEY)) || ""; } catch (e) {}
+    if (!id) { id = uid(); try { if (s) s.setItem(DEV_KEY, id); } catch (e) {} }
+    return id;
+  }
+  function syncCfg() {
+    var c = {};
+    try { c = JSON.parse(secret(CFG_KEY) || "{}") || {}; } catch (e) { c = {}; }
+    return { gistId: c.gistId || "", deviceName: c.deviceName || "",
+      lastPulledAt: c.lastPulledAt || "" };
+  }
+  function saveCfg(c) { setSecret(CFG_KEY, JSON.stringify(c)); }
+  function syncOn() {
+    return !!(syncCfg().gistId && secret(TOK_KEY) && secret(PASS_KEY));
+  }
+
+  /* ---------------- change tracking ---------------- */
+
+  function nowStamp() { return new Date().toISOString(); }
+  function bareOf(r) {
+    var o = {}, k;
+    for (k in r) { if (k !== "updatedAt") o[k] = r[k]; }
+    return JSON.stringify(o);
+  }
+  /* The profile is ONE record, not a list, so it is tracked under a fixed
+     id and merged newer-wins as a whole. */
+  var PROFILE_ID = "__profile";
+
+  /* A record that predates sync has no stamp and would lose every
+     comparison, so it is given one the first time it is seen rather than
+     being treated as infinitely old. Rebuilds the snapshot from nothing,
+     which is also what a wholesale replace needs. */
+  /* A RECORD THAT IS HERE IS NOT DELETED. A merge never leaves a tombstoned
+     record in a list, so one that is present beside its own tombstone was
+     brought back on this device — by an Undo, or a snapshot put back — and
+     it has to be stamped NOW, or the tombstone (older than the deletion it
+     records, newer than the copy that came back) deletes it again on the
+     next merge. Without this, putting a snapshot back on a synced book could
+     never undo the one mistake a snapshot exists for. */
+  function revived(r, now) {
+    if (!state.tombstones[r.id]) return false;
+    delete state.tombstones[r.id];
+    r.updatedAt = now;
+    return true;
+  }
+  function ensureStamps() {
+    var now = nowStamp();
+    snap = {};
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (!r || !r.id) return;
+        revived(r, now);
+        if (!r.updatedAt) r.updatedAt = now;
+        snap[r.id] = bareOf(r);
+      });
+    });
+    /* AN EMPTY PROFILE IS NOT A NEWER ONE. Stamped at boot like a record, a
+       phone joining for the first time carried a blank profile stamped
+       "now" \u2014 newer than the real one \u2014 and the merge blanked your
+       name on every device. A profile nobody has written in stays unstamped,
+       so any profile that says something wins over it. */
+    var said = PROFILE_KEYS.some(function (k) { return !!state.profile[k]; });
+    if (!state.profile.updatedAt && said) state.profile.updatedAt = now;
+    snap[PROFILE_ID] = bareOf(state.profile);
+    snapOf = state;
+  }
+  /* Which records changed since the last pass, so a merge can be per record
+     rather than per file. Whole-file last-write-wins eventually eats a day
+     of work logged on the phone, and it does it silently. */
+  function stampRecords() {
+    if (snapOf !== state) { ensureStamps(); return; }
+    var now = nowStamp(), seen = {};
+    SYNC_LISTS.forEach(function (k) {
+      (state[k] || []).forEach(function (r) {
+        if (!r || !r.id) return;
+        seen[r.id] = 1;
+        revived(r, now);
+        var j = bareOf(r);
+        if (snap[r.id] !== j) { r.updatedAt = now; snap[r.id] = j; }
+      });
+    });
+    var pj = bareOf(state.profile);
+    if (snap[PROFILE_ID] !== pj) { state.profile.updatedAt = now; snap[PROFILE_ID] = pj; }
+    seen[PROFILE_ID] = 1;
+    Object.keys(snap).forEach(function (id) {
+      if (!seen[id]) { state.tombstones[id] = now; delete snap[id]; }
+    });
+  }
+
+  /* EVERY WRITE GOES THROUGH HERE. The shared runtime's `save()` has to stay
+     byte-identical across five apps, so the stamping, the sync nudge and the
+     snapshot hang off this one app-level function instead. */
+  function commit() {
+    stampRecords();
+    save();
+    syncSoon();
+    bkMaybe();
+  }
+
+  function mergeList(mine, theirs, tomb) {
+    var pick = {};
+    mine.concat(theirs).forEach(function (r) {
+      if (!r || !r.id) return;
+      var cur = pick[r.id];
+      if (!cur || (r.updatedAt || "") > (cur.updatedAt || "")) pick[r.id] = r;
+    });
+    return Object.keys(pick).map(function (id) { return pick[id]; })
+      .filter(function (r) { return !(tomb[r.id] && tomb[r.id] > (r.updatedAt || "")); });
+  }
+
+  function payload() {
+    var o = { v: 1, app: SYNC_APP, tombstones: state.tombstones,
+      forgotten: state.forgotten, devices: state.devices, profile: state.profile };
+    SYNC_LISTS.forEach(function (k) { o[k] = state[k] || []; });
+    return o;
+  }
+
+  /* Merge is symmetrical and loses nothing it can avoid losing: a record that
+     exists on one side only survives unless a tombstone newer than it says
+     it was deleted on purpose. */
+  function mergeIn(remote) {
+    var tomb = {};
+    [state.tombstones, remote.tombstones || {}].forEach(function (src) {
+      Object.keys(src).forEach(function (id) {
+        if (!tomb[id] || src[id] > tomb[id]) tomb[id] = src[id];
+      });
+    });
+    var counts = { added: 0, updated: 0, removed: 0 };
+    SYNC_LISTS.forEach(function (k) {
+      var before = {};
+      (state[k] || []).forEach(function (r) { before[r.id] = r.updatedAt || ""; });
+      var merged = mergeList(state[k] || [], remote[k] || [], tomb);
+      merged.forEach(function (r) {
+        if (before[r.id] === undefined) counts.added++;
+        else if (before[r.id] !== (r.updatedAt || "")) counts.updated++;
+      });
+      counts.removed += Object.keys(before).length -
+        merged.filter(function (r) { return before[r.id] !== undefined; }).length;
+      state[k] = merged;
+    });
+    var rp = remote.profile;
+    if (rp && typeof rp === "object" && (rp.updatedAt || "") > (state.profile.updatedAt || "")) {
+      PROFILE_KEYS.forEach(function (k) {
+        if (typeof rp[k] === "string") state.profile[k] = rp[k];
+      });
+      state.profile.updatedAt = rp.updatedAt;
+      counts.updated++;
+    }
+    state.tombstones = tomb;
+    Object.keys(remote.forgotten || {}).forEach(function (id) {
+      if (!state.forgotten[id]) state.forgotten[id] = remote.forgotten[id];
+    });
+    var rd = remote.devices || {};
+    Object.keys(rd).forEach(function (id) {
+      if (!state.devices[id] || rd[id].at > state.devices[id].at) state.devices[id] = rd[id];
+    });
+    return counts;
+  }
+
+  /* ---------------- the sealing ----------------
+
+     A secret gist is unlisted, not private — anyone holding the link can
+     read it — so the encryption is the whole of the privacy. Compress THEN
+     encrypt: the other way round compresses random bytes and saves nothing.
+     The `z` marker is what lets a blob sealed without compression still
+     open. */
+  function b64(buf) {
+    var a = new Uint8Array(buf), s = "";
+    for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+    return btoa(s);
+  }
+  function unb64(s) {
+    var b = atob(s), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function subtle() {
+    return (window.crypto && window.crypto.subtle) ? window.crypto.subtle : null;
+  }
+  function deriveKey(pass, salt) {
+    var enc = new TextEncoder();
+    return subtle().importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) {
+        return subtle().deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: 250000, hash: "SHA-256" },
+          base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      });
+  }
+  function zipOK() {
+    return typeof CompressionStream === "function" &&
+      typeof DecompressionStream === "function" && typeof Response === "function";
+  }
+  function zipThrough(stream, bytes) {
+    var w = stream.writable.getWriter();
+    w.write(bytes); w.close();
+    return new Response(stream.readable).arrayBuffer();
+  }
+  function deflate(bytes) { return zipThrough(new CompressionStream("gzip"), bytes); }
+  function inflate(bytes) { return zipThrough(new DecompressionStream("gzip"), bytes); }
+
+  function seal(text, pass) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var raw = new TextEncoder().encode(text);
+    var zipped = zipOK();
+    return (zipped ? deflate(raw).then(function (buf) { return new Uint8Array(buf); })
+                   : Promise.resolve(raw))
+      .then(function (body) {
+        return deriveKey(pass, salt).then(function (key) {
+          return subtle().encrypt({ name: "AES-GCM", iv: iv }, key, body);
+        });
+      })
+      .then(function (ct) {
+        var o = { v: 1, kdf: "PBKDF2-SHA256", it: 250000,
+          salt: b64(salt), iv: b64(iv), ct: b64(ct) };
+        if (zipped) o.z = "gzip";
+        return JSON.stringify(o, null, 1);
+      });
+  }
+  function unseal(blob, pass) {
+    var o;
+    try { o = JSON.parse(blob); } catch (e) {
+      return Promise.reject(new Error("That gist does not hold a sealed book."));
+    }
+    if (!o || !o.ct || !o.salt || !o.iv) {
+      return Promise.reject(new Error("That gist is not sealed the way this app seals things."));
+    }
+    return deriveKey(pass, unb64(o.salt)).then(function (key) {
+      return subtle().decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.ct));
+    }).then(function (pt) {
+      if (o.z !== "gzip") return JSON.parse(new TextDecoder().decode(pt));
+      if (!zipOK()) {
+        throw new Error("This book was compressed by another device and this browser " +
+          "cannot unpack it.");
+      }
+      return inflate(new Uint8Array(pt)).then(function (buf) {
+        return JSON.parse(new TextDecoder().decode(new Uint8Array(buf)));
+      });
+    }, function () {
+      /* The SECOND argument of this `then`, not of the one above: a handler
+         cannot catch its own sibling's rejection, and attached one link
+         earlier it never saw a failed decrypt at all. */
+      throw new Error("Wrong passphrase — nothing was changed.");
+    });
+  }
+
+  /* PUTTING A BOOK BACK, from a snapshot or from a file. The tombstones
+     travel INTO the restored book, so `revived()` can see which of its
+     records were deleted since and stamp them back to life — the
+     restored book's own older set does not know they were ever deleted, and
+     without this a synced book would have them deleted again on the next
+     merge. Everything else is `adoptState`, the one adoption point. */
+  function adoptRestored(raw) {
+    var tomb = state.tombstones || {};
+    state = adoptState(raw);
+    Object.keys(tomb).forEach(function (id) {
+      if (!state.tombstones[id] || tomb[id] > state.tombstones[id]) state.tombstones[id] = tomb[id];
+    });
+    ensureStamps();
+  }
+
+  /* ---------------- the gist ---------------- */
+
+  function ghFetch(url, token, opts) {
+    opts = opts || {};
+    opts.headers = { "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json" };
+    if (opts.body) opts.headers["Content-Type"] = "application/json";
+    return fetch(url, opts).then(function (res) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("GitHub refused the token. It may have expired, or it may not " +
+          "carry gist access.");
+      }
+      if (res.status === 404) throw new Error("That gist was not found by this token.");
+      if (!res.ok) throw new Error("GitHub answered " + res.status + ".");
+      return res.json();
+    }, function (e) {
+      if (e instanceof TypeError) throw new Error("No answer from GitHub — you may be offline.");
+      throw e;
+    });
+  }
+  function gistRead(id, token) {
+    return ghFetch("https://api.github.com/gists/" + id, token).then(function (g) {
+      var files = g.files || {};
+      var f = files[GIST_FILE];
+      if (!f) {
+        /* THE ORIGINAL APP'S GIST IS NAMED, not merged. Its book is a
+           different shape, and folding one into the other would be two books
+           becoming neither. */
+        if (files[OLD_GIST_FILE]) {
+          throw new Error("That gist belongs to the original Mashghal app, whose book is " +
+            "a different shape. Leave the gist id blank to make one for this app.");
+        }
+        throw new Error("That gist has no " + GIST_FILE + " in it.");
+      }
+      if (f.truncated && f.raw_url) {
+        return fetch(f.raw_url).then(function (r) { return r.text(); });
+      }
+      return f.content || "";
+    });
+  }
+  function gistWrite(id, token, content) {
+    var files = {};
+    files[GIST_FILE] = { content: content };
+    return ghFetch("https://api.github.com/gists/" + id, token,
+      { method: "PATCH", body: JSON.stringify({ files: files }) });
+  }
+  function gistCreate(token, content) {
+    var files = {};
+    files[GIST_FILE] = { content: content };
+    return ghFetch("https://api.github.com/gists", token, {
+      method: "POST",
+      body: JSON.stringify({ description: "Mashghal (the hub) — sealed",
+        "public": false, files: files })
+    });
+  }
+
+  /* ---------------- the act ---------------- */
+
+  function noteDevice() {
+    state.devices[deviceId()] = {
+      name: syncCfg().deviceName || "unnamed device",
+      at: nowStamp(),
+      borrowed: borrowed()
+    };
+  }
+
+  /* Pull, merge, push — one act, because pushing without having pulled is
+     how one device quietly overwrites another's day. */
+  function syncNow(quiet) {
+    if (syncing) return;
+    if (!syncOn()) { if (!quiet) toast("Sync is not set up on this device."); return; }
+    if (!subtle()) {
+      if (!quiet) toast("This browser has no Web Crypto, so nothing can be sealed.");
+      return;
+    }
+    syncing = true;
+    var cfg = syncCfg(), tok = secret(TOK_KEY), pass = secret(PASS_KEY);
+    if (!quiet) toast("Syncing…");
+    stampRecords();
+    gistRead(cfg.gistId, tok)
+      .then(function (book) {
+        book = String(book || "").trim();
+        return book ? unseal(book, pass) : null;
+      })
+      .then(function (remote) {
+        if (remote && remote.app && remote.app !== SYNC_APP) {
+          throw new Error("That gist holds a different app's book, so nothing was merged.");
+        }
+        var counts = remote ? mergeIn(remote) : { added: 0, updated: 0, removed: 0 };
+        /* A MERGED-IN RECORD IS NOT A LOCAL EDIT. Diffed against the
+           snapshot it looks changed, and stamping it "now" would make a copy
+           this device merely RECEIVED outrank an edit a third device made in
+           between \u2014 which is a lost edit. The snapshot is rebuilt, not
+           diffed; local edits were already stamped before the pull. */
+        noteDevice();
+        ensureStamps();
+        cfg.lastPulledAt = nowStamp();
+        saveCfg(cfg);
+        save();
+        return seal(JSON.stringify(payload()), pass)
+          .then(function (sealed) { return gistWrite(cfg.gistId, tok, sealed); })
+          .then(function () { return counts; });
+      })
+      .then(function (counts) {
+        syncing = false; syncFail = "";
+        render();
+        var bits = [];
+        if (counts.added) bits.push(countWords(counts.added, "thing came in", "things came in"));
+        if (counts.updated) bits.push(countWords(counts.updated, "was changed", "were changed"));
+        if (counts.removed) bits.push(countWords(counts.removed, "was removed", "were removed"));
+        /* SILENCE IS THE CORRECT REPORT FOR A NO-OP. A background pass says
+           something only when something actually crossed; pressing Sync
+           yourself always gets an answer, because then you asked. */
+        if (bits.length) toast("Synced — " + listWords(bits));
+        else if (!quiet) toast("Synced — nothing had changed elsewhere");
+      })
+      .catch(function (e) {
+        syncing = false;
+        syncFail = e && e.message ? e.message : "it failed";
+        render();
+        if (!quiet) toast(e && e.message ? e.message : "Sync failed, and nothing was changed.");
+      });
+  }
+
+  /* ---------------- syncing without being asked ----------------
+
+     A button is exactly the failure: an edit on the phone stays on the phone
+     because nobody pressed anything. Three triggers, because they answer
+     different failures — an edit (debounced), the OTHER device's edits
+     (a heartbeat), and coming back to the tab or the network. The merge is
+     untouched: every automatic pass is the same pull-merge-push. */
+  var AUTO_DEBOUNCE = 4000, AUTO_HEARTBEAT = 90000;
+  var autoTimer = null, beatTimer = null, lastAuto = 0, autoWired = false;
+
+  function nudgeSync(why) {
+    if (!syncOn() || syncing) return;
+    if (document.hidden) return;
+    if (Date.now() - lastAuto < 2500) return;
+    lastAuto = Date.now();
+    syncNow(true);
+  }
+  function syncSoon() {
+    if (!syncOn()) return;
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(function () { autoTimer = null; nudgeSync("edit"); }, AUTO_DEBOUNCE);
+  }
+  function wireAutoSync() {
+    if (autoWired) return;
+    autoWired = true;
+    if (beatTimer) clearInterval(beatTimer);
+    beatTimer = setInterval(function () { nudgeSync("heartbeat"); }, AUTO_HEARTBEAT);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) nudgeSync("back to the tab");
+    });
+    window.addEventListener("online", function () { nudgeSync("back online"); });
+    window.addEventListener("pagehide", function () {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; nudgeSync("leaving"); }
+      /* On a machine that is not yours, nothing outlives the tab. */
+      if (borrowed()) {
+        try { localStorage.removeItem(APP.storeKey); } catch (e) {}
+        dropSecrets();
+      }
+    });
+  }
+
+  /* What the screen says about it, in words rather than a spinner. */
+  function syncWords() {
+    var cfg = syncCfg();
+    if (!syncOn()) return "Off — this device keeps its own book";
+    if (syncing) return "Syncing now…";
+    if (!navigator.onLine) return "Offline — it will catch up by itself";
+    if (syncFail) return "Last attempt failed: " + clause(syncFail) + ". It will try again.";
+    if (!cfg.lastPulledAt) return "Set up, but it has not run yet";
+    var mins = Math.round((Date.now() - new Date(cfg.lastPulledAt).getTime()) / 60000);
+    if (mins < 1) return "Up to date, a moment ago";
+    if (mins < 60) return "Up to date, " + countWords(mins, "minute", "minutes") + " ago";
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return "Last synced " + countWords(hrs, "hour", "hours") + " ago";
+    return "Last synced on " + shortDate(iso(new Date(cfg.lastPulledAt)));
+  }
+  /* The rail's footer: short, and it says where the book is. The dot is
+     green only when the book really does reach another device. */
+  function syncShort() {
+    if (!syncOn()) return { words: "This browser only", on: false };
+    if (syncFail) return { words: "Sync is failing", on: false };
+    if (borrowed()) return { words: "Synced · borrowed laptop", on: true };
+    return { words: "Synced across devices", on: true };
+  }
+
+  function syncSetupDialog() {
+    var cfg = syncCfg();
+    openModal({
+      title: syncOn() ? "Change sync" : "Set up sync", wide: true,
+      confirmLabel: syncOn() ? "Save" : "Turn it on",
+      message: "Your book is sealed on this device with the passphrase and only then " +
+        "sent, so GitHub holds characters it cannot read. A secret gist is unlisted " +
+        "rather than private — anyone with the link can fetch it — which is " +
+        "why the sealing is the whole of the privacy. Use a fine-grained token with " +
+        "gist access and nothing else.",
+      fields: [
+        { key: "token", label: "GitHub token", type: "password", span: true,
+          value: secret(TOK_KEY), placeholder: "github_pat_…",
+          hint: "Kept on this device only — never in the book, a backup or the gist." },
+        { key: "pass", label: "Passphrase", type: "password", span: true,
+          value: secret(PASS_KEY),
+          hint: "Lose this and the gist is unreadable. There is no recovery, by design." },
+        { key: "gistId", label: "Gist id", span: true, value: cfg.gistId,
+          hint: "Blank on the first device and one is made for you. On every other " +
+            "device, paste the id the first one shows." },
+        { key: "deviceName", label: "Call this device", span: true,
+          value: cfg.deviceName, placeholder: "Legion",
+          hint: "So your phone can say which laptop last wrote." },
+        { key: "borrowed", label: "Is this your own machine?", type: "select", span: true,
+          value: borrowed() ? "yes" : "no",
+          options: [{ value: "no", label: "Yes — remember it here" },
+            { value: "yes", label: "No — forget everything when I close the tab" }] }
+      ],
+      validate: function (v) {
+        if (!v.token.trim()) return "A token is needed to reach the gist.";
+        if (v.pass.trim().length < 8) return "Use a passphrase of at least eight characters.";
+        if (!v.deviceName.trim()) {
+          return "Name the device, so you can tell from your phone which laptop is " +
+            "still signed in.";
+        }
+        return null;
+      },
+      onConfirm: function (v) {
+        /* The borrowed flag is set FIRST, because it decides which storage
+           everything after it is written into. */
+        try {
+          if (v.borrowed === "yes") window.sessionStorage.setItem(BORROW_KEY, "1");
+          else window.sessionStorage.removeItem(BORROW_KEY);
+        } catch (e) {}
+        var c = { gistId: v.gistId.trim(), deviceName: v.deviceName.trim(), lastPulledAt: "" };
+        setSecret(TOK_KEY, v.token.trim());
+        setSecret(PASS_KEY, v.pass.trim());
+        wireAutoSync();
+        if (c.gistId) { saveCfg(c); render(); syncNow(); return; }
+        saveCfg(c);
+        toast("Making a gist…");
+        stampRecords();
+        noteDevice();
+        seal(JSON.stringify(payload()), v.pass.trim())
+          .then(function (sealed) { return gistCreate(v.token.trim(), sealed); })
+          .then(function (g) {
+            c.gistId = g.id; c.lastPulledAt = nowStamp();
+            saveCfg(c); save(); render();
+            toast("Sync is on. Paste this gist id on your other devices: " + g.id);
+          })
+          .catch(function (e) {
+            c.gistId = ""; saveCfg(c); render();
+            toast(e && e.message ? e.message : "Could not make the gist.");
+          });
+      }
+    });
+  }
+
+  /* WIPE THIS DEVICE never touches the gist, and the dialog says so in as
+     many words, because on a borrowed laptop the fear is exactly that
+     leaving might lose the work. It also says the honest limit: wiping here
+     does not revoke the token, which anyone who copied it still holds. */
+  function wipeDeviceDialog() {
+    confirmAction({
+      title: "Wipe this device?",
+      message: "This removes the book, the token, the passphrase and the snapshots " +
+        "from this browser, and nothing else. <b>Your book in the gist is not " +
+        "touched</b> — no request is sent to GitHub — and your other devices " +
+        "keep theirs. Wiping does not revoke the token: if anyone could have copied " +
+        "it, revoke it at github.com/settings/tokens.",
+      confirmLabel: "Wipe this device", danger: true
+    }, function () {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+      dropSecrets();
+      try { localStorage.removeItem(DEV_KEY); sessionStorage.removeItem(DEV_KEY); } catch (e) {}
+      try { localStorage.removeItem(APP.storeKey); } catch (e) {}
+      try { if (window.indexedDB) indexedDB.deleteDatabase(BK_DB); } catch (e) {}
+      state = APP.blank();
+      ensureStamps();
+      openRec = ""; pageAt = {}; back = [];
+      save(); render();
+      toast("Wiped from this browser. The gist and your other devices are untouched.");
+    });
+  }
+
+  /* ================= snapshots on this device =================
+
+     Sync and a backup are different jobs and one does not cover the other.
+     Sync propagates the CURRENT book — so a mistake propagates too,
+     promptly and to every device. A snapshot preserves an EARLIER one, which
+     is the only thing that helps after a bad delete. Kept in IndexedDB
+     because a rolling set of whole books would crowd out the book itself in
+     localStorage, whose quota five sibling apps share. None are taken on a
+     borrowed laptop, where nothing may outlive the tab. */
+  var BK_DB = "mashghal2-backups", BK_STORE = "snaps", BK_KEEP = 10;
+  var BK_MIN_GAP = 6 * 60 * 60 * 1000;   // at most four a day
+  var bkLast = 0;
+
+  /* READING NEVER CREATES. Opening a database that is not there makes it,
+     so listing snapshots straight after "Wipe this device" put an empty
+     `mashghal2-backups` back on a machine that had just been told to keep
+     nothing. A read aborts the upgrade instead, which leaves no database. */
+  function bkOpen(readOnly) {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) { rej(new Error("no IndexedDB")); return; }
+      var r = indexedDB.open(BK_DB, 1);
+      r.onupgradeneeded = function (e) {
+        if (readOnly && e.oldVersion === 0) { r.transaction.abort(); return; }
+        if (!r.result.objectStoreNames.contains(BK_STORE)) {
+          r.result.createObjectStore(BK_STORE, { keyPath: "at" });
+        }
+      };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error || new Error("could not open")); };
+    });
+  }
+  function bkTx(mode, fn) {
+    return bkOpen(mode === "readonly").then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(BK_STORE, mode);
+        var out = fn(tx.objectStore(BK_STORE));
+        tx.oncomplete = function () {
+          db.close();
+          res(out && out.result !== undefined ? out.result : out);
+        };
+        tx.onerror = function () { db.close(); rej(tx.error); };
+      });
+    });
+  }
+  function bkList() {
+    return bkTx("readonly", function (st) { return st.getAll(); })
+      .then(function (rows) {
+        return (rows || []).sort(function (a, z) { return a.at < z.at ? 1 : -1; });
+      })
+      .catch(function () { return []; });
+  }
+  /* Taken on a change, but rate-limited: a snapshot per keystroke is not a
+     history, it is noise that pushes the useful one out of the window. */
+  function bkMaybe() {
+    if (borrowed() || emptyBook()) return;
+    var now = Date.now();
+    if (now - bkLast < BK_MIN_GAP) return;
+    bkLast = now;
+    bkSnap("automatic");
+  }
+  function bkSnap(why) {
+    if (borrowed()) return Promise.resolve(null);
+    var body;
+    try { body = JSON.stringify(payload()); } catch (e) { return Promise.resolve(null); }
+    var row = { at: nowStamp(), why: why || "automatic", bytes: body.length, body: body };
+    return bkTx("readwrite", function (st) { st.put(row); })
+      .then(bkList)
+      .then(function (rows) {
+        var extra = rows.slice(BK_KEEP);
+        if (!extra.length) return row;
+        return bkTx("readwrite", function (st) {
+          extra.forEach(function (r) { st.delete(r.at); });
+        }).then(function () { return row; });
+      })
+      .catch(function () { return null; });
+  }
+  /* A RESTORE IS ITSELF UNDOABLE: the book as it stands is snapshotted
+     first, and the undo on the message puts that one back. Through
+     `adoptState`, the single adoption point, because hand-copying a key
+     list at a second site is exactly how Coffer lost grants. */
+  function bkRestore(at, noSnap) {
+    return bkTx("readonly", function (st) { return st.get(at); })
+      .then(function (row) {
+        if (!row) throw new Error("That snapshot is gone.");
+        var parsed = JSON.parse(row.body);
+        return (noSnap ? Promise.resolve(null) : bkSnap("before a restore")).then(function (before) {
+          adoptRestored(parsed);
+          openRec = ""; pageAt = {}; back = [];
+          save(); render(); syncSoon();
+          return { row: row, before: before };
+        });
+      });
+  }
+  function stampWhen(s) {
+    var d = new Date(s);
+    if (isNaN(d.getTime())) return String(s);
+    return shortDate(iso(d)) + ", " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  /* Filled in after the fact, because IndexedDB is asynchronous and
+     renderView is not — the card paints what it knows and fills itself in. */
+  function mountBackups() {
+    var list = document.getElementById("bkList");
+    if (!list) return;
+    bkList().then(function (rows) {
+      var sub = document.getElementById("bkSub");
+      if (sub) {
+        sub.textContent = borrowed()
+          ? "None are kept on a borrowed laptop — nothing here outlives the tab."
+          : rows.length
+            ? cap(countWords(rows.length, "snapshot", "snapshots")) + " on this device, " +
+              (rows.length === 1 ? "from " : "the newest from ") + stampWhen(rows[0].at) + "."
+            : "None yet — one is taken the next time you change something.";
+      }
+      if (!rows.length) { list.innerHTML = ""; return; }
+      list.innerHTML = '<div class="rows">' + rows.map(function (r) {
+        return '<div class="row flat"><span class="grow"><span class="nm">' +
+          esc(stampWhen(r.at)) + '</span><span class="sub">' +
+          esc(r.why === "automatic" ? "Taken by itself"
+            : r.why === "before a restore" ? "The book as it was before a restore"
+            : "Taken by hand") + " · " +
+          Math.max(1, Math.round(r.bytes / 1024)) + " KB</span></span>" +
+          '<span class="right">' + btn("bk-restore", r.at, "Put this back", "btn tiny") +
+          "</span></div>";
+      }).join("") + "</div>";
+    });
+  }
+
+  function bkRestoreDialog(at) {
+    confirmAction({
+      title: "Put the book back as it was on " + stampWhen(at) + "?",
+      message: "The book as it stands now is kept as a snapshot first, so the undo on " +
+        "the message puts it straight back." + (syncOn()
+          ? " This book syncs: anything deleted since comes back everywhere, and " +
+            "anything another device changed since returns with the next sync."
+          : ""),
+      confirmLabel: "Put this back", danger: false, cancelLabel: "Cancel"
+    }, function () {
+      bkRestore(at).then(function (r) {
+        toast("Put back as it was on " + stampWhen(r.row.at), r.before ? function () {
+          bkRestore(r.before.at, true).catch(function () {});
+        } : null);
+      }).catch(function (e) {
+        toast(e && e.message ? e.message : "That snapshot could not be read.");
+      });
+    });
+  }
+
+  /* ============================================================
      THE EXAMPLE.
 
      It is the thing people are shown the app with, so it has to EXERCISE
@@ -9569,7 +10435,7 @@ color-scheme: light;
        two screens can never be drawn differently for the same reason. */
     "shape": function (idv) {
       state.settings.shape = idv === "cards" ? "cards" : "rows";
-      save(); render();
+      commit(); render();
     },
     "dir-facet": function (idv) { dirFacet = idv || ""; render(); },
     /* One copy handler for every kind, because the path lives on the
@@ -9731,12 +10597,29 @@ color-scheme: light;
            `adoptState`, because hand-copying a key list at a second site is
            how the app this replaces lost two whole lists out of a restored
            backup. */
-        state = adoptState(j);
+        adoptRestored(j);
         openRec = ""; pageAt = {}; back = [];
-        saveGo("Restored");
+        saveGo(syncOn() ? "Restored — anything changed on another device since " +
+          "comes back on the next sync" : "Restored");
       });
     },
     "sample": function () {
+      /* NOT ON A SYNCED BOOK. The example is invented, and on a book that
+         syncs it would be pushed to every device as though it were real —
+         somebody else's name and three late steps on the phone that holds
+         your actual career. */
+      if (syncOn()) {
+        openModal({
+          title: "Not while this book syncs",
+          message: "The example is invented, and on a synced book it would travel to " +
+            "every device as if it were yours. Turn sync off on this device first " +
+            "(“Wipe this device” under Your book on other devices), or look " +
+            "at it in another browser.",
+          confirmLabel: "Show me the sync card",
+          onConfirm: function () { goPage("settings", ""); }
+        });
+        return;
+      }
       if (!emptyBook()) {
         confirmAction({
           title: "Load the example over what is here?",
@@ -9758,7 +10641,10 @@ color-scheme: light;
             countWords(state.links.length, "link", "links") + " go."
           : "The book is already empty.") +
           " This is the one act in the app with no undo, because there is nothing left " +
-          "to hold one over. Back it up first if any of it matters.",
+          "to hold one over. Back it up first if any of it matters." +
+          (syncOn() ? " <b>This book syncs</b>, so erasing it here is not deleting it: " +
+            "the next sync brings everything back from your other devices. To take it " +
+            "off this machine for good, use \u201cWipe this device\u201d instead." : ""),
         confirmLabel: "Erase it all"
       }, function () {
         state = APP.blank();
@@ -9768,6 +10654,17 @@ color-scheme: light;
     },
     "old-import": function () { oldImportDialog(); },
     "import-json": function () { importDialog(); },
+    "sync-setup": function () { syncSetupDialog(); },
+    "sync-now": function () { syncNow(false); },
+    "sync-wipe": function () { wipeDeviceDialog(); },
+    "bk-now": function () {
+      if (borrowed()) { toast("No snapshots are kept on a borrowed machine."); return; }
+      bkSnap("by hand").then(function (r) {
+        toast(r ? "Snapshot taken" : "The snapshot could not be written here.");
+        render();
+      });
+    },
+    "bk-restore": function (at) { bkRestoreDialog(at); },
     "old-dismiss": function () {
       state.settings.offered = true;
       saveGo("Left alone — it is still under its own key");
@@ -9840,7 +10737,8 @@ color-scheme: light;
         G.gear + "</button>" +
         '<span class="grow"><span class="nm">' +
         esc(state.profile.name || "Mashghal") + "</span>" +
-        '<span class="sub">This browser only</span></span>';
+        '<span class="sub"><span class="syncdot' + (syncShort().on ? " on" : "") +
+        '" aria-hidden="true"></span>' + esc(syncShort().words) + "</span></span>";
     }
   }
 
@@ -9982,6 +10880,7 @@ color-scheme: light;
       return renderHome();
     },
     afterRender: function () {
+      mountBackups();
       railWork();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS.
          Every keystroke re-renders the list under it, which builds a fresh
@@ -10005,6 +10904,12 @@ color-scheme: light;
     },
     afterBoot: function () {
       paintTheme();
+      /* Records written before sync existed carry no stamp; they get one
+         now, and the snapshot that tracks change starts from this book. */
+      ensureStamps();
+      save();
+      wireAutoSync();
+      if (syncOn()) setTimeout(function () { nudgeSync("opened"); }, 400);
       wireKeys();
       document.getElementById("findInput").addEventListener("input", function () {
         paintFind(this.value);
