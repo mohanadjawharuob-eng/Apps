@@ -1,100 +1,81 @@
 # mashghal2 — what this directory is
 
-Mashghal **rebuilt on two nouns**, beside the original rather than on top of
-it, because the two are different apps and its owner asked to keep both.
+Mashghal rebuilt as a **personal career and work hub**, beside the original
+rather than on top of it, because the two are different apps and their owner
+asked to keep both.
 
 `../../mashghal/` is the app as it grew: rev-1's switch-led spine with seven
-rounds of features folded into it, fifteen state lists and seven tabs. This
-one holds **a card and a link**, and nothing else.
+rounds of features folded into it. This one is built the other way round, in
+the order the round-3 brief's §32 asks for in one sentence — *build canonical
+records, relationships and shared derived selectors first; then make each
+screen a view over that same underlying workspace.*
 
-## Why it is two nouns
+## The shape
 
-Its owner said the round-3 rebuild did not feel right, and then agreed with
-all four readings of why: it had no point of view, there was too much to
-learn, it looked generic, and it was wrong about their work. Three of those
-four are one fault with one cause.
+**Three worlds, one record.**
 
-Every round, a new document was read and the question asked was *"what does
-this app already have that answers this?"* — so the record grew a list per
-feature and the bar grew a tab per list. Jobs, projects, workflows, nodes,
-edges, runs, runNodes, actions, assets, people, personLinks, schedule,
-reports, timeEntries. **Fourteen nouns for one person's work**, each of them a
-table whose name you had to learn before you could find anything.
+- **Career** — who you are professionally: profile, roles and the employers
+  that hold them, education, training, skills, and a timeline derived from the
+  dates already on all of those.
+- **Work** — what you are doing and have done: projects, workflows and the
+  runs that are one execution of them, actions, people, equipment, outputs,
+  employers, hours.
+- **Knowledge** — the library: scripts · formulas · methods · templates ·
+  references · places, also readable by subject.
 
-All fourteen are the same two things:
+**And across all three**, the Portfolio and as many CVs as you have readers —
+both **selections over the record, never copies of it**, so correcting a date
+once corrects it everywhere.
 
-- **A card.** Something with a name. A project, a step, somebody you are
-  waiting on, a deadline, a laptop, a site, a scholarship.
-- **A link.** Either **then** (this comes after that) or **with** (these
-  belong together, in no particular order).
+One relationship layer joins them: seven kinds of line (`uses`, `learned`,
+`about`, `shows`, `picks`, `cites`, `withp`), each stated once in one
+direction with the reverse derived, so the two can never disagree.
 
-A card takes on **behaviour** rather than having a type — it waits on
-someone, has a day, files the work away, holds other cards, opens something,
-comes round again — and they compose. A card that waits can be late. A card
-that files is what *unfiled* means. A card that holds is a project, or a
-site, or a job, or a thesis, **by the same mechanism**, so the app never has
-to know which. That is why it can no longer be wrong about the work: the only
-thing it knows about a card's kind is the word its owner typed.
+Nothing is scored. A skill's level is typed or blank; what the app derives is
+the *evidence* — which training taught it, which projects used it, which
+outputs demonstrate it — because that is checkable and a number is not.
 
-**Not one of the six behaviours is stored.** Four are read off the field that
-carries them, so no flag can disagree with the field beside it; the two with
-no field of their own — holding work, filing it away — are one stated `role`.
+## The bibliography
 
-And the sections are gone. There is no table to navigate to, because there is
-one list of cards: a screen is a **question** over it. What is late is a
-list, because that is a list. How a piece of work goes is a **drafting
-sheet**, because that is a shape.
+The part asked for by name. A reference is a real citation record — eighteen
+fields, eleven types — because a bibliography cannot be assembled out of
+prose. BibTeX and RIS paste **in**, several at once, brace-balanced, and what
+cannot be placed is named rather than dropped. Five formats come **out** (a
+plain author–date list, BibTeX, RIS, CSL-JSON, bare cite keys) over five
+scopes (all · by subject · used on a project · about a skill · cited by one
+output). The one human-readable list says in its own header that it is *not*
+APA, MLA, Chicago or Harvard, because a hand-rolled named style is a plausible
+wrong answer and this app would rather show a visible limit.
 
-## The screens
+## Its own storage, and why that is not cosmetic
 
-**Now · Sheet · Index · Ask**, with Settings on the gear.
+`localStorage` is scoped to the **site**, not the folder — which is exactly
+how Coffer's two paths came to share one ledger, and how loading the example
+in one wiped the real book in the other. So every name here is its own:
+`mashghal2.hub`, `mashghal2.theme`, and its own `pwa-mashghal2-vN` cache with
+a manifest `id` and `scope` at its own directory. The build string is `wN`
+rather than `vN`, so a version of the rebuild can never be mistaken for a
+version of the original.
 
-| | the question | the rendering |
-|---|---|---|
-| **Now** | what needs me | a list, worst first |
-| **Sheet** | how does this work go | ArcGIS ModelBuilder, scoped to one holder |
-| **Index** | what have I got | rows, and the phone's reading of the sheet |
-| **Ask** | anything else | a question over the same cards, saved as a lens |
+The older books written by earlier rounds of this rebuild (`mashghal2.v1`,
+`mashghal2.v2`) are **offered, never read**: not loaded, not written to, not
+lost. Importing is additive and lossy, and the dialog names what it cannot
+carry before it runs.
 
-## The look
+## What is in this folder
 
-A **drafting sheet**, not a dashboard: paper by day and a drafting table by
-night, square corners, hairlines instead of fills, small-caps letterspaced
-annotations, a survey grid that pans with the work, and a **title block** at
-the foot of every screen the way every site drawing has one.
+| file | what it is |
+|---|---|
+| `README.md` | this |
+| `design-brief-website.md` | a brief for the **marketing page** at `/Apps/mashghal2.html` — the showcase, with the app explicitly out of scope |
+| `design-brief-app-as-site.md` | a brief for **the app's own desktop interface**, to read like a website rather than like an app |
 
-There is **one colour channel**, which is the model's own doing: a card's
-kind is a word its owner typed, so identity is a glyph and a word and can
-have no palette — which frees every hue for state. Oxide is late, brass is
-drift, verdigris is in hand, and waiting carries no colour at all.
+**The round-3 briefs are not copied here.** They live once, in
+`../../mashghal/docs/`, because two copies of one document is the same fault
+as two copies of one list. The launcher and the mailer are not copied either —
+they are one handler and one workflow per machine, installed from
+`../../mashghal/companion/` and `../../mashghal/mailer/`.
 
-## What is different about it, mechanically
-
-- **Its own storage, entirely.** `localStorage` is scoped to the SITE and not
-  the folder, so a clone that kept the original's key would share one book
-  with it and loading the sample in either would wipe the other — which is
-  exactly what happened to Coffer across its two paths. Every name is its
-  own: `mashghal2.v2`, `mashghal2.theme`.
-- **A new key beside the old one.** `mashghal2.v1` is w3's book and holds a
-  different shape. It is not read, not written and not lost: it is
-  **offered**, once, and imported only on a tap — additively, and the import
-  says what it cannot carry.
-- **Its own service worker and scope.** `pwa-mashghal2-vN`, with the manifest
-  `id` and `scope` at this directory, so a browser treats it as a separate
-  installable app and neither install orphans the other.
-- **Its own build string.** `w` for the rebuild, so a version can never be
-  confused with the original's `vN`.
-
-## The documents this came out of
-
-They live once, in `../../mashghal/docs/`, and belong to both apps:
-
-- `design-brief-round-3.md` — the screens, their regions and their exact copy
-- `product-concept-round-3.md` — the relationship model and the reality rules
-- `design-system.md` — the navy palette the original uses
-
-Two copies of one document is the fault `CLAUDE.md` records about two copies
-of one list, one level out. What this rebuild keeps from them is the
-**discipline** — derived never stored, one selector per question, never guess
-at anything, it proposes and never acts — and not their table structure,
-which is the thing that went wrong.
+`../press/` holds the screenshots the marketing page uses. They are generated
+by driving the real app, never hand-edited, and `../press/README.md` names
+each one.
