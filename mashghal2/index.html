@@ -383,6 +383,7 @@ color-scheme: light;
     padding: 0.9rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
+  .railhead { display: contents; }
   .brand { order: 1; display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .brand h1 { font-size: 1.02rem; overflow-wrap: anywhere; }
   .brand-mark { display: inline-flex; flex: 0 0 auto; }
@@ -519,6 +520,7 @@ color-scheme: light;
   .gearbtn:focus-visible, .findbtn:focus-visible, .row:focus-visible,
   .bcrumb:focus-visible, .chip:focus-visible, .tevt:focus-visible,
   .pcard:focus-visible, .mrow:focus-visible, summary:focus-visible,
+  .panel.wide:focus-visible, .dact:focus-visible,
   input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: 2px solid var(--blue); outline-offset: 2px;
   }
@@ -791,6 +793,13 @@ color-scheme: light;
     display: grid; gap: 0.75rem; margin-top: 0.9rem;
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   }
+  /* A MINIMUM TRACK WIDTH IS A MINIMUM, and 20rem is the whole of a 320px
+     screen before the view's own padding — so the three cards came out
+     13px wider than the phone. One column below the point where two would
+     not fit anyway. */
+  @media (max-width: 660px) {
+    .hgrid { grid-template-columns: 1fr; }
+  }
   .dcard {
     border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet);
     padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.55rem;
@@ -808,6 +817,8 @@ color-scheme: light;
   .dact:hover { color: var(--ink); }
   .dfoot { margin-top: auto; }
   .tiles.tight { grid-template-columns: repeat(auto-fit, minmax(6.2rem, 1fr)); gap: 0.4rem; }
+  /* Two by two, so four parts of one figure read as four. */
+  .dcard .tiles.tight { grid-template-columns: repeat(2, 1fr); }
   .panel.wide {
     width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
     display: block;
@@ -911,11 +922,31 @@ color-scheme: light;
       padding: calc(0.45rem + env(safe-area-inset-top, 0px)) 0.6rem 0;
       gap: 0.45rem; overflow: visible;
     }
-    .railtop { display: flex; align-items: center; gap: 0.5rem; }
-    .railtop .brand { flex: 1 1 auto; }
+    /* THE MARK, THE NAME AND THE GEAR SHARE ONE ROW WITH THE FINDER, because
+       a phone has 780px and 164px of it was chrome. The finder is the one
+       control that reaches further than any tab, so it keeps its width and
+       the rest of the row shrinks around it: 164px → 122px, measured, and
+       nothing was taken out. */
+    .railtop {
+      display: flex; align-items: center; gap: 0.45rem; order: 1;
+      flex: 1 1 auto; min-width: 0;
+    }
+    .railtop .brand { flex: 0 0 auto; min-width: 0; }
+    .railtop .brand h1 {
+      font-size: 0.95rem; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .railsub { display: none; }
-    .findbtn { order: 3; }
-    #nav { order: 4; flex-direction: row; gap: 0; }
+    .findbtn {
+      order: 2; flex: 1 1 8rem; min-width: 0; margin: 0;
+      padding: 0.3rem 0.5rem;
+    }
+    .findbtn .k { display: none; }
+    .railhead {
+      display: flex; align-items: center; gap: 0.45rem; width: 100%; order: 1;
+    }
+    .railtop { order: 0; }
+    #nav { order: 4; flex-direction: row; gap: 0; width: 100%; }
     .tab {
       flex: 1 1 0; min-width: 0; flex-direction: column; gap: 0.06rem;
       align-items: center; text-align: center; padding: 0.3rem 0.12rem;
@@ -930,7 +961,15 @@ color-scheme: light;
     .tab .ico { position: relative; }
     .tab .badge { position: absolute; top: 0; right: 0.18rem; margin: 0; }
     .railwork { display: none; }
-    .railme { order: 2; margin: 0; border-top: 0; padding: 0; flex: 0 0 auto; }
+    .railme {
+      order: 3; margin: 0; border-top: 0; padding: 0; flex: 0 0 auto;
+      align-items: center;
+    }
+    /* On a phone the footer is the gear and nothing else: "This browser only"
+       is a fact worth stating on a laptop rail with room for it, and a third
+       line of chrome on a 780px screen everywhere else. Settings says the
+       same thing in full. */
+    .railme > .grow { display: none; }
     .gearbtn { padding: 0.25rem 0.4rem; }
     .gearbtn > span:last-child { display: none; }
     .view { padding: 1rem 0.8rem calc(2.4rem + env(safe-area-inset-bottom, 0px)); }
@@ -938,6 +977,46 @@ color-scheme: light;
   @media (max-width: 880px) { .railtop { display: flex; } }
   @media (min-width: 881px) { .railtop { display: contents; } }
   @media (max-width: 400px) { .tab { font-size: 0.62rem; } }
+
+  /* ---- the guide ----
+     A page you read rather than a screen you scan, so it takes a measure and
+     a shape of its own: the contents strip jumps, the route sits left of the
+     instruction, and the notes are quieter than the rows they qualify. */
+  .gtoc {
+    display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.2rem 0 0.4rem;
+    padding-bottom: 0.7rem; border-bottom: 1px solid var(--rule);
+  }
+  .gtoclink {
+    font-size: var(--fs-xs); color: var(--dim); text-decoration: none;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: 0.18rem 0.6rem; transition: var(--t);
+  }
+  .gtoclink:hover { color: var(--ink); border-color: var(--rule-strong); background: var(--sheet); }
+  .gtoclink:focus-visible {
+    outline: 1px solid var(--blue); outline-offset: 2px;
+  }
+  .gpart { scroll-margin-top: 1rem; }
+  .gpart + .gpart { margin-top: 0.4rem; }
+  .growlist { display: grid; gap: 0.4rem; }
+  .grow-row {
+    display: flex; gap: 0.9rem; align-items: baseline;
+    border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet);
+    padding: 0.6rem 0.75rem;
+  }
+  .gwhere {
+    flex: 0 0 13rem; font-family: var(--mono); font-size: var(--fs-xs);
+    color: var(--faint); line-height: 1.5;
+  }
+  .gwhat { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.12rem; }
+  .gwhat > b { font-size: var(--fs-sm); }
+  .gnote {
+    border-left: 2px solid var(--rule-mid); padding-left: 0.7rem;
+    margin-top: 0.6rem;
+  }
+  @media (max-width: 620px) {
+    .grow-row { flex-direction: column; gap: 0.25rem; }
+    .gwhere { flex: none; }
+  }
 </style>
 </head>
 <body>
@@ -947,6 +1026,13 @@ color-scheme: light;
   <aside class="rail">
     <!-- The meem the icon is drawn from: a bowl that is also a record, a
          tail that is also the line between two of them. -->
+    <!-- On a phone the mark, the name, the finder and the gear share ONE row,
+         because 780px of screen had 164px of chrome in it. On a laptop this
+         wrapper is `display: contents`, so the rail's own stated order
+         (brand 1 · sub 2 · finder 3 · tabs 4 · quick 5 · footer 6) is
+         untouched — a wrapper with an auto margin inside it is exactly how
+         the footer once pushed everything after it down. -->
+    <div class="railhead">
     <div class="railtop">
       <div class="brand"><span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 512 512" width="25" height="25" fill="none">
@@ -958,9 +1044,7 @@ color-scheme: light;
                 stroke-width="42" stroke-linecap="round"/>
           <circle cx="292" cy="424" r="24" fill="var(--sage)" stroke="none"/>
         </svg></span><h1 id="brandName">Mashghal</h1></div>
-      <div class="railme" id="railFoot"></div>
     </div>
-    <div class="railsub" id="railSub"></div>
     <!-- The one control that reaches further than any tab. It looks like the
          field it is and is still a button: a real <input> in the rail would
          be a second place to type one query. -->
@@ -969,6 +1053,9 @@ color-scheme: light;
         stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8.8" cy="8.8" r="5.3"/><path d="M12.8 12.8l4 4"/></svg></span>
       <span>Find anything</span><span class="k">Ctrl K</span>
     </button>
+    <div class="railme" id="railFoot"></div>
+    </div>
+    <div class="railsub" id="railSub"></div>
     <nav id="nav" aria-label="Sections"></nav>
     <!-- The pages of whichever section is open, written here rather than in
          `renderNav()`, which belongs to the shared runtime and has to stay
@@ -1165,7 +1252,7 @@ color-scheme: light;
     project: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.2a1.6 1.6 0 0 1 1.6-1.6h2.9l1.5 2h6.7a1.6 1.6 0 0 1 1.6 1.6v6.2a1.6 1.6 0 0 1-1.6 1.6H4.4a1.6 1.6 0 0 1-1.6-1.6z"/></svg>',
     workflow: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="3.4" width="6" height="4.2" rx="1.2"/><path d="M8.4 5.5h3.2a1.8 1.8 0 0 1 1.8 1.8v1.4"/><rect x="10.4" y="8.8" width="7.2" height="4.2" rx="1.2"/><path d="M14 13v1.5a1.8 1.8 0 0 1-1.8 1.8H8.6"/><circle cx="5.4" cy="16.3" r="1.8"/></svg>',
     run: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M8.3 6.8l4.6 3.2-4.6 3.2z"/></svg>',
-    action: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.3 10.4l3.5 3.4 7.6-8"/></svg>',
+    action: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 10h10.2"/><path d="M10 6.2 13.9 10 10 13.8"/><path d="M16.6 4.6v10.8"/></svg>',
     person: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="6.8" r="2.9"/><path d="M4.6 16.6c0-3 2.4-4.8 5.4-4.8s5.4 1.8 5.4 4.8"/></svg>',
     asset: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="4.4" width="14.8" height="9" rx="1.4"/><path d="M6.6 16.6h6.8"/></svg>',
     output: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 2.8h6.4l4.8 4.8v9.6H4.4z"/><path d="M10.8 2.8v4.8h4.8"/></svg>',
@@ -4888,7 +4975,8 @@ color-scheme: light;
       btn("sample", "", "Load the example", "btn primary") +
       btn("proj-add", "", "Start with a project") +
       btn("lib-add-script", "", "Start with a script") +
-      btn("profile-edit", "", "Start with your profile") + "</div>" +
+      btn("profile-edit", "", "Start with your profile") +
+      btn("guide", "", "Read how it works first") + "</div>" +
       '<p class="says" style="margin-top:0.7rem">The example is one archaeologist’s ' +
       "book with every part of the app in it. It replaces nothing, because there is " +
       "nothing here yet.</p></div>" +
@@ -4983,6 +5071,10 @@ color-scheme: light;
             : " · " + pageCount(tab, p)) });
       });
     });
+    rows.push({ k: "page", tab: "guide", page: "", name: "How to use Mashghal",
+      key: "guide help how to start manual instructions getting started tutorial " +
+        "add everything what goes where",
+      says: "every record, where it lives, and what to link it to" });
     rows.push({ k: "page", tab: "settings", page: "", name: "Settings",
       key: "settings theme dark light erase wipe export backup version shortcuts owner",
       says: "the theme, your name, the record, and erasing it" });
@@ -5256,7 +5348,13 @@ color-scheme: light;
            the screen contradicting itself in two consecutive lines. */
         if (!(ans.rows || []).length && !ans.go) html.push(findSearch(q));
       } else {
+        /* A QUESTION IT CANNOT SHAPE MAY STILL BE A SEARCH. "how to" opens
+           with a question word and matches no shape — printing only the
+           table of what it can be asked, with the hits for those same words
+           sitting unmentioned underneath, is the box refusing to look for
+           the thing typed into it. */
         html.push(askUnread(q));
+        html.push(findSearch(q));
       }
     } else {
       html.push(findSearch(q));
@@ -5425,6 +5523,13 @@ color-scheme: light;
     var out = [pageHeadOf("Settings",
       "The theme, your name, and the record itself.", "")];
 
+    out.push(sectHead("How to use it", null));
+    out.push('<div class="panel"><p class="says">Every record the app holds, where it ' +
+      "lives, and what to link it to \u2014 in the order that makes the later ones " +
+      "worth having.</p>" +
+      '<div class="page-acts" style="margin-top:0.6rem">' +
+      btn("guide", "", "Open the guide", "btn primary") + "</div></div>");
+
     out.push(sectHead("The look", null));
     var th = localStorage.getItem(THEME_KEY) || "";
     out.push('<div class="panel"><p class="says">Dark by default, because that is what ' +
@@ -5511,6 +5616,392 @@ color-scheme: light;
       "with the portfolio, the timeline and a CV as views across them rather than " +
       "records of their own.</p></div>");
     return out.join("");
+  }
+
+  /* ============================================================
+     THE GUIDE.
+
+     Not a tour and not a tooltip: a page you can read once and come back
+     to, that names every record the app holds, where it lives, and what to
+     link it to. Two rules hold it, and both are the same rule this whole
+     app lives by:
+
+       IT NAMES THE REAL CONTROL. Every instruction says the words actually
+       printed on the button — "New role", "Link it to…", "Paste BibTeX or
+       RIS" — because a guide that paraphrases the interface is a guide
+       that goes wrong the first time a label changes, silently.
+
+       IT IS REACHABLE WITHOUT ALREADY KNOWING IT IS THERE. It is on the
+       first screen of an empty book, on the gear beside Settings, and in
+       the finder under every word somebody would type for it — guide,
+       help, how, start, manual. The one screen whose name you have
+       forgotten is the one that has to be searchable.
+     ============================================================ */
+
+  var GUIDE_PARTS = [
+    { id: "g-start", word: "Start here" },
+    { id: "g-shape", word: "How it is put together" },
+    { id: "g-career", word: "Career" },
+    { id: "g-work", word: "Work" },
+    { id: "g-lib", word: "The library" },
+    { id: "g-bib", word: "References and the bibliography" },
+    { id: "g-links", word: "Drawing the lines" },
+    { id: "g-show", word: "Portfolio and CVs" },
+    { id: "g-ask", word: "Finding and asking" },
+    { id: "g-keys", word: "The keyboard" },
+    { id: "g-record", word: "Your record" }
+  ];
+
+  function gp(id, word, body) {
+    return '<div class="gpart" id="' + id + '">' + sectHead(word, null) + body + "</div>";
+  }
+  /* A HOW-TO ROW IS A ROUTE AND A REASON, in that order: where the button
+     is, then why the field is worth filling. */
+  function grow(where, what, why) {
+    return '<div class="grow-row"><span class="gwhere">' + where + "</span>" +
+      '<span class="gwhat"><b>' + what + "</b>" +
+      (why ? '<span class="sub">' + why + "</span>" : "") + "</span></div>";
+  }
+  function gnote(html) { return '<p class="says gnote">' + html + "</p>"; }
+
+  function renderGuide() {
+    var out = [pageHeadOf("How to use Mashghal",
+      "Every record the app holds, where it lives, and what to link it to — in the " +
+      "order that makes the later ones worth having. Nothing here is a tour you have to " +
+      "sit through; it is a page, and it will still be here next month.",
+      btn("sample", "", emptyBook() ? "Load the example" : "Reload the example") +
+      btn("settings", "", "Settings"))];
+
+    out.push('<div class="gtoc">' + GUIDE_PARTS.map(function (p) {
+      return '<a class="gtoclink" href="#' + p.id + '">' + esc(p.word) + "</a>";
+    }).join("") + "</div>");
+
+    /* ---------------- start ---------------- */
+    out.push(gp("g-start", "Start here",
+      '<div class="panel"><p class="says">Four steps. They are in this order because ' +
+      "each one gives the next something to point at — a skill with no project " +
+      "under it is a word on a list, which is the one thing this app is built not to " +
+      "be.</p></div>" +
+      '<div class="steps">' +
+      gstep("Look at the example, then erase it",
+        "On an empty book, Home offers <b>Load the example</b>. It is one " +
+        "archaeologist’s record with every part of the app in it — projects, " +
+        "workflows, a bibliography, two CVs, a skill with nothing behind it. Read it, " +
+        "then Settings → <b>Erase everything</b> and start your own. Nothing is " +
+        "invented for you otherwise: an empty book stays empty until you type.") +
+      gstep("Write your profile",
+        "Career → <b>Profile</b> → <b>Edit</b>. A name and one line about what " +
+        "you do is enough; every field may be left blank, and blank stays blank rather " +
+        "than being filled in for you. The name is what Home greets you by and what a " +
+        "CV heads itself with.") +
+      gstep("One employer and one role",
+        "Work → <b>Employers</b> → <b>New employer</b>, then Career → " +
+        "<b>Experience</b> → <b>New role</b>. A role with no employer is a real " +
+        "answer — a thesis, a fellowship and freelance work belong to none.") +
+      gstep("A project, and then the lines",
+        "Work → <b>Projects</b> → <b>New project</b>, naming the role it runs " +
+        "under. Then <b>Link it to…</b> on the project’s own page: the skills " +
+        "it used, the people on it, the equipment, the library entries. Those lines are " +
+        "what turn a list of records into a record of your work.") +
+      "</div>"));
+
+    /* ---------------- shape ---------------- */
+    out.push(gp("g-shape", "How it is put together",
+      '<div class="panel"><p class="says">Five tabs, and each is a QUESTION over one ' +
+      "record rather than a separate store:</p>" +
+      '<div class="rows" style="margin-top:0.6rem">' +
+      gtab("home", "Home", "What matters across all of it right now — four cards, " +
+        "each one the route into the screen that answers the same question in full.") +
+      gtab("career", "Career", "Who you are professionally: profile, experience, " +
+        "education, training, skills, and a timeline derived from the dates already on " +
+        "them.") +
+      gtab("work", "Work", "What you are doing and have done: projects, workflows and " +
+        "their runs, actions, people, equipment, outputs, employers and hours.") +
+      gtab("library", "Library", "What you know and can reuse: scripts, formulas, " +
+        "methods, templates, references and places — also readable by subject.") +
+      gtab("show", "Show", "What you can put in front of somebody: the portfolio, and " +
+        "as many CVs as you have readers.") +
+      "</div>" +
+      gnote("Settings is on the <b>gear</b> at the foot of the rail rather than on the " +
+        "bar, because it is opened a few times a year and the bar is worth more than " +
+        "that. The <b>finder</b> sits above the tabs, because it reaches further than " +
+        "any of them.") + "</div>"));
+
+    /* ---------------- career ---------------- */
+    out.push(gp("g-career", "Career — who you are professionally",
+      '<div class="growlist">' +
+      grow("Career → Profile → Edit", "Your profile",
+        "Name, one line about what you do, the fields you work in, and a paragraph for " +
+        "the top of a CV. Nothing here is required.") +
+      grow("Work → Employers → New employer", "An employer",
+        "An organisation, over years. It holds roles, and roles hold projects. Removing " +
+        "one keeps every role and project under it — they simply stop naming an " +
+        "employer, and still read its name with “(removed)” after it.") +
+      grow("Career → Experience → New role", "A role",
+        "A title, the employer, and the dates. <b>Leave the end date empty while it is " +
+        "current</b> and the app reads that as “– present”. What you " +
+        "write in the note is what a CV prints under the title.") +
+      grow("Career → Education → New education", "Education",
+        "What it was, where, when, and how it came out. Only the rows that can have a " +
+        "value are printed on its page.") +
+      grow("Career → Training → New training", "Training",
+        "A course, a workshop, a certification, a ticket — first-class here rather " +
+        "than a footnote under education, because training is very often the thing that " +
+        "actually evidences a skill. The certificate field takes a number or a link, and " +
+        "the page offers to open it only when it really is a link.") +
+      grow("Career → Skills → New skill", "A skill",
+        "The skill, a group you type yourself, and — if you want — a level. " +
+        "<b>Leave the level blank and it stays blank.</b> Nothing computes a proficiency " +
+        "out of how many projects used a word.") +
+      "</div>" +
+      gnote("<b>The Timeline builds itself.</b> It reads the dates already on education, " +
+        "roles, training, projects and outputs, so there is nothing to add to it and " +
+        "nothing on it to keep in step. Every row opens the record it came from.")));
+
+    /* ---------------- work ---------------- */
+    out.push(gp("g-work", "Work — what you are doing and have done",
+      '<div class="growlist">' +
+      grow("Work → Projects → New project", "A project",
+        "A specific body of work. Name the <b>role it ran under</b>: that one field is " +
+        "what makes the same record live work here and a line of experience on the " +
+        "career side. The status is stated, never guessed — and " +
+        "“drifting” in particular is only ever something you say.") +
+      grow("Work → Workflows → New workflow", "A workflow",
+        "How you perform a KIND of work, written once. Add its steps on its own page " +
+        "with <b>Add a step</b>, and attach the script or method each step is done with " +
+        "from the step’s own row.") +
+      grow("a workflow → Run it on a project", "A run",
+        "One execution of that workflow, on one project, between two dates. This is the " +
+        "distinction the whole thing rests on: the workflow is the procedure and the run " +
+        "is the evidence that you did it. Neither side holds a list of the other — " +
+        "the projects a workflow has been used on are worked out from the runs.") +
+      grow("Work → Actions → New action", "An action",
+        "What happens next on a project. Give it a day and it can be late; choose " +
+        "“something to send, then wait on” and name who you are waiting on, " +
+        "and it can be chased. <b>A chase of nought or blank means no chase</b>, so it " +
+        "can sit for ever without being called late — because nobody said when to " +
+        "chase it.") +
+      grow("Work → People → New person", "A person",
+        "Who you work with. What is outstanding with them is not stored: it is read off " +
+        "the actions that name them, so their page and the Actions page cannot " +
+        "disagree.") +
+      grow("Work → Equipment → New equipment", "Equipment",
+        "All three facts are typed — how it stands, where it is, when it was last " +
+        "used — because none of them can be derived: a project that named the total " +
+        "station in March says nothing about where it is this week. Say nothing and the " +
+        "row reads <b>Unknown</b>, which is honest.") +
+      grow("Work → Outputs → New output", "An output",
+        "What the work produced: a map, a dataset, a report, a model, a paper, a " +
+        "lecture. Worth recording even when the file itself lives somewhere this app " +
+        "cannot reach — it is what a portfolio item and a skill both end up " +
+        "pointing at.") +
+      grow("Work → Hours → Log time", "Time",
+        "A project, a day, and a number of MINUTES — so an hour and a quarter is " +
+        "75. No figure is stored as a total; every one on the screen is summed from the " +
+        "entries, and there is an <b>Export as CSV</b> when somebody wants the lot.") +
+      "</div>" +
+      gnote("Actions sit on one page of one tab on purpose. A hub that becomes a to-do " +
+        "list stops being about the career underneath it — so nothing else in the " +
+        "app is a task.")));
+
+    /* ---------------- the library ---------------- */
+    out.push(gp("g-lib", "The library — what you know and can reuse",
+      '<div class="panel"><p class="says">Six months later you remember what the script ' +
+      "DID, not what you called it. So the library holds the content itself, and the " +
+      "finder searches the body as well as the name. Six kinds, and the kind decides the " +
+      "form the dialog takes:</p></div>" +
+      '<div class="growlist">' +
+      grow("Library → Scripts → New script", "A script",
+        "Code, and the language it is written in. <b>Leading whitespace is kept " +
+        "exactly</b> — it is what a Python block means — and only the trailing " +
+        "blank lines a textarea collects come off. There is a <b>Copy</b> on its row and " +
+        "on its page.") +
+      grow("Library → Formulas → New formula", "A formula",
+        "The same record with a different language, so the Formula door opens the code " +
+        "form on Excel. Name it for what it works out: “Area of a polygon from a " +
+        "coordinate list” reads better in six months than “formula 3”.") +
+      grow("Library → Methods → New method", "A method",
+        "A procedure or technique in prose. Code does not wrap and prose does, so this " +
+        "is set to be read rather than scrolled sideways.") +
+      grow("Library → Templates → New template", "A template",
+        "The skeleton you start from — a report outline, a metadata sheet, a naming " +
+        "rule.") +
+      grow("Library → Places → New place", "A place",
+        "Where something lives: a folder, a file, a link, a shortcut. One kind for all " +
+        "four, because they are the same act. <b>A path is copy-only</b> — a page " +
+        "served over https is not allowed to open a local file, every browser blocks it " +
+        "and some block it silently, so the app hands you the path rather than drawing a " +
+        "button that quietly does nothing.") +
+      grow("any entry → What it is about", "Subjects",
+        "Words you type, separated by commas. You never create a subject — you " +
+        "write one onto an entry, which keeps the vocabulary a description of your work " +
+        "rather than a taxonomy to maintain. <b>Library → By subject</b> then reads " +
+        "the whole library that way.") +
+      "</div>"));
+
+    /* ---------------- the bibliography ---------------- */
+    out.push(gp("g-bib", "References, and getting a bibliography out",
+      '<div class="panel"><p class="nm">Paste them in rather than typing them.</p>' +
+      '<p class="says">A reference here is a real citation record — eighteen ' +
+      "fields, eleven types — because a bibliography cannot be assembled out of " +
+      "prose. Typing eighteen fields per paper is how a bibliography feature goes " +
+      "unused, so <b>Library → References → Paste BibTeX or RIS</b> takes what " +
+      "every catalogue, Zotero and Google Scholar will hand you, several at once. " +
+      "Nothing is fetched and nothing is looked up: it is read here, character by " +
+      "character, and what it cannot place it names rather than dropping.</p></div>" +
+      '<div class="growlist">' +
+      grow("References → Export a bibliography", "Five formats",
+        "<b>A plain author–date list</b> for pasting into what you are writing now " +
+        "· <b>BibTeX</b> for LaTeX, Overleaf and JabRef · <b>RIS</b> for " +
+        "EndNote, Mendeley and Papers · <b>CSL-JSON</b> for anything that formats a " +
+        "named style properly · and <b>just the cite keys</b>, one per line.") +
+      grow("the same dialog", "Five scopes",
+        "Every reference · everything on one subject · everything used on one " +
+        "project · everything about one skill · and everything <b>cited by one " +
+        "output</b> — which is the one you want when a paper is actually going " +
+        "out. An output that cites anything carries <b>Its bibliography</b> on its own " +
+        "page.") +
+      grow("on a reference’s page", "One at a time",
+        "<b>Copy the full citation</b> for the formatted line, and <b>Copy " +
+        "“(Author year)”</b> for the in-text form. The cite key is printed " +
+        "beside them.") +
+      "</div>" +
+      gnote("<b>The plain list is author–date and says so in its own header.</b> It " +
+        "is not an implementation of APA, MLA, Chicago or Harvard, and it will not " +
+        "pretend to be: a hand-rolled named style is a plausible wrong answer, and this " +
+        "app would rather show you a visible limit. The four machine formats are exact " +
+        "— export CSL-JSON and let a reference manager format the named style " +
+        "properly.") +
+      gnote("A reference short of an <b>author</b>, a <b>year</b> or a <b>title</b> is " +
+        "named on the References page before you export and again inside the exported " +
+        "file. A bibliography entry with a hole in it is worse than a missing one.")));
+
+    /* ---------------- links ---------------- */
+    out.push(gp("g-links", "Drawing the lines — where most of the value is",
+      '<div class="panel"><p class="says"><b>Link it to…</b> is on every ' +
+      "record’s own page. A line is stated once, in one direction, and the other " +
+      "direction is worked out — so link a project to a skill and the skill’s " +
+      "page gains the project without you saying it twice. Seven kinds, and the picker " +
+      "only ever offers what the model actually has:</p>" +
+      '<table class="tbl" style="margin-top:0.7rem"><thead><tr><th>The line</th>' +
+      "<th>Reads forward</th><th>and backward</th></tr></thead><tbody>" +
+      Object.keys(RELS).filter(function (k) { return k !== "picks"; }).map(function (k) {
+        return "<tr><td>" + esc(RELS[k].says) + "</td><td><b>" + esc(RELS[k].fwd) +
+          "</b></td><td>" + esc(RELS[k].back) + "</td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      gnote("The one worth doing first: <b>a project uses a skill</b>, and <b>training " +
+        "taught</b> it. Those two lines are what make the Skills page say " +
+        "“one project, one training and two outputs” instead of “no " +
+        "evidence linked to it yet”.") +
+      gnote("Taking a line back out is the small <b>×</b> at the end of the row it " +
+        "is on. It cuts the line and leaves both records exactly as they were, and the " +
+        "message it prints carries an <b>Undo</b>.")));
+
+    /* ---------------- show ---------------- */
+    out.push(gp("g-show", "Portfolio and CVs — selections, never copies",
+      '<div class="panel"><p class="says">Neither of these holds a fact of its own. ' +
+      "They point at records that already exist, so correcting a date once corrects it " +
+      "in both — and a CV can never quietly describe a version of your career the " +
+      "rest of the app has stopped agreeing with.</p></div>" +
+      '<div class="growlist">' +
+      grow("Show → Portfolio → New portfolio item", "A portfolio item",
+        "A name, a date and a paragraph in your words. Then <b>Point it at…</b> " +
+        "for the projects, outputs and roles it shows. An item with nothing behind it is " +
+        "a claim with no evidence, and its page says so.") +
+      grow("Show → CVs → New CV", "A CV",
+        "A name and an <b>aim</b> — the job or the application it is for, which is " +
+        "how you tell two CVs apart. Then <b>Put something in it</b>, one record at a " +
+        "time: roles, education, training, skills, projects, outputs, references, " +
+        "portfolio items.") +
+      grow("a CV → Write it out", "The document",
+        "Plain text, read off the record at the moment you ask for it, grouped into the " +
+        "sections a reader expects. Save it as a file or copy it. It carries no house " +
+        "style on purpose — paste it into whatever the reader wants, and it says so " +
+        "at the foot.") +
+      "</div>" +
+      gnote("A CV page names what is <b>missing</b> — no experience, no education, " +
+        "no skills — when the record has something to put there. It is a note and " +
+        "not a refusal: an early-career CV legitimately leads on training.")));
+
+    /* ---------------- ask ---------------- */
+    out.push(gp("g-ask", "Finding things, and asking in words",
+      '<div class="panel"><p class="says"><span class="kbd">Ctrl</span> ' +
+      '<span class="kbd">K</span>, or <span class="kbd">/</span> when you are not ' +
+      "typing, or <b>Find anything</b> in the rail. It searches the record rather than " +
+      "the screen — every name, every body of code, every subject, every citation " +
+      "field — so a hit can never name something the app would then fail to " +
+      "open.</p>" +
+      gnote("<b>Every word has to hit.</b> Typing a second word narrows the search " +
+        "rather than widening it.") +
+      gnote("End a sentence with a <b>question mark</b>, or start it with a question " +
+        "word, and it is read as a question instead: matched by pattern and answered " +
+        "through the same function the screen it points at uses. There is no model " +
+        "behind it, which is why it works with no connection and cannot invent a figure " +
+        "— and it prints <em>read as: …</em> so you can see which question it " +
+        "thought it heard. Ask it something it cannot shape and it prints the list of " +
+        "what it can be asked rather than half-answering.") + "</div>" +
+      '<div class="rows">' + ASK_SHAPES.map(function (s) {
+        return '<div class="row flat"><span class="grow"><span class="nm">' +
+          esc(cap(s.ask || s.shape)) + "</span></span></div>";
+      }).join("") + "</div>"));
+
+    /* ---------------- keys ---------------- */
+    out.push(gp("g-keys", "The keyboard",
+      '<div class="panel"><p class="says">Every shortcut is a route to a control that ' +
+      "is already on the screen, so none of them can do something you could not have " +
+      "done with a tap.</p>" +
+      '<table class="tbl" style="margin-top:0.7rem"><tbody>' +
+      [["Ctrl K", "Open the finder — search, or ask a question"],
+       ["/", "The same, when you are not typing in a field"],
+       ["Enter", "In the finder: open the first hit"],
+       ["Escape", "Close the finder, close a dialog, or go back from a record"],
+       ["Ctrl N", "Add one of whatever the screen you are on is a list of — and " +
+         "where there is nothing to add, it says so and names where it works"],
+       ["Ctrl S", "Save the dialog you are in. It earns its place inside a note or a " +
+         "body, where Enter is a new line"],
+       ["Ctrl Z", "Press the Undo on the message that is up. The undo in this app " +
+         "belongs to the message it is printed on, and lives exactly as long as it does"]
+      ].map(function (r) {
+        return '<tr><td style="width:7.5rem"><span class="kbd">' + esc(r[0]) +
+          "</span></td><td>" + r[1] + "</td></tr>";
+      }).join("") + "</tbody></table></div>"));
+
+    /* ---------------- the record ---------------- */
+    out.push(gp("g-record", "Your record, and how to keep it",
+      '<div class="panel"><p class="says">It lives in this browser, under one key, on ' +
+      "this machine. There is no account, no server and no sync in this build — " +
+      "which is why it opens with no connection, and the honest other half is that " +
+      "<b>a backup file is the only way it reaches a second machine</b>.</p>" +
+      '<div class="page-acts" style="margin-top:0.7rem">' +
+      btn("backup", "", "Back it up", "btn primary") +
+      btn("restore", "", "Restore a backup") +
+      btn("settings", "", "Settings") + "</div>" +
+      gnote("Clearing your browser’s site data takes the book with it, the same as " +
+        "any site’s storage. Back it up first — the backup is the whole " +
+        "record as a file you can read, keep anywhere, and restore into any copy of the " +
+        "app.") +
+      gnote("<b>Erase everything</b> is the one act with no undo, because there is " +
+        "nothing left to hold one over. It asks first and says what goes.") + "</div>" +
+      '<div class="panel"><p class="nm">And four things it deliberately does not do.</p>' +
+      '<p class="says">Each for a reason worth stating rather than leaving as a gap you ' +
+      "discover later: it does not <b>score</b> you, it does not <b>infer</b> a skill " +
+      "level, it does not <b>notify</b> you, and it <b>fetches nothing</b>. Settings " +
+      "spells out why for each of them.</p></div>"));
+
+    return out.join("");
+  }
+
+  function gstep(head, body) {
+    return '<div class="step"><div><h3>' + esc(head) + "</h3><p>" + body + "</p></div></div>";
+  }
+  function gtab(id, word, says) {
+    return '<button class="row" data-act="tab-' + id + '"><span class="itile" ' +
+      'style="--tint:color-mix(in srgb, var(--blue) 16%, transparent);--glyph:var(--blue)">' +
+      (APP.tabs.filter(function (t) { return t.id === id; })[0] || { ico: "" }).ico +
+      '</span><span class="grow"><span class="nm">' + esc(word) + "</span>" +
+      '<span class="sub">' + says + "</span></span>" +
+      '<span class="right"><span class="chev" aria-hidden="true">' + G.chev +
+      "</span></span></button>";
   }
 
   /* ============================================================
@@ -7314,6 +7805,7 @@ color-scheme: light;
     "tab-work-page": function (idv) { goPage("work", idv); },
     "tab-library-page": function (idv) { goPage("library", idv); },
     "settings": function () { goPage("settings", ""); },
+    "guide": function () { goPage("guide", ""); },
 
     "lib-facet": function (idv) { libTopic = idv || ""; render(); },
     "lib-topic": function (idv) { libTopic = idv || ""; pageAt.library = "topics"; render(); },
@@ -7806,7 +8298,8 @@ color-scheme: light;
       { act: "act-add", label: "New action", ico: G.action },
       { act: "lib-add-script", label: "New script", ico: G.script },
       { act: "cite-paste", label: "Paste a reference", ico: G.reference },
-      { act: "bib-export", label: "Export a bibliography", ico: G.output }
+      { act: "bib-export", label: "Export a bibliography", ico: G.output },
+      { act: "guide", label: "How to use Mashghal", ico: G.ask }
     ];
     el.innerHTML = '<p class="label">Quick</p>' + rows.map(function (r) {
       return '<button class="rwrow" data-act="' + r.act + '">' +
@@ -7943,6 +8436,7 @@ color-scheme: light;
     },
     renderView: function (v) {
       if (v === "settings") return renderSettings();
+      if (v === "guide") return renderGuide();
       if (openRec && recOf(openRec) && (TAB_OF[parseRef(openRec).kind] === v)) {
         return recPage(openRec);
       }

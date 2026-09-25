@@ -2661,6 +2661,106 @@ every "mode" is Field mode, a refusal opens a dialog whose button lands
 somewhere, and the deadline tile cannot read nought above a card saying past
 its date.
 
+## The website, and the guide inside the app
+
+Asked for "a landing page for the whole app, kinda like a professional website
+since it is a website", a guide inside the app "on how to do and add
+everything", and a brief to hand to whoever makes the site lively. All three
+shipped; what is worth keeping is where each one lives and why.
+
+**THE SITE IS THE STUB, NOT THE APP'S OWN INDEX.** Every app here has a root
+redirect stub (`coffer.html`, `mashghal.html`, …). `mashghal2.html` was one,
+and is now the site — so the URL is `/Apps/mashghal2.html` and
+`/Apps/mashghal2/` is still the app, byte for byte. The alternative was making
+the app's own `index.html` the landing page and moving the app to `app.html`,
+and it is wrong three times over: the manifest's `start_url` is `./`, so every
+install would open a marketing page; **renaming a served path is never worth a
+tidier tree**, which this file already records about `garden/`; and every scan
+and every driving script names `mashghal2/index.html`. The one cost is stated
+rather than discovered: a bookmark to `mashghal2.html` now lands on the site,
+whose first control is the app.
+
+- **The screenshots are generated, never hand-edited.** `mashghal2/press/`
+  holds eight JPEGs a capture script takes off the running app at a fixed
+  viewport, and `press/README.md` names each one. Two rules learned while
+  taking them: **wait the toast out** — the first pass caught "Example loaded"
+  floating over Home, and a message about something that happened has no
+  business in a product shot — and **look at them**, because the first pass
+  also showed four tiles wrapping three-and-one inside a Home card, and a tick
+  glyph on a late action that read as "done". Both were fixed in the app, which
+  is the point: *a product shot is a reading of the app*.
+- **The site fetches nothing either.** Same first rule as everything here. The
+  display face is the app's own embedded base64 woff2, reused; 222 KB on first
+  load, two requests, and the budget is written into the test.
+- **`.rise` had the no-script fault, and the brief names it because the site
+  shipped with it.** Hidden in CSS and revealed by script means sixteen
+  sections are invisible when the script is blocked. The script's first act is
+  `documentElement.classList.add("js")`, and only `.js .rise` starts hidden —
+  **an enhancement layers on a page that is already complete**, never the other
+  way round.
+- **`.btn.go:hover` LIGHTENED A BLUE THAT CARRIES WHITE TEXT**: 2.86:1 on the
+  page's one primary button, and only the hovered pass of the contrast walk
+  showed it. Third time this exact fault has been recorded here
+  (`.btn.primary:hover`, `.btn.loud:hover`, now this) and the fix is the same
+  each time: *a hover is a token defined per theme*, never a colour written
+  beside one.
+- **A MINIMUM TRACK WIDTH IS A MINIMUM.** `minmax(22rem, 1fr)` is 352px, so one
+  column of it was wider than a 320px phone and the page scrolled sideways —
+  the identical fault the app's own `.hgrid` had at 20rem the same day.
+  `minmax(min(22rem, 100%), 1fr)` lets the track give way.
+- **A diagram and a block of code may scroll inside their own box**, and a
+  no-horizontal-scroll test has to know that or it reports the page broken
+  because a `<span>` inside a `<pre>` is past the edge. The test walks up for a
+  scrollable ancestor; the document's own `scrollWidth` is what decides.
+- **A line has to end at an EDGE.** The evidence chain's arrow into the
+  portfolio card ended at a point *inside* the rectangle, so its head was drawn
+  under the fill and read as no head at all — and the fixed version then ended
+  in mid-air beside the box. Route into the nearest edge, and route into the
+  TOP edge where entering the side would cross the arrow leaving it.
+
+**THE GUIDE IS A PAGE, NOT A TOUR**, reached from the gear, from the rail, from
+Settings, from the finder under every word somebody would type (guide, help,
+how to, getting started, manual), and from the first screen of an empty book —
+which is the one moment it is most needed. Two rules hold it:
+
+- **It names the real control.** Every instruction quotes the words actually
+  printed on the button, and `guide.js` reads its own bold labels back against
+  every label the app renders and fails on one that does not exist. Two traps
+  in writing that test: the scan has to look only where the guide *quotes* a
+  control (`.gwhat .sub b`, `.gnote b`, `.step p b`) — the bold at the head of
+  a row is the row's own title and names nothing — and it has to run on a
+  **full** book, because an empty one hides "Export as CSV" and half the other
+  controls, so the guide reads as naming things that are not there when in fact
+  the harness could not see them.
+- **The route is beside the instruction, not inside it.** `Career → Skills →
+  New skill` sits in mono to the left of what the record is for. A guide
+  written as prose is a guide you have to parse; a guide written as a table of
+  routes is one you can scan for the row you need.
+
+**AND A QUESTION IT CANNOT SHAPE MAY STILL BE A SEARCH.** Typing "how to" into
+the finder printed only the table of the eleven questions it can be asked,
+because "how" is a question word and no shape matched — with the hits for those
+same words sitting unmentioned underneath. The unread branch appends the search
+now. Same class as the earlier fault in the other direction, where a plain
+search for "Chase the bathymetry licence renewal" was read as a question about
+a person called "bathymetry licence renewal": **a box that both searches and
+answers has to fall through in both directions.**
+
+**The brief for the next round is `mashghal2/docs/design-brief-website.md`**,
+and it is written to be handed over whole: the ten hard constraints first, then
+what "come alive" must and must not mean here, then the tasks in order, then
+how to verify. Its own argument is the one worth keeping — this app prints "not
+said, and not inferred" where another would print a number, so **a site in
+front of it that oversells, auto-plays and invents social proof would
+contradict the product on its own front page**.
+
+`site.js` is the test: the page with scripting **off** (every section present
+and nothing invisible), both themes at rest and under the pointer, Tab through
+every control checking the ring is the page's own and not Chromium's, the
+anchors and every link resolving, reduced motion showing the finished state
+with no transition running, five widths down to 320px, and the transferred
+bytes against a stated budget. 542 checks.
+
 ## What an audit of the running app found
 
 Eleven of these came out of driving the real interface rather than reading the
