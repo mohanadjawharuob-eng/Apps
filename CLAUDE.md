@@ -2761,6 +2761,81 @@ anchors and every link resolving, reduced motion showing the finished state
 with no transition running, five widths down to 320px, and the transferred
 bytes against a stated budget. 542 checks.
 
+## Feeding mashghal2 from a file
+
+Asked for what Coffer's plan import does — *"a feature where I can add a JSON
+file to feed the application certain data, because I want to give you my CV and
+have you put it in the app"* — and Coffer's discipline is the whole of the
+answer: **nothing changes until you have seen every line and pressed the
+button.** `impRead(text)` reads and writes nothing; `impReport(read)` prints
+what it WOULD do; `impApply(read)` is the only half that writes, and it writes
+nothing the report did not print. Four rules, each one a fault already recorded
+somewhere in this file:
+
+- **IT IS ADDITIVE, AND THAT IS NOT A RESTORE.** `adoptState` replaces a book;
+  this adds to one. Handed a whole backup “ one carrying `version`,
+  `settings` and `forgotten` ” it refuses **and points at Restore**, because
+  adding a backup to the book that already holds it would duplicate every
+  record without a word. *A refusal has to carry the way out.*
+- **A REFERENCE IS A NAME OR A KEY, NEVER AN ID.** Nobody writing a file by
+  hand can know the app's own ids, so `"role": "GIS analyst"` resolves —
+  against this file **and** against what is already in the book, which is what
+  makes a second file add to the first rather than fork it. `key` is an
+  optional short handle, and **both spellings always resolve**: registering
+  only one of them made a row carrying a key unreachable by the name printed on
+  it, so one line in a file resolved and its neighbour, naming the same record
+  the other way, did not.
+- **THE SAME NAME IS THE SAME RECORD.** A row whose name is already under that
+  kind is reused rather than added again, and the report marks it *Already
+  here*. Two bugs lived here. The seeded “already in the book” entry was
+  **overwritten** by the file's own row, so every row read as new and
+  “importing twice does not give you two of everything” was quietly
+  untrue. And `impApply` copied fields off the row rather than taking the name
+  the reader had resolved, so a **reference** — whose name IS its title and
+  which carries no `name` field at all — landed nameless and printed as a
+  blank row on every screen.
+- **IT NAMES WHAT IT CANNOT PLACE.** An unknown list, an unknown field, a date
+  that is not a date, a word outside a vocabulary, an unresolvable line end:
+  each is reported against the row it came from. Guessing at any of them is the
+  plausible wrong answer this whole app refuses.
+
+**THE FORMAT IS BUILT FROM THE VALIDATOR.** `impHelpHtml()` walks `IMP_KINDS`
+— the same table `impRead` validates against — so the reference table and
+the rules cannot drift. A table typed out beside the code would be wrong the
+first time a field was added, and the fault would be *silent*: the reader
+writes what the table says and is told it is not a field. `import-format.md` is
+the same table for whoever is writing the file rather than pressing the button.
+
+Three things reading the rendered dialog found, none of them visible to an
+assertion:
+
+- **A KEY IS SOMETHING YOU TYPE, NOT A NAME OF ANYTHING.** A preview row read
+  “anfeh uses QGIS” and a role's sub-line read “job: aub” — the
+  internal handle, printed at the reader as though the employer were called
+  aub. Both resolve to what the records are actually called now. Fixing it for
+  the lines and not for the rows was half a fix.
+- **ONE ENDING FOR ONE OUTCOME.** “Left out.” closed five messages where
+  the ROW goes and two where a **field** goes off a row that still comes in —
+  the same three words meaning opposite things in consecutive lines of one
+  list. A row now says *Row left out.* and a field says *that one field is
+  dropped. The row itself still comes in.*
+- **A heading may not disagree with what is under it.** “Left out, and why
+  — 17” counted two rows that were not left out at all. It is *What it
+  could not use, and why*.
+
+`m5import.js` is the driving test (116 assertions: the format table names every
+list, broken JSON says why, a backup is turned away, the template parses and
+reports no problems of its own, ten kinds of trouble are each named, the good
+file lands with every reference resolved to an id, the undo takes it all back
+out, a second file adds to the first, a third adds nothing, and Escape and the
+focus trap work). `m5implook.js` is the other half, and it exists for the
+reason `lightlook.js` had to grow one: **this dialog is not on a screen.** It
+opens off the gear and then a button, so the walk that measures every screen
+never arrives — *the surface that proves a rule is the surface nobody thought
+to visit.* 72 checks: every run of text in both themes, at rest and under the
+pointer, 390px with nothing past the edge, the last problem row reachable
+inside the scrolled box, and the app's own focus ring on every control.
+
 ## What an audit of the running app found
 
 Eleven of these came out of driving the real interface rather than reading the

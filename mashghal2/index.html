@@ -520,7 +520,7 @@ color-scheme: light;
   .gearbtn:focus-visible, .findbtn:focus-visible, .row:focus-visible,
   .bcrumb:focus-visible, .chip:focus-visible, .tevt:focus-visible,
   .pcard:focus-visible, .mrow:focus-visible, summary:focus-visible,
-  .panel.wide:focus-visible, .dact:focus-visible,
+  .panel.wide:focus-visible, .dact:focus-visible, .impprev:focus-visible,
   input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: 2px solid var(--blue); outline-offset: 2px;
   }
@@ -664,6 +664,11 @@ color-scheme: light;
   .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .tbl th { text-align: left; padding: 0.35rem 0.6rem 0.35rem 0; border-bottom: 1px solid var(--rule); }
   .tbl td { padding: 0.4rem 0.6rem 0.4rem 0; border-bottom: 1px solid var(--rule-soft); overflow-wrap: anywhere; }
+  .impprev {
+    max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
+    margin-top: 0.8rem;
+  }
+  .tbl td.lit { font-family: var(--mono); white-space: nowrap; vertical-align: top; }
   .tbl td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
 
   /* ---- a body of text: code does not wrap, prose does ---- */
@@ -1138,7 +1143,7 @@ color-scheme: light;
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w5 · 25 Sep 2026";
+  var BUILD = "w6 · 25 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -5102,6 +5107,8 @@ color-scheme: light;
     { act: "out-add", label: "New output", key: "new output add output deliverable" },
     { act: "cv-add", label: "New CV", key: "new cv add cv resume" },
     { act: "port-add", label: "New portfolio item", key: "new portfolio add portfolio" },
+    { act: "import-json", label: "Feed the book from a file",
+      key: "import json feed file cv resume load data paste bulk" },
     { act: "theme", label: "Switch the theme", key: "theme dark light switch" }
   ];
 
@@ -5579,6 +5586,18 @@ color-scheme: light;
       "is the only act in the app with no undo — which is why the backup button is " +
       "beside it rather than three screens away.</p></div>");
 
+    out.push(sectHead("Feed it from a file", null));
+    out.push('<div class="panel"><p class="says">A JSON file can fill the book in one ' +
+      "go \u2014 which is how a CV gets in without being typed out a line at a time. " +
+      "It <strong>adds</strong> rather than replacing, a record whose name is already " +
+      "here is reused rather than copied, and it shows you every line it would write " +
+      "before it writes one.</p>" +
+      '<div class="page-acts" style="margin-top:0.6rem">' +
+      btn("import-json", "", "Feed it from a file", "btn primary") + "</div>" +
+      '<p class="says" style="margin-top:0.5rem">It is not a restore. A backup ' +
+      "replaces the book; this adds to it, so a second file can name a project the " +
+      "first one added.</p></div>");
+
     var old = oldBooks();
     if (old.length) {
       out.push(sectHead("An older book", null));
@@ -5649,6 +5668,7 @@ color-scheme: light;
     { id: "g-show", word: "Portfolio and CVs" },
     { id: "g-ask", word: "Finding and asking" },
     { id: "g-keys", word: "The keyboard" },
+    { id: "g-feed", word: "Filling it from a file" },
     { id: "g-record", word: "Your record" }
   ];
 
@@ -5768,7 +5788,7 @@ color-scheme: light;
         "“drifting” in particular is only ever something you say.") +
       grow("Work → Workflows → New workflow", "A workflow",
         "How you perform a KIND of work, written once. Add its steps on its own page " +
-        "with <b>Add a step</b>, and attach the script or method each step is done with " +
+        "with <b>Add a step</b>, and attach the script or method each step uses " +
         "from the step’s own row.") +
       grow("a workflow → Run it on a project", "A run",
         "One execution of that workflow, on one project, between two dates. This is the " +
@@ -5967,6 +5987,32 @@ color-scheme: light;
       }).join("") + "</tbody></table></div>"));
 
     /* ---------------- the record ---------------- */
+    out.push(gp("g-feed", "Filling it from a file",
+      '<div class="panel"><p class="says">Typing a career in one record at a time is ' +
+      "the honest way to build it and a poor way to <em>start</em> one. So the book " +
+      "can be fed a JSON file: every list at once, or one list on its own.</p>" +
+      '<div class="page-acts" style="margin-top:0.7rem">' +
+      btn("import-json", "", "Feed it from a file", "btn primary") + "</div>" +
+      gnote("It is in <b>Settings</b> as well, under <b>Feed it from a file</b>. The " +
+        "dialog's <b>What the file looks like</b> prints every list and every field " +
+        "it can read \u2014 built from the same table that validates the file, so " +
+        "the two cannot disagree.") +
+      gnote("<b>It adds; it never replaces.</b> A row whose name is already in the " +
+        "book is reused rather than copied, which is what makes feeding it a second " +
+        "file safe: the second one can name a project the first one added, and draw " +
+        "a line to it.") +
+      gnote("<b>Nothing is written until you have read what it would do.</b> The " +
+        "dialog lists every record, every line, and everything it is leaving out " +
+        "with the reason \u2014 a date that is not a date, a reference to nothing, " +
+        "a field that does not exist. Then one button, and one undo on the message " +
+        "afterwards.") +
+      gnote("<b>Paste a starting template</b> fills the box with a worked example " +
+        "carrying one of everything, including how a reference reads: " +
+        "<code>{ \"a\": \"project:Anfeh harbour survey\", \"rel\": \"uses\", " +
+        "\"b\": \"skill:QGIS\" }</code>.") +
+      gnote("It is <b>not</b> a restore. A backup replaces the whole book and is for " +
+        "moving it between machines; this adds to the book you are in.") + "</div>"));
+
     out.push(gp("g-record", "Your record, and how to keep it",
       '<div class="panel"><p class="says">It lives in this browser, under one key, on ' +
       "this machine. There is no account, no server and no sync in this build — " +
@@ -7257,6 +7303,836 @@ color-scheme: light;
   }
 
   /* ============================================================
+     FEEDING THE BOOK FROM A FILE.
+
+     Coffer imports a plan as a document you paste, and the discipline that
+     makes it safe is worth copying exactly: **nothing changes until you
+     have seen every line and pressed Import.** So this reads the file,
+     reports what it would do, and only then does it.
+
+     Four rules, and each is a fault this repo has already paid for:
+
+       IT IS ADDITIVE, AND THAT IS NOT THE SAME AS A RESTORE. A backup
+       REPLACES the book; an import adds to it. Handed a backup this
+       refuses and points at Restore, because adding one to a book that
+       already holds it would duplicate every record silently.
+
+       A REFERENCE IS A NAME OR A KEY, NEVER AN ID. Nobody writing a file
+       by hand can know the app's own ids, so `"role": "GIS analyst"`
+       resolves — against the file AND against what is already in the book,
+       which is what makes a second import add to the first rather than
+       fork it.
+
+       THE SAME NAME IS THE SAME RECORD. A row whose name already exists
+       under that kind is not added again; it is reused for the lines that
+       point at it, and the report says so. That is what stops "import my
+       CV again with one more job" from producing two of everything.
+
+       IT NAMES WHAT IT CANNOT PLACE. An unknown list, an unknown field, a
+       date that is not a date, a line whose end does not resolve: each is
+       reported against the row it came from and left out. Guessing at any
+       of them is the plausible wrong answer this whole app refuses.
+     ============================================================ */
+
+  /* The lists a file may carry, in the order the report prints them, with
+     the fields each row may hold. A field not in this table is reported
+     rather than dropped — a typo like `startOn` for `startedOn` would
+     otherwise cost somebody a date they thought they had given. */
+  var IMP_KINDS = [
+    { kind: "job", word: "Employers", key: "jobs", fields: ["name", "kind", "place", "site", "note"] },
+    { kind: "role", word: "Roles", key: "roles", fields: ["name", "job", "startedOn", "endedOn",
+      "place", "basis", "note"], refs: { job: "job" },
+      dates: [["startedOn", "part"], ["endedOn", "part"]] },
+    { kind: "education", word: "Education", key: "education", fields: ["name", "org", "startedOn",
+      "endedOn", "result", "note"],
+      dates: [["startedOn", "part"], ["endedOn", "part"]] },
+    { kind: "training", word: "Training", key: "training", fields: ["name", "org", "on", "hours",
+      "kind", "ref", "note"], dates: [["on", "part"]] },
+    { kind: "skill", word: "Skills", key: "skills", fields: ["name", "group", "level", "note"],
+      words: { level: "SKILL_LEVELS" } },
+    { kind: "project", word: "Projects", key: "projects", fields: ["name", "job", "role", "status",
+      "startedOn", "endedOn", "note"], refs: { job: "job", role: "role" },
+      dates: [["startedOn", "part"], ["endedOn", "part"]],
+      words: { status: "PROJ_STATUS" } },
+    { kind: "workflow", word: "Workflows", key: "workflows", fields: ["name", "kind", "note", "steps"] },
+    { kind: "run", word: "Runs", key: "runs", fields: ["workflow", "project", "startedOn",
+      "endedOn", "outcome", "note"], refs: { workflow: "workflow", project: "project" },
+      dates: [["startedOn", "part"], ["endedOn", "part"]], noName: true },
+    { kind: "action", word: "Actions", key: "actions", fields: ["name", "project", "kind", "when",
+      "waitOn", "chaseDays", "chasedOn", "doneAt", "note"], refs: { project: "project" },
+      dates: [["when", "part"], ["chasedOn", "part"], ["doneAt", "part"]],
+      words: { kind: "ACTION_KINDS" } },
+    { kind: "person", word: "People", key: "people", fields: ["name", "role", "org", "email", "note"] },
+    { kind: "asset", word: "Equipment", key: "assets", fields: ["name", "kind", "state", "place",
+      "lastUsedOn", "path", "url", "note"], dates: [["lastUsedOn", "part"]],
+      words: { state: "THING_STATES" } },
+    { kind: "output", word: "Outputs", key: "outputs", fields: ["name", "kind", "project", "on",
+      "path", "url", "note"], refs: { project: "project" }, dates: [["on", "part"]] },
+    { kind: "lib", word: "Library", key: "library", fields: ["name", "kind", "lang", "body", "path",
+      "url", "topics", "from", "note", "cite"] },
+    { kind: "portfolio", word: "Portfolio", key: "portfolio", fields: ["name", "on", "note"],
+      dates: [["on", "part"]] },
+    { kind: "cv", word: "CVs", key: "cvs", fields: ["name", "aim", "note"] },
+    { kind: "hours", word: "Hours", key: "hours", fields: ["project", "on", "minutes", "note"],
+      refs: { project: "project" }, dates: [["on", "day"]], noName: true }
+  ];
+  function impKind(k) {
+    k = String(k || "").trim().toLowerCase();
+    return IMP_KINDS.filter(function (x) {
+      return x.kind === k || x.key === k || LIST_FOR[x.kind] === k;
+    })[0] || null;
+  }
+  /* The rows a file put under this kind, whichever of its three spellings it
+     used. A file naming the same list twice is told rather than having one
+     half of it silently win. */
+  function impRows(j, K, out) {
+    var names = [K.key, K.kind, LIST_FOR[K.kind]].filter(function (n, i, a) {
+      return a.indexOf(n) === i && j[n] != null;
+    });
+    if (names.length > 1) {
+      out.problems.push(K.word + ": the file names that list " +
+        countWords(names.length, "way", "ways") + " (" + listWords(names) +
+        "). Only " + names[0] + " is read.");
+    }
+    return names.length ? j[names[0]] : null;
+  }
+  var IMP_WORDS = {
+    SKILL_LEVELS: function () { return SKILL_LEVELS.map(function (x) { return x.value; }); },
+    PROJ_STATUS: function () { return PROJ_STATUS.map(function (x) { return x.value; }); },
+    ACTION_KINDS: function () { return ACTION_KINDS.map(function (x) { return x.value; }); },
+    THING_STATES: function () { return THING_STATES.map(function (x) { return x.value; }); }
+  };
+
+  /* impRead(text) — the whole of the reading, with nothing written. It
+     returns what it WOULD do, which is what the dialog prints. */
+  function impRead(text) {
+    var out = { ok: false, why: "", j: null, profile: null, kinds: [], links: [],
+      problems: [], unplaced: [], newCount: 0, seenCount: 0, linkCount: 0 };
+    var raw = String(text || "").trim();
+    if (!raw) { out.why = "Nothing pasted yet."; return out; }
+    var j;
+    try { j = JSON.parse(raw); }
+    catch (e) {
+      out.why = "That is not valid JSON yet — " + String(e.message || e) +
+        ". Check for a missing comma or bracket.";
+      return out;
+    }
+    if (!j || typeof j !== "object" || Array.isArray(j)) {
+      out.why = "The file has to be a JSON object with lists inside it, not " +
+        (Array.isArray(j) ? "a bare array" : "a " + typeof j) + ".";
+      return out;
+    }
+    /* A BACKUP IS NOT AN IMPORT, and adding one to a book that already
+       holds it would duplicate every record without a word. */
+    if (j.version && j.settings && j.forgotten) {
+      out.why = "That looks like a whole backup of a book rather than an import " +
+        "file — it carries a version, settings and the forgotten names. " +
+        "Importing it would add a second copy of everything. Use " +
+        "“Restore a backup” in Settings instead, which replaces the book.";
+      return out;
+    }
+
+    /* The map every reference resolves through: a key or a name, per kind,
+       pointing either at a row in this file or at a record already in the
+       book. Built before anything is validated, because a role in the file
+       may legitimately name a project further down it. */
+    var byKey = {};
+    function keyOf(kind, s) { return kind + "\u0000" + String(s || "").trim().toLowerCase(); }
+    IMP_KINDS.forEach(function (K) {
+      live(listOf(K.kind)).forEach(function (rec) {
+        if (rec.name) byKey[keyOf(K.kind, rec.name)] = { have: rec };
+      });
+    });
+
+    var known = {};
+    IMP_KINDS.forEach(function (K) {
+      known[K.kind] = 1; known[K.key] = 1; known[LIST_FOR[K.kind]] = 1;
+    });
+    known.profile = 1;
+    known.links = 1;
+    known.mashghal = 1;
+    known.note = 1;
+    Object.keys(j).forEach(function (k) {
+      if (!known[k]) out.unplaced.push(k);
+    });
+
+    /* ---- the profile ---- */
+    if (j.profile && typeof j.profile === "object") {
+      var pr = {}, bad = [];
+      Object.keys(j.profile).forEach(function (f) {
+        if (PROFILE_KEYS.indexOf(f) < 0) { bad.push(f); return; }
+        var v = j.profile[f];
+        if (v == null || v === "") return;
+        pr[f] = String(v).trim();
+      });
+      bad.forEach(function (f) {
+        out.problems.push("profile: there is no field called “" + f + "”.");
+      });
+      /* Only the fields it actually states, and only over a blank one —
+         an import may fill a gap and may not quietly rewrite what you
+         typed. What it would overwrite is reported instead. */
+      var sets = [], holds = [];
+      Object.keys(pr).forEach(function (f) {
+        if (!String(state.profile[f] || "").trim()) sets.push(f);
+        else if (String(state.profile[f]).trim() !== pr[f]) holds.push(f);
+      });
+      if (sets.length || holds.length) {
+        out.profile = { values: pr, sets: sets, holds: holds };
+      }
+    } else if (j.profile) {
+      out.problems.push("profile: it has to be an object of fields, not a " +
+        typeof j.profile + ".");
+    }
+
+    /* ---- pass one: name every row, so a reference can find it ---- */
+    IMP_KINDS.forEach(function (K) {
+      var rows = impRows(j, K, out);
+      if (rows == null) return;
+      if (!Array.isArray(rows)) {
+        out.problems.push(K.word + ": it has to be a list, not a " +
+          typeof rows + ".");
+        return;
+      }
+      rows.forEach(function (row, i) {
+        if (!row || typeof row !== "object") return;
+        /* A ROW IS FINDABLE BY ITS KEY *AND* BY ITS NAME. Registering only
+           one of them made a row carrying a key unreachable by the name
+           printed on it, so one line in a file resolved and its neighbour,
+           naming the same record the other way, did not. */
+        var spellings = [String(row.key || "").trim(),
+          String(row.name || "").trim(),
+          String((row.cite && row.cite.title) || "").trim()];
+        spellings.filter(Boolean).forEach(function (k, which) {
+          var kk = keyOf(K.kind, k);
+          /* KEEP THE RECORD THE BOOK ALREADY HOLDS. Overwriting the seeded
+             entry lost it, so a row whose name was already in the book read
+             as new \u2014 which is the whole of "importing twice does not
+             give you two of everything", quietly untrue. */
+          if (!byKey[kk] || byKey[kk].have) {
+            byKey[kk] = { at: i, kind: K.kind,
+              have: byKey[kk] ? byKey[kk].have : null };
+            return;
+          }
+          if (byKey[kk].at !== i && which === 0) {
+            out.problems.push(K.word + " " + (i + 1) + ": \u201c" + k +
+              "\u201d is in this file twice. The second one is left out.");
+          }
+        });
+      });
+    });
+
+    /* ---- pass two: validate, and say what each row would do ---- */
+    IMP_KINDS.forEach(function (K) {
+      var rows = impRows(j, K, { problems: [] });
+      if (!Array.isArray(rows) || !rows.length) return;
+      var made = [];
+      rows.forEach(function (row, i) {
+        var at = K.word + " " + (i + 1);
+        if (!row || typeof row !== "object" || Array.isArray(row)) {
+          out.problems.push(at + ": every row has to be an object.");
+          return;
+        }
+        var name = String(row.name || "").trim();
+        /* A REFERENCE HAS NO NAME OF ITS OWN — its name IS its title, which
+           is how the dialog writes one too. So a row carrying a citation and
+           no name is not nameless. */
+        if (!name && K.kind === "lib" && row.cite && typeof row.cite === "object") {
+          name = String(row.cite.title || "").trim();
+        }
+        if (!K.noName && !name) {
+          out.problems.push(at + ": it has no name, so there is nothing to call " +
+            "it. Row left out.");
+          return;
+        }
+        var rec = { id: uid() }, trouble = false;
+
+        Object.keys(row).forEach(function (f) {
+          if (f === "key") return;
+          if (K.fields.indexOf(f) < 0) {
+            out.problems.push(at + (name ? " (" + name + ")" : "") +
+              ": there is no field called “" + f + "” here, so that one field is dropped. " +
+              "The row itself still comes in.");
+          }
+        });
+
+        (K.dates || []).forEach(function (pair) {
+          var v = String(row[pair[0]] || "").trim();
+          if (!v) return;
+          var fine = pair[1] === "day" ? dayOk(v) : partOk(v);
+          if (!fine) {
+            out.problems.push(at + (name ? " (" + name + ")" : "") + ": “" + v +
+              "” is not a date for " + pair[0] + ". " +
+              (pair[1] === "day" ? "Write a full day, 2026-09-17."
+                : "Write a year, a year and month, or a full day — 2026, " +
+                  "2026-09, 2026-09-17.") + " Row left out.");
+            trouble = true;
+          }
+        });
+
+        Object.keys(K.words || {}).forEach(function (f) {
+          var v = String(row[f] || "").trim();
+          if (!v) return;
+          var allowed = IMP_WORDS[K.words[f]]();
+          if (allowed.indexOf(v) < 0) {
+            out.problems.push(at + (name ? " (" + name + ")" : "") + ": “" + v +
+              "” is not one of the words " + f + " can take (" +
+              allowed.filter(Boolean).join(", ") + "). Row left out.");
+            trouble = true;
+          }
+        });
+
+        /* Each reference resolves to a row in this file or a record already
+           in the book, and a reference to neither is named rather than
+           being written as a dangling id. */
+        var refs = {};
+        Object.keys(K.refs || {}).forEach(function (f) {
+          var v = String(row[f] || "").trim();
+          if (!v) return;
+          var hit = byKey[keyOf(K.refs[f], v)];
+          if (!hit) {
+            out.problems.push(at + (name ? " (" + name + ")" : "") + ": nothing called " +
+              "“" + v + "” to be its " + f + ". Row left out.");
+            trouble = true;
+            return;
+          }
+          refs[f] = v;
+        });
+
+        if (K.kind === "hours" && !(num(row.minutes) > 0)) {
+          out.problems.push(at + ": minutes has to be a number above nought. Row left out.");
+          trouble = true;
+        }
+        if (K.kind === "lib") {
+          var lk = String(row.kind || "").trim();
+          if (!lk) {
+            out.problems.push(at + " (" + name + "): a library entry needs a kind — " +
+              "one of " + LIB_ORDER.join(", ") + ". Row left out.");
+            trouble = true;
+          } else if (LIB_ORDER.indexOf(lk) < 0) {
+            out.problems.push(at + " (" + name + "): “" + lk + "” is not a " +
+              "library kind. One of " + LIB_ORDER.join(", ") + ". Row left out.");
+            trouble = true;
+          }
+        }
+        if (K.kind === "lib" && row.cite != null) {
+          if (typeof row.cite !== "object" || Array.isArray(row.cite)) {
+            out.problems.push(at + " (" + name + "): cite has to be an object of " +
+              "citation fields. Row left out.");
+            trouble = true;
+          } else {
+            Object.keys(row.cite).forEach(function (c) {
+              if (c !== "type" && CITE_FIELDS.indexOf(c) < 0) {
+                out.problems.push(at + " (" + name + "): there is no citation field " +
+                  "called “" + c + "”, so that one field is dropped.");
+              }
+            });
+            var ct = String(row.cite.type || "").trim();
+            if (ct && !CITE_TYPES.filter(function (t) { return t.value === ct; })[0]) {
+              out.problems.push(at + " (" + name + "): “" + ct + "” is not a kind of " +
+                "reference. One of " + CITE_TYPES.map(function (t) { return t.value; })
+                  .join(", ") + ". Row left out.");
+              trouble = true;
+            }
+          }
+        }
+        if (K.kind === "workflow" && row.steps != null && !Array.isArray(row.steps)) {
+          out.problems.push(at + " (" + name + "): steps has to be a list. Row left out.");
+          trouble = true;
+        }
+        if (trouble) return;
+
+        var already = name ? byKey[keyOf(K.kind, name)] : null;
+        made.push({
+          row: row, name: name, refs: refs, at: i,
+          have: already && already.have ? already.have : null
+        });
+      });
+      if (!made.length) return;
+      var fresh = made.filter(function (m) { return !m.have; }).length;
+      out.newCount += fresh;
+      out.seenCount += made.length - fresh;
+      out.kinds.push({ K: K, made: made, fresh: fresh });
+    });
+
+    /* ---- the lines ---- */
+    if (j.links != null) {
+      if (!Array.isArray(j.links)) {
+        out.problems.push("links: it has to be a list.");
+      } else {
+        j.links.forEach(function (l, i) {
+          var at = "Line " + (i + 1);
+          if (!l || typeof l !== "object") {
+            out.problems.push(at + ": every line has to be an object with a, rel and b.");
+            return;
+          }
+          var rel = String(l.rel || "").trim();
+          if (!RELS[rel]) {
+            out.problems.push(at + ": “" + rel + "” is not one of the lines " +
+              "this app has (" + Object.keys(RELS).join(", ") + "). Left out.");
+            return;
+          }
+          var ends = ["a", "b"].map(function (side) {
+            var s = String(l[side] || "").trim();
+            var at2 = s.indexOf(":");
+            if (at2 < 1) return { bad: "its “" + side + "” end has to read kind:name, like " +
+              "“project:Anfeh harbour survey”" };
+            var kind = s.slice(0, at2).trim(), nm = s.slice(at2 + 1).trim();
+            if (!impKind(kind)) return { bad: "there is no kind called “" + kind + "”" };
+            if (!byKey[keyOf(kind, nm)]) {
+              return { bad: "nothing called “" + nm + "” under " + kind };
+            }
+            return { kind: kind, name: nm };
+          });
+          var bad = ends.filter(function (e) { return e.bad; });
+          if (bad.length) {
+            out.problems.push(at + ": " + bad[0].bad + ". Left out.");
+            return;
+          }
+          /* A KEY IS SOMETHING YOU TYPE, NOT A NAME OF ANYTHING. A preview
+             row reading \u201canfeh uses QGIS\u201d names an internal handle
+             at the reader; it prints what the records are called. */
+          ends.forEach(function (e) {
+            var hit = byKey[keyOf(e.kind, e.name)];
+            e.says = (hit && hit.have && hit.have.name) || impSaid(j, e) || e.name;
+          });
+          out.links.push({ a: ends[0], rel: rel, b: ends[1],
+            note: String(l.note || "").trim() });
+        });
+        out.linkCount = out.links.length;
+      }
+    }
+
+    out.j = j;
+    out.ok = !!(out.kinds.length || out.links.length || out.profile);
+    if (!out.ok && !out.problems.length) {
+      out.why = "There is nothing in that file this app can hold. It wants lists " +
+        "named " + IMP_KINDS.slice(0, 4).map(function (K) { return K.kind; }).join(", ") +
+        " and so on — press “What the file looks like” below.";
+    }
+    return out;
+  }
+
+  /* impApply(read) — the only half that writes, and it writes nothing the
+     report did not print. It hands back an undo over the ids it made. */
+  function impApply(read) {
+    var stamp2 = new Date().toISOString();
+    var made = [], byKey = {};
+    function keyOf(kind, s) { return kind + "\u0000" + String(s || "").trim().toLowerCase(); }
+    IMP_KINDS.forEach(function (K) {
+      live(listOf(K.kind)).forEach(function (rec) {
+        if (rec.name) byKey[keyOf(K.kind, rec.name)] = rec;
+      });
+    });
+    var wasProfile = null;
+    if (read.profile) {
+      wasProfile = {};
+      read.profile.sets.forEach(function (f) {
+        wasProfile[f] = state.profile[f];
+        state.profile[f] = read.profile.values[f];
+      });
+    }
+    /* Pass one writes the records, so pass two can point at them. A row
+       whose name is already in the book is REUSED rather than copied. */
+    read.kinds.forEach(function (grp) {
+      grp.made.forEach(function (m) {
+        if (m.have) { m.rec = m.have; return; }
+        var rec = { id: uid(), updatedAt: stamp2 };
+        grp.K.fields.forEach(function (f) {
+          if (grp.K.refs && grp.K.refs[f]) return;
+          if (f === "topics") { rec.topics = topicList((m.row.topics || []).join(", ")); return; }
+          if (f === "steps") {
+            rec.steps = (m.row.steps || []).map(function (s) {
+              return { id: uid(),
+                name: String((s && s.name) || s || "").trim(),
+                note: String((s && s.note) || "").trim() };
+            }).filter(function (s) { return s.name; });
+            return;
+          }
+          if (f === "cite") {
+            if (m.row.cite && typeof m.row.cite === "object") {
+              rec.cite = blankCite();
+              CITE_FIELDS.concat(["type"]).forEach(function (c) {
+                if (m.row.cite[c] != null) rec.cite[c] = String(m.row.cite[c]).trim();
+              });
+              if (!rec.cite.title) rec.cite.title = m.name;
+            }
+            return;
+          }
+          if (f === "hours" || f === "minutes" || f === "chaseDays") {
+            if (m.row[f] != null && m.row[f] !== "") rec[f] = num(m.row[f]);
+            return;
+          }
+          if (m.row[f] != null) rec[f] = String(m.row[f]).trim();
+        });
+        /* THE NAME THE READER RESOLVED IS THE NAME THAT GETS WRITTEN. Copied
+           off the row instead, a reference \u2014 whose name IS its title and
+           which carries no `name` field at all \u2014 landed nameless, and
+           every screen then printed a blank row. */
+        if (!grp.K.noName) rec.name = m.name;
+        if (grp.K.kind === "lib" && !rec.topics) rec.topics = [];
+        listOf(grp.K.kind).push(rec);
+        made.push({ kind: grp.K.kind, rec: rec });
+        m.rec = rec;
+        [m.name, m.row.key, m.row.name].filter(Boolean).forEach(function (k) {
+          byKey[keyOf(grp.K.kind, k)] = rec;
+        });
+      });
+    });
+    /* Pass two fills the references, now that every id exists. */
+    read.kinds.forEach(function (grp) {
+      grp.made.forEach(function (m) {
+        if (m.have) return;
+        Object.keys(grp.K.refs || {}).forEach(function (f) {
+          if (!m.refs[f]) return;
+          var hit = byKey[keyOf(grp.K.refs[f], m.refs[f])];
+          if (hit) m.rec[f + "Id"] = hit.id;
+        });
+        stamp(m.rec);
+      });
+    });
+    var lines = [];
+    read.links.forEach(function (l) {
+      var A = byKey[keyOf(l.a.kind, l.a.name)];
+      var B = byKey[keyOf(l.b.kind, l.b.name)];
+      if (!A || !B) return;
+      var ra = ref(l.a.kind, A.id), rb = ref(l.b.kind, B.id);
+      if (linkBetween(ra, l.rel, rb)) return;   /* already drawn; not a second copy */
+      lines.push(link(ra, l.rel, rb, l.note));
+    });
+    return {
+      records: made.length, lines: lines.length,
+      undo: function () {
+        lines.forEach(function (l) { unlink(l.id); });
+        made.slice().reverse().forEach(function (m) {
+          var list = listOf(m.kind), i = list.indexOf(m.rec);
+          if (i >= 0) list.splice(i, 1);
+        });
+        if (wasProfile) {
+          Object.keys(wasProfile).forEach(function (f) {
+            state.profile[f] = wasProfile[f];
+          });
+        }
+      }
+    };
+  }
+
+  /* ---------------- the dialog ----------------
+
+     Hand-written, because the shared runtime's field spec has no file
+     picker and may not grow one for a single app — so it calls
+     `trapOverlay`, because ESCAPE AND THE FOCUS TRAP BELONG TO THE OVERLAY
+     and a hand-written one is exactly where that is forgotten. */
+  function importDialog() {
+    closeModal();
+    overlay.innerHTML = '<div class="scrim" data-scrim="1">' +
+      '<div class="modal" style="max-width:720px" role="dialog" aria-modal="true" ' +
+      'aria-label="Feed the book from a file"><div class="modal-head">' +
+      "<h3>Feed the book from a file</h3><p>Paste a JSON file below, or choose " +
+      "one. <b>Nothing changes until you have read what it would do and pressed " +
+      "Bring it in.</b> It adds to the book rather than replacing it, and a " +
+      "record whose name is already here is reused rather than copied — so " +
+      "importing twice does not give you two of everything.</p></div>" +
+      '<div class="modal-body">' +
+      '<textarea id="impText" rows="9" spellcheck="false" placeholder="' +
+      esc('{\n  "profile": { "name": "…" },\n  "jobs": [ { "name": "…" } ],\n' +
+        '  "roles": [ { "name": "…", "job": "…" } ],\n' +
+        '  "links": [ { "a": "project:…", "rel": "uses", "b": "skill:…" } ]\n}') +
+      '" style="width:100%;font-family:var(--mono);font-size:0.74rem;padding:0.6rem;' +
+      "border-radius:8px;border:1px solid var(--rule-mid);background:var(--raised);" +
+      'color:var(--ink);resize:vertical"></textarea>' +
+      '<div class="page-acts" style="margin-top:0.5rem">' +
+      '<label class="btn tiny" style="cursor:pointer">Choose a file' +
+      '<input type="file" id="impFile" accept=".json,application/json,.txt,text/plain" ' +
+      'style="display:none" /></label>' +
+      '<button class="btn tiny" id="impFmt">What the file looks like</button>' +
+      '<button class="btn tiny" id="impTpl">Paste a starting template</button></div>' +
+      '<div id="impHelp" hidden style="margin-top:0.7rem">' + impHelpHtml() + "</div>" +
+      '<div id="impPrev" class="impprev"></div></div>' +
+      '<div class="modal-foot"><button class="btn quiet" data-mclose="1">Cancel</button>' +
+      '<button class="btn primary" id="impGo" disabled>Bring it in</button>' +
+      "</div></div></div>";
+
+    var ta = document.getElementById("impText");
+    var prev = document.getElementById("impPrev");
+    var go = document.getElementById("impGo");
+    var help = document.getElementById("impHelp");
+    var current = null;
+    trapOverlay();
+    ta.focus();
+
+    function paint() {
+      var read = impRead(ta.value);
+      current = read;
+      prev.innerHTML = impReport(read);
+      go.disabled = !read.ok;
+      go.textContent = read.ok
+        ? "Bring in " + countWords(read.newCount, "record", "records") +
+          (read.linkCount ? " and " + countWords(read.linkCount, "line", "lines") : "")
+        : "Bring it in";
+    }
+    ta.addEventListener("input", paint);
+    paint();
+
+    document.getElementById("impFmt").addEventListener("click", function () {
+      help.hidden = !help.hidden;
+      this.textContent = help.hidden ? "What the file looks like" : "Hide the format";
+    });
+    document.getElementById("impTpl").addEventListener("click", function () {
+      ta.value = IMP_TEMPLATE;
+      paint();
+      ta.focus();
+    });
+    document.getElementById("impFile").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var fr = new FileReader();
+      fr.onload = function () { ta.value = String(fr.result || ""); paint(); };
+      fr.onerror = function () {
+        toast("That file could not be read — paste its text in instead.");
+      };
+      fr.readAsText(f);
+    });
+    overlay.querySelector("[data-mclose]").addEventListener("click", closeModal);
+    overlay.querySelector("[data-scrim]").addEventListener("mousedown", function (e) {
+      if (e.target === e.currentTarget) closeModal();
+    });
+    go.addEventListener("click", function () {
+      if (!current || !current.ok) return;
+      var done = impApply(current);
+      closeModal();
+      saveGo(cap(countWords(done.records, "record", "records")) + " and " +
+        countWords(done.lines, "line", "lines") + " brought in", function () {
+        done.undo();
+        saveGo("Taken back out");
+      });
+    });
+  }
+
+  /* impReport(read) — what it would do, said before it does it. */
+  function impReport(read) {
+    if (read.why) {
+      return '<div class="panel drift"><p class="says">' + esc(read.why) + "</p></div>";
+    }
+    var out = [];
+    if (read.ok) {
+      out.push('<div class="panel"><p class="nm">' +
+        cap(countWords(read.newCount, "new record", "new records")) +
+        (read.seenCount ? ", and " + countWords(read.seenCount, "row", "rows") +
+          " already in the book" : "") +
+        (read.linkCount ? ", plus " + countWords(read.linkCount, "line", "lines") : "") +
+        ".</p>" +
+        (read.seenCount ? '<p class="says">A row whose name is already here is ' +
+          "reused rather than copied, so the lines can point at it.</p>" : "") +
+        "</div>");
+    }
+    if (read.profile) {
+      out.push(sectHead("Your profile", null));
+      out.push('<div class="panel"><p class="says">' +
+        (read.profile.sets.length
+          ? "It would fill " + listWords(read.profile.sets) + "."
+          : "Nothing on it is blank, so nothing would be filled.") +
+        (read.profile.holds.length
+          ? " <strong>It leaves " + listWords(read.profile.holds) + " alone</strong>, " +
+            "because you have already written " +
+            (read.profile.holds.length === 1 ? "it" : "them") + " — an import " +
+            "may fill a gap and may not rewrite what you typed."
+          : "") + "</p></div>");
+    }
+    read.kinds.forEach(function (grp) {
+      out.push(sectHead(grp.K.word, grp.made.length));
+      out.push('<div class="rows">' + grp.made.map(function (m) {
+        return '<div class="row flat"><span class="grow"><span class="nm">' +
+          esc(m.name || impNameless(grp.K, m)) + "</span>" +
+          '<span class="sub">' + esc(impRowSays(read.j, grp.K, m)) + "</span></span>" +
+          (m.have ? '<span class="right"><span class="pill p-done">Already here</span>' +
+            "</span>" : "") + "</div>";
+      }).join("") + "</div>");
+    });
+    if (read.links.length) {
+      out.push(sectHead("Lines", read.links.length));
+      out.push('<div class="rows">' + read.links.map(function (l) {
+        return '<div class="row flat"><span class="grow"><span class="nm">' +
+          esc(l.a.says || l.a.name) + " " + esc(RELS[l.rel].fwd) + " " +
+          esc(l.b.says || l.b.name) + "</span></span></div>";
+      }).join("") + "</div>");
+    }
+    if (read.unplaced.length) {
+      out.push('<div class="panel drift"><p class="says"><strong>' +
+        cap(countWords(read.unplaced.length, "list", "lists")) +
+        " in the file " + (read.unplaced.length === 1 ? "is" : "are") +
+        " not something this app holds</strong>, so " +
+        (read.unplaced.length === 1 ? "it is" : "they are") + " left out: " +
+        esc(listWords(read.unplaced)) + ".</p></div>");
+    }
+    if (read.problems.length) {
+      out.push(sectHead("What it could not use, and why", read.problems.length));
+      out.push('<div class="panel late"><div class="rows">' +
+        read.problems.map(function (p) {
+          return '<div class="row flat"><span class="grow"><span class="sub">' +
+            esc(p) + "</span></span></div>";
+        }).join("") + "</div></div>");
+    }
+    return out.join("");
+  }
+  /* A record the book already holds, by name. */
+  function byBook(kind, name) {
+    var want = String(name || "").trim().toLowerCase();
+    return live(listOf(kind)).filter(function (r) {
+      return String(r.name || "").trim().toLowerCase() === want;
+    })[0] || null;
+  }
+  /* What the FILE calls a row that a line pointed at by key. */
+  function impSaid(j, end) {
+    var K = impKind(end.kind);
+    if (!K) return "";
+    var rows = impRows(j, K, { problems: [] });
+    if (!Array.isArray(rows)) return "";
+    var want = end.name.toLowerCase(), said = "";
+    rows.forEach(function (row) {
+      if (!row || typeof row !== "object" || said) return;
+      var nm = String(row.name || (row.cite && row.cite.title) || "").trim();
+      if (!nm) return;
+      [row.key, row.name, row.cite && row.cite.title].filter(Boolean)
+        .forEach(function (k) {
+          if (String(k).trim().toLowerCase() === want) said = nm;
+        });
+    });
+    return said;
+  }
+  function impNameless(K, m) {
+    if (K.kind === "hours") return hm(num(m.row.minutes));
+    if (K.kind === "run") return m.refs.workflow || "a run";
+    return "(unnamed)";
+  }
+  /* A KEY IS SOMETHING YOU TYPE, NOT A NAME OF ANYTHING. Left as the handle
+     the file used, a role's sub-line read “job: aub”, which reads as the
+     employer being called aub. Fixed for the lines and not for the rows is
+     half a fix. */
+  function impRowSays(j, K, m) {
+    var bits = [];
+    Object.keys(K.refs || {}).forEach(function (f) {
+      if (!m.refs[f]) return;
+      var kind = K.refs[f], hit = byBook(kind, m.refs[f]);
+      bits.push(f + ": " + ((hit && hit.name) ||
+        impSaid(j, { kind: kind, name: m.refs[f] }) || m.refs[f]));
+    });
+    (K.dates || []).forEach(function (pair) {
+      var v = String(m.row[pair[0]] || "").trim();
+      if (v) bits.push(partDate(v));
+    });
+    if (K.kind === "lib" && m.row.kind) bits.unshift(m.row.kind);
+    if (K.kind === "skill" && m.row.group) bits.unshift(m.row.group);
+    if (m.row.org) bits.unshift(m.row.org);
+    return bits.join(" · ");
+  }
+
+  /* impHelpHtml() — the format, BUILT FROM THE VALIDATOR ITSELF rather than
+     written out beside it. A reference table typed by hand would be wrong
+     the first time a field was added, and the fault would be silent: the
+     reader would write what the table said and be told it is not a field.
+     One table, one list, no drift. */
+  function impHelpHtml() {
+    var rows = IMP_KINDS.map(function (K) {
+      var fields = K.fields.map(function (f) {
+        var note = "";
+        if (K.refs && K.refs[f]) note = "→ a " + K.refs[f] + " by name";
+        (K.dates || []).forEach(function (pair) {
+          if (pair[0] === f) note = pair[1] === "day" ? "a full day" : "a date";
+        });
+        if (K.words && K.words[f]) note = "one of: " +
+          IMP_WORDS[K.words[f]]().filter(Boolean).join(" / ");
+        if (f === "topics") note = "a list of words";
+        if (f === "steps") note = "a list of names";
+        if (f === "cite") note = "the citation, as its own object";
+        return "<code>" + f + "</code>" + (note ? " <span class=\"faint\">" +
+          esc(note) + "</span>" : "");
+      }).join(", ");
+      return "<tr><td class=\"lit\">" + K.key + "</td><td>" + fields +
+        (K.noName ? " <span class=\"faint\">(no name of its own)</span>" : "") +
+        "</td></tr>";
+    }).join("");
+    return '<div class="panel"><p class="says">A JSON object. Every list is ' +
+      "optional, so a file may carry one of them or all of them. <b>A row may " +
+      "also carry <code>key</code></b>, which is a short handle other rows can " +
+      "point at instead of writing the name out again — and a row with no " +
+      "<code>key</code> is pointed at by its name.</p>" +
+      '<p class="says">A reference to another record is <b>a name or a key, ' +
+      "never an id</b>, and it resolves against this file <em>and</em> against " +
+      "what is already in the book. So a second file can name a project the " +
+      "first one added.</p>" +
+      '<table class="tbl"><thead><tr><th>List</th><th>Fields</th></tr></thead>' +
+      "<tbody>" + rows + "</tbody></table>" +
+      '<p class="says" style="margin-top:0.6rem"><code>profile</code> is an ' +
+      "object, not a list: " + PROFILE_KEYS.map(function (k) {
+        return "<code>" + k + "</code>"; }).join(", ") + ". It fills what is " +
+      "blank and leaves what you have already written alone.</p>" +
+      '<p class="says"><code>links</code> is a list of <code>{ a, rel, b }</code>, ' +
+      "where each end reads <code>kind:name</code> — " +
+      "<code>“project:Anfeh harbour survey”</code>. The lines this app " +
+      "holds: " + Object.keys(RELS).map(function (r) {
+        return "<code>" + r + "</code> <span class=\"faint\">" + esc(RELS[r].says) +
+          "</span>"; }).join("; ") + ".</p>" +
+      '<p class="says">A date is a year, a year and month, or a full day — ' +
+      "<code>2024</code>, <code>2024-02</code>, <code>2024-02-19</code>. Hours " +
+      "want a full day. Nothing is guessed at: a date that is not a date is " +
+      "named and its row left out.</p></div>";
+  }
+
+  /* A worked example rather than an empty skeleton, because the one thing a
+     template has to show is how a reference reads. */
+  var IMP_TEMPLATE = [
+    "{",
+    '  "profile": {',
+    '    "name": "Your name",',
+    '    "headline": "What you do, in one line",',
+    '    "place": "Beirut"',
+    "  },",
+    '  "jobs": [',
+    '    { "key": "aub", "name": "American University of Beirut", "kind": "University",',
+    '      "place": "Beirut" }',
+    "  ],",
+    '  "roles": [',
+    '    { "name": "GIS analyst", "job": "aub", "startedOn": "2024-02",',
+    '      "basis": "Part time", "note": "What the job actually involved." }',
+    "  ],",
+    '  "education": [',
+    '    { "name": "MA Archaeology", "org": "University of Balamand",',
+    '      "startedOn": "2019-09", "endedOn": "2021-07", "result": "Distinction" }',
+    "  ],",
+    '  "training": [',
+    '    { "name": "Photogrammetry for heritage", "org": "Honor Frost Foundation",',
+    '      "on": "2023-06", "hours": "24", "kind": "Workshop" }',
+    "  ],",
+    '  "skills": [',
+    '    { "name": "QGIS", "group": "GIS", "level": "strong" },',
+    '    { "name": "Agisoft Metashape", "group": "Photogrammetry", "level": "working" }',
+    "  ],",
+    '  "projects": [',
+    '    { "key": "anfeh", "name": "Anfeh harbour survey", "job": "aub",',
+    '      "role": "GIS analyst", "status": "active", "startedOn": "2024-03" }',
+    "  ],",
+    '  "outputs": [',
+    '    { "name": "Anfeh site plan", "kind": "Map", "project": "anfeh",',
+    '      "on": "2024-08" }',
+    "  ],",
+    '  "library": [',
+    '    { "name": "Batch-export layouts", "kind": "script", "lang": "Python",',
+    '      "body": "for lyt in project.listLayouts():\\n    lyt.exportToPDF(...)",',
+    '      "topics": ["ArcGIS", "automation"] },',
+    '    { "kind": "reference", "topics": ["harbours"],',
+    '      "cite": { "type": "article", "authors": "Carayon, N.",',
+    '        "year": "2011", "title": "Le port antique",',
+    '        "container": "Archaeonautica", "pages": "27-46" } }',
+    "  ],",
+    '  "links": [',
+    '    { "a": "project:anfeh", "rel": "uses", "b": "skill:QGIS" },',
+    '    { "a": "training:Photogrammetry for heritage", "rel": "learned",',
+    '      "b": "skill:Agisoft Metashape" }',
+    "  ]",
+    "}"
+  ].join("\n");
+
+  /* ============================================================
      THE EXAMPLE.
 
      It is the thing people are shown the app with, so it has to EXERCISE
@@ -8242,6 +9118,7 @@ color-scheme: light;
       });
     },
     "old-import": function () { oldImportDialog(); },
+    "import-json": function () { importDialog(); },
     "old-dismiss": function () {
       state.settings.offered = true;
       saveGo("Left alone — it is still under its own key");

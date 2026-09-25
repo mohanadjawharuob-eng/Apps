@@ -47,6 +47,33 @@ output). The one human-readable list says in its own header that it is *not*
 APA, MLA, Chicago or Harvard, because a hand-rolled named style is a plausible
 wrong answer and this app would rather show a visible limit.
 
+## Feeding it from a file
+
+Typing a career in one record at a time is the honest way to build one and a
+poor way to *start* one, so the book takes a JSON file: **Settings → Feed it
+from a file**, or the finder. `import-format.md` is the schema, and the
+dialog's own **What the file looks like** prints the same table, built from the
+code that validates the file so the two cannot disagree.
+
+Four rules, each of them a fault this repo has already paid for once:
+
+- **It is additive, and that is not a restore.** A backup replaces the book;
+  this adds to it. Handed a backup it refuses and points at Restore, because
+  adding one to a book that already holds it would duplicate every record
+  without a word.
+- **A reference is a name or a key, never an id.** Nobody writing a file can
+  know the app's own ids, so `"role": "GIS analyst"` resolves — against the
+  file *and* against what is already in the book, which is what makes a second
+  file add to the first rather than fork it.
+- **The same name is the same record.** A row whose name is already there is
+  reused, not copied, and the report marks it *Already here*.
+- **It names what it cannot place.** An unknown list, an unknown field, a date
+  that is not a date, a reference to nothing: each is reported against its own
+  row, and the message says whether the row still comes in or not.
+
+Nothing is written until the whole report has been read, and the apply hands
+back an undo on the message it prints.
+
 ## Its own storage, and why that is not cosmetic
 
 `localStorage` is scoped to the **site**, not the folder — which is exactly
@@ -69,6 +96,7 @@ carry before it runs.
 | `README.md` | this |
 | `design-brief-website.md` | a brief for the **marketing page** at `/Apps/mashghal2.html` — the showcase, with the app explicitly out of scope |
 | `design-brief-app-as-site.md` | a brief for **the app's own desktop interface**, to read like a website rather than like an app |
+| `import-format.md` | the JSON a file can carry, for whoever is writing one |
 
 **The round-3 briefs are not copied here.** They live once, in
 `../../mashghal/docs/`, because two copies of one document is the same fault
