@@ -2043,7 +2043,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w17 · 26 Sep 2026";
+  var BUILD = "w18 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -6041,7 +6041,8 @@
       gtab("map", "Map", "Every record as a node and every link as a line. Drag to move, drag from a ring to link, pick a line to cut it, right-click for more.") +
       gtab("shelves", "Library", "What you know, kept to reuse: scripts, formulas, methods, " +
         "references, the reading list, places, links and files \u2014 by kind, or By folder in a tree " +
-        "you make. Drop a PDF or a picture anywhere on the page and it is kept here.") +
+        "you make. Drop a PDF or a picture anywhere on the page and it asks which folder \u2014 or makes a new " +
+        "one \u2014 and keeps it there; drop it on an open folder or a bench and it goes straight in.") +
       gtab("notes", "Notes", "Anything you write, like a small wiki: tag it with #words, link one note to another " +
         "with [[its title]], and every note shows what links to it. Type note: in the line to start one.") +
       gtab("dir", "Files", "What you have kept in the app, what is in your Drive and OneDrive folders, and every path and link.") +
@@ -10088,8 +10089,12 @@
   }
   /* The filing chips: every live bench that is not an idea, then the two
      other ways out. The prototype's own labels. */
+  /* A file or a note in the inbox can go into the Library as well as onto a
+     bench: its owner found a dropped PDF waiting in the weekly review with
+     no way from there into a folder. */
   function wFileChips(it) {
-    return wbLiveBenches().filter(function (b) { return !b.draft; }).map(function (b) {
+    var k = parseRef(it.id).kind;
+    return (k === "lib" || k === "note" ? wChip("wb-tolib", it.id, "Into the Library…") : "") + wbLiveBenches().filter(function (b) { return !b.draft; }).map(function (b) {
       return wChip("wb-file", it.id + "|" + b.id, "→ " + b.title.split(/[ ,]/)[0]);
     }).join("") + wChip("wb-toact", it.id, "Make it an action") +
       wChip("wb-discard", it.id, "Discard");
@@ -12020,7 +12025,11 @@
       var nf = byId(state.folders, wbNoteFolder);
       return { folderId: nf.id, words: "into the folder " + nf.name, kept: "in the folder " + nf.name };
     }
-    return { inbox: true, words: "into the inbox, to sort later", kept: "in the inbox" };
+    /* ANYWHERE ELSE, IT ASKS. A drop used to land in the inbox, and the
+       inbox is the weekly review's first step — so a PDF somebody meant to
+       keep was found "living in the weekly review", with no way from there
+       into the Library. Its owner chose to be asked every time. */
+    return { ask: true, words: "into the Library — you choose the folder when you let go", kept: "" };
   }
 
   function hasFiles(e) {
@@ -12038,7 +12047,8 @@
       document.body.appendChild(el);
     }
     el.innerHTML = '<div class="w-dropcard"><b>Drop to keep in the Library</b><span>A PDF or a picture goes ' +
-      esc(dropCtx().words) + ". The file stays on this device; the record goes wherever the book goes.</span></div>";
+      esc(dropCtx().words) + ". The file stays on this device and in any Drive folder you connected; the record goes " +
+      "wherever the book goes.</span></div>";
     el.hidden = false;
   }
   function wbWireDrop() {
@@ -12063,12 +12073,30 @@
       e.preventDefault();
       dropDepth = 0; dropScrim(false);
       if (overlay && overlay.innerHTML) return;
-      keepFiles(Array.prototype.slice.call(e.dataTransfer.files || []), dropCtx());
+      var files = Array.prototype.slice.call(e.dataTransfer.files || []), ctx = dropCtx();
+      if (ctx.ask) keepAsking(files); else keepFiles(files, ctx);
     });
   }
 
   /* Several files are ONE act with one toast and one undo. A file that is
      not a PDF or a picture is refused by name, and the rest still come in. */
+  /* The question comes BEFORE anything is kept: the bytes are written only
+     once there is somewhere to put them, so a cancelled drop leaves nothing
+     behind to sweep. A drop of nothing usable is refused without asking. */
+  function keepAsking(files) {
+    var good = files.filter(fileOk);
+    if (!good.length) { keepFiles(files, {}); return; }
+    var names = good.map(function (f) { return f.name; });
+    folderAsk("Where in the Library?", {
+      message: esc(names.length === 1 ? "“" + names[0] + "”" : cap(numWord(names.length)) + " files: " +
+        names.slice(0, 4).join(", ") + (names.length > 4 ? " and " + (names.length - 4) + " more" : "")) +
+        ". Pick a folder, or make one for " + (names.length === 1 ? "it" : "them") + " here.",
+      confirmLabel: names.length === 1 ? "Keep it here" : "Keep them here",
+      onCancel: function () { toast("Nothing was kept."); }
+    }, function (choice) {
+      keepFiles(files, { choice: choice });
+    });
+  }
   function keepFiles(files, ctx) {
     var good = files.filter(fileOk), bad = files.filter(function (f) { return !fileOk(f); });
     if (!good.length) {
@@ -12077,6 +12105,12 @@
       return Promise.resolve([]);
     }
     var snap = wbSnap(), on = wbToday(), made = [];
+    if (ctx.choice) {
+      /* made after the snapshot, so the one Undo takes the folder too */
+      ctx.folderId = folderTake(ctx.choice);
+      var cf = ctx.folderId && byId(state.folders, ctx.folderId);
+      ctx.kept = cf ? "in the folder " + cf.name : "at the top of the Library";
+    }
     return Promise.all(good.map(function (f) {
       var id = uid();
       return fileTx("readwrite", function (st) {
@@ -12090,7 +12124,7 @@
         made.push({ rec: rec, blobId: id });
       }).catch(function () { bad.push(f); });
     })).then(function () {
-      if (!made.length) { toast("This browser would not keep the file."); return made; }
+      if (!made.length) { wbRestore(snap); toast("This browser would not keep the file."); return made; }
       commit(); filesForget(); render();
       driveAfterKeep(made.map(function (m) { return m.rec; }));
       var msg = (made.length === 1 ? "Kept “" + made[0].rec.name + "”" : "Kept " + numWord(made.length) + " files") +
@@ -12286,7 +12320,8 @@
     } else {
       out += '<p class="w-empty">' + (f ? "Nothing in this folder yet. Drop a PDF or a picture anywhere on the page " +
         "while it is open, or use <b>Move to folder…</b> on anything's pane."
-        : "Nothing in the Library yet. Drop a PDF or a picture anywhere on the page, or make a folder to start.") + "</p>";
+        : "Nothing in the Library yet. Drop a PDF or a picture anywhere on the page and it asks which folder, " +
+          "or make a folder to start.") + "</p>";
     }
     return out + "</div></div>";
   }
@@ -12300,10 +12335,7 @@
       validate: function (v) {
         var nm = v.name.trim();
         if (!nm) return "It needs a name.";
-        var clash = state.folders.some(function (o) {
-          return o !== f && (o.folderId || "") === (f ? f.folderId || "" : parentId || "") && o.name.toLowerCase() === nm.toLowerCase();
-        });
-        return clash ? "There is already a folder called “" + nm + "” there." : "";
+        return folderClash(nm, f ? f.folderId || "" : parentId || "", f) ? "There is already a folder called “" + nm + "” there." : "";
       },
       onConfirm: function (v) {
         var snap = wbSnap();
@@ -12318,21 +12350,68 @@
       }
     });
   }
-  function folderPicker(title, current, exclude, onPick) {
+  /* One name per level, whichever door makes or renames the folder. */
+  function folderClash(name, parentId, except) {
+    var nm = String(name || "").trim().toLowerCase();
+    return state.folders.some(function (o) {
+      return o !== except && (o.folderId || "") === (parentId || "") && o.name.toLowerCase() === nm;
+    });
+  }
+  function folderOptions(exclude) {
     var opts = [{ value: "", label: "— the top of the Library" }];
     (function walk(pid, depth) {
       folderKids(pid).forEach(function (f) {
         if (exclude[f.id]) return;
-        opts.push({ value: f.id, label: new Array(depth + 1).join(" ") + f.name });
+        opts.push({ value: f.id, label: new Array(depth + 1).join("\u2003") + f.name });
         walk(f.id, depth + 1);
       });
     })("", 0);
+    return opts;
+  }
+  /* CHOOSING A FOLDER CAN MAKE ONE. Asked to file a PDF and "create folders
+     for it", the picker that could only choose among folders already made
+     was a door with no way through when the right one did not exist yet.
+     "+ A new folder…" asks for its name and where it goes, and hands back a
+     `make` rather than making it: the CALLER snapshots first and then makes
+     it, so the new folder and what goes into it are one act with one Undo. */
+  var FOLDER_NEW = "__new";
+  function folderAsk(title, opts, onPick) {
+    opts = opts || {};
+    var ex = opts.exclude || {}, tree = folderOptions(ex);
     openModal({
       title: title,
-      fields: [{ key: "to", label: "Into", type: "select", value: current || "", options: opts }],
-      confirmLabel: "Move it",
-      onConfirm: function (v) { onPick(v.to); }
+      message: opts.message || "",
+      fields: [
+        { key: "to", label: "Into", type: "select", value: opts.current || "",
+          options: tree.concat([{ value: FOLDER_NEW, label: "+ A new folder…" }]) },
+        { key: "nm", label: "The new folder's name", value: "", span: true, showWhen: { key: "to", is: FOLDER_NEW } },
+        { key: "in", label: "Inside", type: "select", value: opts.current && !ex[opts.current] ? opts.current : "",
+          options: tree, showWhen: { key: "to", is: FOLDER_NEW } }
+      ],
+      confirmLabel: opts.confirmLabel || "Move it",
+      validate: function (v) {
+        if (v.to !== FOLDER_NEW) return v.to && !byId(state.folders, v.to) ? "That folder is gone." : "";
+        var nm = String(v.nm || "").trim();
+        if (!nm) return "The new folder needs a name.";
+        if (v.in && !byId(state.folders, v.in)) return "The folder it would go inside is gone.";
+        return folderClash(nm, v.in || "") ? "There is already a folder called “" + nm + "” there." : "";
+      },
+      onCancel: opts.onCancel,
+      onConfirm: function (v) {
+        if (v.to !== FOLDER_NEW) { onPick({ to: v.to || "" }); return; }
+        var nm = String(v.nm).trim(), parent = v.in || "";
+        onPick({ name: nm, make: function () {
+          var made = { id: uid(), name: nm, folderId: parent };
+          state.folders.push(made);
+          return made.id;
+        } });
+      }
     });
+  }
+  /* What a choice names, making the folder if it asked for one. Called
+     AFTER the caller's snapshot. */
+  function folderTake(choice) {
+    return choice && choice.make ? choice.make() : (choice && choice.to) || "";
   }
   /* A folder cannot go inside itself or anything under it: the picker
      withholds those, and the write refuses them again, because a bad merge
@@ -12341,9 +12420,9 @@
     var f = byId(state.folders, id);
     if (!f) return;
     var ex = folderUnder(id); ex[id] = 1;
-    folderPicker("Move “" + f.name + "”", f.folderId || "", ex, function (to) {
-      if (to && (to === id || folderUnder(id)[to])) { toast("A folder cannot go inside itself."); return; }
-      var snap = wbSnap();
+    folderAsk("Move “" + f.name + "”", { current: f.folderId || "", exclude: ex }, function (choice) {
+      if (choice.to && (choice.to === id || folderUnder(id)[choice.to])) { toast("A folder cannot go inside itself."); return; }
+      var snap = wbSnap(), to = folderTake(choice);
       f.folderId = to || "";
       wbDone(to ? "Moved into " + byId(state.folders, to).name : "Moved to the top", snap);
     });
@@ -12373,11 +12452,12 @@
       wbDone("Folder removed. What was in it moved up.", snap);
     });
   }
-  function fileInto(ref2, to) {
+  function fileInto(ref2, choice) {
     var rec = recOf(ref2);
     if (!rec) return;
-    if (to && !byId(state.folders, to)) { toast("That folder is gone."); return; }
-    var snap = wbSnap();
+    if (typeof choice === "string") choice = { to: choice };
+    if (choice.to && !byId(state.folders, choice.to)) { toast("That folder is gone."); return; }
+    var snap = wbSnap(), to = folderTake(choice);
     rec.folderId = to || "";
     delete rec.inbox;
     wbDone(to ? "Moved into " + byId(state.folders, to).name : "Moved to the top of the Library", snap);
@@ -12398,7 +12478,7 @@
   function moveToFolder(ref2) {
     var rec = recOf(ref2);
     if (!rec) return;
-    folderPicker("Move “" + (rec.name || "it") + "” to a folder", rec.folderId || "", {}, function (to) { fileInto(ref2, to); });
+    folderAsk("Move “" + (rec.name || "it") + "” to a folder", { current: rec.folderId || "" }, function (choice) { fileInto(ref2, choice); });
   }
 
   /* Dragging a card onto a folder files it there. Internal drags carry
@@ -13785,9 +13865,9 @@
       step(2, "Connect a folder", "In Settings, press <b>Connect a folder</b> and pick a folder inside the drive — make one " +
         "called Mashghal, say. Name it, choose whether it carries the whole Library or some folders, and press " +
         "<b>Connect it</b>.") +
-      step(3, "Drop files", "From now on a PDF or a picture you drop anywhere on the page is written into that folder " +
-        "straight away, in the same folders as the Library; what lands in the inbox goes into its Inbox folder until " +
-        "you file it, and then moves.") +
+      step(3, "Drop files", "From now on a PDF or a picture you drop anywhere on the page asks which Library folder it " +
+        "belongs in — or makes a new one — and is written into the same folder in the drive straight away. Move it " +
+        "to another folder later and the copy moves with it.") +
       step(4, "On the other computer", "Connect the same folder there and press <b>Bring in what is here</b>. Nothing " +
         "changes until you have seen the list; then the files attach to the records the book already brought.") + "</ol>" +
       '<p class="hs-note">It needs Chrome or Edge on a computer. The browser asks again each time the app is opened — ' +
@@ -13939,9 +14019,9 @@
   function selMove() {
     if (!selAll(SEL_FOLDERED)) return;
     var ids = SEL.ids.slice();
-    folderPicker("Move " + selWordsOf(ids.length) + " to a folder", "", {}, function (to) {
-      if (to && !byId(state.folders, to)) { toast("That folder is gone."); return; }
-      var snap = wbSnap();
+    folderAsk("Move " + selWordsOf(ids.length) + " to a folder", {}, function (choice) {
+      if (choice.to && !byId(state.folders, choice.to)) { toast("That folder is gone."); return; }
+      var snap = wbSnap(), to = folderTake(choice);
       ids.forEach(function (id) { var r = recOf(id); if (r) { r.folderId = to || ""; delete r.inbox; } });
       selClear();
       wbDone("Moved " + selWordsOf(ids.length) + (to ? " into " + byId(state.folders, to).name : " to the top of the Library"), snap);
@@ -14951,6 +15031,11 @@
     "folder-move": function (idv) { folderMove(idv); },
     "folder-del": function (idv) { folderDel(idv); },
     "wb-movef": function (idv) { moveToFolder(idv); },
+    "wb-tolib": function (idv) {
+      var r = recOf(idv); if (!r) return toast("That record is gone.");
+      folderAsk("Where in the Library?", { message: esc("“" + (r.name || "it") + "”") + ". Pick a folder, or make one for it here.",
+        confirmLabel: "File it here" }, function (choice) { fileInto(idv, choice); });
+    },
     "wb-fopen": function (idv) { fileAct(idv, false); },
     "wb-fsave": function (idv) { fileAct(idv, true); },
     "gr-pane": function (idv) {

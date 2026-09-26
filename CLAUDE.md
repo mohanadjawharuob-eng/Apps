@@ -4943,3 +4943,45 @@ the preview printed with ways pointing at ids, the page showing the words, one
 Undo, appending, the step dialog, `workflow:` in the line keeping nothing in
 the inbox, 390 and 320px) · `pzlook.js` (24: the writer, the reading, the
 legend and the workflow page in contrast at 1400, 390 and 320px).
+
+## mashghal2: a dropped file asks which folder, and a folder can be made on the spot (w18)
+
+Its owner dropped a PDF and found it "living in the weekly review", which
+"doesn't really make sense", and asked for a way to put it in the Library and
+make folders for it. Asked where a drop should land, they chose **ask me every
+time**.
+
+- **A DROP WITH NO PLACE OF ITS OWN ASKS.** `dropCtx()` returned the inbox for
+  any screen that was not a Library folder, a bench or a Notes folder — and the
+  inbox is the weekly review's first step, whose chips offered a bench, an
+  action or Discard and **no way into the Library at all**. Now it returns
+  `{ask: true}`, the scrim says the folder is chosen on letting go, and
+  `keepAsking()` puts the question **before** anything is kept: the bytes are
+  written only once there is somewhere to put them, so Cancel and Escape leave
+  nothing to sweep (and the toast says "Nothing was kept"). A drop of nothing
+  usable is refused by name without a question. A bench, an open folder and
+  the Library itself already answer "where", so they do not ask.
+- **CHOOSING A FOLDER CAN MAKE ONE.** `folderAsk()` replaces `folderPicker()`
+  at every door — a drop, the review's new **Into the Library…** chip, the
+  pane's Move to folder, the bulk bar's Move and a folder's own Move — with
+  **"+ A new folder…"** at the foot of the tree, its name and where it goes
+  shown by the runtime's `showWhen`. It hands back a `make` rather than making
+  it, so **the caller snapshots first and then makes the folder**: the folder
+  and what goes into it are one act with one Undo (the test takes back a file,
+  its bytes and the folder made for it with one press). `folderClash()` is the
+  one-name-per-level rule, shared with `folderDialog`.
+- **Nothing already in the inbox is moved for you.** Each inbox file or note
+  carries **Into the Library…** in the review and on Today, and Select files a
+  whole inbox at once. The `Inbox/` read-back in `placeForPath` stays for
+  anything a drive already holds from before.
+
+`wb-dropask.js` (31: the scrim, the question naming the file before anything
+is kept, an existing folder, not waiting in the review, written straight to
+its folder in the drive and never to `Inbox/`, a new folder inside a chosen
+one, an empty and a taken name refused, one Undo taking file, bytes and
+folder, Escape keeping nothing, three files one question one toast, a docx
+refused without asking, a bench and an open folder not asking, the review's
+chip, the pane and the bulk Move making folders, a folder moved into one made
+in the same dialog, 390px) · `fxlook.js` now 72, measuring the question with
+its new-folder fields open · `wb-files`, `wb-filestab` and `wb-select`
+answer the question where they used to expect the inbox.
