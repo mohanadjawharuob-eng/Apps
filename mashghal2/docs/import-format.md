@@ -65,11 +65,12 @@ book**, in that order.
 | `people` | `name` `role` `org` `email` `note` |
 | `assets` | `name` `kind` `state`⁴ `place` `lastUsedOn`* `path` `url` `note` |
 | `outputs` | `name` `kind` `project`→ `on`* `path` `url` `note` |
-| `library` | `name` `kind`⁵ `lang` `body` `path` `url` `topics` (a list) `from` `note` `cite` |
+| `folders` | `name` `folder`→ (the folder it is in, if any) |
+| `library` | `name` `kind`⁵ `lang` `body` `path` `url` `topics` (a list) `from` `note` `cite` `folder`→ |
 | `portfolio` | `name` `on`* `note` |
 | `cvs` | `name` `aim` `note` |
 | `hours` | `project`→ `on`** `minutes` `note` |
-| `notes` | `name` `kind` (note · meeting · idea) `project`→ `on`** `body` |
+| `notes` | `name` `kind` (note · meeting · idea) `project`→ `on`** `body` `folder`→ |
 
 `→` a name or a key · `*` a date · `**` a full day
 
@@ -79,6 +80,8 @@ book**, in that order.
 3. `kind`: `do` `send` `watch` `file`
 4. `state`: `ready` `out` `fixing` `lost`
 5. `library.kind`: `script` `formula` `method` `template` `reference` `place`
+   `link` `file`. A `file` row is the record only: the bytes of a PDF or a
+   picture are dropped onto the page, never carried in a JSON file.
 
 `runs` and `hours` have no name of their own; every other list needs one, and a
 row without one is refused by its position in the list.

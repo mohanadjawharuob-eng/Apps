@@ -1542,6 +1542,57 @@
   .g-wrap.is-max .g-box { height: 100%; }
   html.g-maxed { overflow: hidden; }
 
+  /* ---- files, and the folder tree ---- */
+  .w-dropall {
+    position: fixed; inset: 0; z-index: 85; display: flex; align-items: center; justify-content: center;
+    background: rgba(29, 28, 25, 0.28); pointer-events: none;
+  }
+  .w-dropall[hidden] { display: none; }
+  .w-dropcard {
+    display: flex; flex-direction: column; gap: 6px; max-width: 26rem; margin: 16px; padding: 22px 26px;
+    border: 2px dashed var(--blue); border-radius: 18px; background: var(--sheet); box-shadow: var(--sh-drop);
+  }
+  .w-dropcard b { font-family: var(--display); font-weight: 500; font-size: 22px; }
+  .w-dropcard span { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+  .w-fprev { margin-top: 14px; }
+  .w-fbox { margin-top: 8px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--wash-2); }
+  .w-fbox > .w-phelp { margin: 12px; }
+  .w-fimg { display: block; max-width: 100%; max-height: 50vh; margin: 0 auto; }
+  .w-fpdf { display: block; width: 100%; height: 50vh; border: 0; background: var(--sheet); }
+  .w-fbtns { display: flex; gap: 8px; margin-top: 8px; }
+  .w-pfold { margin: 12px 0 0; font-size: 13.5px; color: var(--dim); }
+  .w-pfold b { color: var(--ink-2); font-weight: 600; }
+  .w-lthumb {
+    display: flex; align-items: center; justify-content: center; height: 96px; margin-top: 8px; border-radius: 8px;
+    background: var(--wash-2); overflow: hidden; font-family: var(--mono); font-size: 12px; color: var(--dim);
+  }
+  .w-lthumb.is-img > span { display: none; }
+  .w-lthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .w-seg.is-libby { margin-top: 18px; }
+  .w-fwrap { display: grid; grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr); gap: 22px; margin-top: 22px; align-items: start; }
+  .w-ftree {
+    display: flex; flex-direction: column; gap: 1px; padding: 8px; border: 1px solid var(--rule); border-radius: 12px;
+    background: var(--sheet); position: sticky; top: 100px;
+  }
+  .w-frow {
+    display: flex; align-items: center; gap: 7px; min-height: 34px; padding: 5px 10px; border: 1px solid transparent;
+    border-radius: 8px; background: none; font: inherit; font-size: 14px; color: var(--ink-2); text-align: left; cursor: pointer;
+  }
+  .w-frow .w-mono { font-size: 11px; color: var(--dim); }
+  .w-frow:hover { background: var(--row-hover); }
+  .w-frow.is-on { background: var(--selected); color: var(--ink); font-weight: 600; }
+  .w-frow.is-over { border-color: var(--blue); background: var(--blue-tint); }
+  .w-fico { font-size: 11px; color: var(--dim); }
+  .w-fnew { margin: 8px 2px 2px; align-self: flex-start; }
+  .w-fmain { min-width: 0; }
+  .w-crumbs { margin: 0; font-size: 13.5px; color: var(--dim); }
+  .w-crumbs b { color: var(--ink); font-weight: 600; }
+  .w-fhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .w-fhead .w-h2 { margin: 0; }
+  .w-fnote { margin: 20px 0 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .w-fmain .w-lgrid { margin-top: 14px; }
+  .w-fmain > .w-fnote:first-child { margin-top: 0; }
+
   .w-ptabs { display: none; }
 
   /* ---- the older screens, inside the new shell ---- */
@@ -1646,6 +1697,9 @@
     .g-sp { display: none; }
     .g-box { height: max(340px, calc(100vh - 330px)); }
     .g-keys { display: none; }
+    /* The tree goes above the list on a phone, as a row of folders. */
+    .w-fwrap { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .w-ftree { position: static; }
     .w-keys { bottom: 120px; right: 12px; }
   }
 </style>
@@ -1764,7 +1818,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w10 · 26 Sep 2026";
+  var BUILD = "w11 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -1824,10 +1878,13 @@
       /* ---- THE RELATIONSHIP LAYER ---- */
       links: [],       // {id,rel,a,b,note}    a and b are "kind:id"
 
+      /* ---- THE FOLDER TREE ---- */
+      folders: [],     // {id,name,folderId} — a library entry and a note carry folderId too
+
       /* ---- WHERE THINGS SIT ON THE MAP ---- */
       spots: [],       // {id: a record's ref, x, y} — layout, never structure
 
-      settings: { owner: "", offered: false, shape: "rows", demo: false, showGraph: true },
+      settings: { owner: "", offered: false, shape: "rows", demo: false, showGraph: true, libBy: "kind" },
       forgotten: {},   // id -> name, so a removed record still reads
       tombstones: {},  // id -> when it was deleted, so sync cannot resurrect it
       devices: {}      // device id -> {name, at, borrowed} — who last wrote
@@ -1836,7 +1893,7 @@
 
   var STATE_LISTS = ["education", "jobs", "roles", "training", "skills",
     "projects", "workflows", "runs", "actions", "people", "assets",
-    "outputs", "hours", "lib", "portfolio", "cvs", "links", "notes", "spots"];
+    "outputs", "hours", "lib", "portfolio", "cvs", "links", "notes", "folders", "spots"];
   /* A spot is where a record sits on the map. It is its own record so a
      drag cannot stamp — and so outrank — the record it positions, but it
      is layout and not work: no count of the book includes it. */
@@ -1876,6 +1933,9 @@
        about how you like to READ, so surviving a reload is the whole point.
        The same argument Field mode won in the app this replaces. */
     s.settings.shape = t.shape === "cards" ? "cards" : "rows";
+    /* How the Library is read — shelves by kind, or the folder tree — is
+       the same sort of fact: how you like to read, so it survives a reload. */
+    s.settings.libBy = t.libBy === "folder" ? "folder" : "kind";
     /* THE THEME IS NOT IN THE BOOK. It lived in `settings.theme` beside a
        pre-paint reader that has to read `localStorage`, because the main
        script has not loaded yet — two sources of truth for one fact, and
@@ -2090,7 +2150,7 @@
     role: "roles", job: "jobs", education: "education", training: "training",
     skill: "skills", project: "projects", workflow: "workflows", run: "runs",
     action: "actions", person: "people", asset: "assets", output: "outputs",
-    lib: "lib", portfolio: "portfolio", cv: "cvs", hours: "hours", note: "notes"
+    lib: "lib", portfolio: "portfolio", cv: "cvs", hours: "hours", note: "notes", folder: "folders"
   };
   function listOf(kind) { return state[LIST_FOR[kind]] || []; }
   function byId(kind, id) {
@@ -2737,7 +2797,7 @@
      to count straight off the state keys and print "21 wf nodes". */
   var LIST_WORDS = {
     education: ["piece of education", "pieces of education"],
-    jobs: ["employer", "employers"], roles: ["role", "roles"],
+    jobs: ["employer", "employers"], roles: ["role", "roles"], folders: ["folder", "folders"],
     training: ["training", "trainings"], skills: ["skill", "skills"],
     projects: ["project", "projects"], workflows: ["workflow", "workflows"],
     runs: ["run", "runs"], actions: ["action", "actions"],
@@ -5937,7 +5997,8 @@
         "who you are waiting on; the inbox; and each bench with its next step.") +
       gtab("map", "Map", "Every record as a node and every link as a line. Drag to move, drag from a ring to link, pick a line to cut it, right-click for more.") +
       gtab("shelves", "Library", "What you know, kept to reuse: scripts, formulas, methods, " +
-        "references, the reading list, places, links and files \u2014 by subject.") +
+        "references, the reading list, places, links and files \u2014 by kind, or By folder in a tree " +
+        "you make. Drop a PDF or a picture anywhere on the page and it is kept here.") +
       gtab("record", "Record", "Your skills and what backs them, and the live CV.") +
       gtab("review", "Weekly review", "Four steps, about ten minutes.") +
       "</div>" +
@@ -7644,16 +7705,19 @@
       words: { state: "THING_STATES" } },
     { kind: "output", word: "Outputs", key: "outputs", fields: ["name", "kind", "project", "on",
       "path", "url", "note"], refs: { project: "project" }, dates: [["on", "part"]] },
+    /* The folder tree. A folder names the folder it is in, and so does a
+       library entry or a note — by name or key, like every reference. */
+    { kind: "folder", word: "Folders", key: "folders", fields: ["name", "folder"], refs: { folder: "folder" } },
     { kind: "lib", word: "Library", key: "library", fields: ["name", "kind", "lang", "body", "path",
-      "url", "topics", "from", "note", "cite"] },
+      "url", "topics", "from", "note", "cite", "folder"], refs: { folder: "folder" } },
     { kind: "portfolio", word: "Portfolio", key: "portfolio", fields: ["name", "on", "note", "path", "url"],
       dates: [["on", "part"]] },
     { kind: "cv", word: "CVs", key: "cvs", fields: ["name", "aim", "note", "path", "url"] },
     { kind: "hours", word: "Hours", key: "hours", fields: ["project", "on", "minutes", "note"],
       refs: { project: "project" }, dates: [["on", "day"]], noName: true },
     /* The Workbench's notes: a note, a meeting written up, or an idea. */
-    { kind: "note", word: "Notes", key: "notes", fields: ["name", "kind", "project", "on", "body"],
-      refs: { project: "project" }, dates: [["on", "day"]], words: { kind: "NOTE_KINDS" } }
+    { kind: "note", word: "Notes", key: "notes", fields: ["name", "kind", "project", "on", "body", "folder"],
+      refs: { project: "project", folder: "folder" }, dates: [["on", "day"]], words: { kind: "NOTE_KINDS" } }
   ];
   function impKind(k) {
     k = String(k || "").trim().toLowerCase();
@@ -9233,6 +9297,7 @@
       /* The pinned pictures are this device's too, and a wipe that left
          them would leave the one thing nobody would think to look for. */
       try { if (window.indexedDB) indexedDB.deleteDatabase(PIN_DB); } catch (e) {}
+      try { if (window.indexedDB) indexedDB.deleteDatabase(FILE_DB); } catch (e) {}
       state = APP.blank();
       grReset();
       ensureStamps();
@@ -10406,6 +10471,13 @@
         (isUrl ? '<a class="w-pbtn" href="' + esc(it.path) + '" target="_blank" rel="noopener">Open</a>' : "") +
         '<button class="w-pbtn" data-act="wb-copy" data-id="' + esc(it.id) + '">Copy path</button></div>';
     }
+    if (it.rec && it.rec.blobId) out += filePaneHtml(it);
+    var pk = parseRef(it.id).kind;
+    if (pk === "lib" || pk === "note") {
+      var fo = it.rec.folderId && byId(state.folders, it.rec.folderId);
+      out += '<p class="w-pfold">' + (fo ? "In the folder <b>" + esc(folderTrail(fo.id).map(function (t) { return t.name; }).join(" › ")) + "</b>"
+        : "In no folder") + ' <button class="w-inlink" data-act="wb-movef" data-id="' + esc(it.id) + '">Move to folder…</button></p>';
+    }
     if (it.inbox) {
       out += '<p class="w-pq">Still in the inbox. Where does it belong?</p><div class="w-chips is-flat">' +
         wFileChips(it) + "</div>";
@@ -10580,23 +10652,7 @@
      megabytes through the sealed gist would make sync fail slowly and
      silently. So a pin is on this device, and the panel says so. */
   var PIN_DB = "mashghal2-pins", PIN_STORE = "pins";
-  function pinTx(mode, fn) {
-    return new Promise(function (res, rej) {
-      if (!window.indexedDB) { rej(new Error("no IndexedDB")); return; }
-      var r = indexedDB.open(PIN_DB, 1);
-      r.onupgradeneeded = function (e) {
-        /* Reading never creates, the rule the snapshots learned. */
-        if (mode === "readonly" && e.oldVersion === 0) { r.transaction.abort(); return; }
-        r.result.createObjectStore(PIN_STORE, { keyPath: "id" });
-      };
-      r.onerror = function () { rej(r.error || new Error("could not open")); };
-      r.onsuccess = function () {
-        var db = r.result, tx = db.transaction(PIN_STORE, mode), out = fn(tx.objectStore(PIN_STORE));
-        tx.oncomplete = function () { db.close(); res(out && out.result !== undefined ? out.result : null); };
-        tx.onerror = function () { db.close(); rej(tx.error); };
-      };
-    });
-  }
+  function pinTx(mode, fn) { return idbTx(PIN_DB, PIN_STORE, mode, fn); }
   function wbPinsPanel(B) {
     var pid = parseRef(B.id).id;
     return '<div class="w-panel is-pins"><div class="w-phead"><h2>Pinned</h2><span class="w-csub">drop photos, ' +
@@ -10648,10 +10704,13 @@
       });
       /* preventDefault on EVERY dragover, or the browser navigates to the
          file, which looks exactly like the app crashing. */
-      slot.addEventListener("dragover", function (e) { e.preventDefault(); slot.classList.add("is-over"); });
+      /* A pin keeps its own drop: stopped here, so the page-wide drop does
+         not also file the same picture in the Library. */
+      slot.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); slot.classList.add("is-over"); });
       slot.addEventListener("dragleave", function () { slot.classList.remove("is-over"); });
       slot.addEventListener("drop", function (e) {
-        e.preventDefault(); slot.classList.remove("is-over");
+        e.preventDefault(); e.stopPropagation(); slot.classList.remove("is-over");
+        dropDepth = 0; dropScrim(false);
         var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (f) wbPinPut(slot, f);
       });
@@ -10696,9 +10755,23 @@
     var libAll = items.filter(function (x) { return WB_LIB.indexOf(x.type) >= 0 && !x.inbox; });
     if (wbSubject !== "all" && !wbGet(wbSubject)) wbSubject = "all";
     var pool = libAll.filter(function (x) { return wbSubject === "all" || wbBacks(x, wbSubject); });
+    var by = libBy();
     var out = wEyebrow("Library") + '<h1 class="w-h1">What you know, kept to reuse</h1>' +
-      '<p class="w-lead is-62">Each shelf holds the thing itself: the code, the formula, the method written out. ' +
-      "Pick a subject to see only what backs one skill.</p>";
+      '<p class="w-lead is-62">' + (by === "folder" ? "Your folders, and what is filed in them. Drop a PDF or a picture " +
+        "anywhere on the page and it lands in the folder that is open."
+        : "Each shelf holds the thing itself: the code, the formula, the method written out. " +
+        "Pick a subject to see only what backs one skill.") + "</p>";
+    /* ONE LIBRARY, READ TWO WAYS. Shelves by kind is the design's; the tree
+       is how its owner organises. Which one is a setting, like the shape of
+       a list, because it is how you like to read. */
+    out += '<div class="w-seg is-libby" role="group" aria-label="Read the Library">' + [["kind", "By kind"], ["folder", "By folder"]].map(function (r) {
+      return '<button class="w-segb' + (by === r[0] ? " is-on" : "") + '" aria-pressed="' + (by === r[0]) +
+        '" data-act="wb-libby" data-id="' + r[0] + '">' + r[1] + "</button>";
+    }).join("") + "</div>";
+    if (by === "folder") {
+      wbOrder = [];
+      return out + wbFolderView(wbLibCard);
+    }
     out += '<div class="w-subjects"><span class="w-slead">By subject</span>' +
       [{ id: "all", label: "Everything", n: libAll.length }].concat(skills.map(function (sk) {
         return { id: sk.id, label: sk.title, n: libAll.filter(function (x) { return wbBacks(x, sk.id); }).length };
@@ -10731,33 +10804,43 @@
       return '<section class="w-shelf"><div class="w-shead"><span class="w-ssq" style="background:' + tCol(k) +
         '"></span><h2>' + esc(WB_SHELF[k][0]) + '</h2><span class="w-mono w-cnum">' + list.length +
         '</span><span class="w-sline">' + esc(WB_SHELF[k][1]) + '</span></div><div class="w-lgrid">' +
-        list.map(function (x) {
-          wbOrder.push(x.id);
-          /* A record can sit on a bench AND be linked to it; it is one
-             bench, said once. */
-          var used = wbNbrs(x.id).concat(x.bench && wbGet(x.bench) ? [wbGet(x.bench)] : [])
-            .filter(function (y, i, a) { return a.indexOf(y) === i; });
-          var tags = used.filter(function (y) { return y.type === "bench"; }).map(function (y) {
-            return '<span class="w-tag">' + esc(wbShortName(y.title)) + "</span>";
-          }).concat(used.filter(function (y) { return y.type === "skill"; }).map(function (y) {
-            return '<span class="w-tag is-skill">' + esc(y.title) + "</span>";
-          }));
-          if (k === "reading") {
-            tags.unshift(x.rstat === "reading" ? '<span class="w-tag is-now">Reading now</span>'
-              : '<span class="w-tag">Want to read</span>');
-          }
-          if (!tags.length) tags.push('<span class="w-tag is-amber">Not linked yet</span>');
-          var prev = "";
-          if (x.code) prev = '<span class="w-lcode">' + esc(x.code.split("\n").slice(0, 4).join("\n")) + "</span>";
-          else if (k === "reference") prev = x.body ? '<span class="w-lcite">' + esc(x.body) + "</span>" : "";
-          else if (x.path) prev = '<span class="w-lpath">' + esc(x.path) + "</span>";
-          else if (x.body) prev = '<span class="w-ltext">' + esc(x.body) + "</span>";
-          return '<button class="w-lcard' + (wbSel === x.id ? " is-sel" : "") + '" data-act="wb-open" data-id="' +
-            esc(x.id) + '"><span class="w-ltitle">' + esc(x.title) + "</span>" + prev +
-            '<span class="w-ltags">' + tags.join("") + "</span></button>";
-        }).join("") + "</div></section>";
+        list.map(wbLibCard).join("") + "</div></section>";
     }).join("");
     return out;
+  }
+
+  /* One card, for a shelf and for a folder alike, so the two readings of the
+     Library cannot draw one entry two ways. */
+  function wbLibCard(x) {
+    var k = x.type;
+    wbOrder.push(x.id);
+    /* A record can sit on a bench AND be linked to it; it is one
+       bench, said once. */
+    var used = wbNbrs(x.id).concat(x.bench && wbGet(x.bench) ? [wbGet(x.bench)] : [])
+      .filter(function (y, i, a) { return a.indexOf(y) === i; });
+    var tags = used.filter(function (y) { return y.type === "bench"; }).map(function (y) {
+      return '<span class="w-tag">' + esc(wbShortName(y.title)) + "</span>";
+    }).concat(used.filter(function (y) { return y.type === "skill"; }).map(function (y) {
+      return '<span class="w-tag is-skill">' + esc(y.title) + "</span>";
+    }));
+    if (k === "reading") {
+      tags.unshift(x.rstat === "reading" ? '<span class="w-tag is-now">Reading now</span>'
+        : '<span class="w-tag">Want to read</span>');
+    }
+    if (TREE_NOTE[k]) tags.unshift('<span class="w-tag">' + esc(tWord(k)) + "</span>");
+    if (!tags.length) tags.push('<span class="w-tag is-amber">Not linked yet</span>');
+    var prev = "", e = x.rec || {};
+    if (e.blobId) {
+      prev = '<span class="w-lthumb" data-fthumb="' + esc(e.blobId) + '"><span>' + esc(fileKind(e) +
+        (e.size ? " · " + fileSize(e.size) : "")) + "</span></span>";
+    }
+    else if (x.code) prev = '<span class="w-lcode">' + esc(x.code.split("\n").slice(0, 4).join("\n")) + "</span>";
+    else if (k === "reference") prev = x.body ? '<span class="w-lcite">' + esc(x.body) + "</span>" : "";
+    else if (x.path) prev = '<span class="w-lpath">' + esc(x.path) + "</span>";
+    else if (x.body) prev = '<span class="w-ltext">' + esc(x.body) + "</span>";
+    return '<button class="w-lcard' + (wbSel === x.id ? " is-sel" : "") + '" data-act="wb-open" data-id="' +
+      esc(x.id) + '" data-dragref="' + esc(x.id) + '"><span class="w-ltitle">' + esc(x.title) + "</span>" + prev +
+      '<span class="w-ltags">' + tags.join("") + "</span></button>";
   }
 
   /* ---------------- Record: skills and the live CV ---------------- */
@@ -11716,6 +11799,480 @@
   }
 
   /* ============================================================
+     A FILE DROPPED ANYWHERE IS KEPT, AND THE LIBRARY HAS FOLDERS.
+
+     Asked for "throwing a pdf or photo on the whole page" to put it in the
+     Library, and for folders to organise what is there. Two rules from
+     the pictures carry straight over:
+
+       · THE BYTES ARE NOT THE BOOK. A PDF is bigger than the whole record,
+         so it lives in its own IndexedDB (`mashghal2-files`) and never
+         travels through the sealed gist — the same call the pins and the
+         original app's photographs made. The RECORD syncs: a `file` entry
+         in the library with `blobId`, `fname`, `mime` and `size`, so every
+         device knows the file exists and the one without the bytes says so
+         in as many words.
+       · READING NEVER CREATES. Every read opens with the upgrade aborted,
+         so looking for a file on a device that has none cannot leave an
+         empty database behind.
+
+     A FOLDER IS CONTAINMENT, STATED FORWARD AND WALKED BACK. `folders` is
+     `{id, name, folderId}` and a library entry or a note carries the same
+     `folderId` — one field for "which folder is this in", whatever it is. What a
+     folder holds is walked, never stored, so it cannot disagree with what
+     says it is in it — the discipline `atId` and a card's `in` already had.
+     One tree holds both, because its owner chose a vault over two lists.
+     ============================================================ */
+
+  var FILE_DB = "mashghal2-files", FILE_STORE = "files";
+  /* The one way into a small IndexedDB. The pins have used their own copy
+     of this since w9; both now go through here. */
+  function idbTx(name, store, mode, fn) {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) { rej(new Error("no IndexedDB")); return; }
+      var r = indexedDB.open(name, 1);
+      r.onupgradeneeded = function (e) {
+        if (mode === "readonly" && e.oldVersion === 0) { r.transaction.abort(); return; }
+        r.result.createObjectStore(store, { keyPath: "id" });
+      };
+      r.onerror = function () { rej(r.error || new Error("could not open")); };
+      r.onsuccess = function () {
+        var db = r.result, tx = db.transaction(store, mode), out = fn(tx.objectStore(store));
+        tx.oncomplete = function () { db.close(); res(out && out.result !== undefined ? out.result : null); };
+        tx.onerror = function () { db.close(); rej(tx.error); };
+      };
+    });
+  }
+  function fileTx(mode, fn) { return idbTx(FILE_DB, FILE_STORE, mode, fn); }
+  function fileGet(id) { return fileTx("readonly", function (st) { return st.get(id); }).catch(function () { return null; }); }
+
+  var FILE_OK = /^(application\/pdf|image\/)/;
+  function fileOk(f) {
+    return FILE_OK.test(f.type || "") || /\.(pdf|png|jpe?g|gif|webp|heic|tiff?|bmp|svg)$/i.test(f.name || "");
+  }
+  function fileSize(n) {
+    n = num(n);
+    if (n < 1024) return n + " bytes";
+    if (n < 1048576) return Math.round(n / 1024) + " KB";
+    return (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + " MB";
+  }
+  function fileKind(e) {
+    var m = e.mime || "";
+    return m === "application/pdf" || /\.pdf$/i.test(e.fname || "") ? "PDF" : /^image\//.test(m) ? "Picture" : "File";
+  }
+
+  /* ---------------- where a drop lands ---------------- */
+
+  /* WHERE YOU ARE DECIDES WHERE IT GOES, and the scrim says which before
+     you let go: the open folder in the Library, the bench on a bench's
+     page, and the inbox anywhere else — the capture line's rule. */
+  function dropCtx() {
+    if (view === "shelves") {
+      var f = libBy() === "folder" && wbLibFolder ? byId(state.folders, wbLibFolder) : null;
+      return { folderId: f ? f.id : "", words: f ? "into the folder " + f.name : "into the Library",
+        kept: f ? "in the folder " + f.name : "in the Library" };
+    }
+    if (view === "bench" && wbBench && wbGet(wbBench)) {
+      return { projectId: parseRef(wbBench).id, words: "onto " + wbGet(wbBench).title, kept: "on " + wbGet(wbBench).title };
+    }
+    if (view === "notes" && typeof wbNoteFolder !== "undefined" && wbNoteFolder && byId(state.folders, wbNoteFolder)) {
+      var nf = byId(state.folders, wbNoteFolder);
+      return { folderId: nf.id, words: "into the folder " + nf.name, kept: "in the folder " + nf.name };
+    }
+    return { inbox: true, words: "into the inbox, to sort later", kept: "in the inbox" };
+  }
+
+  function hasFiles(e) {
+    var t = e.dataTransfer && e.dataTransfer.types;
+    return !!t && Array.prototype.indexOf.call(t, "Files") >= 0;
+  }
+  var dropDepth = 0;
+  function dropScrim(on) {
+    var el = document.getElementById("dropAll");
+    if (!on) { if (el) el.hidden = true; return; }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "dropAll"; el.className = "w-dropall";
+      el.setAttribute("aria-hidden", "true");
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<div class="w-dropcard"><b>Drop to keep in the Library</b><span>A PDF or a picture goes ' +
+      esc(dropCtx().words) + ". The file stays on this device; the record goes wherever the book goes.</span></div>";
+    el.hidden = false;
+  }
+  function wbWireDrop() {
+    /* preventDefault on EVERY dragover, or the browser navigates to the
+       file, which looks exactly like the app crashing. */
+    document.addEventListener("dragenter", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault(); dropDepth++; dropScrim(true);
+    });
+    document.addEventListener("dragover", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    });
+    document.addEventListener("dragleave", function (e) {
+      if (!hasFiles(e)) return;
+      dropDepth = Math.max(0, dropDepth - 1);
+      if (!dropDepth) dropScrim(false);
+    });
+    document.addEventListener("drop", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dropDepth = 0; dropScrim(false);
+      if (overlay && overlay.innerHTML) return;
+      keepFiles(Array.prototype.slice.call(e.dataTransfer.files || []), dropCtx());
+    });
+  }
+
+  /* Several files are ONE act with one toast and one undo. A file that is
+     not a PDF or a picture is refused by name, and the rest still come in. */
+  function keepFiles(files, ctx) {
+    var good = files.filter(fileOk), bad = files.filter(function (f) { return !fileOk(f); });
+    if (!good.length) {
+      toast(bad.length ? (bad.length === 1 ? bad[0].name + " is not a PDF or a picture." :
+        "None of those is a PDF or a picture.") : "Nothing was dropped.");
+      return Promise.resolve([]);
+    }
+    var snap = wbSnap(), on = wbToday(), made = [];
+    return Promise.all(good.map(function (f) {
+      var id = uid();
+      return fileTx("readwrite", function (st) {
+        st.put({ id: id, blob: f, name: f.name, type: f.type || "", size: f.size || 0, at: new Date().toISOString() });
+      }).then(function () {
+        var rec = { id: uid(), kind: "file", name: String(f.name || "File").replace(/\.[A-Za-z0-9]{1,5}$/, ""),
+          fname: f.name || "", mime: f.type || "", size: f.size || 0, blobId: id, on: on,
+          projectId: ctx.projectId || "", folderId: ctx.folderId || "" };
+        if (ctx.inbox) rec.inbox = true;
+        state.lib.push(rec);
+        made.push({ rec: rec, blobId: id });
+      }).catch(function () { bad.push(f); });
+    })).then(function () {
+      if (!made.length) { toast("This browser would not keep the file."); return made; }
+      commit(); render();
+      var msg = (made.length === 1 ? "Kept “" + made[0].rec.name + "”" : "Kept " + numWord(made.length) + " files") +
+        " " + ctx.kept +
+        (bad.length ? ". " + (bad.length === 1 ? bad[0].name + " is not a PDF or a picture." :
+          cap(numWord(bad.length)) + " were not PDFs or pictures.") : "");
+      toast(msg, function () {
+        wbRestore(snap);
+        /* The undo takes the bytes back as well, or they would sit in this
+           device's storage belonging to nothing. */
+        fileTx("readwrite", function (st) { made.forEach(function (m) { st.delete(m.blobId); }); }).catch(function () {});
+      });
+      return made;
+    });
+  }
+
+  /* A file whose record has gone is swept at boot, not at the moment of
+     deleting: the undo on a Remove toast has to be able to bring the
+     record back WITH its bytes. */
+  function sweepFiles() {
+    if (bookTrouble.unread) return;
+    var live = {};
+    state.lib.forEach(function (e) { if (e.blobId) live[e.blobId] = 1; });
+    fileTx("readonly", function (st) { return st.getAllKeys(); }).then(function (keys) {
+      var dead = (keys || []).filter(function (k) { return !live[k]; });
+      if (dead.length) fileTx("readwrite", function (st) { dead.forEach(function (k) { st.delete(k); }); }).catch(function () {});
+    }).catch(function () {});
+  }
+
+  /* ---------------- showing one ---------------- */
+
+  var fileUrls = [];
+  function fileUrl(blob) {
+    var u = URL.createObjectURL(blob);
+    fileUrls.push(u);
+    return u;
+  }
+  function releaseUrls() {
+    fileUrls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+    fileUrls = [];
+  }
+  function filePaneHtml(it) {
+    var e = it.rec;
+    if (!e || !e.blobId) return "";
+    return '<div class="w-fprev" data-fprev="' + esc(e.blobId) + '" data-mime="' + esc(e.mime || "") + '">' +
+      '<p class="w-phelp">' + esc(fileKind(e) + (e.size ? " · " + fileSize(e.size) : "") + (e.fname ? " · " + e.fname : "")) + "</p>" +
+      '<div class="w-fbox"><span class="w-phelp">Opening…</span></div>' +
+      '<div class="w-fbtns"><button class="w-pbtn" data-act="wb-fopen" data-id="' + esc(it.id) + '">Open</button>' +
+      '<button class="w-pbtn" data-act="wb-fsave" data-id="' + esc(it.id) + '">Save a copy</button></div></div>';
+  }
+  /* Called after every paint that may have drawn a preview or a thumbnail:
+     the bytes come out of IndexedDB and in as object URLs, and the ones the
+     last paint made are let go first. */
+  function mountFiles() {
+    releaseUrls();
+    Array.prototype.forEach.call(document.querySelectorAll("[data-fprev]"), function (el) {
+      var id = el.getAttribute("data-fprev"), box = el.querySelector(".w-fbox");
+      fileGet(id).then(function (row) {
+        if (!el.isConnected) return;
+        if (!row || !row.blob) {
+          box.innerHTML = '<p class="w-phelp">The file itself is on another device. Its record came here with the ' +
+            "book; the bytes stay where they were dropped" + (typeof driveHolding === "function" && driveHolding(id)
+              ? ", and a connected Drive folder holds a copy: " + esc(driveHolding(id)) + "." : ".") + "</p>";
+          el.querySelector(".w-fbtns").hidden = true;
+          return;
+        }
+        var u = fileUrl(row.blob), pdf = /pdf/.test(row.type || "") || /\.pdf$/i.test(row.name || "");
+        box.innerHTML = pdf ? '<iframe class="w-fpdf" title="' + esc(row.name || "PDF") + '" src="' + u + '"></iframe>'
+          : '<img class="w-fimg" alt="' + esc(row.name || "") + '" src="' + u + '" />';
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-fthumb]"), function (el) {
+      fileGet(el.getAttribute("data-fthumb")).then(function (row) {
+        if (!el.isConnected || !row || !row.blob || !/^image\//.test(row.type || "")) return;
+        el.innerHTML = '<img alt="" src="' + fileUrl(row.blob) + '" />';
+        el.classList.add("is-img");
+      });
+    });
+  }
+  function fileAct(idv, save) {
+    var it = wbGet(idv), e = it && it.rec;
+    if (!e || !e.blobId) return;
+    fileGet(e.blobId).then(function (row) {
+      if (!row || !row.blob) { toast("The file itself is on another device."); return; }
+      if (save) { download(row.name || e.fname || e.name, row.blob, row.type || "application/octet-stream"); return; }
+      var u = URL.createObjectURL(row.blob), w = window.open(u, "_blank", "noopener");
+      if (!w) toast("The browser blocked the new tab. Save a copy instead.");
+      setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
+    });
+  }
+
+  /* ---------------- the folder tree ---------------- */
+
+  var wbLibFolder = "";
+  function libBy() { return state.settings.libBy === "folder" ? "folder" : "kind"; }
+  function folderKids(pid) {
+    return state.folders.filter(function (f) { return (f.folderId || "") === (pid || ""); })
+      .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  }
+  function folderTrail(id) {
+    var out = [], seen = {}, f = id && byId(state.folders, id);
+    while (f && !seen[f.id]) { seen[f.id] = 1; out.unshift(f); f = f.folderId && byId(state.folders, f.folderId); }
+    return out;
+  }
+  function folderUnder(id) {
+    var out = {}, front = [id];
+    while (front.length) {
+      var next = [];
+      front.forEach(function (p) {
+        state.folders.forEach(function (f) { if (f.folderId === p && !out[f.id] && f.id !== id) { out[f.id] = 1; next.push(f.id); } });
+      });
+      front = next;
+    }
+    return out;
+  }
+  /* What lives in the tree: everything on a Library shelf, and every note
+     that is not somebody's bench note — a note filed in a folder, or one
+     written on its own. A meeting on a bench is the bench's, until you
+     file it somewhere. */
+  var TREE_NOTE = { note: 1, meeting: 1, draft: 1 };
+  function treeItems() {
+    return WB.items.filter(function (x) {
+      if (x.inbox) return false;
+      if (WB_LIB.indexOf(x.type) >= 0) return true;
+      return TREE_NOTE[x.type] && (x.rec.folderId || !x.bench);
+    });
+  }
+  function folderOf(x) {
+    var f = x.rec && x.rec.folderId;
+    return f && byId(state.folders, f) ? f : "";
+  }
+  /* A folder's count is what is in it AND under it, and the top level's is
+     the whole tree — one walk, so the parts add up to the whole. */
+  function folderCounts() {
+    var n = { "": 0 }, items = treeItems();
+    state.folders.forEach(function (f) { n[f.id] = 0; });
+    items.forEach(function (x) {
+      n[""]++;
+      folderTrail(folderOf(x)).forEach(function (f) { n[f.id]++; });
+    });
+    return n;
+  }
+  function treeRows(pid, depth, counts) {
+    return folderKids(pid).map(function (f) {
+      var on = wbLibFolder === f.id;
+      return '<button class="w-frow' + (on ? " is-on" : "") + '" data-act="wb-folder" data-id="' + esc(f.id) +
+        '" data-dropfolder="' + esc(f.id) + '" style="padding-left:' + (10 + depth * 16) + 'px"' +
+        (on ? ' aria-current="true"' : "") + '><span class="w-fico" aria-hidden="true">▸</span><span class="w-grow w-ell">' +
+        esc(f.name) + '</span><span class="w-mono">' + counts[f.id] + "</span></button>" +
+        treeRows(f.id, depth + 1, counts);
+    }).join("");
+  }
+  function wbFolderTree() {
+    var counts = folderCounts();
+    return '<nav class="w-ftree" aria-label="Folders">' +
+      '<button class="w-frow' + (!wbLibFolder ? " is-on" : "") + '" data-act="wb-folder" data-id="" data-dropfolder=""' +
+      (!wbLibFolder ? ' aria-current="true"' : "") + '><span class="w-grow">Everything</span><span class="w-mono">' +
+      counts[""] + "</span></button>" + treeRows("", 1, counts) +
+      '<button class="w-light w-fnew" data-act="folder-add" data-id="' + esc(wbLibFolder) + '">+ New folder' +
+      (wbLibFolder ? " here" : "") + "</button></nav>";
+  }
+  /* The folder page: where you are, the folders in it, then what is in it
+     directly. "Everything" at the top lists only what is filed nowhere,
+     under that name, so nothing is listed twice. */
+  function wbFolderView(card) {
+    if (wbLibFolder && !byId(state.folders, wbLibFolder)) wbLibFolder = "";
+    var f = wbLibFolder ? byId(state.folders, wbLibFolder) : null, counts = folderCounts();
+    var here = treeItems().filter(function (x) { return folderOf(x) === (f ? f.id : ""); });
+    var out = '<div class="w-fwrap">' + wbFolderTree() + '<div class="w-fmain">';
+    /* THE TRAIL ENDS AT THE PARENT: the folder you are in is the heading
+       under it, and a crumb for it would be a control that goes where you
+       already are. At the top there is no trail at all. */
+    if (f) {
+      out += '<p class="w-crumbs"><button class="w-inlink" data-act="wb-folder" data-id="">Library</button>' +
+        folderTrail(f.id).slice(0, -1).map(function (t) {
+          return ' <span aria-hidden="true">›</span> <button class="w-inlink" data-act="wb-folder" data-id="' +
+            esc(t.id) + '">' + esc(t.name) + "</button>";
+        }).join("") + "</p>";
+      out += '<div class="w-fhead"><h2 class="w-h2">' + esc(f.name) + '</h2><span class="w-mono w-cnum">' + counts[f.id] +
+        '</span><span class="w-grow"></span><button class="w-pbtn" data-act="folder-rename" data-id="' + esc(f.id) + '">Rename</button>' +
+        '<button class="w-pbtn" data-act="folder-move" data-id="' + esc(f.id) + '">Move to…</button>' +
+        '<button class="w-pbtn is-danger" data-act="folder-del" data-id="' + esc(f.id) + '">Remove</button></div>';
+    }
+    /* The folders inside this one are on the tree beside it, so they are
+       not drawn again here: on a phone the tree sits directly above, and
+       the same folders were listed twice in one screen. */
+    var subs = folderKids(f ? f.id : "");
+    if (here.length) {
+      if (!f && state.folders.length) out += '<p class="w-fnote">Filed in no folder</p>';
+      out += '<div class="w-lgrid">' + here.map(card).join("") + "</div>";
+    } else if (f && subs.length) {
+      out += '<p class="w-empty">Nothing is filed directly in this folder; what it holds is in the folders under it.</p>';
+    } else {
+      out += '<p class="w-empty">' + (f ? "Nothing in this folder yet. Drop a PDF or a picture anywhere on the page " +
+        "while it is open, or use <b>Move to folder…</b> on anything's pane."
+        : "Nothing in the Library yet. Drop a PDF or a picture anywhere on the page, or make a folder to start.") + "</p>";
+    }
+    return out + "</div></div>";
+  }
+
+  function folderDialog(f, parentId) {
+    openModal({
+      title: f ? "Rename “" + f.name + "”" : "A new folder" + (parentId && byId(state.folders, parentId)
+        ? " in " + byId(state.folders, parentId).name : ""),
+      fields: [{ key: "name", label: "Its name", value: f ? f.name : "", span: true }],
+      confirmLabel: f ? "Rename it" : "Make it",
+      validate: function (v) {
+        var nm = v.name.trim();
+        if (!nm) return "It needs a name.";
+        var clash = state.folders.some(function (o) {
+          return o !== f && (o.folderId || "") === (f ? f.folderId || "" : parentId || "") && o.name.toLowerCase() === nm.toLowerCase();
+        });
+        return clash ? "There is already a folder called “" + nm + "” there." : "";
+      },
+      onConfirm: function (v) {
+        var snap = wbSnap();
+        if (f) f.name = v.name.trim();
+        else {
+          var made = { id: uid(), name: v.name.trim(), folderId: parentId || "" };
+          state.folders.push(made);
+          wbLibFolder = made.id;
+        }
+        if (libBy() !== "folder") state.settings.libBy = "folder";
+        wbDone(f ? "Renamed" : "Folder made", snap);
+      }
+    });
+  }
+  function folderPicker(title, current, exclude, onPick) {
+    var opts = [{ value: "", label: "— the top of the Library" }];
+    (function walk(pid, depth) {
+      folderKids(pid).forEach(function (f) {
+        if (exclude[f.id]) return;
+        opts.push({ value: f.id, label: new Array(depth + 1).join(" ") + f.name });
+        walk(f.id, depth + 1);
+      });
+    })("", 0);
+    openModal({
+      title: title,
+      fields: [{ key: "to", label: "Into", type: "select", value: current || "", options: opts }],
+      confirmLabel: "Move it",
+      onConfirm: function (v) { onPick(v.to); }
+    });
+  }
+  /* A folder cannot go inside itself or anything under it: the picker
+     withholds those, and the write refuses them again, because a bad merge
+     can hand this function a book the picker never saw. */
+  function folderMove(id) {
+    var f = byId(state.folders, id);
+    if (!f) return;
+    var ex = folderUnder(id); ex[id] = 1;
+    folderPicker("Move “" + f.name + "”", f.folderId || "", ex, function (to) {
+      if (to && (to === id || folderUnder(id)[to])) { toast("A folder cannot go inside itself."); return; }
+      var snap = wbSnap();
+      f.folderId = to || "";
+      wbDone(to ? "Moved into " + byId(state.folders, to).name : "Moved to the top", snap);
+    });
+  }
+  /* REMOVING A FOLDER KEEPS EVERYTHING IN IT. What was in it moves up to
+     where the folder was, the name is kept in `forgotten` so anything that
+     remembers it still reads, and the toast carries the undo — the rule a
+     pocket's delete has always followed. */
+  function folderDel(id) {
+    var f = byId(state.folders, id);
+    if (!f) return;
+    var kids = folderKids(id).length, things = treeItems().filter(function (x) { return folderOf(x) === id; }).length;
+    var up = f.folderId && byId(state.folders, f.folderId);
+    confirmAction({
+      title: "Remove the folder “" + f.name + "”?",
+      message: (kids || things ? "Nothing in it is removed: " + listWords([
+        things ? countWords(things, "thing", "things") : "", kids ? countWords(kids, "folder", "folders") : ""
+      ].filter(Boolean)) + " move up to " + (up ? "“" + up.name + "”" : "the top of the Library") + "."
+        : "It is empty.") + " The undo on the message puts it back.",
+      confirmLabel: "Remove the folder"
+    }, function () {
+      var snap = wbSnap(), to = f.folderId || "";
+      state.folders.concat(state.lib, state.notes).forEach(function (r) { if (r.folderId === id) r.folderId = to; });
+      state.folders = state.folders.filter(function (o) { return o.id !== id; });
+      state.forgotten[id] = f.name;
+      if (wbLibFolder === id) wbLibFolder = to;
+      wbDone("Folder removed. What was in it moved up.", snap);
+    });
+  }
+  function fileInto(ref2, to) {
+    var rec = recOf(ref2);
+    if (!rec) return;
+    if (to && !byId(state.folders, to)) { toast("That folder is gone."); return; }
+    var snap = wbSnap();
+    rec.folderId = to || "";
+    delete rec.inbox;
+    wbDone(to ? "Moved into " + byId(state.folders, to).name : "Moved to the top of the Library", snap);
+  }
+  function moveToFolder(ref2) {
+    var rec = recOf(ref2);
+    if (!rec) return;
+    folderPicker("Move “" + (rec.name || "it") + "” to a folder", rec.folderId || "", {}, function (to) { fileInto(ref2, to); });
+  }
+
+  /* Dragging a card onto a folder files it there. Internal drags carry
+     their own type, so the page-wide file drop ignores them. */
+  var DRAG_T = "text/x-mashghal-ref";
+  function wireFolderDrags() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-dragref]"), function (el) {
+      el.setAttribute("draggable", "true");
+      el.addEventListener("dragstart", function (e) {
+        e.dataTransfer.setData(DRAG_T, el.getAttribute("data-dragref"));
+        e.dataTransfer.effectAllowed = "move";
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-dropfolder]"), function (el) {
+      el.addEventListener("dragover", function (e) {
+        if (Array.prototype.indexOf.call(e.dataTransfer.types, DRAG_T) < 0) return;
+        e.preventDefault(); el.classList.add("is-over");
+      });
+      el.addEventListener("dragleave", function () { el.classList.remove("is-over"); });
+      el.addEventListener("drop", function (e) {
+        var r = e.dataTransfer.getData(DRAG_T);
+        if (!r) return;
+        e.preventDefault(); e.stopPropagation(); el.classList.remove("is-over");
+        fileInto(r, el.getAttribute("data-dropfolder"));
+      });
+    });
+  }
+
+  /* ============================================================
      THE EXAMPLE: Maya Saad's book, from the handoff.
 
      The handoff's `SEED` and `LINKS`, record for record, written onto this
@@ -11812,6 +12369,15 @@
         "RTK fix twice, ten minutes apart. A target that moved between fixes is dropped rather than averaged." });
     lib("p1", { kind: "place", name: "Anfeh working folder", path: "D:\\Anfeh" });
     lib("p2", { kind: "place", name: "Byblos flights", path: "D:\\Byblos\\flights" });
+    /* A few folders, so the tree has something to show: a folder inside a
+       folder, and entries left at the top, which is what a real Library
+       looks like part-way through being sorted. */
+    put("folders", "fd1", { name: "Harbour archaeology", folderId: "" });
+    put("folders", "fd2", { name: "Anfeh", folderId: id("fd1") });
+    put("folders", "fd3", { name: "Photogrammetry toolkit", folderId: "" });
+    [["r1", "fd1"], ["r2", "fd1"], ["p1", "fd2"], ["me1", "fd3"], ["s1", "fd3"], ["fo1", "fd3"]].forEach(function (p) {
+      out.lib.forEach(function (e) { if (e.id === id(p[0])) e.folderId = id(p[1]); });
+    });
 
     put("outputs", "o1", { name: "Anfeh mole: DEM and phase map (A3)", projectId: id("b1"), on: "2026-09-24", note: "" });
     put("outputs", "o2", { name: "Byblos orthophoto, 2 cm per pixel", projectId: id("b2"), on: "2026-09-12", note: "" });
@@ -12012,6 +12578,21 @@
       var q = document.getElementById("linkQ");
       if (q) q.focus();
     },
+    "wb-libby": function (idv) {
+      state.settings.libBy = idv === "folder" ? "folder" : "kind";
+      commit(); render();
+    },
+    "wb-folder": function (idv) {
+      wbLibFolder = idv && byId(state.folders, idv) ? idv : "";
+      wbSel = null; render();
+    },
+    "folder-add": function (idv) { folderDialog(null, idv && byId(state.folders, idv) ? idv : ""); },
+    "folder-rename": function (idv) { var f = byId(state.folders, idv); if (f) folderDialog(f); },
+    "folder-move": function (idv) { folderMove(idv); },
+    "folder-del": function (idv) { folderDel(idv); },
+    "wb-movef": function (idv) { moveToFolder(idv); },
+    "wb-fopen": function (idv) { fileAct(idv, false); },
+    "wb-fsave": function (idv) { fileAct(idv, true); },
     "gr-pane": function (idv) {
       if (!wbGet(idv)) return;
       wbSel = idv; GR.pane = true; wbPaintPane();
@@ -12547,6 +13128,7 @@
       wbSel = null; wbLinking = false; wbStep = 0;
       /* The map keeps where you had panned it, which kinds are on and the
          search; what you were narrowed to is a navigation, and resets. */
+      wbLibFolder = "";
       GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
       grMenuClose();
       /* A SIFT BOX IS A NARROWING, NOT A SETTING. */
@@ -12582,6 +13164,8 @@
       wbPaintKeys();
       wbMountPins();
       wbMountGraph();
+      mountFiles();
+      wireFolderDrags();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
@@ -12614,6 +13198,8 @@
       wbWireKeys();
       wbWireLine();
       grWireDoc();
+      wbWireDrop();
+      setTimeout(sweepFiles, 3000);
       var scrim = document.getElementById("paneScrim");
       if (scrim) scrim.addEventListener("click", function () { wbSel = null; render(); });
       /* THE OLDER BOOK IS OFFERED, ONCE, and only when there is one —

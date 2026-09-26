@@ -4533,3 +4533,72 @@ stack, discard taking the spot, and at 390px nothing past the edge, a pick
 that does not move the sheet and Details opening the pane) · `grlook.js` (contrast of every
 new surface at rest, picked, under the pointer and in the menu, at 1400, 390
 and 320px) · `m5sync.js` now 52.
+
+## mashghal2 keeps a dropped file, and the Library has folders (w11)
+
+Asked for *"throwing a pdf or photo on the whole page"* to put it in the
+Library, and for folders to organise it; the owner chose **one tree for
+Library entries and notes alike**, like a vault. `m5/26-wb-files.js`.
+
+- **THE BYTES ARE NOT THE BOOK.** A PDF is bigger than the whole record, so it
+  lives in its own IndexedDB (`mashghal2-files`) and never travels through the
+  sealed gist — the call the pins and the original's photographs already made.
+  The **record** syncs: a `file` entry with `blobId`, `fname`, `mime`, `size`,
+  so every device knows the file exists, and the one without the bytes says
+  *"The file itself is on another device"* and offers no Open that cannot
+  work. A JSON import can carry a file row but never its bytes, and the format
+  says so.
+- **WHERE YOU ARE DECIDES WHERE IT GOES, and the scrim says which before you
+  let go**: the open folder in the Library, the bench on a bench's page, the
+  inbox anywhere else — the capture line's rule. `dropCtx()` carries two
+  phrasings, `words` for the scrim ("into the Library") and `kept` for the
+  toast ("in the Library"): the first draft reused one and printed *"Kept two
+  files into the Library"*.
+- **Several files are one act**, one toast, one undo — and the undo takes the
+  **bytes** back too, or they would sit in storage belonging to nothing. A file
+  that is not a PDF or a picture is refused **by name**, and the rest still
+  come in.
+- **A pin keeps its own drop.** The page-wide handler is on `document`, so a
+  pin's handlers `stopPropagation`, or one picture would be pinned AND filed.
+- **Removing a record does not delete its bytes; boot does.** The undo on a
+  Remove toast has to bring the record back with its file, so `sweepFiles()`
+  runs a few seconds after boot and deletes only bytes no record names — and
+  never while the book is unreadable. Wipe deletes the database outright (and
+  the pins', which w9's wipe had left behind).
+- **One field says which folder anything is in.** `folders` is `{id, name,
+  folderId}` and a library entry or a note carries the same `folderId`. It was
+  `in` for a folder in the first draft, which would have needed its own import
+  rule; the importer resolves any reference `x` into `xId`, so one name made
+  folders, entries and notes import by the same line. What a folder holds is
+  walked, never stored; a move into itself or anything under it is withheld by
+  the picker **and** refused by the write, because a bad merge can hand the
+  write a book the picker never saw.
+- **Removing a folder keeps everything in it** — contents and sub-folders move
+  up to where it was, the name goes to `forgotten`, the toast has the undo.
+  The pocket rule.
+- **What is in the tree**: every Library entry out of the inbox, and every note
+  that is not a bench's own — a note filed in a folder, or one written on its
+  own. A meeting on a bench is the bench's until you file it. A folder's count
+  is what is in it **and under it**, and *Everything* is the whole tree: one
+  walk, so the parts add up.
+- **Two readings of one Library**: *By kind* (the design's shelves) and *By
+  folder*. Which is `settings.libBy` — how you like to read, so it survives a
+  reload, like the shape of a list. `wbLibCard()` draws an entry for both, so
+  the two cannot draw one entry two ways.
+- **The trail ends at the parent** and the folders inside the open one are on
+  the tree, not drawn again as cards: on a phone the tree sits directly above
+  the list, and the first build listed the same folders twice in one screen.
+- **Move to folder…** is on the pane of anything that can be filed, and a card
+  dragged onto a tree row files it (internal drags carry their own type, so the
+  page-wide file drop ignores them).
+
+`wb-files.js` (57: the scrim naming the inbox, a drop on Today, a bench and an
+open folder each landing where it said, bytes in IndexedDB and not in the book,
+Undo taking records and bytes, a docx refused by name, a mixed drop, the PDF
+and picture previews, Save a copy, a pin keeping its own drop, tree counts,
+the trail, a clashing name refused, the move picker withholding descendants,
+Move to folder, drag onto a folder, removal keeping contents and Undo putting
+them back, the reading surviving a reload, bytes elsewhere said in words, the
+boot sweep, wipe deleting both databases, a JSON file bringing nested folders
+in, and 390px) · `flook.js` (33: the tree, the drop card and the file pane in
+contrast, at rest and under the pointer, at 1400, 390 and 320px).
