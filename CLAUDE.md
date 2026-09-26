@@ -4985,3 +4985,55 @@ chip, the pane and the bulk Move making folders, a folder moved into one made
 in the same dialog, 390px) · `fxlook.js` now 72, measuring the question with
 its new-folder fields open · `wb-files`, `wb-filestab` and `wb-select`
 answer the question where they used to expect the inbox.
+
+## mashghal2: an experiment, and what it found (w19)
+
+Asked to "run a user experiment and try everything in the app", five
+Playwright sessions drove w18 as a first-time user and as the example's
+owner, laptop and phone, reading every screen's text. No screen threw, and
+the four worst findings were one class each; w19 fixes them. The rest is a
+plan (w20–w22) in the conversation, not in the code.
+
+- **A "WITH" LINE ANSWERS EVERY QUESTION OF ASSOCIATION.** The Workbench
+  draws one kind of line; the older Profile and Work pages asked for typed
+  ones (`learned`, `uses`, `about`, `withp`). Read strictly, the two halves
+  disagreed on screen: Record said a course backed Photogrammetry and
+  Profile said it had taught nothing; a bench named a skill its own project
+  page said it never used. `relHit()` in `tie`/`tied` lets `with` count
+  wherever the question is association — and **never for a selection**
+  (`picks`, `shows`, `cites`), because a CV picking something is a choice
+  and a line drawn for another reason is not that choice.
+- **ONE EVIDENCE WALK.** Record walked the map's neighbours and Profile
+  walked `getSkillEvidence`, so a note linked to Teaching was "one record
+  backs it" beside "no evidence yet". `skillEvidenceRefs()` is the walk (it
+  counts notes now), and Record, Profile, the About tile and the line's
+  evidence question all read it. The bench's "building evidence for" reads
+  `getProjectSkills`, the project page's own question.
+- **A BENCH NAMES ITS ROLE, it does not type it.** The example's benches
+  carried `role: "Freelance"` as words while the project page read
+  `roleId` and printed "not said". They name `roleId`/`jobId` now;
+  `benchRole()` joins stated words to the employer, and the project page
+  falls back to the words and reads the employer through the role
+  (`projJob`).
+- **TIME IS NEVER PUT ON A BENCH BY GUESSING.** `2h survey` on Today was
+  filed on `wbLiveBenches()[0]` — an employer's name chosen by list order.
+  A `#key` or the bench you are typing on still decides; with neither, the
+  preview says Enter asks, `wbAskBench()` asks, and Escape hands the words
+  back to the line. With no bench at all it refuses in words.
+- **THE LINE BOTH SEARCHES AND KEEPS, so the keys reach the search.** ↓/↑
+  walk the rows (`wbDropWalk`, `.is-hi`), Enter opens the walked one; an
+  exact title makes Enter open it and **Shift+Enter** keep a new one. Before
+  this "typology", ↓, Enter kept a note called "typology", and typing a
+  note's title made a second note of that title.
+- **Words**: Today's headline spells small counts and drops a nought clause;
+  `ofWords` never prints "nought of one action are done"; the Work strip's
+  Hours shows time, not entries; a snippet prints `[[x]]` as x
+  (`wbPlain`); the CV lists skills without "(7 records)"; Files' empty
+  state says a drop asks for a folder.
+- **The guide** is on the empty book ("How to use it") and in the footer.
+
+`wb-agree.js` (41) is the test: each of the four disagreements read on both
+screens, the hours question with Escape and with a choice, `#key` and a
+bench deciding without asking, ↓ + Enter opening and keeping nothing, the
+exact title and Shift+Enter, the walk wrapping and clearing on a keystroke,
+and the guide on the empty book.

@@ -1021,7 +1021,8 @@
     display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 18px; border: 0;
     background: none; font: inherit; color: inherit; text-align: left; cursor: pointer;
   }
-  .w-row:hover { background: var(--row-hover); }
+  .w-row:hover, .w-row.is-hi { background: var(--row-hover); }
+  .w-row.is-hi { box-shadow: inset 2px 0 0 var(--ink); }
   .w-row.is-ans { padding: 10px 18px; border-bottom: 1px solid var(--rule-soft); }
   .w-row.is-sel { background: var(--selected); }
   .w-rt { display: block; font-size: 14px; font-weight: 500; }
@@ -2043,7 +2044,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w18 · 26 Sep 2026";
+  var BUILD = "w19 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -2417,12 +2418,25 @@
   /* The other ends: `tie` walks forward (this record is `a`), `tied` walks
      back (this record is `b`). Both return refs, and a ref whose record is
      gone is dropped by `.filter(recOf)` at every call site that draws it. */
+  /* A "WITH" LINE ANSWERS EVERY QUESTION OF ASSOCIATION. The Workbench
+     draws one kind of line — two records that belong together — while the
+     older pages asked for a typed one ("taught", "uses", "involved"). Read
+     strictly, the two halves of the app disagreed on screen: Record said a
+     course backed Photogrammetry while Profile said the course had taught
+     nothing, and a bench named a skill its own project page said it had
+     never used. So a `with` line counts wherever the question is only
+     "does this belong with that". It never counts for a SELECTION — a CV
+     picking, a portfolio showing, a citation — because those are choices
+     somebody made about one record, and a line drawn for another reason is
+     not that choice. */
+  var WITH_ANSWERS = { uses: 1, learned: 1, about: 1, withp: 1 };
+  function relHit(l, rel) { return !rel || l.rel === rel || (l.rel === "with" && WITH_ANSWERS[rel]); }
   function tie(r, rel) {
-    return state.links.filter(function (l) { return l.a === r && (!rel || l.rel === rel); })
+    return state.links.filter(function (l) { return l.a === r && relHit(l, rel); })
       .map(function (l) { return l.b; });
   }
   function tied(r, rel) {
-    return state.links.filter(function (l) { return l.b === r && (!rel || l.rel === rel); })
+    return state.links.filter(function (l) { return l.b === r && relHit(l, rel); })
       .map(function (l) { return l.a; });
   }
   /* Either direction, for a question that does not care — "what touches
@@ -2798,14 +2812,19 @@
       outputs: ofKind(touching, "output").filter(recOf),
       lib: ofKind(touching, "lib").filter(recOf),
       roles: ofKind(touching, "role").filter(recOf),
-      portfolio: ofKind(touching, "portfolio").filter(recOf)
+      portfolio: ofKind(touching, "portfolio").filter(recOf),
+      notes: ofKind(touching, "note").filter(recOf)
     };
   }
-  function skillEvidenceCount(skillId) {
+  /* ONE WALK, READ BY EVERY SCREEN THAT COUNTS EVIDENCE. Record walked the
+     map's neighbours and Profile walked this, so a course-plan note linked
+     to Teaching was "one record backs it" on one screen and "no evidence
+     linked to it yet" on the other. Both read this list now. */
+  function skillEvidenceRefs(skillId) {
     var e = getSkillEvidence(skillId);
-    return e.training.length + e.projects.length + e.workflows.length +
-      e.outputs.length + e.lib.length + e.roles.length + e.portfolio.length;
+    return [].concat(e.projects, e.roles, e.training, e.workflows, e.outputs, e.lib, e.portfolio, e.notes);
   }
+  function skillEvidenceCount(skillId) { return skillEvidenceRefs(skillId).length; }
   /* The one sentence a skill row carries, and it is a count of evidence
      rather than a claim about ability. */
   function skillSays(s) {
@@ -2815,6 +2834,9 @@
     if (e.workflows.length) bits.push(countWords(e.workflows.length, "workflow", "workflows"));
     if (e.lib.length) bits.push(countWords(e.lib.length, "library entry", "library entries"));
     if (e.outputs.length) bits.push(countWords(e.outputs.length, "output", "outputs"));
+    if (e.roles.length) bits.push(countWords(e.roles.length, "role", "roles"));
+    if (e.portfolio.length) bits.push(countWords(e.portfolio.length, "portfolio piece", "portfolio pieces"));
+    if (e.notes.length) bits.push(countWords(e.notes.length, "note", "notes"));
     if (!bits.length) return "No evidence linked to it yet.";
     return cap(listWords(bits)) + ".";
   }
@@ -3779,6 +3801,10 @@
   function pageStrip(tab) {
     return '<div class="strip">' + PAGES[tab].map(function (p) {
       var n = pageCount(tab, p);
+      /* "Hours 21" was a count of ENTRIES beside a total of 63h 30m on the
+         page it opens — a strip labelled Hours shows hours. */
+      if (p.id === "hours") n = state.hours.length ? hm(state.hours.reduce(function (a, h) {
+        return a + (+h.minutes || 0); }, 0)) : null;
       /* The separator is a pipe, because the `page` handler splits on one and
          a colon is already the separator INSIDE a ref ("project:abc123") —
          two meanings for one character is how every strip button in the app
@@ -4113,9 +4139,14 @@
      IS THE SUBJECT. It read "1 of three actions on it are done" \u2014 a
      digit beside a spelled-out count, and a plural verb after a subject of
      one. The subject is what is DONE, so one done takes "is". */
+  /* And nought is not a count worth reading: "nought of one action are
+     done" was on every project row, which is the arithmetic showing
+     through the sentence. */
   function ofWords(done, total, one, many) {
-    return numWord(done) + " of " + numWord(total) + " " +
-      (total === 1 ? one : many) + (done === 1 ? " is" : " are") + " done";
+    if (total === 1) return "the one " + one + (done ? " is done" : " is not done yet");
+    if (!done) return "none of the " + numWord(total) + " " + many + " is done yet";
+    if (done === total) return "all " + numWord(total) + " " + many + " are done";
+    return numWord(done) + " of " + numWord(total) + " " + many + (done === 1 ? " is" : " are") + " done";
   }
   /* A `says` is a SENTENCE on its own and a CLAUSE inside a sub-line, so the
      full stop comes off when it is being joined to something else. */
@@ -4542,9 +4573,9 @@
       tile("Roles", String(n.roles), n.roles ? "across " +
         countWords(state.jobs.length, "employer", "employers") : "none yet") +
       tile("Education", String(n.education), "") +
-      tile("Training", String(n.training), n.training ? countWords(
-        state.training.filter(function (t) { return getTrainingSkills(t.id).length; }).length,
-        "with a skill on it", "with skills on them") : "none yet") +
+      tile("Training", String(n.training), n.training ? (function (k) {
+        return k ? countWords(k, "with a skill on it", "with skills on them") : "none names a skill yet";
+      })(state.training.filter(function (t) { return getTrainingSkills(t.id).length; }).length) : "none yet") +
       tile("Skills", String(n.skills), n.skills ? countWords(
         state.skills.filter(function (s) { return skillEvidenceCount(s.id); }).length,
         "with evidence", "with evidence") : "none yet") +
@@ -5083,6 +5114,12 @@
 
   /* ---------------- the record pages ---------------- */
 
+  /* A project's employer is its own, or failing that its role's — the
+     reading the bench line already makes. */
+  function projJob(p) {
+    var r = p.roleId && byId("role", p.roleId);
+    return p.jobId || (r && r.jobId) || "";
+  }
   function projPage(p) {
     var st = projStand(p), pr = projProgress(p.id);
     var acts = projActions(p.id), outs = getProjectOutputs(p.id);
@@ -5092,8 +5129,8 @@
     var mins = hoursFor(p.id);
     var out = [crumbTo("work", "projects", "Projects"),
       pageHeadOf(p.name,
-        [p.jobId ? esc(nameOf(ref("job", p.jobId))) : "",
-          p.roleId ? esc(nameOf(ref("role", p.roleId))) : "",
+        [projJob(p) ? esc(nameOf(ref("job", projJob(p)))) : "",
+          p.roleId ? esc(nameOf(ref("role", p.roleId))) : p.role ? esc(p.role) : "",
           esc(spanWords(p.startedOn, p.endedOn))].filter(Boolean).join(" · "),
         btn("proj-edit", p.id, "Edit", "btn primary") +
         btn("act-add-proj", p.id, "New action") +
@@ -5113,21 +5150,21 @@
         /* A DIGIT BESIDE A SPELLED-OUT COUNT, and a verb following the
            wrong one of the two: it read "1 of three actions on it are
            done". The subject is what is DONE. */
-        '<p class="says">' + cap(numWord(pr.done)) + " of " +
-        countWords(pr.total, "action", "actions") +
-        " on it " + (pr.done === 1 ? "is" : "are") + " done. That is the only percentage " +
-        "in this app, and it is a count of what you marked — not a prediction.</p></div>"
+        '<p class="says">' + cap(ofWords(pr.done, pr.total, "action on it", "actions on it")) +
+        ". The bar is a count of what you marked, not a prediction.</p></div>"
         : "") + "</div>");
 
     out.push('<div style="margin-top:0.9rem">' + factRows([
-      ["Employer", p.jobId
-        ? '<button class="bcrumb" data-act="open" data-id="' + esc(ref("job", p.jobId)) +
-          '" style="font-weight:600">' + esc(nameOf(ref("job", p.jobId))) + "</button>"
+      ["Employer", projJob(p)
+        ? '<button class="bcrumb" data-act="open" data-id="' + esc(ref("job", projJob(p))) +
+          '" style="font-weight:600">' + esc(nameOf(ref("job", projJob(p)))) + "</button>"
         : unsaid("none — which is a real answer")],
       ["Role it ran under", p.roleId
         ? '<button class="bcrumb" data-act="open" data-id="' + esc(ref("role", p.roleId)) +
           '" style="font-weight:600">' + esc(nameOf(ref("role", p.roleId))) + "</button>"
-        : unsaid()],
+        /* The bench's own words, when that is all anybody wrote: the bench
+           read "Freelance" three inches from a page saying "not said". */
+        : p.role ? esc(p.role) : unsaid()],
       ["Status", p.status ? esc(statusLook(p.status).label)
         : unsaid("not said, and not inferred")],
       ["When", esc(spanWords(p.startedOn, p.endedOn)) || unsaid()],
@@ -9579,11 +9616,11 @@
      writes "New bench" on a bench it makes); otherwise read off the role
      and employer the project already names, never invented. */
   function benchRole(p) {
-    if (p.role) return p.role;
-    if (p.status === "idea") return "Idea, not started";
     /* The employer is the project's own, or failing that its role's. */
     var r = p.roleId && byId("role", p.roleId);
     var j = (p.jobId && byId("job", p.jobId)) || (r && r.jobId && byId("job", r.jobId));
+    if (p.role) return j && p.role.indexOf(j.name) < 0 ? p.role + " \u00b7 " + j.name : p.role;
+    if (p.status === "idea") return "Idea, not started";
     if (r && j) return r.name + " · " + j.name;
     if (r) return r.name;
     if (j) return j.name;
@@ -9731,8 +9768,13 @@
     return [wbBenchName(it.bench), it.path, wbFmt(it.date)].filter(Boolean).join(" · ");
   }
   function wbTitle(it) { return it.type === "hours" ? wbHm(it.mins) + " · " + it.title : it.title; }
+  /* A note's [[link]] is written for the notes page, which renders it; a
+     one-line snippet anywhere else prints the words, not the brackets. */
+  function wbPlain(t) {
+    return String(t || "").replace(/\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, function (_, a, b) { return b || a; });
+  }
   function wbSnippet(it) {
-    return it.body || it.path || (it.type === "action" ? wbStand(it).w : it.type === "hours" ? "Logged" : "");
+    return wbPlain(it.body) || it.path || (it.type === "action" ? wbStand(it).w : it.type === "hours" ? "Logged" : "");
   }
 
   /* ---------------- writing it back ----------------
@@ -9920,18 +9962,22 @@
           return /\b(needs?|send|by|book|do|chase|ask)\b/i.test(x);
         }) };
     }
-    if (type === "hours" && !bench) {
-      var first = wbLiveBenches()[0];
-      bench = first ? first.id : null;
-    }
+    /* TIME IS NEVER PUT ON A BENCH BY GUESSING. The prototype filed hours
+       nobody placed on whichever bench came first in the list — so "2h
+       survey" typed on Today went onto the harbour survey, an employer's
+       name, because it happened to be first. A bench named by #key or by
+       where you are typing still decides; with neither, the line asks. */
     var noteish = type === "note" || type === "draft";
     return { type: type, title: (noteish ? untag(t) : t) || "Untitled", bench: bench, mins: mins, due: due,
       tags: noteish ? tags : [] };
   }
 
   /* KEEP. Each parsed type lands on the list that owns it. */
-  function wbCapture(q) {
-    var p = wbParse(q), on = wbToday(), snap = wbSnap();
+  function wbCapture(q, onBench) {
+    var p = wbParse(q);
+    if (onBench) p.bench = onBench;
+    if (p.type === "hours" && !p.bench) return wbAskBench(q);
+    var on = wbToday(), snap = wbSnap();
     var pid = p.bench ? parseRef(p.bench).id : "";
     var inbox = !p.bench && !p.wiki && p.type !== "reading" && p.type !== "bench";
     var made;
@@ -9982,6 +10028,30 @@
       snap);
   }
 
+  /* Hours with no bench: one question, and Escape hands the words back to
+     the line rather than losing them. */
+  function wbAskBench(q) {
+    var bs = wbLiveBenches(), inp = document.getElementById("line");
+    var giveBack = function () { if (inp && !inp.value) { inp.value = q; wbPaintDrop(); } };
+    if (!bs.length) {
+      giveBack();
+      toast("Time goes on a bench, and there is none yet. Type bench: a name first.");
+      return;
+    }
+    openModal({
+      title: "Which bench was it on?",
+      message: "<p>" + esc(wbHm(wbParse(q).mins)) + " is kept against one piece of work, and nothing here " +
+        "names one. Next time, #" + esc(bs[0].key || "key") + " in the line or typing on the bench itself " +
+        "puts it there without asking.</p>",
+      fields: [{ key: "b", label: "Bench", type: "select", value: bs[0].id, options: bs.map(function (b) {
+        return { value: b.id, label: b.title };
+      }) }],
+      confirmLabel: "Log it there",
+      onCancel: giveBack,
+      onConfirm: function (v) { wbCapture(q, v.b); }
+    });
+  }
+
   /* ---------------- the line: search and ask ---------------- */
 
   function wbIsQuestion(q) {
@@ -10012,7 +10082,7 @@
         return x.type === "skill" && x.title.toLowerCase().indexOf(m[1].toLowerCase()) >= 0;
       })[0];
       if (sk) {
-        var ev = wbNbrs(sk.id).filter(function (x) { return x.type !== "skill"; });
+        var ev = wbSkillEv(sk.id);
         return { text: wbWords(ev.length, "record backs", "records back") + " " + sk.title + ".",
           readAs: "what evidence do I have for a skill", rows: rows(ev) };
       }
@@ -10181,6 +10251,7 @@
         ? "synced across your devices, sealed before it leaves."
         : "this browser only. Nothing is uploaded.") +
         '<br>Press <span class="w-mono">?</span> for keys. ' +
+        '<button class="w-footlink" data-act="guide">Guide</button> \u00b7 ' +
         '<button class="w-footlink" data-act="settings">Settings</button>';
     }
     var pt = document.getElementById("ptabs");
@@ -10216,6 +10287,7 @@
     var inp = document.getElementById("line"), drop = document.getElementById("drop");
     if (!inp || !drop) return;
     var q = inp.value.trim();
+    wbExact = null; wbDropAt = -1;
     if (!q) { drop.hidden = true; drop.innerHTML = ""; return; }
     if (!WB) wbBuild();
     var html = "";
@@ -10238,24 +10310,60 @@
         wbWords(p.spawn.length, "action", "actions").toLowerCase() : "") +
         (p.type === "hours" ? " · " + wbHm(p.mins) : "") + (p.due ? " · due " + wbFmt(p.due) : "");
       var where = (p.type === "bench" ? "a new bench" : p.bench ? "on " + wbBenchName(p.bench)
+        : p.type === "hours" ? (wbLiveBenches().length ? "not on a bench yet — Enter asks which"
+          : "needs a bench, and there is none yet")
         : p.wiki ? "in your notes" : p.type === "reading" ? "in your reading list" : "in the inbox, to sort later") +
         (p.tags && p.tags.length ? ", tagged " + p.tags.map(function (x) { return "#" + x; }).join(" ") : "");
       var found = WB.items.filter(function (x) { return x.type !== "hours" && wbMatches(x, q); }).slice(0, 7);
-      html = '<div class="w-keepbar"><span class="w-kbd">Enter</span><span>keeps it as</span>' +
+      /* WHAT YOU TYPED IS ALREADY HERE: then Enter opens it. Typing a note's
+         exact title and pressing Enter kept a second note by that title,
+         which is the one thing a title that is an address may not be. */
+      var low = q.toLowerCase();
+      wbExact = found.filter(function (x) { return String(x.title).toLowerCase() === low; })[0] || null;
+      if (wbExact && found.indexOf(wbExact) > 0) { found.splice(found.indexOf(wbExact), 1); found.unshift(wbExact); }
+      html = (wbExact ? '<div class="w-keepbar"><span class="w-kbd">Enter</span><span>opens it \u00b7 ' +
+          '<span class="w-kbd">Shift</span> + <span class="w-kbd">Enter</span> keeps a new one as</span>'
+        : '<div class="w-keepbar"><span class="w-kbd">Enter</span><span>keeps it as</span>') +
         '<span class="w-pillt" style="background:' + tCol(p.type) + '">' + esc(word) + "</span>" +
         '<span class="w-where">' + esc(where) + "</span></div>" +
         '<p class="w-dlabel">' + (found.length ? "Already kept" : "Nothing kept matches yet") + "</p>" +
         found.map(function (it) { return wRow(it, "is-find"); }).join("") +
         '<p class="w-dhelp">Start with <b>!</b> for an action, <b>2h</b> to log time, <b>read:</b> for your ' +
         "reading list, <b>idea:</b> for a draft, <b>note:</b> for a note in your notes, <b>workflow:</b> to write one out, <b>#" + esc((wbLiveBenches()[0] || { key: "anfeh" }).key) +
-        "</b> to put it on a bench. End with <b>?</b> to ask.</p>";
+        "</b> to put it on a bench. End with <b>?</b> to ask. <b>\u2193</b> walks what is already kept.</p>";
     }
     drop.innerHTML = html;
     drop.hidden = false;
   }
-  function wbLineKeep() {
+  /* THE LINE BOTH SEARCHES AND KEEPS, so the keys have to reach the half
+     that searches. ↓ and ↑ walk the rows under it and Enter opens the one
+     walked to; before this, the only key was Enter and it always kept, so
+     "typology", ↓, Enter left a note called "typology" in the inbox. */
+  var wbExact = null, wbDropAt = -1;
+  function wbDropRows() {
+    return Array.prototype.slice.call(document.querySelectorAll('#drop [data-act="wb-open"]'));
+  }
+  function wbDropWalk(d) {
+    var rows = wbDropRows();
+    if (!rows.length) return false;
+    wbDropAt = wbDropAt < 0 ? (d > 0 ? 0 : rows.length - 1) : wbDropAt + d;
+    if (wbDropAt >= rows.length || wbDropAt < 0) wbDropAt = -1;
+    rows.forEach(function (r, i) {
+      r.classList.toggle("is-hi", i === wbDropAt);
+      r.setAttribute("aria-selected", i === wbDropAt ? "true" : "false");
+    });
+    if (wbDropAt >= 0) rows[wbDropAt].scrollIntoView({ block: "nearest" });
+    return true;
+  }
+  function wbLineKeep(e) {
     var inp = document.getElementById("line");
     var q = inp.value.trim();
+    var rows = wbDropRows();
+    if (wbDropAt >= 0 && rows[wbDropAt]) { rows[wbDropAt].click(); return; }
+    if (wbExact && !(e && e.shiftKey)) {
+      var hit = rows.filter(function (r) { return r.getAttribute("data-id") === wbExact.id; })[0];
+      if (hit) { hit.click(); return; }
+    }
     var wfm = q.match(PROSE_LINE);
     if (wfm) { inp.value = ""; wbPaintDrop(); proseOpen(wfm[2] || ""); return; }
     if (!q || wbIsQuestion(q)) return;
@@ -10267,10 +10375,13 @@
     var inp = document.getElementById("line");
     inp.addEventListener("input", wbPaintDrop);
     inp.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); wbLineKeep(); }
+      if (e.key === "Enter") { e.preventDefault(); wbLineKeep(e); }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (wbDropWalk(e.key === "ArrowDown" ? 1 : -1)) e.preventDefault();
+      }
       if (e.key === "Escape") { inp.value = ""; wbPaintDrop(); }
     });
-    document.getElementById("lineKeep").addEventListener("click", wbLineKeep);
+    document.getElementById("lineKeep").addEventListener("click", function () { wbLineKeep(); });
     wbPlaceholder();
     if (WB_PHONE && WB_PHONE.addEventListener) WB_PHONE.addEventListener("change", wbPlaceholder);
     /* A press on a result opens it, and the line lets go of what was typed:
@@ -10282,6 +10393,16 @@
 
   /* ---------------- Today ---------------- */
 
+  /* A SMALL COUNT IN PROSE IS A WORD, and a nought is not worth a clause:
+     it read "Two things are late, 4 in the inbox" and, on a quiet week,
+     "0m logged". */
+  function wbHeadline(late, inbox, mins) {
+    var bits = [late ? wbWords(late, "thing is", "things are") + " late" : "Nothing is late"];
+    if (inbox) bits.push(wbWords(inbox, "thing", "things").toLowerCase() + " in the inbox");
+    if (mins) bits.push(wbHm(mins) + " logged this week across your benches");
+    return (bits.length === 3 ? bits[0] + ", " + bits[1] + ", and " + bits[2]
+      : bits.join(" and ")) + ".";
+  }
   function wbGreeting() {
     var h = new Date().getHours();
     var part = state.settings.demo || h < 12 ? "morning" : h < 18 ? "afternoon" : "evening";
@@ -10319,8 +10440,7 @@
     wbOrder = needRows.map(function (x) { return x.id; }).concat(inbox.map(function (x) { return x.id; }));
 
     var out = wEyebrow(wbLongDate(T)) + '<h1 class="w-h1 is-today">' + esc(wbGreeting()) + "</h1>" +
-      (emptyBook() ? "" : '<p class="w-lead">' + esc(wbWords(late.length, "thing is", "things are") + " late, " + inbox.length +
-        " in the inbox, and " + wbHm(weekMins) + " logged this week across your benches.") + "</p>");
+      (emptyBook() ? "" : '<p class="w-lead">' + esc(wbHeadline(late.length, inbox.length, weekMins)) + "</p>");
 
     /* AN EMPTY BOOK GETS AN OFFER, NOT A DASHBOARD OF NOUGHTS. Nothing is
        invented for you; the ways in are named. */
@@ -10330,6 +10450,9 @@
         'kept \u2014 start a bench with <span class="w-mono">bench: name</span> \u2014 or begin from one of these.</p>' +
         '<div class="w-chips is-pad">' + wChip("sample", "", "Load the example") +
         wChip("import-json", "", "Feed it from a file") + wChip("profile-edit", "", "Start with your profile") +
+        /* The one moment the guide is most needed, and it was two screens
+           away behind Settings. */
+        wChip("guide", "", "How to use it") +
         "</div>" + ((state.settings.offered || !oldBooks().length) ? "" :
           '<p class="w-cempty">There is an older Mashghal book on this browser. It is not read and not ' +
           "written to; it is offered.</p><div class=\"w-chips is-pad\">" +
@@ -10396,7 +10519,9 @@
     var items = WB.items, T = wbToday(), W = wbWeek();
     var mine = items.filter(function (x) { return x.bench === B.id && !x.inbox; });
     var bmins = mine.filter(function (x) { return x.type === "hours"; }).reduce(function (a, x) { return a + x.mins; }, 0);
-    var skills = wbNbrs(B.id).filter(function (x) { return x.type === "skill"; });
+    /* The project page's own question, so the bench and that page cannot
+       name different skills. */
+    var skills = getProjectSkills(parseRef(B.id).id).map(wbGet).filter(Boolean);
     var hasMap = APP.tabs.some(function (t) { return t.id === "map"; });
 
     var out = wEyebrow(B.role) + '<h1 class="w-h1' + (B.draft ? " is-idea" : "") + '">' + esc(B.title) + "</h1>" +
@@ -10503,7 +10628,7 @@
           esc(it.id + "|" + r[0]) + '">' + r[1] + "</button>";
       }).join("") + '</div><p class="w-phelp">Marking it read files it as a reference, ready to cite.</p>';
     }
-    if (it.body) out += '<p class="w-pbody">' + esc(it.body) + "</p>";
+    if (it.body) out += '<p class="w-pbody">' + esc(wbPlain(it.body)) + "</p>";
     if (it.code) out += '<pre class="w-pcode">' + esc(it.code) + "</pre>";
     if (it.path) {
       /* A URL opens; a path is copied. A page served over https may not
@@ -10963,6 +11088,10 @@
 
   /* ---------------- Record: skills and the live CV ---------------- */
 
+  /* A skill's evidence as items, through the one walk Profile uses. */
+  function wbSkillEv(skillRef) {
+    return skillEvidenceRefs(parseRef(skillRef).id).map(wbGet).filter(Boolean);
+  }
   function wbRecordView() {
     var items = WB.items, skills = items.filter(function (x) { return x.type === "skill"; });
     var cv = wbCv();
@@ -10970,7 +11099,7 @@
       "benches. A skill is backed by the records linked to it, and the CV is a selection of them, never a copy.</p>";
     out += '<div class="w-rgrid"><section><h2 class="w-h2s">Skills, and what backs them</h2><div class="w-rcol">' +
       (skills.length ? skills.map(function (sk) {
-        var ev = wbNbrs(sk.id).filter(function (x) { return x.type !== "skill"; });
+        var ev = wbSkillEv(sk.id);
         return '<div class="w-scard"><div class="w-scrow"><button class="w-sname" data-act="wb-open" data-id="' +
           esc(sk.id) + '">' + esc(sk.title) + '</button><span class="w-scount2' + (ev.length ? "" : " is-amber") + '">' +
           esc(ev.length ? wbWords(ev.length, "record backs it", "records back it") : "Nothing backs it yet") +
@@ -10986,10 +11115,11 @@
     }).map(function (r) { return wbGet(ref("role", r.id)); }).filter(Boolean);
     var pickable = items.filter(function (x) { return x.type === "output" || x.type === "training"; });
     var work = pickable.filter(function (x) { return x.onCv; });
-    var skillLine = skills.map(function (sk) {
-      var n = wbNbrs(sk.id).filter(function (x) { return x.type !== "skill"; }).length;
-      return n ? sk.title + " (" + n + (n === 1 ? " record)" : " records)") : null;
-    }).filter(Boolean).join(" · ");
+    /* A CV DOES NOT PRINT THE APP'S OWN COUNTS. "Photogrammetry (7 records)"
+       is how the card beside it reads, and a reader of the CV has no idea
+       what a record is. It names the skills that have something under them. */
+    var skillLine = skills.filter(function (sk) { return wbSkillEv(sk.id).length; })
+      .map(function (sk) { return sk.title; }).join(" · ");
     out += '<section><div class="w-cvhead"><h2 class="w-h2s">CV' + (cv && (cv.aim || cv.name !== "CV")
         ? " · " + esc(cv.aim || cv.name) : "") + '</h2><span class="w-csub">live</span></div>' +
       '<div class="w-cv"><p class="w-cvname">' + esc(who || "Your name goes here") + "</p>" +
@@ -13642,7 +13772,7 @@
     var all = keptFiles().filter(function (e) { return filesMatch(e.name + " " + e.fname + " " + keptWhere(e).word); });
     if (!keptFiles().length) {
       return emptyLinesW("Nothing kept in the app yet.",
-        "Drop a PDF or a picture anywhere on the page. It lands in the inbox, or in the folder or bench that is open.");
+        "Drop a PDF or a picture anywhere on the page. It asks which Library folder it belongs in \u2014 or goes straight into the folder or bench that is open.");
     }
     if (!all.length) return '<p class="w-empty">Nothing kept here matches “' + esc(filesQ.trim()) + "”.</p>";
     var groups = {}, keys = [];
@@ -14669,9 +14799,11 @@
     put("roles", "rl1", { name: "Field surveyor", jobId: id("lu"), startedOn: "2022-01", endedOn: "", note: "" });
     put("roles", "rl2", { name: "Freelance survey work", startedOn: "2020-01", endedOn: "", note: "" });
 
-    put("projects", "b1", { name: "Anfeh harbour survey", key: "anfeh", role: "Field surveyor \u00b7 Lebanese University", status: "active" });
-    put("projects", "b2", { name: "Byblos orthophoto", key: "byblos", role: "Freelance", status: "active" });
-    put("projects", "b3", { name: "Thesis, chapter 3", key: "thesis", role: "PhD \u00b7 Lebanese University", status: "active" });
+    /* A bench NAMES its role and employer rather than typing them out, so
+       the bench line and the project page read the same record. */
+    put("projects", "b1", { name: "Anfeh harbour survey", key: "anfeh", roleId: id("rl1"), jobId: id("lu"), status: "active" });
+    put("projects", "b2", { name: "Byblos orthophoto", key: "byblos", roleId: id("rl2"), status: "active" });
+    put("projects", "b3", { name: "Thesis, chapter 3", key: "thesis", role: "PhD", jobId: id("lu"), status: "active" });
     put("projects", "b4", { name: "Drone photogrammetry course", key: "course", status: "idea" });
 
     function act(k, name, b, when, on, extra) {
