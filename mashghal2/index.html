@@ -965,7 +965,7 @@
     text-decoration: underline; white-space: nowrap;
   }
 
-  .w-col { min-width: 0; display: flex; flex-direction: column; }
+  .w-col { position: relative; min-width: 0; display: flex; flex-direction: column; }
   .w-top {
     position: sticky; top: 0; z-index: 20; background: var(--paper);
     border-bottom: 1px solid var(--rule); padding: 14px 28px;
@@ -1830,7 +1830,6 @@
   }
 
   /* ---- Profile button and the one Library (w15) ---- */
-  .w-col { position: relative; }
   @media (min-width: 880px) { .w-top { padding-right: 84px; } }
   .w-me {
     position: fixed; top: 20px; right: 28px; z-index: 25; width: 38px; height: 38px; border-radius: 50%;
@@ -1845,6 +1844,33 @@
     .w-me { position: absolute; top: 8px; right: 12px; width: 32px; height: 32px; font-size: 12px; }
   }
   .w-popen { margin-top: 12px; }
+
+  /* ---- select many (w16) ---- */
+  .w-nheadacts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+  .w-nheadacts .w-dark { margin-top: 0; }
+  .w-stephead .w-pbtn.is-sel { margin-top: 10px; }
+  .w-pbtn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  body.sel-on #view [data-dragref] { position: relative; padding-right: 38px; }
+  body.sel-on #view [data-dragref]::after {
+    content: ""; position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; box-sizing: border-box;
+    border-radius: 5px; border: 1.5px solid var(--rule-strong); background: var(--sheet);
+    display: grid; place-items: center; font-size: 12px; line-height: 1; font-weight: 700; color: var(--on-ink);
+  }
+  body.sel-on #view [data-dragref].is-picked { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  body.sel-on #view [data-dragref].is-picked::after { content: "\2713"; background: var(--ink); border-color: var(--ink); }
+  .w-selbar {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; display: flex; flex-wrap: wrap;
+    align-items: center; gap: 6px; max-width: calc(100vw - 32px); padding: 8px 10px; border-radius: 12px;
+    background: var(--sheet); border: 1px solid var(--rule-strong); box-shadow: 0 12px 30px -16px rgba(40, 30, 10, 0.45);
+  }
+  .w-selbar[hidden] { display: none; }
+  .w-selc { padding: 0 6px; font-size: 13px; color: var(--ink-2); }
+  .w-selbar .w-pbtn.is-done { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  @media (max-width: 879px) {
+    .w-selbar { left: 8px; right: 8px; top: 8px; bottom: auto; transform: none; max-width: none; }
+  }
+  body.sel-on #view .fx-row::after, body.sel-on #view .w-ihead::after, body.sel-on #view .w-nrow::after { top: 50%; margin-top: -9px; }
+  .g-n.is-grp .g-rect { stroke: var(--blue); stroke-width: 2.4; stroke-dasharray: 5 3; }
 </style>
 </head>
 <body>
@@ -1963,7 +1989,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w15 · 26 Sep 2026";
+  var BUILD = "w16 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -5968,6 +5994,11 @@
         "file you keep is written there straight away. On the other computer connect the same folder and press <b>Bring in what " +
         "is here</b>. Chrome or Edge on a computer; a second account is a second folder. The whole walk-through is " +
         "under <b>How syncing works</b>.") +
+      gnote("<b>Many at once.</b> Press <b>Select</b> in the Library, Notes, Files or the review's inbox, then click " +
+        "what you want: Shift+click takes a run, Ctrl+A takes everything on the screen, Esc lets go, and Ctrl+click " +
+        "starts it without the button. The bar that appears moves them to a folder, tags them, puts them on a bench, " +
+        "links them or removes them \u2014 one act, one message, one Undo. On the Map, Shift+click picks a second " +
+        "node, and dragging one picked node moves all of them.") +
       gnote("<b>Profile</b> is the round button at the top right, with your initials on it: about you, " +
         "the timeline, experience, education, training, skills, the portfolio and the CVs, on one strip. " +
         "Employers, people, workflows, equipment and hours are under <em>Work</em> at the foot of the " +
@@ -10701,6 +10732,7 @@
        BibTeX or RIS, and exporting a bibliography. An entry's own page
        (the citation, where it is used) opens from its pane. */
     out += '<div class="w-libacts">' +
+      '<button class="w-pbtn is-sel" data-act="sel-mode" aria-pressed="false">Select</button>' +
       '<button class="w-pbtn" data-act="lib-add-script">New script</button>' +
       '<button class="w-pbtn" data-act="lib-add-formula">New formula</button>' +
       '<button class="w-pbtn" data-act="lib-add-method">New method</button>' +
@@ -10922,10 +10954,11 @@
           '<span class="w-mono w-stepn">0' + (i + 1) + '</span><span class="w-stepl">' + esc(s[0]) + "</span></button>";
       }).join("") + "</div>";
     out += '<div class="w-card"><div class="w-stephead"><h2>' + esc(WB_STEPS[wbStep][0]) + "</h2><p>" +
-      esc(WB_STEPS[wbStep][1]) + "</p></div>" +
+      esc(WB_STEPS[wbStep][1]) + "</p>" + (wbStep === 0 && rows.length > 1
+        ? '<button class="w-pbtn is-sel" data-act="sel-mode" aria-pressed="false">Select</button>' : "") + "</div>" +
       (rows.length ? rows.map(function (r) {
         return '<div class="w-irow is-review' + wSelBg(r.it.id) + '"><button class="w-ihead" data-act="wb-open" data-id="' +
-          esc(r.it.id) + '">' + wDot(r.it.type) + '<span class="w-grow"><span class="w-rt">' + esc(wbTitle(r.it)) +
+          esc(r.it.id) + '"' + (wbStep === 0 ? ' data-dragref="' + esc(r.it.id) + '"' : "") + ">" + wDot(r.it.type) + '<span class="w-grow"><span class="w-rt">' + esc(wbTitle(r.it)) +
           '</span><span class="w-rm">' + esc(r.meta || wbMeta(r.it)) + "</span></span>" + wTw(r.it.type) + "</button>" +
           '<div class="w-chips">' + r.chips + "</div></div>";
       }).join("") : '<p class="w-stepempty">Nothing left in this step.</p>') +
@@ -11332,7 +11365,7 @@
       var it = WB.by[id], p = pos[id], w = grW(it), h = grHt(it), st = grStandWord(it);
       var cls = "g-n t-" + it.type + (id === sel ? " is-sel" : "") + (hot[id] ? " is-hot" : "") +
         (st === "Late" ? " is-late" : "") + (it.done ? " is-done" : "") + (q && !grMatches(it, q) ? " is-dim" : "") +
-        (GR.local === id ? " is-local" : "");
+        (GR.local === id ? " is-local" : "") + (SEL.on && SEL.ids.indexOf(id) >= 0 ? " is-grp" : "");
       out.push('<g class="' + cls + '" data-node="' + esc(id) + '" transform="translate(' + p[0] + "," + p[1] + ')">' +
         '<rect class="g-rect" x="' + (-w / 2) + '" y="' + (-h / 2) + '" width="' + w + '" height="' + h + '" rx="' +
         (it.type === "bench" ? 12 : 8) + '"/>' +
@@ -11472,7 +11505,13 @@
       var id = node ? node.getAttribute("data-node") : "", s = id ? grSpot(id) : null;
       grDrag = { id: hand ? "" : id, link: hand ? hand.getAttribute("data-hand") : "", edge: edge ? edge.getAttribute("data-edge") : "",
         sx: ev.clientX, sy: ev.clientY, moved: false, cx: s ? num(s.x) : 0, cy: s ? num(s.y) : 0,
-        ox: GR.ox, oy: GR.oy, at: grAt(ev) };
+        ox: GR.ox, oy: GR.oy, at: grAt(ev), shift: ev.shiftKey || ev.ctrlKey || ev.metaKey };
+      /* A PICKED NODE CARRIES THE OTHERS: pressing one of several picked
+         nodes moves the lot, each from where it started. */
+      if (id && !hand && SEL.on && SEL.ids.indexOf(id) >= 0 && SEL.ids.length > 1) {
+        grDrag.grp = SEL.ids.map(function (g) { var sp = grSpot(g); return sp ? { id: g, x: num(sp.x), y: num(sp.y) } : null; })
+          .filter(Boolean);
+      }
       el.setPointerCapture(ev.pointerId);
       /* A long press is a right-click on a phone. The node comes from THE
          PRESS: `ev.target` under capture is the <svg>, and a layout that
@@ -11506,6 +11545,8 @@
       if (grDrag.link) {
         var p = grAt(ev);
         grDrag.to = [p.x, p.y];
+      } else if (grDrag.grp) {
+        grDrag.grp.forEach(function (g) { grMoveSpot(g.id, g.x + dx / GR.k, g.y + dy / GR.k); });
       } else if (grDrag.id) {
         grMoveSpot(grDrag.id, grDrag.cx + dx / GR.k, grDrag.cy + dy / GR.k);
       } else {
@@ -11531,7 +11572,20 @@
         wbToggleLink(d.link, to);
         return;
       }
-      if (d.id && d.moved) {
+      if (d.grp && d.moved) {
+        /* One move of many nodes is one entry on the map's undo. */
+        var was = d.grp.slice(), now = was.map(function (g) { var sp = grSpot(g.id); return { id: g.id, x: num(sp.x), y: num(sp.y) }; });
+        grPush("moving " + wbWords(was.length, "node", "nodes").toLowerCase(),
+          function () { was.forEach(function (g) { grMoveSpot(g.id, g.x, g.y); }); },
+          function () { now.forEach(function (g) { grMoveSpot(g.id, g.x, g.y); }); });
+        commit(); grPaint(); grBarPaint();
+      } else if (d.id && !d.moved && (d.shift || SEL.on)) {
+        /* SHIFT+CLICK PICKS ONE MORE, the same selection the lists use, so
+           the same bar acts on it. The node picked a moment ago joins. */
+        if (!SEL.on) { SEL.on = true; SEL.ids = wbSel && wbSel !== d.id ? [wbSel] : []; }
+        selToggle(d.id, false);
+        grPaint();
+      } else if (d.id && d.moved) {
         var s = grSpot(d.id);
         if (s) {
           var id = d.id, wasX = d.cx, wasY = d.cy, nowX = num(s.x), nowY = num(s.y), it = wbGet(id);
@@ -12234,6 +12288,19 @@
     delete rec.inbox;
     wbDone(to ? "Moved into " + byId(state.folders, to).name : "Moved to the top of the Library", snap);
   }
+  /* Many into one folder is one write and one undo, the same as one. Only
+     what a folder can hold goes in; the rest is named, not dropped. */
+  function fileManyInto(refs, to) {
+    if (to && !byId(state.folders, to)) { toast("That folder is gone."); return; }
+    var fits = refs.filter(function (r) { return recOf(r) && SEL_FOLDERED[parseRef(r).kind]; });
+    if (!fits.length) { toast("None of those can go in a folder: only Library entries and notes can."); return; }
+    var snap = wbSnap();
+    fits.forEach(function (r) { var rec = recOf(r); rec.folderId = to || ""; delete rec.inbox; });
+    selClear();
+    wbDone("Moved " + wbWords(fits.length, "thing", "things").toLowerCase() + (to ? " into " + byId(state.folders, to).name
+      : " to the top of the Library") + (fits.length < refs.length ? "; " + wbWords(refs.length - fits.length, "other", "others").toLowerCase() +
+      " cannot go in a folder" : ""), snap);
+  }
   function moveToFolder(ref2) {
     var rec = recOf(ref2);
     if (!rec) return;
@@ -12247,7 +12314,9 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-dragref]"), function (el) {
       el.setAttribute("draggable", "true");
       el.addEventListener("dragstart", function (e) {
-        e.dataTransfer.setData(DRAG_T, el.getAttribute("data-dragref"));
+        /* A picked card carries every picked card with it. */
+        var me = el.getAttribute("data-dragref");
+        e.dataTransfer.setData(DRAG_T, SEL.on && SEL.ids.length > 1 && SEL.ids.indexOf(me) >= 0 ? SEL.ids.join("\n") : me);
         e.dataTransfer.effectAllowed = "move";
       });
     });
@@ -12261,7 +12330,9 @@
         var r = e.dataTransfer.getData(DRAG_T);
         if (!r) return;
         e.preventDefault(); e.stopPropagation(); el.classList.remove("is-over");
-        fileInto(r, el.getAttribute("data-dropfolder"));
+        var many = r.split("\n").filter(Boolean);
+        if (many.length > 1) fileManyInto(many, el.getAttribute("data-dropfolder"));
+        else fileInto(r, el.getAttribute("data-dropfolder"));
       });
     });
   }
@@ -12478,7 +12549,8 @@
     if (wbNoteFolder && !byId(state.folders, wbNoteFolder)) wbNoteFolder = "";
     var list = noteList(), tags = allTags();
     var out = wEyebrow("Notes") + '<div class="w-nhead"><h1 class="w-h1">Your notes</h1>' +
-      '<button class="w-dark" data-act="note-new">New note</button></div>' +
+      '<span class="w-nheadacts">' + (state.notes.length > 1 ? '<button class="w-pbtn is-sel" data-act="sel-mode" aria-pressed="false">Select</button>' : "") +
+      '<button class="w-dark" data-act="note-new">New note</button></span></div>' +
       '<p class="w-lead is-62">Write anything. Tag it with <span class="w-mono">#words</span>, and link one note to another ' +
       "by writing its title in double brackets, <span class=\"w-mono\">[[like this]]</span>.</p>";
     if (!state.notes.length) {
@@ -13547,7 +13619,8 @@
         s[0] + '">' + s[1] + (s[0] === "drive" && !driveList.length ? "" : ' <span class="w-mono">' + n[s[0]] + "</span>") + "</button>";
     }).join("") + "</div>";
     out += '<div class="w-nbar"><input class="g-q" id="filesQ" type="search" placeholder="Find by name, folder or path…" ' +
-      'aria-label="Find a file" value="' + esc(filesQ) + '" /></div>';
+      'aria-label="Find a file" value="' + esc(filesQ) + '" />' + (filesSect === "kept" && n.kept > 1
+        ? '<button class="w-pbtn is-sel" data-act="sel-mode" aria-pressed="false">Select</button>' : "") + "</div>";
     wbOrder = [];
     out += filesSect === "drive" ? filesDriveSect() : filesSect === "links" ? filesLinksSect() : filesKeptSect();
     return out;
@@ -13630,6 +13703,241 @@
     out += '<p class="fx-acts"><button class="w-dark" data-act="settings">Open Settings</button> ' +
       '<button class="w-pbtn" data-act="tab-dir">Open Files</button></p>';
     return out;
+  }
+  /* ============================================================
+     SELECT MANY, ACT ONCE.
+
+     Asked for "multiple selection in things like the Library so I can
+     manage things that are numerous". The rule under it is the one every
+     act in this app already keeps: A BULK ACT IS ONE WRITE, ONE TOAST, ONE
+     UNDO. Forty entries moved to a folder are forty records changed under
+     one snapshot, so a single Undo puts all forty back — never forty undos,
+     and never thirty-nine because one of them failed.
+
+     What can be picked is whatever a screen already lets you drag: the
+     `data-dragref` a card or a row carries for the folder tree is the same
+     "this is one record" marker a selection needs, so there is no second
+     attribute to keep in step. Library cards, notes, kept files and the
+     inbox in the weekly review all carry it.
+
+     How you pick is Explorer's habit: Select turns it on, a click toggles,
+     Shift+click takes the run between, Ctrl/⌘+A takes everything on the
+     screen, Esc lets go — and a Ctrl/⌘+click with the mode off starts it
+     on that record. Picking is VIEW STATE: it is cleared on a tab change
+     and never reaches the book.
+
+     The bar offers only acts that make sense for EVERY picked record: a
+     folder holds Library entries and notes and nothing else, so Move to
+     folder is not offered over an action. An act that would do something
+     to half the selection is an act that surprises you with the other
+     half.
+     ============================================================ */
+
+  var SEL = { on: false, ids: [], anchor: "" };
+  var SEL_FOLDERED = { lib: 1, note: 1 };
+  var SEL_BENCHED = { lib: 1, note: 1, action: 1, output: 1 };
+
+  function selOnScreen() {
+    return Array.prototype.map.call(document.querySelectorAll("#view [data-dragref], #view [data-node]:not(.is-dim)"), function (el) {
+      return el.getAttribute("data-dragref") || el.getAttribute("data-node");
+    }).filter(function (id, i, a) { return id && a.indexOf(id) === i && !!recOf(id); });
+  }
+  function selKinds() { return SEL.ids.map(function (id) { return parseRef(id).kind; }); }
+  function selAll(set) { return SEL.ids.length && selKinds().every(function (k) { return set[k]; }); }
+  function selStart() { SEL.on = true; selPaint(); }
+  function selClear() {
+    SEL.on = false; SEL.ids = []; SEL.anchor = "";
+    selPaint();
+  }
+  function selToggle(id, range) {
+    var i = SEL.ids.indexOf(id);
+    if (range && SEL.anchor) {
+      var order = selOnScreen(), a = order.indexOf(SEL.anchor), b = order.indexOf(id);
+      if (a >= 0 && b >= 0) {
+        order.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(function (x) {
+          if (SEL.ids.indexOf(x) < 0) SEL.ids.push(x);
+        });
+        selPaint();
+        return;
+      }
+    }
+    if (i >= 0) SEL.ids.splice(i, 1); else SEL.ids.push(id);
+    SEL.anchor = id;
+    selPaint();
+  }
+
+  /* Painted, never rendered: a render would throw away where the page was
+     scrolled to, on the one screen where you are working down a long list. */
+  function selPaint() {
+    document.body.classList.toggle("sel-on", SEL.on);
+    Array.prototype.forEach.call(document.querySelectorAll("#view [data-dragref]"), function (el) {
+      var on = SEL.on && SEL.ids.indexOf(el.getAttribute("data-dragref")) >= 0;
+      el.classList.toggle("is-picked", on);
+      if (SEL.on) el.setAttribute("aria-pressed", on ? "true" : "false");
+      else if (el.hasAttribute("data-selpressed")) { el.removeAttribute("aria-pressed"); }
+      if (SEL.on) el.setAttribute("data-selpressed", "1"); else el.removeAttribute("data-selpressed");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-act="sel-mode"]'), function (b) {
+      b.textContent = SEL.on ? "Done selecting" : "Select";
+      b.setAttribute("aria-pressed", SEL.on ? "true" : "false");
+    });
+    if (view === "map" && document.getElementById("grHost")) grPaint();
+    var bar = document.getElementById("selBar");
+    if (!SEL.on) { if (bar) bar.hidden = true; return; }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "selBar"; bar.className = "w-selbar";
+      bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "What to do with the picked records");
+      document.body.appendChild(bar);
+    }
+    bar.hidden = false;
+    var n = SEL.ids.length, acts = [];
+    if (selAll(SEL_FOLDERED)) acts.push('<button class="w-pbtn" data-act="sel-move">Move to folder…</button>',
+      '<button class="w-pbtn" data-act="sel-tag">Tag…</button>');
+    if (selAll(SEL_BENCHED) && wbLiveBenches().length) acts.push('<button class="w-pbtn" data-act="sel-bench">Put on a bench…</button>');
+    if (n >= 2) acts.push('<button class="w-pbtn" data-act="sel-link">Link them</button>');
+    if (n) acts.push('<button class="w-pbtn is-danger" data-act="sel-remove">Remove</button>');
+    bar.innerHTML = '<span class="w-selc" aria-live="polite">' + (n ? esc(cap(wbWords(n, "picked", "picked").toLowerCase()))
+      : "Nothing picked. Click to pick, Shift+click for a run") + "</span>" +
+      '<button class="w-pbtn" data-act="sel-all">Pick all ' + selOnScreen().length + "</button>" +
+      acts.join("") +
+      '<button class="w-pbtn is-done" data-act="sel-done">Done</button>';
+  }
+  /* After every render the picked records that still exist stay picked;
+     one removed from under the selection (by a sync, by an Undo) drops out
+     rather than being acted on as a ghost. */
+  function selAfterRender() {
+    if (!SEL.on) { selPaint(); return; }
+    SEL.ids = SEL.ids.filter(function (id) { return !!recOf(id); });
+    selPaint();
+  }
+
+  /* The click is taken BEFORE the runtime sees it, so a picked card does
+     not also open its pane. Only inside the screen: the pane, the bar, a
+     dialog and the sidebar are never picks. */
+  function selWire() {
+    document.addEventListener("click", function (e) {
+      var el = e.target && e.target.closest && e.target.closest("#view [data-dragref]");
+      if (!el) return;
+      var mod = e.ctrlKey || e.metaKey;
+      if (!SEL.on && !mod) return;
+      e.preventDefault(); e.stopPropagation();
+      if (!SEL.on) SEL.on = true;
+      selToggle(el.getAttribute("data-dragref"), e.shiftKey);
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      if (!SEL.on) return;
+      var t = e.target, typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      var dlg = document.querySelector("#overlay .modal, #overlay .overlay-card");
+      if (e.key === "Escape" && !dlg) { e.preventDefault(); e.stopPropagation(); selClear(); return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A") && !typing && !dlg) {
+        e.preventDefault(); e.stopPropagation();
+        selOnScreen().forEach(function (id) { if (SEL.ids.indexOf(id) < 0) SEL.ids.push(id); });
+        selPaint();
+      }
+    }, true);
+  }
+
+  function selWordsOf(n) { return wbWords(n, "thing", "things").toLowerCase(); }
+
+  /* ---------------- the acts ---------------- */
+
+  function selMove() {
+    if (!selAll(SEL_FOLDERED)) return;
+    var ids = SEL.ids.slice();
+    folderPicker("Move " + selWordsOf(ids.length) + " to a folder", "", {}, function (to) {
+      if (to && !byId(state.folders, to)) { toast("That folder is gone."); return; }
+      var snap = wbSnap();
+      ids.forEach(function (id) { var r = recOf(id); if (r) { r.folderId = to || ""; delete r.inbox; } });
+      selClear();
+      wbDone("Moved " + selWordsOf(ids.length) + (to ? " into " + byId(state.folders, to).name : " to the top of the Library"), snap);
+    });
+  }
+  function selTag() {
+    if (!selAll(SEL_FOLDERED)) return;
+    var ids = SEL.ids.slice();
+    openModal({
+      title: "Tag " + selWordsOf(ids.length),
+      fields: [{ key: "tags", label: "Tags", value: "", span: true,
+        hint: "Words separated by commas. A note takes them as tags; a Library entry as what it is about. " +
+          "Nothing already there is taken off." }],
+      confirmLabel: "Tag them",
+      validate: function (v) { return topicList(v.tags.replace(/#/g, "")).length ? "" : "Write at least one word."; },
+      onConfirm: function (v) {
+        var words = topicList(v.tags.replace(/#/g, "")), snap = wbSnap();
+        ids.forEach(function (id) {
+          var r = recOf(id), k = parseRef(id).kind;
+          if (!r) return;
+          if (k === "note") r.tags = topicList((r.tags || []).concat(words).join(","));
+          else r.topics = topicList((r.topics || []).concat(words).join(","));
+        });
+        selClear();
+        wbDone("Tagged " + selWordsOf(ids.length) + " " + words.map(function (w) { return "#" + w; }).join(" "), snap);
+      }
+    });
+  }
+  function selBench() {
+    if (!selAll(SEL_BENCHED)) return;
+    var ids = SEL.ids.slice(), bs = wbLiveBenches();
+    if (!bs.length) { toast("There is no bench to put them on. Type bench: name in the line."); return; }
+    openModal({
+      title: "Put " + selWordsOf(ids.length) + " on a bench",
+      fields: [{ key: "b", label: "Which bench", type: "select", value: bs[0].id, options: bs.map(function (b) {
+        return { value: b.id, label: b.title };
+      }) }],
+      confirmLabel: "Put them there",
+      onConfirm: function (v) {
+        var snap = wbSnap(), pid = parseRef(v.b).id;
+        ids.forEach(function (id) { var r = recOf(id); if (r) { r.projectId = pid; delete r.inbox; } });
+        selClear();
+        wbDone("Put " + selWordsOf(ids.length) + " on " + wbBenchName(v.b), snap);
+      }
+    });
+  }
+  /* Every pair once, so twelve picked are sixty-six lines — the ceiling,
+     because past it a "link them" is a hairball nobody asked for. */
+  function selLink() {
+    var ids = SEL.ids.slice();
+    if (ids.length < 2) return;
+    if (ids.length > 12) { toast("Link twelve or fewer at once. Past that every one is joined to every other, and the map turns to string."); return; }
+    var snap = wbSnap(), made = 0;
+    ids.forEach(function (a, i) {
+      ids.slice(i + 1).forEach(function (b) {
+        if (wbLinked(a, b)) return;
+        state.links.push({ id: uid(), rel: "with", a: a, b: b, note: "" }); made++;
+      });
+    });
+    selClear();
+    if (!made) { toast("They are all linked to each other already."); return; }
+    wbDone("Linked " + selWordsOf(ids.length) + " to each other · " + wbWords(made, "line", "lines").toLowerCase(), snap);
+  }
+  /* One confirmation that names the count, then one write: every record,
+     every line touching one, every place on the map. A kept file's bytes
+     stay until the app next opens, which is what lets Undo bring it back
+     whole. */
+  function selRemove() {
+    var ids = SEL.ids.slice();
+    if (!ids.length) return;
+    var files = ids.filter(function (id) { var r = recOf(id); return r && r.blobId; }).length;
+    confirmAction({
+      title: "Remove " + selWordsOf(ids.length) + "?",
+      message: "They go from the book with every line that touches them" +
+        (files ? ", and " + (files === 1 ? "the file" : "the files") + " with them" : "") +
+        ". One Undo on the message after brings every one of them back.",
+      confirmLabel: "Remove " + (ids.length === 1 ? "it" : "them")
+    }, function () {
+      var snap = wbSnap(), gone = {};
+      ids.forEach(function (id) {
+        var p = parseRef(id), list = listOf(p.kind), r = recOf(id);
+        if (!r || !list) return;
+        list.splice(list.indexOf(r), 1); gone[id] = 1;
+      });
+      state.links = state.links.filter(function (l) { return !gone[l.a] && !gone[l.b]; });
+      state.spots = state.spots.filter(function (s) { return !gone[s.id]; });
+      if (wbSel && gone[wbSel]) wbSel = null;
+      selClear();
+      wbDone("Removed " + selWordsOf(Object.keys(gone).length), snap);
+    });
   }
 
   /* ============================================================
@@ -13862,6 +14170,18 @@
       wbSel = null; openRec = ""; back = []; view = "shelves"; render(); window.scrollTo({ top: 0, behavior: "auto" });
     },
     "wb-topic": function (idv) { wbLibTopic = idv || ""; render(); },
+    /* ---- select many (30-wb-select.js) ---- */
+    "sel-mode": function () { if (SEL.on) selClear(); else selStart(); },
+    "sel-all": function () {
+      selOnScreen().forEach(function (id) { if (SEL.ids.indexOf(id) < 0) SEL.ids.push(id); });
+      selPaint();
+    },
+    "sel-done": function () { selClear(); },
+    "sel-move": function () { selMove(); },
+    "sel-tag": function () { selTag(); },
+    "sel-bench": function () { selBench(); },
+    "sel-link": function () { selLink(); },
+    "sel-remove": function () { selRemove(); },
     "wb-profile": function () {
       wbSel = null; openRec = ""; back = []; view = "profile"; pageAt.profile = "profile";
       render(); window.scrollTo({ top: 0, behavior: "auto" });
@@ -14550,6 +14870,7 @@
       wbLibFolder = ""; wbLibTopic = "";
       wbNote = ""; wbNoteEdit = false; wbNoteTag = ""; wbNoteQ = ""; wbNoteFolder = "";
       filesSect = "kept"; filesQ = ""; filesDrive = {};
+      SEL.on = false; SEL.ids = []; SEL.anchor = "";
       GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
       grMenuClose();
       /* A SIFT BOX IS A NARROWING, NOT A SETTING. */
@@ -14599,6 +14920,7 @@
       mountNotesIndex();
       mountNoteEditor();
       mountFilesTab();
+      selAfterRender();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
@@ -14628,6 +14950,7 @@
       save();
       wireAutoSync();
       if (syncOn()) setTimeout(function () { nudgeSync("opened"); }, 400);
+      selWire();
       wbWireKeys();
       wbWireLine();
       grWireDoc();

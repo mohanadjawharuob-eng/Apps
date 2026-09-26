@@ -4834,3 +4834,52 @@ returning, More, and the button uncovered and in the corner at 390 and 320px) ·
 the Library's new buttons, By topic, the pane's page link and Profile's strip
 in contrast at rest and under the pointer at 1400, 390 and 320px). `wb-views`,
 `m5import` and `m5dir` reach Profile through the button now.
+
+## mashghal2: select many, act once (w16)
+
+Asked for "multiple selection in things like the Library so I can manage
+things that are numerous". `m5/30-wb-select.js`.
+
+- **A BULK ACT IS ONE WRITE, ONE TOAST, ONE UNDO.** Forty entries moved to a
+  folder are forty records changed under one `wbSnap()`, so a single Undo puts
+  all forty back — never forty undos, and never thirty-nine because one failed.
+  Move to folder, Tag, Put on a bench, Link them and Remove all keep it.
+- **WHAT CAN BE PICKED IS WHAT CAN ALREADY BE DRAGGED.** The `data-dragref` a
+  Library card, a note row, a kept file and a review-inbox row carry for the
+  folder tree is the same "this is one record" marker a selection needs, so
+  there is no second attribute to keep in step — and dragging one picked card
+  onto a folder carries the rest (`fileManyInto`).
+- **EXPLORER'S HABIT**: Select turns it on, a click toggles, Shift+click takes
+  the run from the last click, Ctrl/⌘+A takes what is on the screen, Esc lets
+  go, and Ctrl/⌘+click with the mode off starts it. The click is taken in the
+  capture phase, before the runtime sees it, so a pick never also opens the
+  pane. Picking is **view state**: a tab change lets go, and it never reaches
+  the book (a test reads the stored book for it).
+- **THE BAR OFFERS ONLY WHAT FITS EVERY PICKED RECORD.** A folder holds Library
+  entries and notes, so Move to folder and Tag vanish the moment an action is
+  in the selection. An act that would do something to half the selection
+  surprises you with the other half. Link them joins every pair once and stops
+  at twelve, because past that "link them" is a hairball. Tag puts the words on
+  a note as tags and on an entry as what it is about, taking nothing off.
+- **Painted, never rendered**: picking toggles classes and the bar, so a long
+  list keeps where it was scrolled; after any real render the records that
+  still exist stay picked and one removed underneath drops out rather than
+  being acted on as a ghost.
+- **THE MAP SHARES THE SAME SELECTION.** Shift+click picks a second node (the
+  one picked a moment ago joins), and pressing any picked node drags the lot,
+  each from where it started — **one entry on the map's undo** for the whole
+  move. The same bar acts on it.
+
+Found by driving it: **a toast sits over the map**, and a press there lands on
+the toast. The test waits it out the way a reader would; the app's toasts
+already take no pointer events except on themselves.
+
+`wb-select.js` (38: the mode and its words, a pick not opening the pane,
+`aria-pressed`, a run, Ctrl+A, Esc, Ctrl+click, five moved and one Undo
+restoring all five, Link them, two notes tagged and removed and brought back
+by one Undo, every kept file put on a bench, Move withheld over a mixed
+selection, a picked pair dragged onto a folder, two map nodes moved by the same
+distance and put back by one undo, a tab change letting go, nothing in the
+book, 390px) · `slook.js` (39: the bar and the tick in contrast, at rest and
+under the pointer, at 1400, 390 and 320px). The `.w-col` rule w15 declared a
+second time — the collision scan's catch — is one rule again.
