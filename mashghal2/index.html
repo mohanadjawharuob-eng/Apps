@@ -1433,68 +1433,114 @@
     font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 9px; border: 1px solid var(--rule-mid);
     background: var(--sheet); color: var(--ink-2); cursor: pointer; white-space: nowrap;
   }
-  .w-light.is-side { margin: 12px 0 0 6px; }
   .w-dark.is-foot { margin-top: 0; padding: 7px 16px; }
 
-  /* ---- Map ---- */
-  .w-mapwrap { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 26px; align-items: flex-start; }
-  .w-mapbox {
-    flex: 1 1 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; border: 1px solid var(--rule);
-    border-radius: 16px; background: var(--wash-2); height: 640px;
+  /* ---- Map: a graph of every record ---- */
+  .g-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .g-chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--sheet); font: inherit; font-size: 13px; color: var(--dim);
+    cursor: pointer;
   }
-  .w-mapclip { width: 960px; height: 640px; overflow: hidden; }
-  .w-mapcanvas { position: relative; width: 960px; height: 640px; transform-origin: 0 0; }
-  .w-medge { position: absolute; height: 0; transform-origin: 0 50%; transition: opacity 180ms; pointer-events: none; }
-  .w-medge.is-spoke { border-top: 2px solid var(--spoke); }
-  .w-medge.is-skill { border-top: 1.5px dashed var(--blue-line); }
-  .w-medge.is-leaf { border-top: 1px solid var(--rule-strong); }
-  .w-mme {
-    position: absolute; left: 480px; top: 320px; transform: translate(-50%, -50%); padding: 10px 16px; border-radius: 999px;
-    background: var(--ink); color: var(--on-ink); font-family: var(--display); font-size: 16px; white-space: nowrap;
+  .g-chip .w-mono { font-size: 11px; }
+  .g-chip.is-on { color: var(--ink); border-color: var(--rule-strong); }
+  .g-chip:not(.is-on) .g-csq { opacity: 0.35; }
+  .g-csq { width: 9px; height: 9px; border-radius: 2.5px; flex: none; }
+  .g-wrap { margin-top: 14px; }
+  .g-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .g-sp { flex: 1 1 0; }
+  .g-q {
+    flex: 0 1 17rem; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--rule-mid); border-radius: 9px;
+    background: var(--sheet); font: inherit; font-size: 14px; color: var(--ink);
   }
-  .w-mskill, .w-mclus, .w-mbench { position: absolute; transform: translate(-50%, -50%); transition: opacity 180ms; }
-  .w-mskill:active, .w-mclus:active, .w-mbench:active { transform: translate(-50%, calc(-50% + 1px)); }
-  .w-mskill {
-    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--blue-border); background: var(--blue-tint-2);
-    color: var(--blue-deep); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  .g-tb {
+    height: 32px; padding: 0 11px; border: 1px solid var(--rule-mid); border-radius: 9px; background: var(--sheet);
+    font: inherit; font-size: 13.5px; color: var(--ink-2); cursor: pointer; white-space: nowrap;
   }
-  .w-mclus {
-    display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border-radius: 999px; border: 1px solid var(--rule);
-    background: var(--sheet); font: inherit; font-size: 14px; color: var(--ink-2); white-space: nowrap; cursor: pointer;
+  .g-tb[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+  .g-tb:disabled { color: var(--faint); cursor: default; border-color: var(--rule); }
+  .g-tb:hover:not(:disabled) { border-color: var(--hover-border); }
+  .g-local { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); }
+  /* PICKING A NODE MAY NOT MOVE THE SHEET UNDER THE FINGER. Wrapped, the
+     strip grew to three lines on a phone the moment a node was picked and
+     pushed the sheet 85px down, so the next press landed on something
+     else. It is one row of a stated height that scrolls sideways. */
+  .g-strip {
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; height: 48px; margin-top: 8px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
   }
-  .w-mclus:hover { border-color: var(--spoke); }
-  .w-mbadge {
-    min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; color: #fff; font-family: var(--mono);
-    font-size: 11px; line-height: 20px; text-align: center;
+  .g-strip > * { flex: none; }
+  .g-sname {
+    display: inline-flex; align-items: center; gap: 7px; margin-right: 6px; font-size: 14.5px;
+    max-width: min(22rem, 45vw);
   }
-  .w-mbench {
-    width: 190px; display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-radius: 14px;
-    border: 1px solid var(--rule-mid); background: var(--sheet); font: inherit; color: inherit; text-align: left;
-    cursor: pointer; box-shadow: var(--sh-bench);
+  .g-sname b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g-shint { font-size: 13.5px; color: var(--faint); }
+  .g-sb, .g-mrow {
+    font: inherit; font-size: 13.5px; padding: 6px 11px; border-radius: 9px; border: 1px solid var(--rule-mid);
+    background: var(--sheet); color: var(--ink-2); cursor: pointer; white-space: nowrap;
   }
-  .w-mbench.is-focus { border: 2px solid var(--ink); }
-  .w-mbdot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
-  .w-mrole { font-size: 13px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .w-mtitle { font-family: var(--display); font-size: 17px; line-height: 1.2; }
-  .w-mtitle.is-idea { font-style: italic; }
-  .w-mapside {
-    flex: 1 1 100%; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-    gap: 14px; align-items: start;
+  .g-sb.is-loud, .g-mrow.is-loud { color: var(--ink); font-weight: 600; border-color: var(--ink); }
+  .g-sb.is-danger, .g-mrow.is-danger { color: var(--dim); }
+  .g-sb.is-danger:hover, .g-mrow.is-danger:hover { color: var(--late); border-color: var(--late); }
+  .g-box {
+    position: relative; height: max(360px, calc(100vh - 360px)); border: 1px solid var(--rule); border-radius: 14px;
+    overflow: hidden; background-color: var(--wash-2);
+    background-image: linear-gradient(to right, var(--rule-soft) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--rule-soft) 1px, transparent 1px);
   }
-  .w-mfocus { padding: 16px 18px; border: 1px solid var(--ink); border-radius: 14px; background: var(--sheet); }
-  .w-mfrole { margin: 0; font-size: 12px; color: var(--faint); }
-  .w-mfocus h2 { margin: 4px 0 0; font-family: var(--display); font-weight: 500; font-size: 20px; letter-spacing: 0; }
-  .w-mfocus p:not(.w-mfrole) { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
-  .w-mfocus .w-dark { margin-top: 12px; }
-  .w-mhow { padding: 16px 18px; border: 1px solid var(--rule); border-radius: 14px; background: var(--sheet); }
-  .w-mhow h2 { margin: 0 0 12px; font-family: var(--display); font-weight: 500; font-size: 18px; letter-spacing: 0; }
-  .w-mstep { display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule-soft); font-size: 14px; line-height: 1.5; }
-  .w-mstep b { font-weight: 600; }
-  .w-mnum {
-    flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--sidebar); font-size: 12px;
-    line-height: 24px; text-align: center; color: var(--ink-2);
+  .g-sheet { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; }
+  .g-sheet:active { cursor: grabbing; }
+  .g-sheet:focus-visible { outline: 2px solid var(--blue); outline-offset: -3px; }
+  .g-e .g-ehit { stroke: transparent; stroke-width: 12; cursor: pointer; }
+  .g-e .g-eln { stroke: var(--graph-edge); stroke-width: 1.4; pointer-events: none; }
+  .g-e.is-in .g-eln { stroke-dasharray: 5 4; stroke: var(--rule-strong); }
+  .g-e.is-wiki .g-eln { stroke-dasharray: 1.5 4; stroke-linecap: round; stroke-width: 2; }
+  .g-e.is-hot .g-eln { stroke: var(--ink-2); stroke-width: 2; }
+  .g-e.is-sel .g-eln { stroke: var(--ink); stroke-width: 2.6; }
+  .g-e.is-dim { opacity: 0.2; }
+  .g-cut { cursor: pointer; }
+  .g-cut circle { fill: var(--sheet); stroke: var(--ink); stroke-width: 1.5; }
+  .g-cut path { stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; }
+  .g-n { cursor: pointer; }
+  .g-n .g-rect { fill: var(--sheet); stroke: var(--rule-mid); stroke-width: 1; }
+  .g-n.t-bench .g-rect { stroke: var(--rule-strong); stroke-width: 1.4; }
+  .g-n.is-hot .g-rect { stroke: var(--ink-2); }
+  .g-n.is-local .g-rect { stroke-dasharray: 4 3; stroke: var(--ink); }
+  .g-n.is-sel .g-rect { stroke: var(--ink); stroke-width: 2.2; }
+  .g-n.is-late .g-rect { stroke: var(--late); stroke-width: 1.6; }
+  .g-n.is-sel.is-late .g-rect { stroke-width: 2.4; }
+  .g-n.is-dim { opacity: 0.22; }
+  .g-n.is-done .g-lab { fill: var(--dim); text-decoration: line-through; }
+  .g-lab { fill: var(--ink); font-family: var(--sans); font-size: 13px; }
+  .g-n.t-bench .g-lab { font-family: var(--display); font-size: 16px; }
+  .g-st { fill: var(--today); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; }
+  .g-st.is-late { fill: var(--late); }
+  .g-hand { fill: var(--sheet); stroke: var(--blue); stroke-width: 2; cursor: crosshair; }
+  .g-hand:hover { fill: var(--blue-tint); }
+  .g-draw { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+  .g-foot { margin: 8px 0 0; font-size: 13px; color: var(--faint); }
+  .g-keys { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0 0; font-size: 12.5px; color: var(--faint); }
+  .g-keys .w-mono { color: var(--ink-2); }
+  .g-menu {
+    position: fixed; z-index: 80; min-width: 180px; max-height: calc(100vh - 16px); overflow-y: auto;
+    overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; padding: 5px;
+    border: 1px solid var(--rule-mid); border-radius: 12px; background: var(--sheet); box-shadow: var(--sh-drop);
   }
-  .w-mtext { color: var(--dim); }
+  .g-menu .g-mrow { border-color: transparent; text-align: left; }
+  .g-menu .g-mrow:hover, .g-menu .g-mrow:focus-visible { background: var(--row-hover); }
+  .g-menu .g-mrow.is-loud { border-color: transparent; }
+  /* Full screen is a fixed box over the page, not the Fullscreen API: that
+     is refused without a gesture, swallows dialogs, and is left by a
+     different key on every platform. Above the page's own chrome, below
+     the storage alarm and the overlay. */
+  .g-wrap.is-max {
+    position: fixed; inset: 0; z-index: 55; margin: 0; padding: 12px 14px; background: var(--paper);
+    display: flex; flex-direction: column;
+  }
+  .g-wrap.is-max .g-host { flex: 1 1 auto; min-height: 0; }
+  .g-wrap.is-max .g-box { height: 100%; }
+  html.g-maxed { overflow: hidden; }
 
   .w-ptabs { display: none; }
 
@@ -1590,6 +1636,16 @@
     .w-pane .w-dark { width: 100%; min-height: 48px; border-radius: 12px; font-size: 15px; }
     .w-plbtn { min-height: 44px; }
     .toasts { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+    /* The map's kinds are one row you swipe on a phone: wrapped, twenty
+       of them took most of a screen above the sheet they filter. */
+    .g-chips {
+      flex-wrap: nowrap; overflow-x: auto; margin: 14px -18px 0; padding: 0 18px 4px; scrollbar-width: none;
+    }
+    .g-chip { flex: none; }
+    .g-q { flex: 1 1 100%; }
+    .g-sp { display: none; }
+    .g-box { height: max(340px, calc(100vh - 330px)); }
+    .g-keys { display: none; }
     .w-keys { bottom: 120px; right: 12px; }
   }
 </style>
@@ -1708,7 +1764,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w9 · 26 Sep 2026";
+  var BUILD = "w10 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -1768,6 +1824,9 @@
       /* ---- THE RELATIONSHIP LAYER ---- */
       links: [],       // {id,rel,a,b,note}    a and b are "kind:id"
 
+      /* ---- WHERE THINGS SIT ON THE MAP ---- */
+      spots: [],       // {id: a record's ref, x, y} — layout, never structure
+
       settings: { owner: "", offered: false, shape: "rows", demo: false, showGraph: true },
       forgotten: {},   // id -> name, so a removed record still reads
       tombstones: {},  // id -> when it was deleted, so sync cannot resurrect it
@@ -1777,7 +1836,11 @@
 
   var STATE_LISTS = ["education", "jobs", "roles", "training", "skills",
     "projects", "workflows", "runs", "actions", "people", "assets",
-    "outputs", "hours", "lib", "portfolio", "cvs", "links", "notes"];
+    "outputs", "hours", "lib", "portfolio", "cvs", "links", "notes", "spots"];
+  /* A spot is where a record sits on the map. It is its own record so a
+     drag cannot stamp — and so outrank — the record it positions, but it
+     is layout and not work: no count of the book includes it. */
+  var LAYOUT_LISTS = { spots: 1 };
   var STATE_MAPS = ["forgotten", "tombstones", "devices"];
 
   var PROFILE_KEYS = ["name", "headline", "fields", "interests",
@@ -2685,7 +2748,7 @@
     links: ["link", "links"]
   };
   function bookCount() {
-    return STATE_LISTS.reduce(function (n, k) { return n + state[k].length; }, 0);
+    return STATE_LISTS.reduce(function (n, k) { return n + (LAYOUT_LISTS[k] ? 0 : state[k].length); }, 0);
   }
   /* bookWords() — the same figures in the READER'S vocabulary. A screen
      may not print a state key at somebody: "21 wf nodes · four person
@@ -2693,7 +2756,7 @@
      worth a clause, so an empty list simply does not appear. */
   function bookWords() {
     return STATE_LISTS.filter(function (k) {
-      return k !== "links" && state[k].length;
+      return k !== "links" && !LAYOUT_LISTS[k] && state[k].length;
     }).map(function (k) {
       var w = LIST_WORDS[k] || [k, k];
       return countWords(state[k].length, w[0], w[1]);
@@ -5872,7 +5935,7 @@
       '<div class="rows" style="margin-top:0.6rem">' +
       gtab("today", "Today", "What needs you: late, due today and this week\u2019s focus; " +
         "who you are waiting on; the inbox; and each bench with its next step.") +
-      gtab("map", "Map", "How the benches fit together, and the skills their work backs.") +
+      gtab("map", "Map", "Every record as a node and every link as a line. Drag to move, drag from a ring to link, pick a line to cut it, right-click for more.") +
       gtab("shelves", "Library", "What you know, kept to reuse: scripts, formulas, methods, " +
         "references, the reading list, places, links and files \u2014 by subject.") +
       gtab("record", "Record", "Your skills and what backs them, and the live CV.") +
@@ -8886,6 +8949,7 @@
   function adoptRestored(raw) {
     var tomb = state.tombstones || {};
     state = adoptState(raw);
+    grReset();
     Object.keys(tomb).forEach(function (id) {
       if (!state.tombstones[id] || tomb[id] > state.tombstones[id]) state.tombstones[id] = tomb[id];
     });
@@ -9166,7 +9230,11 @@
       try { localStorage.removeItem(DEV_KEY); sessionStorage.removeItem(DEV_KEY); } catch (e) {}
       try { localStorage.removeItem(APP.storeKey); } catch (e) {}
       try { if (window.indexedDB) indexedDB.deleteDatabase(BK_DB); } catch (e) {}
+      /* The pinned pictures are this device's too, and a wipe that left
+         them would leave the one thing nobody would think to look for. */
+      try { if (window.indexedDB) indexedDB.deleteDatabase(PIN_DB); } catch (e) {}
       state = APP.blank();
+      grReset();
       ensureStamps();
       openRec = ""; pageAt = {}; back = [];
       save(); render();
@@ -9636,6 +9704,8 @@
     var snap = wbSnap();
     list.splice(list.indexOf(rec), 1);
     state.links = state.links.filter(function (l) { return l.a !== id && l.b !== id; });
+    /* Where it sat on the map goes with it; the undo brings both back. */
+    state.spots = state.spots.filter(function (s) { return s.id !== id; });
     if (wbSel === id) wbSel = null;
     wbDone("Discarded", snap);
   }
@@ -9655,6 +9725,9 @@
       state.actions.push(a);
       var nr = ref("action", a.id);
       state.links.forEach(function (l) { if (l.a === id) l.a = nr; if (l.b === id) l.b = nr; });
+      /* It stays where it sat on the map, as the new record. */
+      state.spots.forEach(function (s) { if (s.id === id) state.spots.push({ id: nr, x: s.x, y: s.y }); });
+      state.spots = state.spots.filter(function (s) { return s.id !== id; });
       var list = listOf(p.kind);
       list.splice(list.indexOf(rec), 1);
       if (wbSel === id) wbSel = nr;
@@ -10376,7 +10449,14 @@
     var pane = document.getElementById("pane"), scrim = document.getElementById("paneScrim");
     if (!pane) return;
     var it = wbSel && WB_VIEWS[view] ? wbGet(wbSel) : null;
-    if (!it) { wbSel = null; pane.hidden = true; pane.innerHTML = ""; if (scrim) scrim.hidden = true; return; }
+    /* ON A PHONE THE MAP KEEPS ITS SHEET. The pane is a bottom sheet there,
+       and opening it on every pick covered the node you had just picked;
+       the strip carries Details instead, and the pane comes when asked. */
+    var quiet = it && view === "map" && window.innerWidth < 880 && !GR.pane;
+    if (!it || quiet) {
+      if (!it) wbSel = null;
+      pane.hidden = true; pane.innerHTML = ""; if (scrim) scrim.hidden = true; return;
+    }
     pane.innerHTML = wbPaneHtml(it);
     pane.hidden = false;
     if (scrim) scrim.hidden = false;
@@ -10588,7 +10668,7 @@
      the benches and what hangs off them.
      ============================================================ */
 
-  var wbLib = "all", wbSubject = "all", wbStep = 0, wbMapFocus = null;
+  var wbLib = "all", wbSubject = "all", wbStep = 0;
 
   var WB_SHELF = {
     script: ["Scripts", "Code you run again. Whitespace kept exactly."],
@@ -10783,137 +10863,6 @@
     return out;
   }
 
-  /* ---------------- Map ----------------
-
-     A fixed 960 × 640 drawing, scaled to the box. The reference places
-     four benches and four skills at stated points; a real book can hold
-     more, so beyond four they go round a ring instead, and up to four the
-     reference's own points are used. */
-  var MAP_W = 960, MAP_H = 640, MX = 480, MY = 320;
-  var MAP_BP = [[230, 175], [730, 175], [230, 465], [730, 465]];
-  var MAP_SP = [[480, 205], [612, 320], [480, 435], [348, 320]];
-  var MAP_GROUPS = [["action", "actions", ["action"]], ["note", "notes", ["note", "draft"]],
-    ["meeting", "meetings", ["meeting"]], ["file", "files", ["file", "link", "output"]],
-    ["hours", "hours", ["hours"]], ["reference", "sources", ["reference"]]];
-
-  function wbMapView() {
-    var items = WB.items, benches = wbLiveBenches(), skills = items.filter(function (x) { return x.type === "skill"; });
-    if (wbMapFocus && !wbGet(wbMapFocus)) wbMapFocus = null;
-    var mf = wbMapFocus, edges = [], clusters = [], bnodes = [], backs = {};
-    function edge(x1, y1, x2, y2, cls, op) {
-      var dx = x2 - x1, dy = y2 - y1;
-      edges.push('<div class="w-medge ' + cls + '" style="left:' + x1 + "px;top:" + y1 + "px;width:" + Math.hypot(dx, dy) +
-        "px;transform:rotate(" + (Math.atan2(dy, dx) * 180 / Math.PI) + "deg);opacity:" + op + '"></div>');
-    }
-    function ring(i, n, rx, ry, a0) { var a = a0 + i / n * Math.PI * 2; return [MX + Math.cos(a) * rx, MY + Math.sin(a) * ry]; }
-    var BP = {}, SP = {};
-    benches.forEach(function (b, i) {
-      BP[b.id] = benches.length <= 4 ? MAP_BP[i] : ring(i, benches.length, 300, 215, -Math.PI * 0.75);
-    });
-    skills.forEach(function (s, i) {
-      SP[s.id] = skills.length <= 4 ? MAP_SP[i] : ring(i, skills.length, 150, 112, -Math.PI / 2);
-    });
-    benches.forEach(function (bn) {
-      var bx = BP[bn.id][0], by = BP[bn.id][1], on = !mf || mf === bn.id, op = on ? 1 : 0.18;
-      edge(MX, MY, bx, by, "is-spoke", op);
-      var mine = items.filter(function (x) { return x.bench === bn.id && !x.inbox; });
-      var sk = {};
-      wbNbrs(bn.id).forEach(function (x) { if (x.type === "skill") sk[x.id] = 1; });
-      mine.forEach(function (x) { wbNbrs(x.id).forEach(function (y) { if (y.type === "skill") sk[y.id] = 1; }); });
-      backs[bn.id] = sk;
-      Object.keys(sk).forEach(function (sid) { edge(bx, by, SP[sid][0], SP[sid][1], "is-skill", op); });
-      var cl = MAP_GROUPS.map(function (g) {
-        return [g[0], g[1], mine.filter(function (x) { return g[2].indexOf(x.type) >= 0; })];
-      }).filter(function (g) { return g[2].length; });
-      var base = Math.atan2(by - MY, bx - MX);
-      cl.forEach(function (g, i) {
-        var a = base + (cl.length === 1 ? 0 : (-1 + (2 * i) / (cl.length - 1)) * 1.55), rr = i % 2 ? 1.28 : 1;
-        /* A BUBBLE NEVER SITS ON A BENCH. The fan is the reference's; when
-           the point it picks lands on a card, its own or a neighbour's, the
-           bubble walks further out along the same angle until it is clear,
-           and is held inside the canvas as it goes. */
-        var cx, cy, tries = 0;
-        do {
-          cx = Math.min(900, Math.max(60, bx + Math.cos(a) * 150 * rr));
-          cy = Math.min(615, Math.max(22, by + Math.sin(a) * 108 * rr));
-          rr += 0.12;
-        } while (tries++ < 10 && benches.some(function (o) {
-          var q = BP[o.id];
-          return Math.abs(cx - q[0]) < 150 && Math.abs(cy - q[1]) < 68;
-        }));
-        edge(bx, by, cx, cy, "is-leaf", op);
-        var n = g[0] === "hours" ? wbHm(g[2].reduce(function (t, x) { return t + x.mins; }, 0)) : String(g[2].length);
-        var label = g[0] === "hours" ? "logged" : g[2].length === 1 ? g[1].replace(/s$/, "") : g[1];
-        clusters.push('<button class="w-mclus" data-act="wb-mapclus" data-id="' + esc(bn.id + "|" + g[0]) +
-          '" style="left:' + cx + "px;top:" + cy + "px;opacity:" + op + '"><span class="w-mbadge" style="background:' +
-          tCol(g[0]) + '">' + esc(n) + "</span>" + esc(label) + "</button>");
-      });
-      bnodes.push('<button class="w-mbench' + (mf === bn.id ? " is-focus" : "") + '" aria-pressed="' + (mf === bn.id) +
-        '" data-act="wb-mapbench" data-id="' + esc(bn.id) + '" style="left:' + bx + "px;top:" + by + "px;opacity:" +
-        (on ? 1 : 0.35) + '"><span class="w-bline"><span class="w-mbdot" style="background:' + bn.dot + '"></span>' +
-        '<span class="w-mrole">' + esc(bn.role) + '</span></span><span class="w-mtitle' + (bn.draft ? " is-idea" : "") +
-        '">' + esc(bn.title) + "</span></button>");
-    });
-    var snodes = skills.map(function (sk) {
-      var op = !mf || (backs[mf] && backs[mf][sk.id]) ? 1 : 0.25;
-      return '<button class="w-mskill" data-act="wb-open" data-id="' + esc(sk.id) + '" style="left:' + SP[sk.id][0] +
-        "px;top:" + SP[sk.id][1] + "px;opacity:" + op + '">' + esc(sk.title) + "</button>";
-    });
-    var who = state.settings.demo ? "Maya" : (String(state.profile.name || "").trim().split(/\s+/)[0] || "You");
-    var out = wEyebrow("Map") + '<h1 class="w-h1">How your benches fit together</h1><p class="w-lead is-62">You sit in the ' +
-      "middle. Each bench is one piece of work, and around it is what it holds. The dashed lines are skills that " +
-      "work backs. Press a bench to follow its lines.</p>";
-    if (!benches.length) {
-      return out + '<p class="w-empty">No benches yet. Type <span class="w-mono">bench: name</span> in the line and it ' +
-        "appears here.</p>";
-    }
-    out += '<div class="w-mapwrap"><div class="w-mapbox" id="mapBox"><div class="w-mapclip" id="mapClip">' +
-      '<div class="w-mapcanvas" id="mapCanvas">' + edges.join("") + '<div class="w-mme">' + esc(who) + "</div>" +
-      snodes.join("") + clusters.join("") + bnodes.join("") + "</div></div></div>";
-    out += '<aside class="w-mapside">';
-    var FB = mf && wbGet(mf);
-    if (FB) {
-      var mineF = items.filter(function (x) { return x.bench === mf && !x.inbox; });
-      var sks = Object.keys(backs[mf] || {}).map(function (id) { return wbGet(id).title; });
-      out += '<div class="w-mfocus"><p class="w-mfrole">' + esc(FB.role) + '</p><h2>' + esc(FB.title) + "</h2><p>" +
-        esc(wbWords(mineF.length, "thing is", "things are") + " kept here, " +
-          wbWords(mineF.filter(function (x) { return x.type === "action" && !x.done; }).length, "action", "actions").toLowerCase() +
-          " open. " + (sks.length ? "It backs " + sks.join(" and ") + "." : "It backs no skill yet.")) + "</p>" +
-        '<button class="w-dark" data-act="wb-bench" data-id="' + esc(mf) + '">Open the bench →</button>' +
-        '<button class="w-light is-side" data-act="wb-mapclear">Show all</button></div>';
-    }
-    out += '<div class="w-mhow"><h2>How a bench works</h2>' + [
-      ["1", "A bench is one piece of work.", "A project, a thesis chapter, even an idea you have not started."],
-      ["2", "Everything lands on it.", "Notes, meetings, files, reading, actions and hours. Type while you are on it and it goes there."],
-      ["3", "Some of it backs a skill.", "Link an output or a method to a skill, or do it in the weekly review."],
-      ["4", "Backed skills make the record.", "The CV reads them. Nothing is typed twice."]].map(function (s) {
-        return '<div class="w-mstep"><span class="w-mono w-mnum">' + s[0] + '</span><span><b>' + esc(s[1]) + "</b> " +
-          '<span class="w-mtext">' + esc(s[2]) + "</span></span></div>";
-      }).join("") + "</div></aside></div>";
-    wbOrder = [];
-    return out;
-  }
-  /* The drawing is fixed at 960 × 640 and scaled to the box it sits in,
-     between 0.8 and 1.25, as the reference does — re-measured whenever
-     the box changes width. */
-  var mapObs = null;
-  function wbFitMap() {
-    var box = document.getElementById("mapBox"), clip = document.getElementById("mapClip"),
-      cv = document.getElementById("mapCanvas");
-    if (!box || !cv) return;
-    var k = Math.max(0.8, Math.min(1.25, (box.clientWidth || MAP_W) / MAP_W));
-    cv.style.transform = "scale(" + k + ")";
-    box.style.height = Math.round(MAP_H * k) + "px";
-    clip.style.width = Math.round(MAP_W * k) + "px";
-    clip.style.height = Math.round(MAP_H * k) + "px";
-    if (window.ResizeObserver && !box._obs) {
-      if (mapObs) mapObs.disconnect();
-      mapObs = new ResizeObserver(function () { wbFitMap(); });
-      mapObs.observe(box);
-      box._obs = true;
-    }
-  }
-
   /* ---------------- the phone's two extra screens ----------------
 
      Under 880px the sidebar goes and four tabs sit under the line, as the
@@ -10941,7 +10890,7 @@
     }).join("") + "</div>";
   }
   function wbMoreView() {
-    var rows = [["wb-go", "map", "Map", "How your benches fit together"],
+    var rows = [["wb-go", "map", "Map", "Everything, and how it is joined"],
       ["wb-go", "record", "Record", "Your skills and the live CV"],
       ["wb-else", "career", "Career", "Roles, education, training, skills"],
       ["wb-else", "work", "Work", "Projects, workflows, people, equipment, hours"],
@@ -10955,6 +10904,815 @@
       return '<button class="w-srec" data-act="' + r[0] + '" data-id="' + r[1] + '"><span class="w-grow"><span class="w-rt">' +
         esc(r[2]) + '</span><span class="w-snip">' + esc(r[3]) + '</span></span><span class="w-mono w-chev">›</span></button>';
     }).join("") + "</div>";
+  }
+
+  /* ============================================================
+     THE MAP IS A GRAPH OF EVERY RECORD, AND YOU CAN EDIT IT.
+
+     Asked for the map to be "flexible like the workflow page" and
+     editable, and then — given the choice — for every record as its own
+     node, the way Obsidian draws a vault. So this is the old sheet's
+     machinery (pan, zoom, drag, the keyboard, a menu that is the strip
+     laid down) over the Workbench's projection: every node is a record in
+     `WB.items`, and every line is a fact the book already holds.
+
+     Three kinds of line, and none is invented:
+       · a LINK — any `state.links` entry, drawn solid; the only kind you
+         draw and cut here;
+       · ON A BENCH — a record to the bench it is kept on, dashed, because
+         it is a field on the record and not a link; cutting it means
+         taking the record off the bench, and the map says so;
+       · a WIKI LINK — `[[Title]]` in a note, dotted, because it is written
+         in text (the notes chunk supplies `grWikiEdges`).
+
+     WHERE A NODE SITS IS ITS OWN RECORD, NOT A FIELD ON THE ONE IT DRAWS.
+     A position written onto the record would stamp the record, and sync
+     merges newer-wins per record — so dragging a node on the laptop could
+     outrank an edit the phone had made to that same action's name. Worse,
+     placing a graph for the first time would stamp EVERY record in the
+     book. `state.spots` holds `{id: <the record's ref>, x, y}`, which
+     syncs on its own and can never clobber the thing it positions.
+
+     A node with no spot has never been placed, so placing it is not a
+     re-layout: the first open lays the book out once and writes it down,
+     and after that a new record is seeded beside what it is linked to
+     while everything already placed stays exactly where it is. Nothing
+     moves on its own; Tidy is a button and it is undoable.
+     ============================================================ */
+
+  var GR = { ox: 0, oy: 0, k: 1, fitted: false, edge: "", q: "", hide: { hours: 1 }, pane: false,
+    hideDone: false, local: "", depth: 1, max: false, undo: [], redo: [] };
+  var grBox = null, grSvg = null, grDrag = null, grPress = null, grMenuEl = null, grPinch = null;
+  var GR_MANY = { action: "Actions", note: "Notes", meeting: "Meetings", file: "Files", link: "Links",
+    reading: "To read", script: "Scripts", formula: "Formulas", method: "Methods",
+    reference: "References", place: "Places", output: "Outputs", skill: "Skills",
+    training: "Training", draft: "Ideas", hours: "Hours", role: "Roles", bench: "Benches",
+    template: "Templates", person: "People", job: "Employers", education: "Education",
+    workflow: "Workflows", run: "Runs", asset: "Equipment", portfolio: "Portfolio", cv: "CVs" };
+  var GR_H = 30, GR_BH = 40;
+
+  /* A book replaced wholesale (the example, a restore, erasing) takes the
+     move history with it: the entries close over ids and values, so a
+     stale one would do nothing, but a button offering to undo a move in a
+     book that no longer holds it is a control that does nothing. */
+  function grReset() {
+    GR.undo = []; GR.redo = []; GR.local = ""; GR.edge = ""; GR.q = ""; GR.fitted = false;
+    grMenuClose();
+  }
+
+  function grSpot(id) { return byId(state.spots, id); }
+  function grLabel(it) { return clip(wbTitle(it) || "(no name)", it.type === "bench" ? 30 : 26); }
+  /* A box as wide as its label. SVG text cannot be measured before it is
+     drawn, and drawing to measure would be two paints per frame; an
+     average glyph is close enough for a box, and the label is clipped to
+     a length the estimate holds for. */
+  function grW(it) {
+    var n = grLabel(it).length;
+    return Math.round(it.type === "bench" ? 44 + n * 8.6 : 36 + n * 7.1);
+  }
+  function grHt(it) { return it.type === "bench" ? GR_BH : GR_H; }
+
+  /* ---------------- the lines ---------------- */
+
+  function grEdges() {
+    var out = [], by = WB.by;
+    state.links.forEach(function (l) {
+      if (!by[l.a] || !by[l.b] || l.a === l.b) return;
+      out.push({ id: "l:" + l.id, a: l.a, b: l.b, kind: "link", rel: l.rel || "with" });
+    });
+    WB.items.forEach(function (it) {
+      if (it.bench && by[it.bench] && it.type !== "bench") {
+        out.push({ id: "m:" + it.id, a: it.id, b: it.bench, kind: "in" });
+      }
+    });
+    if (typeof grWikiEdges === "function") out = out.concat(grWikiEdges());
+    return out;
+  }
+  function grNbrsOf(id, edges) {
+    var s = {};
+    edges.forEach(function (e) { if (e.a === id) s[e.b] = 1; else if (e.b === id) s[e.a] = 1; });
+    return Object.keys(s);
+  }
+
+  /* ---------------- what is shown ---------------- */
+
+  function grMatches(it, q) {
+    if (!q) return true;
+    var hay = (it.title + " " + (it.body || "") + " " + (it.path || "") + " " + tWord(it.type)).toLowerCase();
+    return q.toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+  function grVisible(edges) {
+    var keep = {};
+    WB.items.forEach(function (it) {
+      if (GR.hide[it.type]) return;
+      if (GR.hideDone && it.done) return;
+      keep[it.id] = 1;
+    });
+    if (GR.local && WB.by[GR.local]) {
+      /* LOCAL GRAPH: it and what is within reach of it. The node itself is
+         shown even when its own kind is switched off, or picking "only
+         what is near it" on an hour would draw nothing at all. */
+      var near = {}, front = [GR.local];
+      near[GR.local] = 0;
+      for (var d = 0; d < GR.depth; d++) {
+        var next = [];
+        front.forEach(function (id) {
+          grNbrsOf(id, edges).forEach(function (o) {
+            if (near[o] === undefined) { near[o] = d + 1; next.push(o); }
+          });
+        });
+        front = next;
+      }
+      var k2 = {};
+      Object.keys(near).forEach(function (id) { if (keep[id] || id === GR.local) k2[id] = 1; });
+      keep = k2;
+    } else if (GR.local) {
+      GR.local = "";
+    }
+    return keep;
+  }
+
+  /* ---------------- placing ---------------- */
+
+  function grHash(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) / 4294967296;
+  }
+  /* Fruchterman–Reingold with a fixed seed and a fixed number of rounds,
+     so the same book always lays out the same way. `fixed` nodes pull and
+     push but do not move — that is how a new record is placed among
+     records somebody has already arranged by hand. */
+  function grLayout(ids, pos, fixed, edges) {
+    var n = ids.length;
+    if (!n) return;
+    var K = 105, idx = {};
+    ids.forEach(function (id, i) { idx[id] = i; });
+    var E = edges.filter(function (e) { return idx[e.a] !== undefined && idx[e.b] !== undefined; })
+      .map(function (e) { return [idx[e.a], idx[e.b], e.kind === "in" ? 0.7 : 1]; });
+    var X = ids.map(function (id) { return pos[id][0]; }), Y = ids.map(function (id) { return pos[id][1]; });
+    var fx = new Float64Array(n), fy = new Float64Array(n);
+    var rounds = n > 250 ? 120 : 260, t = K * 1.6, R = K * Math.sqrt(n) * 0.75, G = n * K * K / (R * R);
+    for (var r = 0; r < rounds; r++) {
+      fx.fill(0); fy.fill(0);
+      for (var i = 0; i < n; i++) {
+        for (var j = i + 1; j < n; j++) {
+          var dx = X[i] - X[j], dy = Y[i] - Y[j], d2 = dx * dx + dy * dy || 0.01;
+          var f = K * K / d2;
+          fx[i] += dx * f; fy[i] += dy * f; fx[j] -= dx * f; fy[j] -= dy * f;
+        }
+      }
+      E.forEach(function (e) {
+        var a = e[0], b = e[1], dx = X[a] - X[b], dy = Y[a] - Y[b], d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        var f = d / K * e[2];
+        fx[a] -= dx * f; fy[a] -= dy * f; fx[b] += dx * f; fy[b] += dy * f;
+      });
+      for (var m = 0; m < n; m++) {
+        if (fixed[ids[m]]) continue;
+        /* A pull to the middle, sized so a record linked to nothing
+           settles at the edge of a disc about as big as the book needs
+           rather than drifting off to the edge of the world: repulsion
+           from n others falls as 1/d, so the pull has to grow as d. */
+        fx[m] -= X[m] * G; fy[m] -= Y[m] * G;
+        var len = Math.sqrt(fx[m] * fx[m] + fy[m] * fy[m]) || 0.01, step = Math.min(len, t);
+        X[m] += fx[m] / len * step; Y[m] += fy[m] / len * step * 0.8;
+      }
+      t = Math.max(2, t * 0.975);
+    }
+    ids.forEach(function (id, i) { pos[id] = [X[i], Y[i]]; });
+    grUnoverlap(ids, pos, fixed);
+  }
+  /* The spring layout knows points and these are boxes, so a last pass
+     pushes apart any two that overlap. Only a free node moves. */
+  function grUnoverlap(ids, pos, fixed) {
+    var its = ids.map(function (id) { return WB.by[id]; });
+    for (var pass = 0; pass < 30; pass++) {
+      var moved = false;
+      for (var i = 0; i < ids.length; i++) {
+        for (var j = i + 1; j < ids.length; j++) {
+          var a = pos[ids[i]], b = pos[ids[j]];
+          var ox = (grW(its[i]) + grW(its[j])) / 2 + 14 - Math.abs(a[0] - b[0]);
+          var oy = (grHt(its[i]) + grHt(its[j])) / 2 + 12 - Math.abs(a[1] - b[1]);
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          var fa = !fixed[ids[i]], fb = !fixed[ids[j]];
+          if (!fa && !fb) continue;
+          var sy = (a[1] <= b[1] ? -1 : 1), share = fa && fb ? 0.5 : 1;
+          if (oy < ox) {
+            if (fa) a[1] += sy * oy * share; if (fb) b[1] -= sy * oy * share;
+          } else {
+            var sx = (a[0] <= b[0] ? -1 : 1);
+            if (fa) a[0] += sx * ox * share; if (fb) b[0] -= sx * ox * share;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+  }
+  function grSeed(id, pos, edges) {
+    var near = grNbrsOf(id, edges).filter(function (o) { return pos[o]; });
+    var h = grHash(id), a = h * Math.PI * 2;
+    if (near.length) {
+      var cx = 0, cy = 0;
+      near.forEach(function (o) { cx += pos[o][0]; cy += pos[o][1]; });
+      return [cx / near.length + Math.cos(a) * 90, cy / near.length + Math.sin(a) * 70];
+    }
+    var r = 160 + h * 380;
+    return [Math.cos(a) * r, Math.sin(a) * r * 0.75];
+  }
+  /* Every record gets a spot the first time the map sees it, and it is
+     written down so it stays put. Records of hidden kinds are placed too,
+     or switching a chip on would lay out part of the sheet again. */
+  function grEnsureSpots() {
+    var edges = grEdges(), pos = {}, fixed = {}, fresh = [];
+    WB.items.forEach(function (it) {
+      var s = grSpot(it.id);
+      if (s) { pos[it.id] = [num(s.x), num(s.y)]; fixed[it.id] = 1; } else fresh.push(it.id);
+    });
+    if (!fresh.length) return pos;
+    var all = !Object.keys(fixed).length;
+    fresh.forEach(function (id, i) {
+      pos[id] = all ? [Math.cos(i * 2.39996) * 40 * Math.sqrt(i + 1), Math.sin(i * 2.39996) * 30 * Math.sqrt(i + 1)]
+        : grSeed(id, pos, edges);
+    });
+    grLayout(WB.items.map(function (it) { return it.id; }), pos, fixed, edges);
+    fresh.forEach(function (id) {
+      state.spots.push({ id: id, x: Math.round(pos[id][0]), y: Math.round(pos[id][1]) });
+    });
+    commit();
+    return pos;
+  }
+  function grPositions() {
+    var pos = {};
+    state.spots.forEach(function (s) { if (WB.by[s.id]) pos[s.id] = [num(s.x), num(s.y)]; });
+    return pos;
+  }
+
+  /* ---------------- the screen ---------------- */
+
+  function wbMapView() {
+    var total = WB.items.length;
+    var out = wEyebrow("Map") + '<h1 class="w-h1">Everything, and how it is joined</h1>' +
+      '<p class="w-lead is-62">Every record is a node. Drag one to move it, drag from its ring onto another to ' +
+      "link them, pick a line to cut it.</p>";
+    if (!total) {
+      return out + '<p class="w-empty">Nothing in the book yet. Type <span class="w-mono">bench: name</span> in the ' +
+        "line, or load the example from Today.</p>";
+    }
+    var types = {};
+    WB.items.forEach(function (it) { types[it.type] = (types[it.type] || 0) + 1; });
+    var order = Object.keys(GR_MANY).filter(function (t) { return types[t]; });
+    Object.keys(types).forEach(function (t) { if (order.indexOf(t) < 0) order.push(t); });
+    out += '<div class="g-chips" role="group" aria-label="Kinds shown">' + order.map(function (t) {
+      var on = !GR.hide[t];
+      return '<button class="g-chip' + (on ? " is-on" : "") + '" aria-pressed="' + on + '" data-act="gr-chip" data-id="' +
+        esc(t) + '"><span class="g-csq" style="background:' + tCol(t) + '"></span>' + esc(GR_MANY[t] || tWord(t)) +
+        ' <span class="w-mono">' + types[t] + "</span></button>";
+    }).join("") + "</div>";
+    var L = GR.local && wbGet(GR.local);
+    out += '<div class="g-wrap' + (GR.max ? " is-max" : "") + '"><div class="g-bar">' +
+      '<input class="g-q" id="grQ" type="search" placeholder="Light up what matches…" aria-label="Light up what matches" value="' +
+      esc(GR.q) + '" />' +
+      '<button class="g-tb" data-act="gr-done" aria-pressed="' + GR.hideDone + '">' + (GR.hideDone ? "Showing open only" : "Hide what is done") + "</button>" +
+      (L ? '<span class="g-local">Near <b>' + esc(clip(L.title, 24)) + '</b><button class="g-tb" data-act="gr-depth">' +
+        (GR.depth === 1 ? "One step out" : "Two steps out") + '</button><button class="g-tb" data-act="gr-local" data-id="">Everything</button></span>' : "") +
+      '<span class="g-sp"></span>' +
+      '<button class="g-tb" data-act="gr-zoom" data-id="out" aria-label="Zoom out">−</button>' +
+      '<button class="g-tb" data-act="gr-zoom" data-id="in" aria-label="Zoom in">+</button>' +
+      '<button class="g-tb" data-act="gr-fit">Fit</button>' +
+      '<button class="g-tb" data-act="gr-tidy">Tidy</button>' +
+      '<button class="g-tb" data-act="gr-undo"' + (GR.undo.length ? "" : " disabled") + ' title="' +
+        esc(GR.undo.length ? "Undo " + GR.undo[GR.undo.length - 1].label : "Nothing to undo") + '">Undo move</button>' +
+      '<button class="g-tb" data-act="gr-redo"' + (GR.redo.length ? "" : " disabled") + ' title="' +
+        esc(GR.redo.length ? "Redo " + GR.redo[GR.redo.length - 1].label : "Nothing to redo") + '">Redo</button>' +
+      '<button class="g-tb" data-act="gr-max" aria-pressed="' + GR.max + '">' + (GR.max ? "Leave full screen" : "Full screen") + "</button></div>" +
+      '<div class="g-strip" id="grStrip"></div>' +
+      '<div class="g-host" id="grHost"></div>' +
+      '<p class="g-foot" id="grFoot"></p></div>';
+    out += '<p class="g-keys">' + [["← →", "walk the nodes"], ["↑ ↓", "follow its lines"], ["Enter", "what you can do to it"],
+      ["Delete", "cut the picked line"], ["+ − 0", "zoom, fit"], ["Esc", "let go"]].map(function (k) {
+        return '<span><span class="w-mono">' + k[0] + "</span> " + k[1] + "</span>";
+      }).join("") + "</p>";
+    wbOrder = [];
+    return out;
+  }
+
+  /* The sheet is MOUNTED ONCE and moved into each fresh render's host.
+     Rebuilding the <svg> destroyed the element holding the pointer
+     capture on the first move of a drag in w4, and took the keyboard focus
+     with it. Only its contents are redrawn. */
+  function wbMountGraph() {
+    var host = document.getElementById("grHost");
+    if (!host) { grMenuClose(); return; }
+    if (!grBox) grBuild();
+    host.appendChild(grBox);
+    grEnsureSpots();
+    var q = document.getElementById("grQ");
+    if (q) q.addEventListener("input", function () { GR.q = q.value; grPaint(); });
+    document.documentElement.classList.toggle("g-maxed", GR.max);
+    if (!GR.fitted) { grOpenView(); GR.fitted = true; }
+    grPaint();
+  }
+  function grBuild() {
+    grBox = document.createElement("div");
+    grBox.className = "g-box";
+    grBox.innerHTML = '<svg class="g-sheet" tabindex="0" role="application" aria-label="The map. Arrow keys walk the ' +
+      'nodes, Enter shows what you can do to the picked one." xmlns="http://www.w3.org/2000/svg">' +
+      '<g class="g-world"></g></svg>';
+    grSvg = grBox.querySelector("svg");
+    grWire();
+  }
+
+  function grStandWord(it) {
+    if (it.type !== "action" || it.done) return "";
+    var s = wbStand(it).w;
+    return s === "Late" || s === "Today" ? s : "";
+  }
+  function grPaint() {
+    if (!grSvg || !grSvg.isConnected) return;
+    var edges = grEdges(), keep = grVisible(edges), pos = grPositions();
+    var sel = wbSel && keep[wbSel] ? wbSel : "";
+    var hot = {};
+    if (sel) grNbrsOf(sel, edges).forEach(function (o) { hot[o] = 1; });
+    var q = GR.q.trim(), out = [], cut = "";
+    edges.forEach(function (e) {
+      if (!keep[e.a] || !keep[e.b] || !pos[e.a] || !pos[e.b]) return;
+      var a = pos[e.a], b = pos[e.b], picked = GR.edge === e.id;
+      var cls = "g-e is-" + e.kind + (picked ? " is-sel" : "") + (sel && (e.a === sel || e.b === sel) ? " is-hot" : "") +
+        (q && !(grMatches(WB.by[e.a], q) && grMatches(WB.by[e.b], q)) ? " is-dim" : "");
+      var tip = WB.by[e.a].title + (e.kind === "in" ? " is on the bench " : e.kind === "wiki" ? " names " : " — " +
+        (e.rel === "with" ? "linked to" : e.rel) + " — ") + WB.by[e.b].title;
+      out.push('<g class="' + cls + '" data-edge="' + esc(e.id) + '"><line class="g-ehit" x1="' + a[0] + '" y1="' + a[1] +
+        '" x2="' + b[0] + '" y2="' + b[1] + '"/><line class="g-eln" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] +
+        '" y2="' + b[1] + '"/><title>' + esc(tip) + "</title></g>");
+      if (picked) {
+        var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        cut = '<g class="g-cut" data-cut="' + esc(e.id) + '" transform="translate(' + mx + "," + my + ')"><circle r="11"/>' +
+          '<path d="M-4,-4L4,4M4,-4L-4,4"/><title>' + (e.kind === "link" ? "Cut this link" :
+            e.kind === "in" ? "Take it off the bench" : "Written in the note — edit the note to change it") + "</title></g>";
+      }
+    });
+    if (GR.edge && !cut) GR.edge = "";
+    var ids = Object.keys(keep).filter(function (id) { return pos[id]; });
+    /* A picked node is drawn last, so its ring is never under a
+       neighbour. */
+    ids.sort(function (a, b) { return (a === sel) - (b === sel); });
+    ids.forEach(function (id) {
+      var it = WB.by[id], p = pos[id], w = grW(it), h = grHt(it), st = grStandWord(it);
+      var cls = "g-n t-" + it.type + (id === sel ? " is-sel" : "") + (hot[id] ? " is-hot" : "") +
+        (st === "Late" ? " is-late" : "") + (it.done ? " is-done" : "") + (q && !grMatches(it, q) ? " is-dim" : "") +
+        (GR.local === id ? " is-local" : "");
+      out.push('<g class="' + cls + '" data-node="' + esc(id) + '" transform="translate(' + p[0] + "," + p[1] + ')">' +
+        '<rect class="g-rect" x="' + (-w / 2) + '" y="' + (-h / 2) + '" width="' + w + '" height="' + h + '" rx="' +
+        (it.type === "bench" ? 12 : 8) + '"/>' +
+        '<rect class="g-sq" x="' + (-w / 2 + 11) + '" y="-4.5" width="9" height="9" rx="2.5" style="fill:' + tCol(it.type) + '"/>' +
+        '<text class="g-lab" x="' + (-w / 2 + 27) + '" y="' + (it.type === "bench" ? 5.5 : 4.5) + '">' + esc(grLabel(it)) + "</text>" +
+        (st ? '<text class="g-st' + (st === "Late" ? " is-late" : "") + '" x="' + (-w / 2 + 4) + '" y="' + (h / 2 + 13) + '">' + st + "</text>" : "") +
+        (id === sel ? '<circle class="g-hand" data-hand="' + esc(id) + '" cx="' + (w / 2) + '" cy="0" r="7"><title>Drag onto another node to link them</title></circle>' : "") +
+        "<title>" + esc(tWord(it.type) + " · " + wbTitle(it)) + "</title></g>");
+    });
+    if (grDrag && grDrag.link && grDrag.to) {
+      var s0 = pos[grDrag.link];
+      if (s0) out.push('<line class="g-draw" x1="' + s0[0] + '" y1="' + s0[1] + '" x2="' + grDrag.to[0] + '" y2="' + grDrag.to[1] + '"/>');
+    }
+    out.push(cut);
+    grSvg.querySelector(".g-world").innerHTML = out.join("");
+    grSvg.querySelector(".g-world").setAttribute("transform", "translate(" + GR.ox + "," + GR.oy + ") scale(" + GR.k + ")");
+    /* The survey grid pans and zooms with the work. */
+    var g = 40 * GR.k;
+    grBox.style.backgroundSize = g + "px " + g + "px";
+    grBox.style.backgroundPosition = GR.ox + "px " + GR.oy + "px";
+    grPaintStrip();
+    var foot = document.getElementById("grFoot");
+    if (foot) {
+      /* A narrowed sheet says so, or a record switched off reads as a
+         record gone missing. */
+      var n = ids.length, all = WB.items.length;
+      foot.textContent = n === all ? "Showing every record in the book."
+        : "Showing " + n + " of " + all + " records. The rest are " +
+          (GR.local ? "switched off above, or further from the picked one." : "switched off above.");
+    }
+  }
+
+  /* ---------------- the strip, and the menu that is the strip laid down ------ */
+
+  /* ONE LIST, TWO RENDERINGS. The strip lays it across, the menu lays it
+     down, and a test reads both — two copies of one list drift the first
+     time an act is added. */
+  function grActs(id) {
+    var it = wbGet(id);
+    if (!it) return [];
+    var acts = [];
+    if (window.innerWidth < 880) acts.push({ act: "gr-pane", label: "Details" });
+    if (it.type === "bench") acts.push({ act: "wb-bench", label: "Open the bench", loud: true });
+    else if (it.type === "action") acts.push({ act: "wb-done", label: it.done ? "Reopen" : "Mark done", loud: true });
+    acts.push({ act: "gr-link", label: "Link to…" });
+    if (WB_EDIT[parseRef(id).kind]) acts.push({ act: "wb-edit", label: "Edit" });
+    acts.push({ act: "gr-local", label: GR.local === id ? "Show everything" : "Only what is near it" });
+    if (it.path) acts.push({ act: "wb-copy", label: /^https?:\/\//.test(it.path) ? "Copy the link" : "Copy the path" });
+    if (WB_EDIT[parseRef(id).kind]) acts.push({ act: "wb-remove", label: "Remove", danger: true });
+    return acts;
+  }
+  function grActBtn(a, id, cls) {
+    return '<button class="' + cls + (a.loud ? " is-loud" : "") + (a.danger ? " is-danger" : "") + '" data-act="' + a.act +
+      '" data-id="' + esc(a.act === "gr-local" && GR.local === id ? "" : id) + '">' + esc(a.label) + "</button>";
+  }
+  function grPaintStrip() {
+    var s = document.getElementById("grStrip");
+    if (!s) return;
+    var it = wbSel && wbGet(wbSel);
+    s.innerHTML = it ? '<span class="g-sname">' + wDot(it.type, "is-9") + '<b>' + esc(clip(wbTitle(it), 40)) + "</b></span>" +
+      grActs(it.id).map(function (a) { return grActBtn(a, it.id, "g-sb"); }).join("")
+      : '<span class="g-shint">Pick a node to see what you can do to it.</span>';
+  }
+  function grMenuClose() {
+    if (grMenuEl && grMenuEl.parentNode) grMenuEl.parentNode.removeChild(grMenuEl);
+    grMenuEl = null;
+  }
+  function grMenuOpen(html, x, y) {
+    grMenuClose();
+    grMenuEl = document.createElement("div");
+    grMenuEl.className = "g-menu";
+    grMenuEl.setAttribute("role", "menu");
+    grMenuEl.innerHTML = html;
+    document.body.appendChild(grMenuEl);
+    var r = grMenuEl.getBoundingClientRect();
+    grMenuEl.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + "px";
+    grMenuEl.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 8)) + "px";
+    grMenuEl.addEventListener("click", function () { setTimeout(grMenuClose, 0); });
+    var first = grMenuEl.querySelector("button");
+    if (first) first.focus({ preventScroll: true });
+  }
+  function grMenuNode(id, x, y) {
+    grMenuOpen(grActs(id).map(function (a) { return grActBtn(a, id, "g-mrow"); }).join(""), x, y);
+  }
+  function grMenuSheet(at, x, y) {
+    var w = Math.round(at.x) + "|" + Math.round(at.y);
+    grMenuOpen('<button class="g-mrow" data-act="gr-new" data-id="note|' + w + '">New note here</button>' +
+      '<button class="g-mrow" data-act="gr-new" data-id="bench|' + w + '">New bench here</button>', x, y);
+  }
+
+  /* ---------------- driving it ---------------- */
+
+  function grAt(ev) {
+    var r = grSvg.getBoundingClientRect();
+    return { x: (ev.clientX - r.left - GR.ox) / GR.k, y: (ev.clientY - r.top - GR.oy) / GR.k };
+  }
+  function grZoomAt(k, px, py) {
+    k = Math.max(0.15, Math.min(2.5, k));
+    GR.ox = px - (px - GR.ox) * k / GR.k;
+    GR.oy = py - (py - GR.oy) * k / GR.k;
+    GR.k = k;
+  }
+  function grPick(id) {
+    GR.edge = ""; GR.pane = false;
+    wbSel = id || null; wbLinking = false; wbLinkQ = "";
+    wbPaintPane();
+    grPaint();
+  }
+  function grMoveSpot(id, x, y) {
+    var s = grSpot(id);
+    if (s) { s.x = Math.round(x); s.y = Math.round(y); }
+  }
+
+  function grWire() {
+    var el = grSvg;
+    el.addEventListener("pointerdown", function (ev) {
+      if (ev.button === 2) return;
+      grMenuClose();
+      el.focus({ preventScroll: true });
+      if (ev.pointerType === "touch") {
+        grPinch = grPinch || {};
+        grPinch[ev.pointerId] = [ev.clientX, ev.clientY];
+        if (Object.keys(grPinch).length === 2) {
+          /* A second finger turns the press into a pinch, and whatever the
+             first finger was dragging stays where it was. */
+          if (grDrag && grDrag.id && grDrag.moved) grMoveSpot(grDrag.id, grDrag.cx, grDrag.cy);
+          grDrag = null;
+          if (grPress) { clearTimeout(grPress); grPress = null; }
+          return;
+        }
+      }
+      var cutEl = ev.target.closest && ev.target.closest("[data-cut]");
+      if (cutEl) { ev.preventDefault(); grCut(cutEl.getAttribute("data-cut")); return; }
+      var hand = ev.target.closest && ev.target.closest("[data-hand]");
+      var node = ev.target.closest && ev.target.closest("[data-node]");
+      var edge = !node && ev.target.closest && ev.target.closest("[data-edge]");
+      var id = node ? node.getAttribute("data-node") : "", s = id ? grSpot(id) : null;
+      grDrag = { id: hand ? "" : id, link: hand ? hand.getAttribute("data-hand") : "", edge: edge ? edge.getAttribute("data-edge") : "",
+        sx: ev.clientX, sy: ev.clientY, moved: false, cx: s ? num(s.x) : 0, cy: s ? num(s.y) : 0,
+        ox: GR.ox, oy: GR.oy, at: grAt(ev) };
+      el.setPointerCapture(ev.pointerId);
+      /* A long press is a right-click on a phone. The node comes from THE
+         PRESS: `ev.target` under capture is the <svg>, and a layout that
+         moves between the press and the menu makes any later reading of
+         the coordinates a reading of the last frame. */
+      var cx = ev.clientX, cy = ev.clientY, at = grDrag.at;
+      grPress = setTimeout(function () {
+        grPress = null;
+        if (!grDrag || grDrag.moved) return;
+        var d = grDrag; grDrag = null;
+        if (d.id) { grPick(d.id); requestAnimationFrame(function () { grMenuNode(d.id, cx, cy); }); }
+        else if (!d.link && !d.edge) grMenuSheet(at, cx, cy);
+      }, 520);
+    });
+    el.addEventListener("pointermove", function (ev) {
+      if (grPinch && grPinch[ev.pointerId] && Object.keys(grPinch).length === 2) {
+        var ids = Object.keys(grPinch), a = grPinch[ids[0]], b = grPinch[ids[1]];
+        var d0 = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        grPinch[ev.pointerId] = [ev.clientX, ev.clientY];
+        a = grPinch[ids[0]]; b = grPinch[ids[1]];
+        var d1 = Math.hypot(a[0] - b[0], a[1] - b[1]), r = el.getBoundingClientRect();
+        if (d0 > 0) grZoomAt(GR.k * d1 / d0, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top);
+        grPaint();
+        return;
+      }
+      if (!grDrag) return;
+      var dx = ev.clientX - grDrag.sx, dy = ev.clientY - grDrag.sy;
+      if (!grDrag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      grDrag.moved = true;
+      if (grPress) { clearTimeout(grPress); grPress = null; }
+      if (grDrag.link) {
+        var p = grAt(ev);
+        grDrag.to = [p.x, p.y];
+      } else if (grDrag.id) {
+        grMoveSpot(grDrag.id, grDrag.cx + dx / GR.k, grDrag.cy + dy / GR.k);
+      } else {
+        GR.ox = grDrag.ox + dx; GR.oy = grDrag.oy + dy;
+      }
+      grPaint();
+    });
+    function letGo(ev) {
+      if (grPinch) { delete grPinch[ev.pointerId]; if (!Object.keys(grPinch).length) grPinch = null; }
+      if (grPress) { clearTimeout(grPress); grPress = null; }
+      if (!grDrag) return;
+      var d = grDrag; grDrag = null;
+      if (d.link) {
+        grPaint();
+        if (!d.moved) { grPick(d.link); return; }
+        /* Where the finger was let go is a question about the drawing as
+           it stands NOW, so it is asked of the document, not the capture
+           target. */
+        var under = document.elementFromPoint(ev.clientX, ev.clientY);
+        var tn = under && under.closest && under.closest("[data-node]"), to = tn && tn.getAttribute("data-node");
+        if (!to || to === d.link) { toast("Let go on another node to link them."); return; }
+        if (wbLinked(d.link, to)) { toast("Those two are already linked."); return; }
+        wbToggleLink(d.link, to);
+        return;
+      }
+      if (d.id && d.moved) {
+        var s = grSpot(d.id);
+        if (s) {
+          var id = d.id, wasX = d.cx, wasY = d.cy, nowX = num(s.x), nowY = num(s.y), it = wbGet(id);
+          grPush("moving " + (it ? clip(it.title, 30) : "a node"),
+            function () { grMoveSpot(id, wasX, wasY); }, function () { grMoveSpot(id, nowX, nowY); });
+          commit();
+        }
+        /* Moving a node picks it, so the strip names what you just moved. */
+        grPick(d.id);
+        grBarPaint();
+      } else if (d.id) {
+        grPick(d.id);
+      } else if (d.edge && !d.moved) {
+        GR.edge = d.edge; grPaint();
+      } else if (!d.moved) {
+        /* Letting go on empty sheet has to mean letting go. */
+        GR.edge = "";
+        if (wbSel) grPick(null); else grPaint();
+      }
+    }
+    el.addEventListener("pointerup", letGo);
+    el.addEventListener("pointercancel", letGo);
+    el.addEventListener("contextmenu", function (ev) {
+      ev.preventDefault();
+      if (grPress) { clearTimeout(grPress); grPress = null; }
+      var n = ev.target.closest && ev.target.closest("[data-node]");
+      var id = (grDrag && grDrag.id) || (n && n.getAttribute("data-node")) || "";
+      var at = (grDrag && grDrag.at) || grAt(ev);
+      grDrag = null;
+      if (id) { grPick(id); var x = ev.clientX, y = ev.clientY; requestAnimationFrame(function () { grMenuNode(id, x, y); }); }
+      else grMenuSheet(at, ev.clientX, ev.clientY);
+    });
+    el.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var r = el.getBoundingClientRect(), f = Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.0015));
+      grZoomAt(GR.k * f, ev.clientX - r.left, ev.clientY - r.top);
+      grPaint();
+    }, { passive: false });
+    el.addEventListener("keydown", grKey);
+  }
+
+  /* Undo and Redo on the toolbar are for WHERE THINGS SIT — a move and a
+     Tidy. Every entry closes over ids and values, never a record, so an
+     entry about a node that has since gone does nothing. What changes the
+     book (a link, a cut, a new node) is undone on its toast, the way every
+     other change in the Workbench is: two undos for one act would be the
+     fault two copies of one list is. */
+  function grPush(label, undo, redo) {
+    GR.undo.push({ label: label, undo: undo, redo: redo });
+    if (GR.undo.length > 60) GR.undo.shift();
+    GR.redo = [];
+  }
+  function grBarPaint() {
+    var u = document.querySelector('[data-act="gr-undo"]'), r = document.querySelector('[data-act="gr-redo"]');
+    if (u) { u.disabled = !GR.undo.length; u.title = GR.undo.length ? "Undo " + GR.undo[GR.undo.length - 1].label : "Nothing to undo"; }
+    if (r) { r.disabled = !GR.redo.length; r.title = GR.redo.length ? "Redo " + GR.redo[GR.redo.length - 1].label : "Nothing to redo"; }
+  }
+  function grUndo(redo) {
+    var from = redo ? GR.redo : GR.undo, to = redo ? GR.undo : GR.redo, e = from.pop();
+    if (!e) { toast(redo ? "Nothing to redo." : "Nothing to undo on the map."); return; }
+    (redo ? e.redo : e.undo)();
+    to.push(e);
+    commit(); grPaint(); grBarPaint();
+    toast((redo ? "Redone: " : "Undone: ") + e.label);
+  }
+
+  function grCut(edgeId) {
+    var kind = edgeId.slice(0, 2), rest = edgeId.slice(2);
+    GR.edge = "";
+    if (kind === "l:") {
+      var snap = wbSnap();
+      state.links = state.links.filter(function (l) { return l.id !== rest; });
+      wbDone("Link cut", snap);
+    } else if (kind === "m:") {
+      var it = wbGet(rest), b = it && wbGet(it.bench);
+      if (!it || !b) return;
+      confirmAction({ title: "Take it off " + b.title + "?",
+        message: "This line is not a link: “" + it.title + "” is kept on that bench. Taking it off leaves it in the book, " +
+          "on no bench, and every link it has stays.", confirmLabel: "Take it off" }, function () {
+        var s2 = wbSnap(), rec = recOf(rest);
+        if (rec) rec.projectId = "";
+        wbDone("Taken off " + b.title, s2);
+      });
+    } else {
+      toast("That line is written in the note. Edit the note to change it.");
+      grPaint();
+    }
+  }
+
+  /* THE FIRST VIEW IS READABLE, AND FIT IS THE OVERVIEW. Fitting a
+     sixty-node book into a laptop's box sets 13px labels at about seven
+     pixels — a picture of the shape and not a thing anybody can read. So
+     opening the map fits, then holds the zoom at a floor where a label
+     reads, centred on what matters: the picked node, else a late one,
+     else the middle of the work. The Fit button is the true fit. */
+  function grOpenView() {
+    grFit();
+    var floor = window.innerWidth < 620 ? 0.62 : 0.78;
+    if (GR.k >= floor || !grSvg) return;
+    var pos = grPositions(), keep = grVisible(grEdges()), ids = Object.keys(keep).filter(function (id) { return pos[id]; });
+    var at = wbSel && pos[wbSel] && keep[wbSel] ? wbSel : ids.filter(function (id) { return grStandWord(WB.by[id]) === "Late"; })[0];
+    var c;
+    if (at) c = pos[at];
+    else {
+      c = [0, 0];
+      ids.forEach(function (id) { c[0] += pos[id][0] / ids.length; c[1] += pos[id][1] / ids.length; });
+    }
+    GR.k = floor;
+    GR.ox = grSvg.clientWidth / 2 - c[0] * floor;
+    GR.oy = grSvg.clientHeight / 2 - c[1] * floor;
+  }
+  function grFit() {
+    if (!grSvg) return;
+    var keep = grVisible(grEdges()), pos = grPositions(), ids = Object.keys(keep).filter(function (id) { return pos[id]; });
+    var w = grSvg.clientWidth || 800, h = grSvg.clientHeight || 520;
+    if (!ids.length) { GR.k = 1; GR.ox = w / 2; GR.oy = h / 2; return; }
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    ids.forEach(function (id) {
+      var p = pos[id], it = WB.by[id], hw = grW(it) / 2, hh = grHt(it) / 2;
+      x0 = Math.min(x0, p[0] - hw); x1 = Math.max(x1, p[0] + hw);
+      y0 = Math.min(y0, p[1] - hh); y1 = Math.max(y1, p[1] + hh + 16);
+    });
+    var k = Math.min((w - 40) / Math.max(1, x1 - x0), (h - 40) / Math.max(1, y1 - y0), 1.3);
+    GR.k = Math.max(0.15, k);
+    GR.ox = w / 2 - (x0 + x1) / 2 * GR.k;
+    GR.oy = h / 2 - (y0 + y1) / 2 * GR.k;
+  }
+  /* Brings a node into view WITHOUT changing the zoom — a re-fit throws
+     away wherever the reader had got to. */
+  function grPanTo(id) {
+    var s = grSpot(id);
+    if (!s || !grSvg) return;
+    var w = grSvg.clientWidth, h = grSvg.clientHeight, x = num(s.x) * GR.k + GR.ox, y = num(s.y) * GR.k + GR.oy, pad = 80;
+    if (x < pad) GR.ox += pad - x; if (x > w - pad) GR.ox -= x - (w - pad);
+    if (y < pad) GR.oy += pad - y; if (y > h - pad) GR.oy -= y - (h - pad);
+  }
+  function grTidy() {
+    var before = {};
+    state.spots.forEach(function (s) { before[s.id] = [num(s.x), num(s.y)]; });
+    var ids = WB.items.map(function (it) { return it.id; }), pos = {};
+    ids.forEach(function (id, i) {
+      pos[id] = [Math.cos(i * 2.39996) * 40 * Math.sqrt(i + 1), Math.sin(i * 2.39996) * 30 * Math.sqrt(i + 1)];
+    });
+    grLayout(ids, pos, {}, grEdges());
+    var after = {};
+    ids.forEach(function (id) { after[id] = [Math.round(pos[id][0]), Math.round(pos[id][1])]; });
+    function put(m) { Object.keys(m).forEach(function (id) { grMoveSpot(id, m[id][0], m[id][1]); }); }
+    put(after);
+    grPush("the tidy", function () { put(before); }, function () { put(after); });
+    commit(); grFit(); grPaint(); grBarPaint();
+    toast("Laid out again. Undo move puts every node back.");
+  }
+
+  /* Reading order: rows first, then left to right. It always works and can
+     never dead-end, and it wraps rather than sticking. */
+  function grOrder() {
+    var keep = grVisible(grEdges()), pos = grPositions();
+    return Object.keys(keep).filter(function (id) { return pos[id]; }).sort(function (a, b) {
+      var ra = Math.round(pos[a][1] / 60), rb = Math.round(pos[b][1] / 60);
+      return ra - rb || pos[a][0] - pos[b][0];
+    });
+  }
+  var grNextSeen = 0;
+  function grKey(ev) {
+    var k = ev.key;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (k === "Escape") { ev.preventDefault(); ev.stopPropagation(); grEscape(); return; }
+    if (k === "+" || k === "=") { ev.preventDefault(); grZoomAt(GR.k * 1.2, grSvg.clientWidth / 2, grSvg.clientHeight / 2); grPaint(); return; }
+    if (k === "-") { ev.preventDefault(); grZoomAt(GR.k / 1.2, grSvg.clientWidth / 2, grSvg.clientHeight / 2); grPaint(); return; }
+    if (k === "0") { ev.preventDefault(); grFit(); grPaint(); return; }
+    if (k === "Delete" || k === "Backspace") {
+      ev.preventDefault(); ev.stopPropagation();
+      if (GR.edge) grCut(GR.edge);
+      else if (wbSel && WB_EDIT[parseRef(wbSel).kind]) ACTIONS["wb-remove"](wbSel);
+      return;
+    }
+    var order = grOrder();
+    if (!order.length) return;
+    if (k === "Enter") {
+      ev.preventDefault(); ev.stopPropagation();
+      if (!wbSel || order.indexOf(wbSel) < 0) { grPanTo(order[0]); grPick(order[0]); return; }
+      var b = document.querySelector("#grStrip button");
+      if (b) b.focus();
+      return;
+    }
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(k) < 0) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var cur = wbSel && order.indexOf(wbSel) >= 0 ? wbSel : "";
+    var next;
+    if (!cur) next = order[0];
+    else if (k === "ArrowLeft" || k === "ArrowRight") {
+      var i = order.indexOf(cur);
+      next = order[(i + (k === "ArrowRight" ? 1 : -1) + order.length) % order.length];
+    } else {
+      /* Up and down follow the LINES, which is what the map is saying,
+         cycling when a node has several. */
+      var keep = grVisible(grEdges()), nb = grNbrsOf(cur, grEdges()).filter(function (o) { return keep[o]; });
+      if (!nb.length) { toast("Nothing is linked to this one."); return; }
+      nb.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      if (k === "ArrowUp") nb.reverse();
+      next = nb[grNextSeen++ % nb.length];
+    }
+    grPanTo(next);
+    grPick(next);
+  }
+  /* AN ESCAPE STACK IS WRITTEN ONCE: the menu, then a picked line, then a
+     picked node, then full screen. */
+  function grEscape() {
+    if (grMenuEl) { grMenuClose(); if (grSvg) grSvg.focus({ preventScroll: true }); return; }
+    if (GR.edge) { GR.edge = ""; grPaint(); return; }
+    if (wbSel) { grPick(null); return; }
+    if (GR.max) { GR.max = false; render(); }
+  }
+  function grWireDoc() {
+    document.addEventListener("pointerdown", function (ev) {
+      if (grMenuEl && !grMenuEl.contains(ev.target)) grMenuClose();
+    });
+    document.addEventListener("scroll", function () { grMenuClose(); }, true);
+    document.addEventListener("keydown", function (ev) {
+      if (!grMenuEl) return;
+      if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); grEscape(); return; }
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        var bs = Array.prototype.slice.call(grMenuEl.querySelectorAll("button")), i = bs.indexOf(document.activeElement);
+        ev.preventDefault();
+        bs[(i + (ev.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length].focus();
+      }
+    }, true);
+    window.addEventListener("resize", function () { if (view === "map" && grSvg) grPaint(); });
+  }
+
+  /* A new node lands WHERE YOU PRESSED, and the dialog asks only its name. */
+  function grNew(kind, x, y) {
+    openModal({
+      title: kind === "bench" ? "A new bench here" : "A new note here",
+      fields: [{ key: "name", label: kind === "bench" ? "What the work is called" : "Title", value: "", span: true }],
+      confirmLabel: "Add it",
+      validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
+      onConfirm: function (v) {
+        var snap = wbSnap(), made, name = v.name.trim();
+        if (kind === "bench") {
+          var key = (name.toLowerCase().match(/[a-z0-9؀-ۿ]+/) || [""])[0];
+          state.projects.push(made = { id: uid(), name: name, key: key, role: "New bench", status: "active" });
+          made = ref("project", made.id);
+        } else {
+          state.notes.push(made = { id: uid(), kind: "note", name: name, on: wbToday(), projectId: "", body: "" });
+          made = ref("note", made.id);
+        }
+        state.spots.push({ id: made, x: x, y: y });
+        wbSel = made;
+        wbDone(kind === "bench" ? "Bench added" : "Note added", snap);
+      }
+    });
   }
 
   /* ============================================================
@@ -11220,17 +11978,47 @@
       window.scrollTo({ top: 0, behavior: "auto" });
       toast("Review done. Your focus is at the top of Today.");
     },
-    "wb-tomap": function (idv) { wbMapFocus = idv || null; ACTIONS["wb-go"]("map"); },
-    "wb-mapbench": function (idv) {
-      if (wbMapFocus === idv) { wbGoBench(idv); return; }
-      wbMapFocus = idv; render();
+    /* "See it on the map" lands on the graph narrowed to what is near
+       the bench, with the bench picked — the old map's focus, kept. */
+    "wb-tomap": function (idv) {
+      ACTIONS["wb-go"]("map");
+      if (idv && wbGet(idv)) { GR.local = idv; GR.fitted = false; wbSel = idv; render(); }
     },
-    "wb-mapclear": function () { wbMapFocus = null; render(); },
-    "wb-mapclus": function (idv) {
-      var p = String(idv || "").split("|");
-      wbGoBench(p[0]);
-      wbFilter = ["action", "note", "meeting", "file", "hours"].indexOf(p[1]) >= 0 ? p[1] : "all";
+    "gr-chip": function (idv) {
+      if (GR.hide[idv]) delete GR.hide[idv]; else GR.hide[idv] = 1;
       render();
+    },
+    "gr-done": function () { GR.hideDone = !GR.hideDone; render(); },
+    "gr-local": function (idv) {
+      GR.local = idv && wbGet(idv) ? idv : ""; GR.fitted = false;
+      if (idv) wbSel = idv;
+      render();
+    },
+    "gr-depth": function () { GR.depth = GR.depth === 1 ? 2 : 1; GR.fitted = false; render(); },
+    "gr-zoom": function (idv) {
+      if (!grSvg) return;
+      grZoomAt(GR.k * (idv === "in" ? 1.25 : 0.8), grSvg.clientWidth / 2, grSvg.clientHeight / 2);
+      grPaint();
+    },
+    "gr-fit": function () { grFit(); grPaint(); },
+    "gr-tidy": function () { grTidy(); },
+    "gr-undo": function () { grUndo(false); },
+    "gr-redo": function () { grUndo(true); },
+    "gr-max": function () { GR.max = !GR.max; GR.fitted = false; render(); },
+    "gr-link": function (idv) {
+      if (!wbGet(idv)) return;
+      wbSel = idv; wbLinking = true; wbLinkQ = ""; GR.pane = true;
+      wbPaintPane(); if (view === "map") grPaint();
+      var q = document.getElementById("linkQ");
+      if (q) q.focus();
+    },
+    "gr-pane": function (idv) {
+      if (!wbGet(idv)) return;
+      wbSel = idv; GR.pane = true; wbPaintPane();
+    },
+    "gr-new": function (idv) {
+      var p = String(idv || "").split("|");
+      grNew(p[0] === "bench" ? "bench" : "note", num(p[1]), num(p[2]));
     },
     "wb-remove": function (idv) {
       var p = parseRef(idv), pre = WB_EDIT[p.kind];
@@ -11609,7 +12397,7 @@
       restoreDialog(function (j) {
         if (!j || typeof j !== "object") return "";
         var n = STATE_LISTS.reduce(function (t, k) {
-          return t + ((j[k] || []).length);
+          return t + (LAYOUT_LISTS[k] ? 0 : (j[k] || []).length);
         }, 0);
         return countWords(n, "record", "records") + " and " +
           countWords((j.links || []).length, "link", "links") +
@@ -11670,6 +12458,7 @@
         confirmLabel: "Erase it all"
       }, function () {
         state = APP.blank();
+        grReset();
         openRec = ""; pageAt = {}; back = [];
         saveGo("Erased");
       });
@@ -11695,6 +12484,7 @@
 
   function loadSample() {
     state = adoptState(sampleData());
+    grReset();
     openRec = ""; pageAt = {}; back = [];
     wbSel = null; wbBench = ""; view = "today";
     saveGo("Example loaded");
@@ -11754,7 +12544,11 @@
          you did ten minutes ago. The pane closes with it, as the
          prototype's `go()` does. */
       openRec = ""; back = []; libTopic = ""; projFilter = ""; dirFacet = "";
-      wbSel = null; wbLinking = false; wbMapFocus = null; wbStep = 0;
+      wbSel = null; wbLinking = false; wbStep = 0;
+      /* The map keeps where you had panned it, which kinds are on and the
+         search; what you were narrowed to is a navigation, and resets. */
+      GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
+      grMenuClose();
       /* A SIFT BOX IS A NARROWING, NOT A SETTING. */
       sift = {};
     },
@@ -11787,7 +12581,7 @@
       wbPaintPane();
       wbPaintKeys();
       wbMountPins();
-      wbFitMap();
+      wbMountGraph();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
@@ -11819,6 +12613,7 @@
       if (syncOn()) setTimeout(function () { nudgeSync("opened"); }, 400);
       wbWireKeys();
       wbWireLine();
+      grWireDoc();
       var scrim = document.getElementById("paneScrim");
       if (scrim) scrim.addEventListener("click", function () { wbSel = null; render(); });
       /* THE OLDER BOOK IS OFFERED, ONCE, and only when there is one —

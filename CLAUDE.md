@@ -4458,3 +4458,78 @@ the focus fade, a bubble opening its bench on its filter, a pinned picture
 surviving a reload and staying out of the book, and a w8-shaped book opening
 unchanged with every record reachable) · `m5sync.js` now 49, with the undo
 checks · `m5import.js` 116 · `m5dir.js` 89.
+
+## mashghal2's map is a graph you can edit (w10)
+
+Asked for the Map to be *"flexible like the workflow page"* and editable,
+and — given the choice — for **every record as its own node**, the way
+Obsidian draws a vault. `m5/25-wb-graph.js` is the old sheet's machinery (pan,
+zoom, drag, a keyboard, a menu that is the strip laid down) over the
+Workbench's projection, so every node is a record in `WB.items` and every line
+is a fact the book already holds: a **link** (any `state.links` entry, solid —
+the only kind drawn and cut here), **on a bench** (dashed, because it is a
+field on the record; cutting it asks, and takes the record off the bench), and
+later a **wiki link** (dotted, written in text).
+
+- **WHERE A NODE SITS IS ITS OWN RECORD.** `state.spots` holds `{id: <the
+  record's ref>, x, y}`. Written onto the record, a position would stamp it —
+  and sync merges newer-wins per record, so dragging a node on the laptop could
+  outrank the phone's edit to that same action's name; placing a graph for the
+  first time would have stamped every record in the book at once. A spot syncs
+  on its own and can never clobber what it positions, and `m5sync.js` asserts
+  that opening the map leaves a record's `updatedAt` alone. It is layout, not
+  work: `LAYOUT_LISTS` keeps it out of every count of the book, a discard takes
+  its spot and the undo brings it back, and "Make it an action" moves it onto
+  the new record.
+- **A node with no spot has never been placed.** The first open lays the book
+  out once (Fruchterman–Reingold, fixed seed, fixed rounds, then a pass that
+  pushes overlapping boxes apart) and writes it down; after that a new record
+  is seeded beside what it is linked to, with everything placed held still.
+  Records of hidden kinds are placed too, or switching a chip on would lay out
+  part of the sheet again. **The centre pull has to grow with distance**: at
+  a flat 0.02 a record linked to nothing settled about 6,500 units out, because
+  repulsion from sixty others falls as 1/d, and the fit shrank the whole book
+  to seven-pixel labels.
+- **The first view is readable; Fit is the overview.** Opening fits, then holds
+  a zoom floor (0.78, 0.62 on a phone) centred on the picked node, else a late
+  one, else the middle of the work.
+- **Mounted once.** The `<svg>` is built once and moved into each render's
+  host; only its contents are redrawn, so a render can never destroy the
+  element holding a pointer capture. Selection is `wbSel` — the pane's own —
+  so the sheet and the pane cannot disagree about what is picked.
+- **Two undos, and they do not overlap.** The toolbar's *Undo move* and *Redo*
+  are for where things sit (a drag, a Tidy), closing over ids and values and
+  dropped when the book is replaced. A link, a cut or a new node changes the
+  book and is undone on its toast like everything else in the Workbench.
+- **`.g-box` was nearly the node's class as well as the sheet's box.** CSS
+  `height` is a geometry property on an SVG `<rect>` in Chrome, so the box's
+  `height: max(360px, …)` would have overridden every node's height
+  attribute. The rect is `.g-rect`.
+- **Crowding is the reader's to control**: kind chips (hours off by default,
+  and the foot says what is switched off), *Hide what is done*, a search that
+  dims what does not match, and **Only what is near it** — Obsidian's local
+  graph, one or two steps out, which is also where *See it on the map* from a
+  bench lands.
+
+- **On a phone the map keeps its sheet.** The pane is a bottom sheet there,
+  and opening it on every pick covered the node just picked; the strip
+  carries **Details** at that width (in `grActs`, so the menu has it too) and
+  the pane comes only when asked. And **the strip is one row of a stated
+  height** that scrolls sideways — wrapped, it grew three lines on a pick and
+  pushed the sheet 85px down under the finger, the rule w4 already wrote.
+- **Name the picked node, never count one.** A picked node is drawn last so
+  its ring is on top, which re-orders the DOM — so `.g-n.is-late` after a pick
+  is the OTHER late node, off screen. And Playwright's `hover()` waits thirty
+  seconds on a covered control; a contrast walk hovering forty chips needs a
+  timeout on each, or it reads as the app hanging.
+
+`wb-graph.js` (61: every record a node and the chips adding up to the book, a
+spot written once and not again, pan and wheel zoom moving no spot, a drag
+that survives a reload with Undo and Redo, drag-to-link and its toast undo,
+Delete on a picked line, the bench line asking first, the menu reading the
+strip, local graph one and two steps out, chips and search, the keyboard walk,
+Tidy undone, a note made where you right-clicked, full screen and the Escape
+stack, discard taking the spot, and at 390px nothing past the edge, a pick
+that does not move the sheet and Details opening the pane) · `grlook.js` (contrast of every
+new surface at rest, picked, under the pointer and in the menu, at 1400, 390
+and 320px) · `m5sync.js` now 52.
