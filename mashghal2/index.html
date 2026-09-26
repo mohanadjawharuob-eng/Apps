@@ -1828,6 +1828,23 @@
     .fx-row { flex-wrap: wrap; }
     .fx-where { flex-basis: 100%; text-align: left; padding-left: 50px; }
   }
+
+  /* ---- Profile button and the one Library (w15) ---- */
+  .w-col { position: relative; }
+  @media (min-width: 880px) { .w-top { padding-right: 84px; } }
+  .w-me {
+    position: fixed; top: 20px; right: 28px; z-index: 25; width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center; padding: 0; border: 1px solid var(--rule-mid); background: var(--sheet);
+    font: inherit; font-size: 13.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink); cursor: pointer;
+  }
+  .w-me:hover { border-color: var(--ink); }
+  .w-me.is-on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .w-libacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .w-sgroup.is-else { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--rule); }
+  @media (max-width: 879px) {
+    .w-me { position: absolute; top: 8px; right: 12px; width: 32px; height: 32px; font-size: 12px; }
+  }
+  .w-popen { margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -1855,6 +1872,8 @@
   </aside>
 
   <div class="w-col">
+    <!-- Profile: the owner's initials, top right, on every screen. -->
+    <button class="w-me" id="meBtn" data-act="wb-profile" aria-label="Your profile" title="Your profile"></button>
     <div class="w-top">
       <div class="w-linewrap">
         <div class="w-line">
@@ -1944,7 +1963,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w14 · 26 Sep 2026";
+  var BUILD = "w15 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -2061,7 +2080,7 @@
     s.settings.shape = t.shape === "cards" ? "cards" : "rows";
     /* How the Library is read — shelves by kind, or the folder tree — is
        the same sort of fact: how you like to read, so it survives a reload. */
-    s.settings.libBy = t.libBy === "folder" ? "folder" : "kind";
+    s.settings.libBy = t.libBy === "folder" || t.libBy === "topic" ? t.libBy : "kind";
     /* THE THEME IS NOT IN THE BOOK. It lived in `settings.theme` beside a
        pre-paint reader that has to read `localStorage`, because the main
        script has not loaded yet — two sources of truth for one fact, and
@@ -3605,19 +3624,24 @@
   var openRec = "";     // "kind:id" — whose page is open
   var pageAt = {};      // tab id -> the page open inside it
   var back = [];        // where Back goes, one push per navigation
-  var libTopic = "";    // the Library's topic lens
   var projFilter = "";  // the Projects chip
   var sift = {};        // page key -> what is typed in its sift box
   var dirFacet = "";    // the Directory's chip
 
   var PAGES = {
-    career: [
-      { id: "profile",   label: "Profile" },
+    /* PROFILE IS CAREER AND WHAT YOU SHOW, on one strip. Its owner read
+       the timeline as a profile and asked for the portfolio and the CVs to
+       sit with it: they are selections OUT of the career record, so a
+       separate section made them look like a second record. */
+    profile: [
+      { id: "profile",   label: "About" },
+      { id: "timeline",  label: "Timeline" },
       { id: "roles",     label: "Experience", kind: "role" },
       { id: "education", label: "Education",  kind: "education" },
       { id: "training",  label: "Training",   kind: "training" },
       { id: "skills",    label: "Skills",     kind: "skill" },
-      { id: "timeline",  label: "Timeline" }
+      { id: "portfolio", label: "Portfolio",  kind: "portfolio" },
+      { id: "cvs",       label: "CVs",        kind: "cv" }
     ],
     work: [
       { id: "projects",  label: "Projects",  kind: "project" },
@@ -3637,19 +3661,15 @@
       { id: "references", label: "References", lib: "reference" },
       { id: "places",     label: "Places",     lib: "place" },
       { id: "topics",     label: "By subject" }
-    ],
-    show: [
-      { id: "portfolio", label: "Portfolio", kind: "portfolio" },
-      { id: "cvs",       label: "CVs",       kind: "cv" }
     ]
   };
   /* Which tab a record belongs to, so the rail marks the right one and
      Back from a record page lands on the page that lists it. */
   var TAB_OF = {
-    role: "career", job: "work", education: "career", training: "career",
-    skill: "career", project: "work", workflow: "work", run: "work",
+    role: "profile", job: "work", education: "profile", training: "profile",
+    skill: "profile", project: "work", workflow: "work", run: "work",
     action: "work", person: "work", asset: "work", output: "work",
-    lib: "library", portfolio: "show", cv: "show"
+    lib: "shelves", portfolio: "profile", cv: "profile"
   };
   var PAGE_OF = {
     role: "roles", job: "jobs", education: "education", training: "training",
@@ -4097,209 +4117,16 @@
      plan's §12 asks for and what makes it part of the career system.
      ============================================================ */
 
-  function renderLibrary() {
-    var page = pageNow("library");
-    var p = PAGES.library.filter(function (x) { return x.id === page; })[0];
-    var out = [];
-    if (p.lib) {
-      var k = LIB_KINDS[p.lib], list = libOf(p.lib);
-      /* ON THE REFERENCES PAGE, PASTING IS THE PRIMARY ACT. Typing
-         eighteen fields per paper is how a bibliography feature goes unused,
-         and every catalogue, Zotero and Scholar will hand you BibTeX or RIS
-         for nothing. */
-      out.push(pageHeadOf(k.many, esc(cap(k.says)) + ".",
-        p.lib === "reference"
-          ? btn("cite-paste", "", "Paste BibTeX or RIS", "btn primary") +
-            btn("lib-add", "reference", "Type one in") +
-            btn("bib-export", "", "Export a bibliography")
-          : btn("lib-add", p.lib, "New " + k.word.toLowerCase(), "btn primary")));
-      out.push(pageStrip("library"));
-      if (p.lib === "reference") out.push(refsPage(list));
-      else out.push(libListPage(p.lib, list));
-    } else {
-      out.push(pageHeadOf("By subject",
-        "The same entries read by what they are ABOUT instead of by what kind they are. " +
-        "You never create a subject: you write one onto an entry, which keeps the " +
-        "vocabulary a description of the work rather than a taxonomy to maintain.",
-        btn("lib-add", "method", "New entry", "btn primary")));
-      out.push(pageStrip("library"));
-      out.push(topicsPage());
-    }
-    return out.join("");
-  }
 
   /* ---------------- a kind's list ---------------- */
 
-  function libListPage(kind, list) {
-    var out = [];
-    if (!list.length) {
-      /* The page's own sub-line already says what this kind IS, three
-         inches above — printing it again here was most of the screen. */
-      return '<div class="panel">' + emptyLines(
-        "Nothing under " + LIB_KINDS[kind].many + " yet.",
-        "Press New " + LIB_KINDS[kind].word.toLowerCase() + ".") + "</div>";
-    }
-    /* CHIPS ARE COUNTED FROM WHAT IS ACTUALLY HERE, so no chip can empty
-       the list, and a chip for a language nothing is written in is not
-       drawn at all. */
-    var facet = kind === "script" || kind === "formula" ? "lang"
-      : kind === "place" ? "where" : "";
-    if (facet) {
-      var by = {};
-      list.forEach(function (e) {
-        var w = facet === "lang" ? (e.lang || "no language said")
-          : (e.url ? "a link" : e.path ? "a path on this computer" : "nothing to open");
-        by[w] = (by[w] || 0) + 1;
-      });
-      var keys = Object.keys(by).sort();
-      if (keys.length > 1) {
-        out.push('<div class="chips" style="margin-bottom:0.6rem">' +
-          '<button class="chip" data-act="lib-facet" data-id=""' +
-          (libTopic ? "" : ' aria-pressed="true"') + ">All · " + list.length + "</button>" +
-          keys.map(function (w) {
-            return '<button class="chip" data-act="lib-facet" data-id="' + esc(w) + '"' +
-              (libTopic === w ? ' aria-pressed="true"' : "") + ">" + esc(w) +
-              " · " + by[w] + "</button>";
-          }).join("") + "</div>");
-        if (libTopic) {
-          list = list.filter(function (e) {
-            var w = facet === "lang" ? (e.lang || "no language said")
-              : (e.url ? "a link" : e.path ? "a path on this computer" : "nothing to open");
-            return w === libTopic;
-          });
-        }
-      }
-    }
-    /* AN EMPTY CHIP SAYS SO BEFORE THE SIFT BOX IS DRAWN. Left after it,
-       a chip holding nothing returned with the sift box's own message —
-       which is empty when nothing is typed — so the screen rendered a
-       heading and then nothing at all. */
-    if (!list.length) {
-      out.push('<div class="panel">' + emptyLines("Nothing on that chip.",
-        "The counts beside each chip say where the entries are.") + "</div>");
-      return out.join("");
-    }
-    out.push(shapeRow("lib", list.length, LIST_WORDS.lib));
-    var shown = sifted("lib", "lib", list);
-    var says = siftSays("lib", shown.length, list.length, LIST_WORDS.lib);
-    if (!shown.length) { out.push(says); return out.join(""); }
-    if (says) out.push(says);
-    out.push(shapedOf("lib", shown.slice().sort(byName), { kindw: "" }));
-    return out.join("");
-  }
   function byName(a, b) { return String(a.name).localeCompare(String(b.name)); }
 
   /* ---------------- references, and the bibliography ---------------- */
 
-  function refsPage(list) {
-    var out = [];
-    if (!list.length) {
-      return '<div class="panel">' + emptyLines("No references yet.",
-        "Press Paste BibTeX or RIS — that is how a reference actually arrives, " +
-        "off a journal page or out of Zotero, and it is read exactly rather than " +
-        "retyped.") + "</div>";
-    }
-    /* A reference missing an author, a year or a title cannot be exported
-       into anything usable, so that is said HERE rather than being found
-       out at the moment of export. */
-    var gaps = list.filter(function (e) { return citeComplete(e).length; });
-    if (gaps.length) {
-      out.push('<div class="panel drift"><span class="label">Not ready to export</span>' +
-        '<p class="says">' + cap(countWords(gaps.length, "reference", "references")) +
-        (gaps.length === 1 ? " is" : " are") + " missing an author, a year or a title. " +
-        "They export, but a bibliography entry with a hole in it is worse than a " +
-        "missing one — the rows below say which.</p></div>");
-    }
-    var byType = {};
-    list.forEach(function (e) {
-      var t = citeType(citeOf(e).type).label;
-      byType[t] = (byType[t] || 0) + 1;
-    });
-    var tkeys = Object.keys(byType).sort();
-    if (tkeys.length > 1) {
-      out.push('<div class="chips" style="margin-bottom:0.6rem">' +
-        '<button class="chip" data-act="lib-facet" data-id=""' +
-        (libTopic ? "" : ' aria-pressed="true"') + ">All · " + list.length + "</button>" +
-        tkeys.map(function (t) {
-          return '<button class="chip" data-act="lib-facet" data-id="' + esc(t) + '"' +
-            (libTopic === t ? ' aria-pressed="true"' : "") + ">" + esc(t) +
-            " · " + byType[t] + "</button>";
-        }).join("") + "</div>");
-    }
-    var show = libTopic
-      ? list.filter(function (e) { return citeType(citeOf(e).type).label === libTopic; })
-      : list;
-    /* Author-date order, because that is the order a bibliography is read
-       in and a list of references sorted by when you happened to add them
-       is not a bibliography. */
-    out.push('<div class="rows">' + bibSort(show).map(function (e) {
-      var gap = citeComplete(e);
-      return '<button class="row' + (gap.length ? " e-drift" : "") +
-        '" data-act="open" data-id="' + esc(ref("lib", e.id)) + '">' +
-        itile("lib", e) +
-        '<span class="grow"><span class="nm serif">' + esc(plainCite(e)) + "</span>" +
-        '<span class="sub">' + esc([citeType(citeOf(e).type).label,
-          (e.topics || []).join(", "), citeKey(e)].filter(Boolean).join(" · ")) +
-        "</span></span>" +
-        '<span class="right">' +
-        (gap.length ? '<span class="pill p-drift">Needs ' + esc(gap[0]) + "</span>" : "") +
-        '<span class="chev" aria-hidden="true">' + G.chev + "</span></span></button>";
-    }).join("") + "</div>");
-    if (!show.length) {
-      out.push('<div class="panel">' + emptyLines("Nothing of that type.",
-        "The counts beside each chip say where the references are.") + "</div>");
-    }
-    out.push('<details class="fold"><summary><span class="label">How a bibliography ' +
-      "comes out of here</span></summary><div class=\"foldbody\">" +
-      /* THE COUNT IS THE TABLE'S OWN LENGTH. Written out as "Four formats"
-         it sat above five rows — a figure disagreeing with its own parts,
-         in the one panel whose job is to explain the export. */
-      '<p class="says">' + cap(countWords(BIB_FORMATS.length, "format", "formats")) +
-      ", and the difference between them matters.</p>" +
-      '<table class="tbl"><tbody>' + BIB_FORMATS.map(function (f) {
-        return "<tr><td><b>" + esc(f.label) + "</b></td><td>" + esc(f.says) + "</td></tr>";
-      }).join("") + "</tbody></table>" +
-      '<p class="says">BibTeX, RIS and CSL-JSON are exact: they are field mappings with ' +
-      "no style judgement in them, which is why they can be trusted. The plain list is " +
-      "author-date for pasting, and it says on itself that it is not an implementation " +
-      "of APA, MLA, Chicago or Harvard — a citation string that is <i>almost</i> a " +
-      "named style is the one kind of wrong answer nobody checks.</p>" +
-      '<p class="says">And you pick WHICH references: all of them, everything on one ' +
-      "subject, everything used on one project, everything about one skill, or " +
-      "everything a given output cites.</p></div></details>");
-    return out.join("");
-  }
 
   /* ---------------- by subject ---------------- */
 
-  function topicsPage() {
-    var topics = allTopics();
-    if (!topics.length) {
-      return '<div class="panel">' + emptyLines("Nothing is filed under a subject yet.",
-        "Open any library entry and write a word or two into “What it is about” " +
-        "— harbour surveying, photogrammetry, GIS. The subjects are whatever you type.") +
-        "</div>";
-    }
-    /* A SUBJECT IS A ROW, not a chip over an empty screen. The page answers
-       "what do I know about" without a tap. */
-    return '<div class="rows">' + topics.map(function (t) {
-      var list = libByTopic(t.word);
-      var byKind = {};
-      list.forEach(function (e) { byKind[e.kind] = (byKind[e.kind] || 0) + 1; });
-      var words = Object.keys(byKind).map(function (k) {
-        return countWords(byKind[k], LIB_KINDS[k].word.toLowerCase(),
-          LIB_KINDS[k].many.toLowerCase());
-      });
-      return '<button class="row" data-act="lib-topic" data-id="' + esc(t.word) + '">' +
-        itile("lib", { kind: "method" }) +
-        '<span class="grow"><span class="nm">' + esc(t.word) + "</span>" +
-        '<span class="sub">' + esc(cap(listWords(words))) + " · " +
-        esc(clip(list.slice(0, 4).map(function (e) { return e.name; }).join(", "), 90)) +
-        "</span></span>" +
-        '<span class="right"><span class="when">' + list.length + "</span>" +
-        '<span class="chev" aria-hidden="true">' + G.chev + "</span></span></button>";
-    }).join("") + "</div>";
-  }
 
   /* ---------------- one entry's own page ---------------- */
 
@@ -4320,7 +4147,7 @@
     acts.push(btn("link-add", ref("lib", e.id), "Link it to…"));
     acts.push(btn("lib-del", e.id, "Remove", "btn danger"));
 
-    var out = [crumbTo("library", LIB_PAGE[e.kind], k.many),
+    var out = [crumbTo("shelves", "", "Library"),
       pageHeadOf(e.name,
         esc(k.word) + (isCode(e) ? " · " + esc(e.lang) : "") +
         (e.usedOn ? " · last used " + esc(agoWords(e.usedOn)) : ""),
@@ -4456,11 +4283,13 @@
      something happened.
      ============================================================ */
 
-  function renderCareer() {
-    var page = pageNow("career");
+  function renderProfile() {
+    var page = pageNow("profile");
     if (page === "profile") return profilePage();
+    if (page === "portfolio") return portfolioPage();
+    if (page === "cvs") return cvsPage();
     if (page === "timeline") return timelinePage();
-    var p = PAGES.career.filter(function (x) { return x.id === page; })[0];
+    var p = PAGES.profile.filter(function (x) { return x.id === page; })[0];
     var kind = p.kind, list = listOf(kind);
     var out = [];
     if (kind === "role") {
@@ -4488,7 +4317,7 @@
         "it. Nothing is scored and no proficiency is inferred.",
         btn("skill-add", "", "New skill", "btn primary")));
     }
-    out.push(pageStrip("career"));
+    out.push(pageStrip("profile"));
     if (!list.length) {
       var word = { role: "Experience", education: "Education", training: "Training",
         skill: "Skills" }[kind];
@@ -4591,11 +4420,11 @@
 
   function profilePage() {
     var pr = state.profile;
-    var out = [pageHeadOf("Profile",
+    var out = [pageHeadOf("About you",
       "Who you are professionally. This is the record, not a CV — a CV is a " +
       "selection out of it, and there can be several.",
       btn("profile-edit", "", "Edit", "btn primary"))];
-    out.push(pageStrip("career"));
+    out.push(pageStrip("profile"));
     if (!pr.name && !pr.headline && !pr.summary) {
       out.push('<div class="panel">' + emptyLines("Nothing written yet.",
         "Press Edit. Only a name is needed; everything else can wait, and blank " +
@@ -4667,7 +4496,7 @@
       "How the professional record developed, read off the dates already on " +
       "education, roles, training, projects and outputs. Nothing here is typed " +
       "twice: every row opens the record it came from.")];
-    out.push(pageStrip("career"));
+    out.push(pageStrip("profile"));
     if (!years.length) {
       out.push('<div class="panel">' + emptyLines("Nothing is dated yet.",
         "A date on any role, training, project, piece of education or output puts " +
@@ -4697,7 +4526,7 @@
   function rolePage(r) {
     var projects = getExperienceProjects(r.id);
     var skills = ofKind(both(ref("role", r.id), "uses"), "skill").filter(recOf);
-    var out = [crumbTo("career", "roles", "Experience"),
+    var out = [crumbTo("profile", "roles", "Experience"),
       pageHeadOf(r.name,
         [r.jobId ? esc(nameOf(ref("job", r.jobId))) : "",
           esc(spanWords(r.startedOn, r.endedOn)), r.place ? esc(r.place) : ""]
@@ -4788,7 +4617,7 @@
   }
 
   function eduPage(e) {
-    var out = [crumbTo("career", "education", "Education"),
+    var out = [crumbTo("profile", "education", "Education"),
       pageHeadOf(e.name,
         [e.org, spanWords(e.startedOn, e.endedOn)].filter(Boolean).map(esc).join(" · "),
         btn("edu-edit", e.id, "Edit", "btn primary") +
@@ -4830,7 +4659,7 @@
       acts += btn("train-copy", t.id, "Copy the certificate line");
     }
     acts += btn("train-del", t.id, "Remove", "btn danger");
-    var out = [crumbTo("career", "training", "Training"),
+    var out = [crumbTo("profile", "training", "Training"),
       pageHeadOf(t.name,
         [t.org, t.kind, t.on ? partDate(t.on) : ""]
           .filter(Boolean).map(esc).join(" · "), acts)];
@@ -4881,7 +4710,7 @@
   function skillPage(s) {
     var e = getSkillEvidence(s.id), lv = levelLabel(s.level);
     var total = skillEvidenceCount(s.id);
-    var out = [crumbTo("career", "skills", "Skills"),
+    var out = [crumbTo("profile", "skills", "Skills"),
       pageHeadOf(s.name, [s.group, lv].filter(Boolean).map(esc).join(" · ") ||
         "No group or level said.",
         btn("skill-edit", s.id, "Edit", "btn primary") +
@@ -5555,19 +5384,13 @@
      record of the same facts, kept somewhere this app cannot see.
      ============================================================ */
 
-  function renderShow() {
-    var page = pageNow("show");
-    if (page === "cvs") return cvsPage();
-    return portfolioPage();
-  }
-
   function portfolioPage() {
     var out = [pageHeadOf("Portfolio",
       "What you can show somebody. A portfolio item is a SELECTION — it points at " +
       "projects, outputs and roles that are already in the record rather than describing " +
       "them again, so nothing here can go out of date on its own.",
       btn("port-add", "", "New portfolio item", "btn primary"))];
-    out.push(pageStrip("show"));
+    out.push(pageStrip("profile"));
     if (!state.portfolio.length) {
       out.push('<div class="panel">' + emptyLines("Nothing in the portfolio yet.",
         "Press New portfolio item, then point it at the work it shows.") + "</div>");
@@ -5604,7 +5427,7 @@
   function portPage(i) {
     var ev = getPortfolioEvidence(i.id);
     var skills = ofKind(both(ref("portfolio", i.id), "uses"), "skill").filter(recOf);
-    var out = [crumbTo("show", "portfolio", "Portfolio"),
+    var out = [crumbTo("profile", "portfolio", "Portfolio"),
       pageHeadOf(i.name, esc(i.on ? partDate(i.on) : "") ,
         btn("port-edit", i.id, "Edit", "btn primary") +
         docActs("portfolio", i) +
@@ -5654,7 +5477,7 @@
       "which work to put in front of THIS reader. Several can exist at once, and none of " +
       "them holds a fact of its own — they all read the same record.",
       btn("cv-add", "", "New CV", "btn primary"))];
-    out.push(pageStrip("show"));
+    out.push(pageStrip("profile"));
     if (!state.cvs.length) {
       out.push('<div class="panel">' + emptyLines("No CVs yet.",
         "Press New CV. Give it an aim — the job or the application it is for — " +
@@ -5686,7 +5509,7 @@
 
   function cvPage(c) {
     var picks = both(ref("cv", c.id), "picks").filter(recOf);
-    var out = [crumbTo("show", "cvs", "CVs"),
+    var out = [crumbTo("profile", "cvs", "CVs"),
       pageHeadOf(c.name, esc(c.aim || "No aim stated."),
         btn("cv-edit", c.id, "Edit", "btn primary") +
         docActs("cv", c) +
@@ -6057,12 +5880,12 @@
     { id: "g-start", word: "Start here" },
     { id: "g-shape", word: "How it is put together" },
     { id: "g-read", word: "Reading a long list" },
-    { id: "g-career", word: "Career" },
+    { id: "g-career", word: "Profile" },
     { id: "g-work", word: "Work" },
     { id: "g-lib", word: "The library" },
     { id: "g-bib", word: "References and the bibliography" },
     { id: "g-links", word: "Drawing the lines" },
-    { id: "g-show", word: "Portfolio and CVs" },
+    { id: "g-show", word: "Portfolio and CVs, in Profile" },
     { id: "g-ask", word: "The line" },
     { id: "g-keys", word: "The keyboard" },
     { id: "g-dir", word: "Where your stuff is" },
@@ -6145,9 +5968,10 @@
         "file you keep is written there straight away. On the other computer connect the same folder and press <b>Bring in what " +
         "is here</b>. Chrome or Edge on a computer; a second account is a second folder. The whole walk-through is " +
         "under <b>How syncing works</b>.") +
-      gnote("Employers, education, people, workflows and the portfolio have no " +
-        "Workbench screen, and are still in the book: they sit under " +
-        "<em>Everything else</em> in the sidebar, and under More on a phone.") + "</div>"));
+      gnote("<b>Profile</b> is the round button at the top right, with your initials on it: about you, " +
+        "the timeline, experience, education, training, skills, the portfolio and the CVs, on one strip. " +
+        "Employers, people, workflows, equipment and hours are under <em>Work</em> at the foot of the " +
+        "sidebar, and under More on a phone.") + "</div>"));
 
     /* ---------------- career ---------------- */
     out.push(gp("g-read", "Reading a long list",
@@ -6166,28 +5990,28 @@
         "a list silently shortened reads as records having gone missing.") +
       "</div>"));
 
-    out.push(gp("g-career", "Career — who you are professionally",
+    out.push(gp("g-career", "Profile — who you are professionally",
       '<div class="growlist">' +
-      grow("Career → Profile → Edit", "Your profile",
+      grow("Profile → About → Edit", "Your profile",
         "Name, one line about what you do, the fields you work in, and a paragraph for " +
         "the top of a CV. Nothing here is required.") +
       grow("Work → Employers → New employer", "An employer",
         "An organisation, over years. It holds roles, and roles hold projects. Removing " +
         "one keeps every role and project under it — they simply stop naming an " +
         "employer, and still read its name with “(removed)” after it.") +
-      grow("Career → Experience → New role", "A role",
+      grow("Profile → Experience → New role", "A role",
         "A title, the employer, and the dates. <b>Leave the end date empty while it is " +
         "current</b> and the app reads that as “– present”. What you " +
         "write in the note is what a CV prints under the title.") +
-      grow("Career → Education → New education", "Education",
+      grow("Profile → Education → New education", "Education",
         "What it was, where, when, and how it came out. Only the rows that can have a " +
         "value are printed on its page.") +
-      grow("Career → Training → New training", "Training",
+      grow("Profile → Training → New training", "Training",
         "A course, a workshop, a certification, a ticket — first-class here rather " +
         "than a footnote under education, because training is very often the thing that " +
         "actually evidences a skill. The certificate field takes a number or a link, and " +
         "the page offers to open it only when it really is a link.") +
-      grow("Career → Skills → New skill", "A skill",
+      grow("Profile → Skills → New skill", "A skill",
         "The skill, a group you type yourself, and — if you want — a level. " +
         "<b>Leave the level blank and it stays blank.</b> Nothing computes a proficiency " +
         "out of how many projects used a word.") +
@@ -6249,22 +6073,22 @@
       "line searches the body as well as the name. Each kind decides the " +
       "form the dialog takes:</p></div>" +
       '<div class="growlist">' +
-      grow("Library → Scripts → New script", "A script",
+      grow("Library → New script", "A script",
         "Code, and the language it is written in. <b>Leading whitespace is kept " +
         "exactly</b> — it is what a Python block means — and only the trailing " +
         "blank lines a textarea collects come off. There is a <b>Copy</b> on its row and " +
         "on its page.") +
-      grow("Library → Formulas → New formula", "A formula",
+      grow("Library → New formula", "A formula",
         "The same record with a different language, so the Formula door opens the code " +
         "form on Excel. Name it for what it works out: “Area of a polygon from a " +
         "coordinate list” reads better in six months than “formula 3”.") +
-      grow("Library → Methods → New method", "A method",
+      grow("Library → New method", "A method",
         "A procedure or technique in prose. Code does not wrap and prose does, so this " +
         "is set to be read rather than scrolled sideways.") +
-      grow("Library → Templates → New template", "A template",
+      grow("Library → New template", "A template",
         "The skeleton you start from — a report outline, a metadata sheet, a naming " +
         "rule.") +
-      grow("Library → Places → New place", "A place",
+      grow("Library → New place", "A place",
         "Where something lives: a folder, a file, a link, a shortcut. One kind for all " +
         "four, because they are the same act. <b>A path is copy-only</b> — a page " +
         "served over https is not allowed to open a local file, every browser blocks it " +
@@ -6273,7 +6097,7 @@
       grow("any entry → What it is about", "Subjects",
         "Words you type, separated by commas. You never create a subject — you " +
         "write one onto an entry, which keeps the vocabulary a description of your work " +
-        "rather than a taxonomy to maintain. <b>Library → By subject</b> then reads " +
+        "rather than a taxonomy to maintain. <b>Library → By topic</b> then reads " +
         "the whole library that way.") +
       "</div>"));
 
@@ -6283,12 +6107,12 @@
       '<p class="says">A reference here is a real citation record — eighteen ' +
       "fields, eleven types — because a bibliography cannot be assembled out of " +
       "prose. Typing eighteen fields per paper is how a bibliography feature goes " +
-      "unused, so <b>Library → References → Paste BibTeX or RIS</b> takes what " +
+      "unused, so <b>Library → Paste BibTeX or RIS</b> takes what " +
       "every catalogue, Zotero and Google Scholar will hand you, several at once. " +
       "Nothing is fetched and nothing is looked up: it is read here, character by " +
       "character, and what it cannot place it names rather than dropping.</p></div>" +
       '<div class="growlist">' +
-      grow("References → Export a bibliography", "Five formats",
+      grow("Library → Export a bibliography", "Five formats",
         "<b>A plain author–date list</b> for pasting into what you are writing now " +
         "· <b>BibTeX</b> for LaTeX, Overleaf and JabRef · <b>RIS</b> for " +
         "EndNote, Mendeley and Papers · <b>CSL-JSON</b> for anything that formats a " +
@@ -6342,11 +6166,11 @@
       "in both — and a CV can never quietly describe a version of your career the " +
       "rest of the app has stopped agreeing with.</p></div>" +
       '<div class="growlist">' +
-      grow("Show → Portfolio → New portfolio item", "A portfolio item",
+      grow("Profile → Portfolio → New portfolio item", "A portfolio item",
         "A name, a date and a paragraph in your words. Then <b>Point it at…</b> " +
         "for the projects, outputs and roles it shows. An item with nothing behind it is " +
         "a claim with no evidence, and its page says so.") +
-      grow("Show → CVs → New CV", "A CV",
+      grow("Profile → CVs → New CV", "A CV",
         "A name and an <b>aim</b> — the job or the application it is for, which is " +
         "how you tell two CVs apart. Then <b>Put something in it</b>, one record at a " +
         "time: roles, education, training, skills, projects, outputs, references, " +
@@ -6413,19 +6237,20 @@
     /* ---------------- the record ---------------- */
     out.push(gp("g-dir", "Where your stuff is",
       '<div class="panel"><p class="says">Every record can say where its ' +
-      "documents live: a folder on this machine, a link, or both. The " +
-      "<b>Directory</b> tab is then every one of those in one place \u2014 which " +
+      "documents live: a folder on this machine, a link, or both. <b>Files</b> " +
+      "then holds every one of those in one place, beside the files you have kept in the app and what is in your " +
+      "Drive or OneDrive folders \u2014 which " +
       "is the answer to \u201cwhere did I put the Tripoli data\u201d without " +
       "remembering which project it was under.</p>" +
       '<div class="page-acts" style="margin-top:0.7rem">' +
-      btn("tab-dir", "", "Open the Directory", "btn primary") +
+      btn("tab-dir", "", "Open Files", "btn primary") +
       btn("asset-add", "", "New entry") + "</div>" +
       gnote("The two fields are on <b>every</b> edit dialog, under the fold: " +
         "<b>Where its files are</b> and <b>A link</b>. A role, a degree, a piece of " +
         "training, a project, a workflow, an output, a person, a portfolio piece, " +
         "a CV \u2014 all of them.") +
-      gnote("<b>The Directory is not a list you maintain.</b> It fills itself from " +
-        "those fields, so a project folder cannot be in the Directory and missing " +
+      gnote("<b>Paths and links is not a list you maintain.</b> It fills itself from " +
+        "those fields, so a project folder cannot be in Files and missing " +
         "from the project, and renaming the project renames its entry. Press " +
         "<b>New entry</b> only for something that belongs to no record at all \u2014 " +
         "a drive on a shelf, a bookmark, a shared folder.") +
@@ -6435,7 +6260,7 @@
         "not allowed to open a file on your computer \u2014 every browser refuses " +
         "and Chrome refuses silently \u2014 so a path is handed to you to paste " +
         "rather than drawn as a link that would do nothing.") +
-      gnote("On the Directory the row itself is the open control, which is the only " +
+      gnote("Under Paths and links the row itself is the open control, which is the only " +
         "place in the app where a row does not open a page. The chevron beside it " +
         "still does.") + "</div>"));
 
@@ -10202,18 +10027,29 @@
             esc(b.title) + '</span><span class="w-scount">' + (open || "") + "</span></button>";
         }).join("") +
         '<p class="w-shelp">Start a bench by typing <span class="w-mono">bench: name</span> in the line.</p></div>' +
-        /* EVERYTHING ELSE. The Workbench has no screen for an employer, a
-           degree, a person, a workflow or a portfolio item, and the book
-           holds them; the handoff's own plan says the older screens "stay
-           reachable", so they are here, quietly, under the benches. */
-        '<div class="w-sgroup"><p class="w-slabel">Everything else</p>' +
-        [["career", "Career"], ["work", "Work"], ["library", "Library pages"],
-         ["show", "Portfolio and CVs"]].map(function (x) {
+        /* WHAT IS LEFT OF "EVERYTHING ELSE". Career, the portfolio and the
+           CVs are Profile, behind the round button at the top right; the
+           Directory is Files and the old Library is the one Library. Work —
+           employers, people, workflows, equipment, hours — is left as it is
+           for now, as its owner asked, and one row needs no heading. */
+        '<div class="w-sgroup is-else">' + [["work", "Work"]].map(function (x) {
           var on = view === x[0];
           return '<button class="w-srow is-quiet' + (on ? " is-on" : "") + '" data-act="wb-else" data-id="' +
             x[0] + '"' + (on ? ' aria-current="page"' : "") + '><span class="w-stitle">' + x[1] +
             "</span></button>";
         }).join("") + "</div>";
+    }
+    /* THE PROFILE BUTTON carries the owner's initials, or a person's
+       outline when no name has been written — never invented letters. */
+    var me = document.getElementById("meBtn");
+    if (me) {
+      var nm = state.settings.demo ? "Maya Saad" : String(state.profile.name || "").trim();
+      var ini = nm.split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join("");
+      me.innerHTML = ini ? '<span aria-hidden="true">' + esc(ini) + "</span>" :
+        '<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+        '<circle cx="10" cy="7" r="3.4"/><path d="M3.8 17c.8-3.2 3.3-5 6.2-5s5.4 1.8 6.2 5" stroke-linecap="round"/></svg>';
+      if (view === "profile") me.setAttribute("aria-current", "page"); else me.removeAttribute("aria-current");
+      me.classList.toggle("is-on", view === "profile");
     }
     var foot = document.getElementById("railFoot");
     if (foot) {
@@ -10230,7 +10066,7 @@
     }
     var pt = document.getElementById("ptabs");
     if (pt) {
-      var MORE = { map: 1, notes: 1, note: 1, record: 1, career: 1, work: 1, library: 1, dir: 1, show: 1, settings: 1, guide: 1, more: 1, synchow: 1 };
+      var MORE = { map: 1, notes: 1, note: 1, record: 1, work: 1, dir: 1, settings: 1, guide: 1, more: 1, synchow: 1 };
       pt.innerHTML = [["today", "Today"], ["benches", "Benches"], ["shelves", "Library"],
         ["review", "Review"], ["more", "More"]].map(function (x) {
           var on = x[0] === "benches" ? (view === "bench" || view === "benches")
@@ -10552,6 +10388,10 @@
     if (it.rec && it.rec.blobId) out += filePaneHtml(it);
     if (parseRef(it.id).kind === "note") {
       out += '<button class="w-dark" data-act="note-open" data-id="' + esc(parseRef(it.id).id) + '">Open as a page →</button>';
+    } else if (TAB_OF[parseRef(it.id).kind] && it.type !== "bench") {
+      /* The record's own page: a reference's citation, where an entry is
+         used, a role's projects. The pane is the glance; the page is all. */
+      out += '<button class="w-pbtn w-popen" data-act="open" data-id="' + esc(it.id) + '">Open as a page →</button>';
     }
     var pk = parseRef(it.id).kind;
     if (pk === "lib" || pk === "note") {
@@ -10851,12 +10691,28 @@
     var out = wEyebrow("Library") + '<h1 class="w-h1">What you know, kept to reuse</h1>' +
       '<p class="w-lead is-62">' + (by === "folder" ? "Your folders, and what is filed in them. Drop a PDF or a picture " +
         "anywhere on the page and it lands in the folder that is open."
+        : by === "topic" ? "The same entries read by what they are about. You never make a topic: you write one onto an " +
+        "entry, under What it is about, and it appears here."
         : "Each shelf holds the thing itself: the code, the formula, the method written out. " +
-        "Pick a subject to see only what backs one skill.") + "</p>";
+        "Pick a skill to see only what backs it.") + "</p>";
+    /* ONE LIBRARY. The pre-Workbench Library screen listed these same
+       records a second time, and its owner asked why there were two. What
+       only it could do lives here now: a new entry of each kind, pasting
+       BibTeX or RIS, and exporting a bibliography. An entry's own page
+       (the citation, where it is used) opens from its pane. */
+    out += '<div class="w-libacts">' +
+      '<button class="w-pbtn" data-act="lib-add-script">New script</button>' +
+      '<button class="w-pbtn" data-act="lib-add-formula">New formula</button>' +
+      '<button class="w-pbtn" data-act="lib-add-method">New method</button>' +
+      '<button class="w-pbtn" data-act="lib-add-template">New template</button>' +
+      '<button class="w-pbtn" data-act="lib-add-place">New place</button>' +
+      '<button class="w-pbtn" data-act="cite-paste">Paste BibTeX or RIS</button>' +
+      '<button class="w-pbtn" data-act="lib-add" data-id="reference">Type a reference in</button>' +
+      '<button class="w-pbtn" data-act="bib-export">Export a bibliography</button>' + "</div>";
     /* ONE LIBRARY, READ TWO WAYS. Shelves by kind is the design's; the tree
        is how its owner organises. Which one is a setting, like the shape of
        a list, because it is how you like to read. */
-    out += '<div class="w-seg is-libby" role="group" aria-label="Read the Library">' + [["kind", "By kind"], ["folder", "By folder"]].map(function (r) {
+    out += '<div class="w-seg is-libby" role="group" aria-label="Read the Library">' + [["kind", "By kind"], ["folder", "By folder"], ["topic", "By topic"]].map(function (r) {
       return '<button class="w-segb' + (by === r[0] ? " is-on" : "") + '" aria-pressed="' + (by === r[0]) +
         '" data-act="wb-libby" data-id="' + r[0] + '">' + r[1] + "</button>";
     }).join("") + "</div>";
@@ -10864,7 +10720,11 @@
       wbOrder = [];
       return out + wbFolderView(wbLibCard);
     }
-    out += '<div class="w-subjects"><span class="w-slead">By subject</span>' +
+    if (by === "topic") {
+      wbOrder = [];
+      return out + wbTopicView(libAll);
+    }
+    out += '<div class="w-subjects"><span class="w-slead">Backs a skill</span>' +
       [{ id: "all", label: "Everything", n: libAll.length }].concat(skills.map(function (sk) {
         return { id: sk.id, label: sk.title, n: libAll.filter(function (x) { return wbBacks(x, sk.id); }).length };
       })).map(function (k) {
@@ -10884,8 +10744,8 @@
     });
     wbOrder = [];
     if (!libAll.length) {
-      out += '<p class="w-empty">Nothing on the shelves yet. Keep a script, a method or a reference from its own ' +
-        "page under Library pages, or type <span class=\"w-mono\">read: a title</span> in the line.</p>";
+      out += '<p class="w-empty">Nothing on the shelves yet. Press <b>New script</b> or one of the buttons beside it, drop a ' +
+        "PDF anywhere on the page, or type <span class=\"w-mono\">read: a title</span> in the line.</p>";
       return out;
     }
     if (!shelves.length) {
@@ -10898,6 +10758,42 @@
         '</span><span class="w-sline">' + esc(WB_SHELF[k][1]) + '</span></div><div class="w-lgrid">' +
         list.map(wbLibCard).join("") + "</div></section>";
     }).join("");
+    return out;
+  }
+
+  /* BY TOPIC: the words written onto entries under What it is about, each
+     a section of the same cards. A topic is never made on its own, so there
+     is no empty topic; an entry carrying none is counted once at the foot
+     rather than drawn a second time. */
+  var wbLibTopic = "";
+  function wbTopicView(libAll) {
+    var topics = allTopics().map(function (t) {
+      var list = libAll.filter(function (x) {
+        return (x.rec.topics || []).some(function (w) { return w.toLowerCase() === t.word.toLowerCase(); });
+      });
+      return { word: t.word, list: list };
+    }).filter(function (t) { return t.list.length; });
+    if (!topics.length) {
+      return '<p class="w-empty">Nothing carries a topic yet. Press <b>Edit</b> on any entry\u2019s pane and write a word or two ' +
+        "under What it is about \u2014 harbour surveying, photogrammetry, GIS.</p>";
+    }
+    if (wbLibTopic && !topics.some(function (t) { return t.word.toLowerCase() === wbLibTopic.toLowerCase(); })) wbLibTopic = "";
+    var out = '<div class="w-ntags" role="group" aria-label="Topics"><button class="w-ntag' + (!wbLibTopic ? " is-on" : "") +
+      '" aria-pressed="' + !wbLibTopic + '" data-act="wb-topic" data-id="">Every topic</button>' + topics.map(function (t) {
+        var on = t.word.toLowerCase() === wbLibTopic.toLowerCase();
+        return '<button class="w-ntag' + (on ? " is-on" : "") + '" aria-pressed="' + on + '" data-act="wb-topic" data-id="' +
+          esc(t.word) + '">' + esc(t.word) + ' <span class="w-mono">' + t.list.length + "</span></button>";
+      }).join("") + "</div>";
+    var shown = wbLibTopic ? topics.filter(function (t) { return t.word.toLowerCase() === wbLibTopic.toLowerCase(); }) : topics;
+    out += shown.map(function (t) {
+      return '<section class="w-shelf"><div class="w-shead"><h2>' + esc(t.word) + '</h2><span class="w-mono w-cnum">' +
+        t.list.length + '</span></div><div class="w-lgrid">' + t.list.map(wbLibCard).join("") + "</div></section>";
+    }).join("");
+    var none = libAll.filter(function (x) { return !(x.rec.topics || []).length; }).length;
+    if (none && !wbLibTopic) {
+      out += '<p class="w-fnote">' + esc(cap(wbWords(none, "entry carries", "entries carry").toLowerCase())) +
+        " no topic yet, and " + (none === 1 ? "is" : "are") + " on the other two readings.</p>";
+    }
     return out;
   }
 
@@ -10952,7 +10848,7 @@
             return '<button class="w-ev" data-act="wb-open" data-id="' + esc(e.id) + '">' + wDot(e.type, "is-6") +
               '<span class="w-ell">' + esc(e.title) + "</span></button>";
           }).join("") + "</div></div>";
-      }).join("") : '<p class="w-empty is-tight">No skills yet. Add one under Career.</p>') + "</div></section>";
+      }).join("") : '<p class="w-empty is-tight">No skills yet. Add one under Profile, from the round button at the top.</p>') + "</div></section>";
 
     var who = state.settings.demo ? "Maya Saad" : (state.profile.name || "");
     var roles = state.roles.slice().sort(function (a, b) {
@@ -11069,10 +10965,8 @@
       ["wb-go", "dir", "Files", "What you kept, what is in your Drive folders, every path"],
       ["wb-go", "map", "Map", "Everything, and how it is joined"],
       ["wb-go", "record", "Record", "Your skills and the live CV"],
-      ["wb-else", "career", "Career", "Roles, education, training, skills"],
+      ["wb-profile", "", "Profile", "About you, your timeline, experience, portfolio and CVs"],
       ["wb-else", "work", "Work", "Projects, workflows, people, equipment, hours"],
-      ["wb-else", "library", "Library pages", "Citations, bibliographies, templates"],
-      ["wb-else", "show", "Portfolio and CVs", "What you show people"],
       ["settings", "", "Settings", "Sync, snapshots, feeding it a file, erasing"],
       ["sync-how", "", "How syncing works", "The book between devices, the files between computers"],
       ["guide", "", "How to use it", "The guide"]];
@@ -12143,7 +12037,7 @@
   /* ---------------- the folder tree ---------------- */
 
   var wbLibFolder = "";
-  function libBy() { return state.settings.libBy === "folder" ? "folder" : "kind"; }
+  function libBy() { var b = state.settings.libBy; return b === "folder" || b === "topic" ? b : "kind"; }
   function folderKids(pid) {
     return state.folders.filter(function (f) { return (f.folderId || "") === (pid || ""); })
       .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
@@ -13920,11 +13814,9 @@
     var p = parseRef(r);
     if (!recOf(r)) { toast(nameOf(r) + " is not in the book"); return; }
     back.push({ tab: view, page: pageAt[view] || "", rec: openRec });
-    openRec = r;
+    openRec = r; wbSel = null;
     view = TAB_OF[p.kind] || view;
-    if (p.kind === "lib") {
-      pageAt.library = LIB_PAGE[recOf(r).kind] || "scripts";
-    } else if (PAGE_OF[p.kind]) {
+    if (PAGE_OF[p.kind]) {
       pageAt[TAB_OF[p.kind]] = PAGE_OF[p.kind];
     }
     render();
@@ -13964,8 +13856,16 @@
     "settings": function () { goPage("settings", ""); },
     "guide": function () { goPage("guide", ""); },
 
-    "lib-facet": function (idv) { libTopic = idv || ""; render(); },
-    "lib-topic": function (idv) { libTopic = idv || ""; pageAt.library = "topics"; render(); },
+    /* A subject pill opens the one Library on that subject. */
+    "lib-topic": function (idv) {
+      wbLibTopic = idv || ""; state.settings.libBy = "topic"; save();
+      wbSel = null; openRec = ""; back = []; view = "shelves"; render(); window.scrollTo({ top: 0, behavior: "auto" });
+    },
+    "wb-topic": function (idv) { wbLibTopic = idv || ""; render(); },
+    "wb-profile": function () {
+      wbSel = null; openRec = ""; back = []; view = "profile"; pageAt.profile = "profile";
+      render(); window.scrollTo({ top: 0, behavior: "auto" });
+    },
     "proj-filter": function (idv) { projFilter = idv || ""; render(); },
 
     /* ---- the Workbench ----
@@ -14096,7 +13996,7 @@
     "note-save": function (idv) { noteSave(idv || wbNote); },
     "note-cancel": function () { wbNoteEdit = false; render(); },
     "wb-libby": function (idv) {
-      state.settings.libBy = idv === "folder" ? "folder" : "kind";
+      state.settings.libBy = idv === "folder" || idv === "topic" ? idv : "kind";
       commit(); render();
     },
     "wb-folder": function (idv) {
@@ -14643,11 +14543,11 @@
          looked at means the tab shows a different screen depending on what
          you did ten minutes ago. The pane closes with it, as the
          prototype's `go()` does. */
-      openRec = ""; back = []; libTopic = ""; projFilter = ""; dirFacet = "";
+      openRec = ""; back = []; projFilter = ""; dirFacet = "";
       wbSel = null; wbLinking = false; wbStep = 0;
       /* The map keeps where you had panned it, which kinds are on and the
          search; what you were narrowed to is a navigation, and resets. */
-      wbLibFolder = "";
+      wbLibFolder = ""; wbLibTopic = "";
       wbNote = ""; wbNoteEdit = false; wbNoteTag = ""; wbNoteQ = ""; wbNoteFolder = "";
       filesSect = "kept"; filesQ = ""; filesDrive = {};
       GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
@@ -14656,10 +14556,18 @@
       sift = {};
     },
     renderView: function (v) {
+      /* THE OLD SECTIONS' IDS STILL LAND SOMEWHERE: Career and Portfolio
+         and CVs are Profile now, and the Library is one Library. */
+      if (v === "career" || v === "show") { view = v = "profile"; }
+      if (v === "library") { view = v = "shelves"; if (openRec && parseRef(openRec).kind !== "lib") openRec = ""; }
       if (v === "today") return wbTodayView();
       if (v === "bench") return wbBenchView();
       if (v === "map") return wbMapView();
-      if (v === "shelves") return wbLibraryView();
+      /* A Library entry's own page opens INSIDE the Library, over the list
+         it came from: Back and the crumb both return to it. */
+      if (v === "shelves") {
+        return openRec && parseRef(openRec).kind === "lib" && recOf(openRec) ? recPage(openRec) : wbLibraryView();
+      }
       if (v === "notes") return wbNotesView();
       if (v === "note") return wbNoteView();
       if (v === "record") return wbRecordView();
@@ -14673,10 +14581,8 @@
       if (openRec && recOf(openRec) && (TAB_OF[parseRef(openRec).kind] === v)) {
         return recPage(openRec);
       }
-      if (v === "career") return renderCareer();
+      if (v === "profile") return renderProfile();
       if (v === "work") return renderWork();
-      if (v === "library") return renderLibrary();
-      if (v === "show") return renderShow();
       view = "today";
       return wbTodayView();
     },

@@ -4783,3 +4783,54 @@ rest and under the pointer, at 1400, 390 and 320px, with a file whose bytes
 are elsewhere on screen so the amber reading is measured) · `m5dir.js` now
 84, reaching the Directory through Files and testing the shape switch where
 it still lives, on the record lists.
+
+## mashghal2: Profile behind a round button, and one Library (w15)
+
+Its owner asked why there were two Libraries, and for Career — the timeline,
+the roles — to become a **Profile** reached from a small icon at the top right,
+with Portfolio and CVs merged into it. Work was left alone, as asked.
+
+- **TWO LISTS OF ONE STORE IS THE FAULT THIS APP WAS REBUILT OVER.** The
+  Workbench's Library and the pre-Workbench "Library pages" both listed
+  `state.lib`. The second list is gone; what only it could do moved onto the
+  first — a New button for each kind, **Paste BibTeX or RIS**, **Type a
+  reference in**, **Export a bibliography** — and its subject lens became a
+  third reading, **By topic**, beside By kind and By folder (`settings.libBy`,
+  kept like the others). The skill chips on By kind were also headed "By
+  subject", so two readings would have had one name for two different things:
+  they read **Backs a skill** now.
+- **AN ENTRY'S OWN PAGE IS NOT A SECOND LIBRARY.** The old per-entry page is the
+  only place a reference is shown as it would be cited, with where it is used
+  and what else is on its subject, so it stays — opened from the pane's **Open
+  as a page →**, INSIDE the Library (`TAB_OF.lib` is `shelves`, and the
+  shelves route renders `recPage` when a lib record is open), with its crumb
+  and Back both returning to the list. `renderLibrary`, `libListPage`,
+  `refsPage` and `topicsPage` went with the list, found by the orphan scan in
+  three passes; the five `lib-add-*` actions that had been unclickable since
+  the Workbench landed are the New buttons now.
+- **PROFILE IS ONE STRIP OF EIGHT**: About · Timeline · Experience · Education
+  · Training · Skills · Portfolio · CVs (`PAGES.profile`, replacing
+  `PAGES.career` and `PAGES.show`). The pages are the ones that were there;
+  only their section changed, so `TAB_OF` sends a role, a degree, a portfolio
+  piece and a CV to `profile`, and the old view ids `career` and `show` land
+  on it rather than on nothing. A portfolio and a CV are selections out of the
+  career record — as a separate section they read as a second record.
+- **THE ROUND BUTTON CARRIES INITIALS OR AN OUTLINE, NEVER INVENTED LETTERS.**
+  Top right on every screen, fixed in the bar on a laptop and at the top of
+  the page on a phone (where the bar is at the bottom), `aria-current` while
+  Profile is open. With no name written it is a person's outline.
+- **The sidebar lost its "Everything else" heading**: Files is a tab, Profile
+  is the button, the Library is one, and a single quiet **Work** row needs no
+  heading. More on a phone follows.
+
+`wb-profile.js` (64: the outline on an empty book and the initials on the
+example, top right with the line clear of it, the sidebar's old rows gone, the
+strip of eight each rendering and current, a role's page and Back, a portfolio
+piece and a CV made from Profile opening in it, the three old ids landing,
+every button the old Library had, a script made with its topics, By topic and
+its chip, the reading surviving a reload, a reference's own page with its
+citation opening inside the Library with the pane closed and the crumb
+returning, More, and the button uncovered and in the corner at 390 and 320px) · `plook.js` (63: the button,
+the Library's new buttons, By topic, the pane's page link and Profile's strip
+in contrast at rest and under the pointer at 1400, 390 and 320px). `wb-views`,
+`m5import` and `m5dir` reach Profile through the button now.
