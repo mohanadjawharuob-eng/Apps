@@ -4883,3 +4883,63 @@ distance and put back by one undo, a tab change letting go, nothing in the
 book, 390px) · `slook.js` (39: the bar and the tick in contrast, at rest and
 under the pointer, at 1400, 390 and 320px). The `.w-col` rule w15 declared a
 second time — the collision scan's catch — is one rule again.
+
+## mashghal2 reads a workflow written in plain language (w17)
+
+Asked for "a feature to read my plain language and make it into a workflow
+... try not to make it forced to use a certain format of writing, maybe we
+can use different symbology". `m5/31-wb-prose.js`; reached from Work →
+Workflows (**Write one out**), a workflow's page (**Write steps out**, which
+appends), More, and `workflow:` in the line.
+
+- **FORGIVING ABOUT FORM, STRICT ABOUT GUESSING.** A new step is a new line, a
+  number, a bullet of any shape, an arrow of any shape (`->` `=>` `→` `>`),
+  or a sequence word (then, after that, next, finally) — or an "and" followed
+  by a step's verb, which is how "email it to Rita and wait a week" is two
+  steps while "the photos and the texts" stays one name. The kind comes from a
+  mark (✉ ⏳ ❓ 📁, `[send]`, `wait:`), a question mark, or the verb.
+  `(3 days)` or "chase after a week" is when to chase, `by Friday` a deadline,
+  `@Rita` or a name after to/with/from/ask is who — and anybody already in the
+  book — and "her notes" after a step sent to Rita is waiting on Rita. What it
+  cannot place is **named in the preview, never guessed**: a loop with nothing
+  above it, a "back to" naming no step, a second loop from one step.
+- **THE READING IS SHOWN AS YOU TYPE, AND NOTHING IS KEPT UNTIL THE BUTTON.**
+  `proseRead()` writes nothing; `proseMake()` writes exactly what the preview
+  printed, under one snapshot, with one Undo. Typing repaints the reading and
+  never the page, or the caret would leave the box on every key.
+- **A QUESTION KEEPS ITS ANSWERS.** Everything after a `?` is its ways out, so
+  "Approved? yes → print, no → back to 2" is never cut at its arrows, and an
+  "if X, A; otherwise B" sentence anywhere in a paragraph is a question too.
+  A way out naming a step not yet written **makes it**, right after the
+  question, and says so ("made from a way out") — the writer is taken at their
+  word. "back to 2" means the step WRITTEN as 2; "back to design", "redo the
+  letter" and "skip to submit" find the step by its words.
+- **WHERE A LINE POINTS IS A STEP, NOT A POSITION.** The first draft stored
+  indexes, and inserting a step made from a way out shifted every one after it
+  — "no → skip to submit" came to point at the step just made. Targets are held
+  as the steps themselves and turned into positions last, and on the record
+  they are **step ids**, so reordering or deleting later cannot re-aim them.
+- **A digit may touch its unit ("5d"); a word may not.** "an" followed by "d"
+  inside "and" read as one day, so "the photos and the texts" lost its "and"
+  and gained a chase interval. Word numbers need a boundary and a full unit.
+- **Nothing about the older workflow record changed.** A step is still a name
+  and a note in order; `act`, `who`, `days`, `by`, `optional`, `withPrev`,
+  `phase`, `back` and `ways` are optional words on it, shown on the workflow's
+  page by `stepMetaWords()` in the preview's own words, and **Edit** on a step
+  now sets its kind, who and chase — a chase of nought is refused, since
+  nothing is ever called late without a real number.
+- **A tint is a token, not a `color-mix()`.** The first pills mixed their
+  backgrounds, which computes to `color(srgb 0.93 …)` on a 0–1 scale and read
+  as black to the contrast walk; they use the palette's own pill tints now,
+  the pairs `.w-tag` already measures.
+
+`wb-prose.js` (45: the routes in, a numbered list, three kinds of bullet,
+three shapes of arrow, a paragraph with "then" and "after that", "and" before
+a verb and not inside a name, the marks, a named first line, an indented
+detail, ways out making a step and looping by number, meanwhile and a
+deadline, optional, a 🔁 loop, an if-sentence mid-paragraph, skip to, what
+cannot be placed, both refusals in words, Ctrl+Enter, the record holding what
+the preview printed with ways pointing at ids, the page showing the words, one
+Undo, appending, the step dialog, `workflow:` in the line keeping nothing in
+the inbox, 390 and 320px) · `pzlook.js` (24: the writer, the reading, the
+legend and the workflow page in contrast at 1400, 390 and 320px).

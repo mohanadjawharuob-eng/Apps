@@ -1871,6 +1871,60 @@
   }
   body.sel-on #view .fx-row::after, body.sel-on #view .w-ihead::after, body.sel-on #view .w-nrow::after { top: 50%; margin-top: -9px; }
   .g-n.is-grp .g-rect { stroke: var(--blue); stroke-width: 2.4; stroke-dasharray: 5 3; }
+
+  /* ---- write a workflow out (w17) ---- */
+  .pz-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; margin-top: 20px; align-items: start; }
+  .pz-lab { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .pz-lab:first-child { margin-top: 0; }
+  .pz-lab .w-mono { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--dim); }
+  .pz-namein { width: 100%; box-sizing: border-box; }
+  .pz-to { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .pz-in {
+    width: 100%; box-sizing: border-box; min-height: 300px; padding: 12px 14px; resize: vertical;
+    border: 1px solid var(--rule-mid); border-radius: 10px; background: var(--sheet); color: var(--ink);
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.65;
+  }
+  .pz-err { margin: 8px 0 0; font-size: 13.5px; color: var(--late); min-height: 1em; }
+  .pz-err:empty { display: none; }
+  .pz-legend { margin-top: 16px; font-size: 13px; color: var(--ink-2); }
+  .pz-legend summary { cursor: pointer; font-weight: 600; }
+  .pz-legend table { margin-top: 8px; border-collapse: collapse; width: 100%; }
+  .pz-legend th { text-align: left; vertical-align: top; padding: 5px 12px 5px 0; font-weight: 600; white-space: nowrap; color: var(--ink); }
+  .pz-legend td { padding: 5px 0; color: var(--ink-2); border-top: 1px solid var(--rule); }
+  .pz-legend th { border-top: 1px solid var(--rule); }
+  .pz-right { position: sticky; top: 96px; }
+  .pz-out { display: flex; flex-direction: column; gap: 6px; }
+  .pz-empty { margin: 0; font-size: 14px; color: var(--dim); line-height: 1.55; }
+  .pz-phase { margin: 10px 0 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .pz-phase.is-page { margin: 14px 0 4px; }
+  .pz-step { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+  .pz-step.is-along, .row.is-along { margin-left: 22px; border-left: 3px solid var(--rule-strong); }
+  .pz-n { flex: none; width: 20px; font-size: 12.5px; color: var(--dim); padding-top: 2px; }
+  .pz-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
+  .pz-name { font-size: 14.5px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .pz-act {
+    display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    background: var(--sidebar); color: var(--ink-2); vertical-align: 1px;
+  }
+  /* The kind of a step is a word on a tinted pill, in the palette's own
+     pill tints — the same pairs .w-tag already measures. */
+  .pz-act.is-send { background: var(--blue-tint-2); color: var(--blue-deep); }
+  .pz-act.is-wait { background: var(--amber-bg); color: var(--amber); }
+  .pz-act.is-decide { background: var(--today-bg); color: var(--today); }
+  .pz-act.is-file { background: var(--sidebar); color: var(--ink); border: 1px solid var(--rule-mid); }
+  .pz-meta, .pz-note { margin: 3px 0 0; font-size: 12.5px; color: var(--dim); overflow-wrap: anywhere; }
+  .pz-note { font-style: italic; }
+  .pz-ways { margin: 4px 0 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); }
+  .pz-ways em { color: var(--dim); }
+  .pz-unplaced { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--amber-bg); font-size: 13px; color: var(--ink-2); }
+  .pz-unplaced p { margin: 2px 0; }
+  .pz-uh { font-weight: 600; color: var(--ink); }
+  @media (max-width: 879px) {
+    .pz-wrap { grid-template-columns: minmax(0, 1fr); }
+    .pz-right { position: static; }
+    .pz-in { min-height: 220px; }
+    .pz-legend th { white-space: normal; }
+  }
 </style>
 </head>
 <body>
@@ -1989,7 +2043,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w16 · 26 Sep 2026";
+  var BUILD = "w17 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -4815,7 +4869,7 @@
       workflow: ["Workflows", "How you actually perform a kind of work. One workflow is " +
         "reused across projects — each use is a run — which is exactly the " +
         "distinction that makes a procedure worth writing down once.",
-        btn("wf-add", "", "New workflow", "btn primary")],
+        btn("wf-add", "", "New workflow", "btn primary") + btn("wf-prose", "", "Write one out")],
       action: ["Actions", "What happens next. Late first, because that is the only thing " +
         "that cannot wait.", btn("act-add", "", "New action", "btn primary")],
       person: ["People", "Who you work with, and what is outstanding with them.",
@@ -5154,6 +5208,7 @@
           : "not used on a project yet"),
         btn("wf-edit", w.id, "Edit", "btn primary") +
         btn("wf-step", w.id, "Add a step") +
+        btn("wf-prose", w.id, "Write steps out") +
         btn("run-add-wf", w.id, "Run it on a project") +
         docActs("workflow", w) +
         btn("link-add", ref("workflow", w.id), "Link it to…") +
@@ -5163,11 +5218,18 @@
 
     out.push(sectHead("The procedure", steps.length));
     if (steps.length) {
+      var phase = "";
       out.push('<div class="rows">' + steps.map(function (s, i) {
         var sl = ofKind(both(ref("workflow", w.id) + "#" + s.id, "uses"), "lib").filter(recOf);
-        return '<div class="row flat">' +
+        var meta = stepMetaWords(w, s), ph = s.phase && s.phase !== phase ? s.phase : "";
+        phase = s.phase || phase;
+        /* A step written out carries its kind as a word, the preview's
+           word, so the page and the writer cannot disagree about it. */
+        return (ph ? '<p class="pz-phase is-page">' + esc(ph) + "</p>" : "") + '<div class="row flat' + (s.withPrev ? " is-along" : "") + '">' +
           '<span class="when" style="padding-top:0.2rem;min-width:1.4rem">' + (i + 1) + ".</span>" +
-          '<span class="grow"><span class="nm">' + esc(s.name) + "</span>" +
+          '<span class="grow"><span class="nm">' + (s.act && PROSE_ACTS[s.act] ? '<span class="pz-act is-' + s.act + '">' +
+            PROSE_ACTS[s.act].word + "</span> " : "") + esc(s.name) + "</span>" +
+          (meta ? '<span class="sub">' + esc(meta) + "</span>" : "") +
           (s.note ? '<span class="sub">' + esc(s.note) + "</span>" : "") +
           (sl.length ? '<span class="sub">' + esc(countWords(sl.length,
             "library entry", "library entries")) + " on it</span>" : "") + "</span>" +
@@ -5178,8 +5240,8 @@
       }).join("") + "</div>");
     } else {
       out.push('<div class="panel">' + emptyLines("No steps written yet.",
-        "Press Add a step. A workflow with no steps is a name; with them it is the " +
-        "thing you reuse.") + "</div>");
+        "Press Add a step, or Write steps out to type them the way you would say them. A workflow " +
+        "with no steps is a name; with them it is the thing you reuse.") + "</div>");
     }
 
     /* THE SAME PROCEDURE, DIFFERENT EXECUTIONS. This is the distinction
@@ -5994,6 +6056,11 @@
         "file you keep is written there straight away. On the other computer connect the same folder and press <b>Bring in what " +
         "is here</b>. Chrome or Edge on a computer; a second account is a second folder. The whole walk-through is " +
         "under <b>How syncing works</b>.") +
+      gnote("<b>A workflow, written the way you would say it.</b> Work \u2192 Workflows \u2192 <b>Write one out</b>, or " +
+        "type <span class=\"w-mono\">workflow:</span> in the line. A numbered list, bullets, arrows or one long sentence all " +
+        "work; a question becomes a decision with its ways out (<em>Approved? yes \u2192 print, no \u2192 back to 2</em>), " +
+        "<em>(3 days)</em> is when to chase, <em>@Rita</em> is who, and \u2709 \u23f3 \u2753 \ud83d\udcc1 mark the kind. " +
+        "The steps appear beside the text as they are read, and what it cannot place is named rather than guessed.") +
       gnote("<b>Many at once.</b> Press <b>Select</b> in the Library, Notes, Files or the review's inbox, then click " +
         "what you want: Shift+click takes a run, Ctrl+A takes everything on the screen, Esc lets go, and Ctrl+click " +
         "starts it without the button. The bar that appears moves them to a folder, tags them, puts them on a bench, " +
@@ -6749,16 +6816,32 @@
       title: s ? "Edit “" + s.name + "”" : "Add a step to " + w.name,
       fields: [
         { key: "name", label: "The step", value: s ? s.name : "", span: true },
+        { key: "act", label: "What kind", type: "select", value: s && s.act ? s.act : "do", options: [
+          { value: "do", label: "Do — yours to do" }, { value: "send", label: "Send — goes to somebody" },
+          { value: "wait", label: "Wait — on somebody" }, { value: "decide", label: "Decide — a question with ways out" },
+          { value: "file", label: "File — puts the result away" }] },
+        { key: "who", label: "With whom", value: s && s.who ? s.who : "", hint: "Blank if it is only yours." },
+        { key: "days", label: "Chase after (days)", type: "number", value: s && s.days ? String(s.days) : "",
+          hint: "Blank for never. Nothing is ever called late without a number here." },
         { key: "note", label: "How it is done", value: s ? s.note : "", type: "textarea",
           rows: 3, span: true,
           hint: "A step that names the library entry it uses is the one that saves you " +
             "an hour next year — attach it from the step's own row." }
       ],
-      validate: function (v) { return v.name.trim() ? "" : "It needs a name."; },
+      validate: function (v) {
+        if (!v.name.trim()) return "It needs a name.";
+        var d = String(v.days == null ? "" : v.days).trim();
+        if (d && !(/^\d{1,3}$/.test(d) && +d > 0)) return "Chase after is a number of days, or blank.";
+        return "";
+      },
       onConfirm: function (v) {
         if (!w.steps) w.steps = [];
         var rec = s || { id: uid() };
         rec.name = v.name.trim(); rec.note = (v.note || "").trim();
+        if (v.act && v.act !== "do") rec.act = v.act; else delete rec.act;
+        if (String(v.who || "").trim()) rec.who = String(v.who).trim(); else delete rec.who;
+        var dd = String(v.days == null ? "" : v.days).trim();
+        if (dd) rec.days = +dd; else delete rec.days;
         if (!s) w.steps.push(rec);
         stamp(w);
         saveGo(s ? "Saved" : "Added the step");
@@ -10097,7 +10180,7 @@
     }
     var pt = document.getElementById("ptabs");
     if (pt) {
-      var MORE = { map: 1, notes: 1, note: 1, record: 1, work: 1, dir: 1, settings: 1, guide: 1, more: 1, synchow: 1 };
+      var MORE = { map: 1, notes: 1, note: 1, record: 1, work: 1, dir: 1, settings: 1, guide: 1, more: 1, synchow: 1, wfwrite: 1 };
       pt.innerHTML = [["today", "Today"], ["benches", "Benches"], ["shelves", "Library"],
         ["review", "Review"], ["more", "More"]].map(function (x) {
           var on = x[0] === "benches" ? (view === "bench" || view === "benches")
@@ -10131,6 +10214,14 @@
     if (!q) { drop.hidden = true; drop.innerHTML = ""; return; }
     if (!WB) wbBuild();
     var html = "";
+    var wfm = q.match(PROSE_LINE);
+    if (wfm) {
+      var rd = proseRead(wfm[2] || "");
+      html = '<div class="w-keepbar"><span class="w-kbd">Enter</span><span>opens the workflow writer with</span>' +
+        '<span class="w-where">' + esc(rd.steps.length ? wbWords(rd.steps.length, "step", "steps").toLowerCase() + ": " +
+          rd.steps.map(function (s) { return s.name; }).join(" → ") : "a blank page") + "</span></div>";
+      drop.innerHTML = html; drop.hidden = false; return;
+    }
     if (wbIsQuestion(q)) {
       var a = wbAsk(q);
       html = '<div class="w-ans"><p class="w-anst">' + esc(a.text) + '</p><p class="w-ansr">read as: ' +
@@ -10151,7 +10242,7 @@
         '<p class="w-dlabel">' + (found.length ? "Already kept" : "Nothing kept matches yet") + "</p>" +
         found.map(function (it) { return wRow(it, "is-find"); }).join("") +
         '<p class="w-dhelp">Start with <b>!</b> for an action, <b>2h</b> to log time, <b>read:</b> for your ' +
-        "reading list, <b>idea:</b> for a draft, <b>note:</b> for a note in your notes, <b>#" + esc((wbLiveBenches()[0] || { key: "anfeh" }).key) +
+        "reading list, <b>idea:</b> for a draft, <b>note:</b> for a note in your notes, <b>workflow:</b> to write one out, <b>#" + esc((wbLiveBenches()[0] || { key: "anfeh" }).key) +
         "</b> to put it on a bench. End with <b>?</b> to ask.</p>";
     }
     drop.innerHTML = html;
@@ -10160,6 +10251,8 @@
   function wbLineKeep() {
     var inp = document.getElementById("line");
     var q = inp.value.trim();
+    var wfm = q.match(PROSE_LINE);
+    if (wfm) { inp.value = ""; wbPaintDrop(); proseOpen(wfm[2] || ""); return; }
     if (!q || wbIsQuestion(q)) return;
     inp.value = "";
     wbPaintDrop();
@@ -11000,6 +11093,7 @@
       ["wb-go", "record", "Record", "Your skills and the live CV"],
       ["wb-profile", "", "Profile", "About you, your timeline, experience, portfolio and CVs"],
       ["wb-else", "work", "Work", "Projects, workflows, people, equipment, hours"],
+      ["wf-prose", "", "Write a workflow out", "Type the steps the way you would say them"],
       ["settings", "", "Settings", "Sync, snapshots, feeding it a file, erasing"],
       ["sync-how", "", "How syncing works", "The book between devices, the files between computers"],
       ["guide", "", "How to use it", "The guide"]];
@@ -13939,6 +14033,529 @@
       wbDone("Removed " + selWordsOf(Object.keys(gone).length), snap);
     });
   }
+  /* ============================================================
+     WRITE A WORKFLOW OUT.
+
+     Asked for "a feature to read my plain language and make it into a
+     workflow, in a very simple way ... try not to make it forced to use a
+     certain format of writing, maybe we can use different symbology".
+
+     So the reader is FORGIVING ABOUT FORM and STRICT ABOUT GUESSING. It
+     takes a numbered list, bullets, one long sentence with "then" in it,
+     arrows of any shape, a question with its answers on the same line —
+     and it will not invent a meaning for a line it cannot read. Every
+     reading is shown beside the text AS YOU TYPE, so a line read wrongly is
+     seen before anything is written, and what it could not place is named.
+
+     A step is a step in the record the app already has — a name and a
+     note, in order — plus a few optional words the reader found: what kind
+     of step it is (do, send, wait, decide, file), who it is with, how long
+     before chasing, a deadline, where a "no" loops back to, and whether it
+     runs alongside the step before. Nothing about the older workflow
+     record changes, so a workflow written by hand and one written out read
+     the same.
+
+     `proseRead(text)` reads and writes nothing; `proseMake()` is the only
+     half that writes, and it writes what the preview printed.
+     ============================================================ */
+
+  var proseText = "", proseName = "", proseTo = "";
+  /* "workflow: design it -> send to Rita -> print" in the line opens the
+     writer with it; a line cannot hold a list, the writer can. */
+  var PROSE_LINE = /^(workflow|procedure|process|steps)\s*:\s*([\s\S]*)$/i;
+
+  var PROSE_ACTS = {
+    do: { word: "Do", says: "yours to do" },
+    send: { word: "Send", says: "goes to somebody" },
+    wait: { word: "Wait", says: "waiting on somebody" },
+    decide: { word: "Decide", says: "a question with ways out" },
+    file: { word: "File", says: "puts the result away" }
+  };
+  var PROSE_NUMS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+    nine: 9, ten: 10, eleven: 11, twelve: 12, fourteen: 14, fifteen: 15, twenty: 20, thirty: 30,
+    "a couple of": 2, "a few": 3, couple: 2, few: 3 };
+  var PROSE_NUM_RE = "(\\d+|a couple of|a few|an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fourteen|fifteen|twenty|thirty)";
+
+  /* THE SYMBOLS. Any of these at the start of a step says what kind it
+     is: a mark, a word with a colon, or a word in brackets. */
+  var PROSE_MARKS = [
+    [/^(?:✉️?|📧|📨|📤|📮)\s*/, "send"], [/^(?:⏳|⌛|🕒|⏰|⏱️?)\s*/, "wait"],
+    [/^(?:❓|❔)\s*/, "decide"], [/^(?:📁|🗂️?|🗄️?|💾|📦)\s*/, "file"], [/^(?:✅|☑️?|🔨|🛠️?)\s*/, "do"],
+    [/^\[\s*(send|wait|ask|decide|file|do)\s*\]\s*/i, ""], [/^\(\s*(send|wait|ask|decide|file|do)\s*\)\s*/i, ""],
+    [/^(send|wait|ask|decide|file|do)\s*:\s*/i, ""]
+  ];
+  var PROSE_VERBS = {
+    send: /^(send|e-?mail|mail|share|submit|deliver|post|forward|hand (it )?(over|in)|give (it )?to|pass (it )?(on )?to|dispatch|return (it )?to)\b/i,
+    wait: /^(wait|await|chase|follow up|hear back|get (their |his |her )?(feedback|approval|sign-?off|notes|a reply|comments|answer)|until|expect)\b/i,
+    file: /^(archive|file|save (it )?(to|in)|store|back ?up|put (it |them )?(away|in)|keep a copy|upload (it |them )?to the (archive|folder|drive))\b/i,
+    decide: /^(decide|check (whether|if)|approve\b|choose|is it|are they|does it|should (we|i))/i
+  };
+  /* Sequence can be said in any of these ways inside one line. */
+  var PROSE_SEP = /\s*(?:-{1,2}>|={1,2}>|→|⟶|➔|➜|➡️?|»|>>|\s>\s|;\s*(?:and\s+)?then\b|,\s*(?:and\s+)?then\b|\band then\b|\bthen\s+(?=[a-z])|\bafter that\b,?|\bafterwards\b,?|\bnext\s*[,:]|\bfinally\b,?|\blastly\b,?)\s*/i;
+  /* "email it to Rita and wait a week": an "and" followed by a step's verb
+     is two steps. Any other "and" is part of the name. */
+  var PROSE_AND = /\s*,?\s+and\s+(?=(?:then\s+)?(?:wait|send|e-?mail|mail|share|submit|chase|archive|file|print|ask|check|review|design|draft|write|call|book|upload|save|store|approve|sign|publish|deliver|forward|collect|gather|prepare|edit|fix|revise)\b)/i;
+  var PROSE_LOOP = /^(?:and\s+)?(?:(?:go|come|loop|jump|return)\s+)?back\s+to\s+(.+)$|^(?:repeat|redo|start again|loop)(?:\s+(?:from|to|at)\s+(.+))?$|^(?:🔁|↺|↻|⟲)\s*(.*)$/i;
+  var PROSE_ABBR = /\b(?:e\.g|i\.e|etc|vs|dr|mr|mrs|ms|prof|approx|no|fig|st)\.$/i;
+
+  function proseNum(w) {
+    w = String(w || "").toLowerCase();
+    return /^\d+$/.test(w) ? +w : PROSE_NUMS[w] || 0;
+  }
+  function proseCap(s) {
+    s = String(s || "").replace(/\s+/g, " ").trim().replace(/^[,;:.\-–—]+\s*/, "").replace(/[\s,;:]+$/, "");
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+  }
+  function proseKnownPeople() {
+    return live(state.people || []).map(function (p) { return String(p.name || "").trim(); }).filter(Boolean)
+      .sort(function (a, b) { return b.length - a.length; });
+  }
+
+  /* One line may be several steps. A question keeps its answers: the part
+     after the "?" is read as ways out, never cut at its arrows. */
+  function proseSplit(line) {
+    var out = [];
+    var q = line.indexOf("?");
+    var head = q >= 0 ? line.slice(0, q + 1) : line, tail = q >= 0 ? line.slice(q + 1).trim() : "";
+    /* sentences, then the sequence words and arrows inside each */
+    var sentences = [], buf = "";
+    head.split(/(?<=[.!;])\s+(?=[A-Z؀-ۿ\d@✉📧⏳❓📁🔁])/).forEach(function (s) {
+      if (buf && PROSE_ABBR.test(buf)) { buf += " " + s; return; }
+      if (buf) sentences.push(buf);
+      buf = s;
+    });
+    if (buf) sentences.push(buf);
+    sentences.forEach(function (s) {
+      /* a conditional sentence keeps its commas: they are its ways out */
+      if (/^if\s/i.test(s.trim())) { out.push({ text: s.trim() }); return; }
+      s.split(PROSE_SEP).forEach(function (seg) {
+        (seg || "").split(PROSE_AND).forEach(function (x) { if (x && x.trim()) out.push({ text: x.trim() }); });
+      });
+    });
+    if (tail && out.length) out[out.length - 1].ways = tail;
+    else if (tail) out.push({ text: tail });
+    return out;
+  }
+
+  /* The ways out of a question: "yes → print, no → back to design",
+     "approved: print / otherwise: redo", "if not, back to 2". */
+  function proseWays(txt) {
+    var parts = String(txt || "").split(/\s*(?:;|\||\s\/\s|,\s*(?=(?:and\s+)?(?:if\s+)?(?:yes|no|not|otherwise|else|approved|rejected|ok|changes)\b)|\s+or\s+(?=(?:if\s+)?(?:yes|no|not)\b))\s*/i);
+    var ways = [];
+    parts.forEach(function (p) {
+      p = p.replace(/^(?:and\s+)?/i, "").trim().replace(/[.]+$/, "");
+      if (!p) return;
+      var m = p.match(/^(?:if\s+)?(otherwise|else|if not|not)\s*[,:]?\s*(?:-{1,2}>|=>|→|then)?\s*(.+)$/i) ||
+        p.match(/^(?:if\s+)?(.+?)\s*(?:-{1,2}>|={1,2}>|→|➜|:|,|\bthen\b)\s*(.+)$/i);
+      if (m) ways.push({ when: m[1].trim().toLowerCase().replace(/^else$/, "otherwise").replace(/^if not$/, "no").replace(/^not$/, "no"), then: m[2].trim() });
+      else ways.push({ when: "", then: p });
+    });
+    return ways;
+  }
+
+  /* Everything one segment says, read off it: the kind, who, when, and what
+     is left as its name. */
+  function proseStep(seg, people, prev) {
+    var t = seg.text, st = { act: "", who: [], days: 0, by: "", optional: false, withPrev: false, notes: [], src: t };
+    /* running alongside */
+    t = t.replace(/^(?:\+|&|\|\|)\s*/, function () { st.withPrev = true; return ""; })
+      .replace(/^(?:meanwhile|at the same time|in parallel|alongside(?: that)?|simultaneously)\s*[,:]?\s*/i, function () { st.withPrev = true; return ""; });
+    PROSE_MARKS.forEach(function (mk) {
+      t = t.replace(mk[0], function (all, w) {
+        if (!st.act) st.act = mk[1] || { ask: "decide" }[String(w).toLowerCase()] || String(w).toLowerCase();
+        return "";
+      });
+    });
+    t = t.replace(/^(?:first(?:ly)?|to start|start by|begin by|second(?:ly)?|third(?:ly)?)\s*[,:]?\s*/i, "")
+      .replace(/^(?:then\s+)?(?:i|we|you)\s+(?:will\s+|then\s+|need to\s+|have to\s+|should\s+|must\s+)?(?=[a-z])/i, "");
+    /* optional */
+    t = t.replace(/\s*\((?:optional|if needed|maybe|if there is time)\)\s*/i, function () { st.optional = true; return " "; })
+      .replace(/^(?:optional(?:ly)?|maybe|if needed)\s*[,:]?\s*/i, function () { st.optional = true; return ""; })
+      .replace(/,?\s*if needed\s*$/i, function () { st.optional = true; return ""; });
+    /* when to chase: "(3 days)", "chase after a week", "remind me in 5d" */
+    /* A DIGIT MAY TOUCH ITS UNIT ("5d"); a word may not, or the "an" in
+       "and" followed by a "d" reads as a day. */
+    var chase = new RegExp("\\(?\\s*(?:\\b(?:remind me|chase(?: them| it| her| him)?|follow up|nudge)\\s+)?(?:\\b(?:after|in|within|for|every)\\s+)?" +
+      "(?:(\\d+)\\s*|\\b(a couple of|a few|an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fourteen|fifteen|twenty|thirty)\\s+)" +
+      "(working\\s+|business\\s+)?(days?|d|weeks?|wks?|w)\\b\\s*\\)?", "i");
+    var cm = t.match(chase);
+    if (cm) cm = [cm[0], cm[1] || cm[2], cm[3], cm[4]];
+    if (cm) {
+      var n = proseNum(cm[1]);
+      if (n) {
+        st.days = n * (/^w/i.test(cm[3]) ? 7 : 1);
+        var stripped = t.replace(cm[0], " ").replace(/\s+/g, " ").trim().replace(/[,(]+$/, "").trim();
+        /* "Wait 5 days" is a whole step; do not leave it as "Wait". */
+        if (stripped.split(" ").length >= 2 || /\(/.test(cm[0])) t = stripped;
+        if (!st.act && /remind|chase|follow|nudge|wait/i.test(cm[0] + t)) st.act = "wait";
+      }
+    }
+    t = t.replace(/\s*\b(?:by|before|due)\s+((?:next\s+)?(?:mon|tues|wednes|thurs|fri|satur|sun)day|tomorrow|tonight|next week|the end of (?:the )?(?:week|month)|end of (?:the )?(?:week|month)|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}|[A-Za-z]{3,9}\s+\d{1,2}(?:st|nd|rd|th)?|\d{4}-\d{2}-\d{2})\b\.?/i,
+      function (all, d) { st.by = d; return ""; });
+    /* who: known people first, then @names, then a capitalised name after
+       a word that hands work to somebody */
+    people.forEach(function (nm) {
+      var re = new RegExp("(^|[^\\w@])@?(" + nm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![\\w])", "i");
+      if (re.test(t) && st.who.indexOf(nm) < 0) st.who.push(nm);
+    });
+    t = t.replace(/@([\w؀-ۿ][\w.؀-ۿ'-]*)/g, function (all, nm) {
+      var clean = nm.replace(/[.'-]+$/, "");
+      var known = people.filter(function (p) { return p.toLowerCase() === clean.toLowerCase() || p.toLowerCase().split(" ")[0] === clean.toLowerCase(); })[0];
+      var shown = clean.charAt(0).toUpperCase() + clean.slice(1), w = known || shown;
+      if (st.who.indexOf(w) < 0) st.who.push(w);
+      return shown;
+    });
+    var NOTNAME = /^(The|A|An|It|Them|This|That|Me|Us|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December|PDF|A5|A4)$/;
+    var hand = t.match(/\b(?:to|with|from|ask|asks|email|call|cc|remind|chase|by)\s+((?:[A-Z؀-ۿ][\w.'؀-ۿ-]*)(?:\s+(?:and|&)\s+(?:the\s+)?[A-Z؀-ۿ][\w.'؀-ۿ-]*|\s+[A-Z][\w.'-]*)*)/);
+    if (hand) {
+      hand[1].split(/\s+(?:and|&)\s+(?:the\s+)?/).forEach(function (nm) {
+        nm = nm.replace(/[.,]+$/, "");
+        if (NOTNAME.test(nm.split(" ")[0])) return;
+        if (!st.who.some(function (w) { return w.toLowerCase().indexOf(nm.toLowerCase()) === 0 || nm.toLowerCase().indexOf(w.toLowerCase()) === 0; })) st.who.push(nm);
+      });
+    }
+    /* "wait for her notes" is waiting on whoever the step before went to */
+    if (!st.who.length && prev && prev.who.length && /\b(her|him|them|their|his)\b/i.test(t)) st.who = prev.who.slice();
+    /* a note: brackets that are not a reading, or a colon after a short head */
+    t = t.replace(/\s*\(([^()]{2,})\)/g, function (all, x) { st.notes.push(x.trim()); return ""; });
+    var colon = t.match(/^([^:]{3,48}?):\s+(.{3,})$/);
+    if (colon && colon[1].split(" ").length <= 7 && !/^https?$/i.test(colon[1])) { t = colon[1]; st.notes.push(colon[2]); }
+    var dash = t.match(/^(.{3,}?)\s+(?:—|–|--)\s+(.{3,})$/);
+    if (dash) { t = dash[1]; st.notes.push(dash[2]); }
+    t = t.replace(/[.!]+$/, "");
+    st.name = proseCap(t);
+    /* the kind, if nothing marked it: a question decides, verbs say the rest */
+    if (!st.act) {
+      if (seg.ways || /\?\s*$/.test(st.name)) st.act = "decide";
+      else if (PROSE_VERBS.send.test(st.name)) st.act = "send";
+      else if (PROSE_VERBS.wait.test(st.name)) st.act = "wait";
+      else if (PROSE_VERBS.file.test(st.name)) st.act = "file";
+      else if (PROSE_VERBS.decide.test(st.name)) st.act = "decide";
+      else st.act = "do";
+    }
+    if (st.act === "decide" && !/\?$/.test(st.name)) st.name += "?";
+    st.ways = seg.ways ? proseWays(seg.ways) : [];
+    return st;
+  }
+
+  /* Which step a "back to …" or a way out names: a number is the step as
+     written ("2", "step 2", "#2"); words find the step whose name holds
+     them, earliest first. Nothing found is said, never guessed. */
+  function proseFind(steps, label) {
+    label = String(label || "").trim().replace(/^(?:the\s+)?(?:step\s*)?#?/i, "").replace(/[.!]+$/, "");
+    if (!label) return -1;
+    if (/^\d+$/.test(label)) {
+      var n = +label, byNum = -1;
+      steps.forEach(function (s, i) { if (byNum < 0 && s.num === n) byNum = i; });
+      if (byNum >= 0) return byNum;
+      return n >= 1 && n <= steps.length ? n - 1 : -1;
+    }
+    var l = label.toLowerCase().replace(/^the\s+/, "");
+    var words = l.split(/\s+/).filter(function (w) { return w.length > 2 && !/^(the|and|for|with|again|step)$/.test(w); });
+    for (var i = 0; i < steps.length; i++) {
+      var nm = steps[i].name.toLowerCase();
+      if (nm === l || nm.indexOf(l) >= 0) return i;
+    }
+    for (i = 0; i < steps.length; i++) {
+      nm = steps[i].name.toLowerCase();
+      if (words.length && words.every(function (w) { return nm.indexOf(w) >= 0 || nm.indexOf(w.replace(/(ing|ed|s)$/, "")) >= 0; })) return i;
+    }
+    return -1;
+  }
+  function proseLoopOf(txt) {
+    var m = String(txt || "").trim().replace(/[.!]+$/, "").match(PROSE_LOOP);
+    if (!m) return null;
+    var label = (m[1] || m[2] || m[3] || "").trim();
+    var again = label && label.match(PROSE_LOOP);
+    if (again && (again[1] || again[2])) label = (again[1] || again[2]).trim();
+    return { label: label };
+  }
+
+  /* "if X, A; otherwise B" — anywhere, not only at the start of a line —
+     is a question with two ways out. */
+  function proseIf(seg) {
+    var iff = seg.text.match(/^if\s+(.+?)\s*(?:,|:|\bthen\b|-{1,2}>|=>|→)\s*(.+?)(?:\s*[;,.]\s*(?:otherwise|else|if not)\s*[,:]?\s*(.+?))?[.!]?$/i);
+    if (!iff) return seg;
+    return { text: proseCap(iff[1]) + "?", ways: "yes → " + iff[2] + (iff[3] ? "; no → " + iff[3] : "") };
+  }
+  function proseRead(text) {
+    var lines = String(text || "").replace(/\r/g, "").replace(/\t/g, "    ").split("\n");
+    var people = proseKnownPeople(), steps = [], unplaced = [], name = "", phase = "", baseIndent = -1;
+    var first = true;
+    lines.forEach(function (raw, li) {
+      if (!raw.trim()) return;
+      var indent = raw.match(/^\s*/)[0].length, line = raw.trim();
+      /* the name: a heading, a "Workflow:" line, or a first line that ends in a colon */
+      var hm = line.match(/^#{1,3}\s+(.+)$/) || line.match(/^(?:workflow|procedure|process|title|name|how to)\s*:\s*(.+)$/i);
+      if (first && (hm || (/:$/.test(line) && line.split(" ").length <= 9 && !PROSE_SEP.test(line)))) {
+        name = proseCap((hm ? hm[1] : line).replace(/:$/, ""));
+        first = false; return;
+      }
+      first = false;
+      /* a heading further down is a phase of the work */
+      var ph = line.match(/^#{1,3}\s+(.+)$/);
+      if (ph || (/:$/.test(line) && line.split(" ").length <= 6 && !PROSE_SEP.test(line) && !/^[-*•\d]/.test(line))) {
+        phase = proseCap((ph ? ph[1] : line).replace(/:$/, ""));
+        return;
+      }
+      /* a list marker, remembering its number so "back to 2" means what was written */
+      var num = 0;
+      line = line.replace(/^(?:(\d{1,2})[.)]|\(?(\d{1,2})\)|[-*•–·▪◦]|\[\s?[xX ]?\s?\]|[a-z][.)](?=\s))\s*/, function (all, a, b) {
+        num = +(a || b) || 0; return "";
+      });
+      if (!line) return;
+      var last = steps[steps.length - 1];
+      /* INDENTED UNDER A STEP IS A DETAIL OF IT — or, under a question, a
+         way out of it. */
+      if (last && baseIndent >= 0 && indent > baseIndent) {
+        if (last.act === "decide" && /^(?:if\s+)?(?:yes|no|not|otherwise|else|approved|rejected|ok)\b/i.test(line)) {
+          last.ways = last.ways.concat(proseWays(line));
+        } else last.notes.push(line.replace(/^[-*•]\s*/, ""));
+        return;
+      }
+      baseIndent = indent;
+      /* "if X, A; otherwise B" is a question with two ways out */
+      var segs = proseSplit(line).map(proseIf);
+      segs.forEach(function (seg, si) {
+        var loop = proseLoopOf(seg.text);
+        if (loop) {
+          var host = steps[steps.length - 1];
+          if (!host) { unplaced.push({ line: li + 1, text: seg.text, why: "it loops back, but nothing comes before it" }); return; }
+          if (host.back) { unplaced.push({ line: li + 1, text: seg.text, why: "is a second loop from one step; the first, “" + host.backSrc + "”, is kept" }); return; }
+          host.back = loop.label || "1"; host.backSrc = seg.text;
+          return;
+        }
+        var st = proseStep(seg, people, steps[steps.length - 1]);
+        if (!st.name || st.name === "?") return;
+        st.num = si === 0 ? num : 0; st.line = li + 1; st.phase = phase;
+        steps.push(st);
+      });
+    });
+    /* resolve loops and ways out, and take the writer at their word: a way
+       out naming a step not yet written makes it, right after the question */
+    var i = 0;
+    while (i < steps.length) {
+      var s = steps[i];
+      if (s.back && !s.backStep) {
+        var bi = proseFind(steps.slice(0, i + 1), s.back);
+        if (bi < 0) unplaced.push({ line: s.line, text: s.backSrc || "back to " + s.back, why: "names no step above it" });
+        else s.backStep = steps[bi];
+      }
+      var made = [];
+      s.ways.forEach(function (w) {
+        /* "skip to archive" points at a step; it is not one */
+        var fwd = w.then.match(/^(?:go|skip|jump|move|continue|carry on|proceed)\s+(?:on\s+)?(?:to|with)\s+(.+)$/i);
+        if (fwd) {
+          var fi = proseFind(steps, fwd[1]);
+          if (fi < 0) unplaced.push({ line: s.line, text: w.then, why: "names no step" }); else w.toStep = steps[fi];
+          return;
+        }
+        /* "redo the letter" is a loop when the letter is a step above */
+        var rd = w.then.match(/^(?:redo|repeat|rework|revise|do again|go through)\s+(.+)$/i);
+        if (rd) {
+          var ri = proseFind(steps.slice(0, i + 1), rd[1]);
+          if (ri >= 0) { w.loop = true; w.toStep = steps[ri]; return; }
+        }
+        var lp = proseLoopOf(w.then);
+        if (lp) {
+          w.loop = true;
+          var li2 = proseFind(steps.slice(0, i + 1), lp.label || "1");
+          if (li2 < 0) unplaced.push({ line: s.line, text: w.then, why: "names no step above it" }); else w.toStep = steps[li2];
+          return;
+        }
+        var at = proseFind(steps, w.then);
+        if (at >= 0 && at !== i) { w.toStep = steps[at]; return; }
+        var ns = proseStep({ text: w.then }, people, s);
+        ns.num = 0; ns.line = s.line; ns.phase = s.phase; ns.fromWay = true;
+        made.push(ns); w.toStep = ns;
+      });
+      if (made.length) Array.prototype.splice.apply(steps, [i + 1, 0].concat(made));
+      i++;
+    }
+    /* indexes are final now */
+    /* WHERE A LINE POINTS IS A STEP, NOT A POSITION: inserting a step made
+       from a way out moved every position after it, and "skip to submit"
+       came to point at the step just made. Positions are read off now. */
+    steps.forEach(function (s) {
+      s.backTo = s.backStep ? steps.indexOf(s.backStep) : -1;
+      s.ways.forEach(function (w) { w.to = w.toStep ? steps.indexOf(w.toStep) : -1; });
+    });
+    return { name: name, steps: steps, unplaced: unplaced };
+  }
+
+  /* ---------------- the page ---------------- */
+
+  var PROSE_EXAMPLE = [
+    "Harbour festival brochure:",
+    "1. Gather the photos and the texts from @Nada",
+    "2. Design the brochure",
+    "     A5, folded twice, in the festival colours",
+    "3. Send the draft to @Rita -> wait for her notes (chase after 3 days)",
+    "4. Approved? yes → print 500 copies, no → back to 2",
+    "+ meanwhile book the stall at the harbour by Friday",
+    "5. 📁 Archive the final files in the festival folder"
+  ].join("\n");
+
+  function proseOpen(text, to) {
+    proseText = text != null ? String(text) : proseText;
+    proseTo = to || "";
+    var w = proseTo && byId(state.workflows, proseTo);
+    proseName = w ? w.name : "";
+    wbSel = null; openRec = ""; back = [];
+    view = "wfwrite"; render(); window.scrollTo({ top: 0, behavior: "auto" });
+    setTimeout(function () { var el = document.getElementById("proseIn"); if (el) el.focus(); }, 30);
+  }
+
+  function prosePreview(read) {
+    if (!read.steps.length) {
+      return '<p class="pz-empty">Nothing read yet. Write the steps any way you like — one a line, numbered, or one ' +
+        "sentence with “then” in it — and they appear here as they are read.</p>";
+    }
+    var out = "", ph = null;
+    read.steps.forEach(function (s, i) {
+      if (s.phase !== ph && s.phase) out += '<p class="pz-phase">' + esc(s.phase) + "</p>";
+      ph = s.phase;
+      var meta = [];
+      if (s.who.length) meta.push("with " + s.who.join(" and "));
+      if (s.days) meta.push((s.act === "wait" || s.act === "send" ? "chase after " : "") + wbWords(s.days, "day", "days").toLowerCase());
+      if (s.by) meta.push("by " + s.by);
+      if (s.optional) meta.push("if needed");
+      if (s.withPrev && i > 0) meta.push("alongside step " + i);
+      if (s.backTo >= 0 && s.back) meta.push("↺ back to step " + (s.backTo + 1));
+      if (s.fromWay) meta.push("made from a way out");
+      out += '<div class="pz-step' + (s.withPrev && i > 0 ? " is-along" : "") + '"><span class="pz-n w-mono">' + (i + 1) +
+        '</span><div class="w-grow"><div class="pz-head"><span class="pz-act is-' + s.act + '">' + PROSE_ACTS[s.act].word +
+        '</span><span class="pz-name">' + esc(s.name) + "</span></div>" +
+        (meta.length ? '<p class="pz-meta">' + esc(meta.join(" · ")) + "</p>" : "") +
+        (s.ways.length ? '<ul class="pz-ways">' + s.ways.map(function (w) {
+          return "<li>" + esc(w.when ? cap(w.when) : "Way out") + " → " + (w.to >= 0
+            ? (w.loop ? "back to " : "") + "step " + (w.to + 1) + " · " + esc(read.steps[w.to].name)
+            : esc(w.then) + " <em>(no step)</em>") + "</li>";
+        }).join("") + "</ul>" : "") +
+        (s.notes.length ? '<p class="pz-note">' + esc(s.notes.join(" · ")) + "</p>" : "") + "</div></div>";
+    });
+    if (read.unplaced.length) {
+      out += '<div class="pz-unplaced"><p class="pz-uh">Could not place</p>' + read.unplaced.map(function (u) {
+        return "<p>Line " + u.line + ": “" + esc(u.text) + "” " + esc(u.why) + ".</p>";
+      }).join("") + "</div>";
+    }
+    return out;
+  }
+
+  function proseView() {
+    var read = proseRead(proseText), guess = read.name;
+    var to = proseTo && byId(state.workflows, proseTo);
+    var out = wEyebrow("Workflows") + '<h1 class="w-h1">Write a workflow out</h1>' +
+      '<p class="w-lead is-62">Write it the way you would tell somebody: a numbered list, bullets, arrows, or one sentence with ' +
+      "“then” in it. The steps appear as they are read — beside the box, or under it on a phone — and nothing is kept until you press <b>" +
+      (to ? "Add these steps" : "Make the workflow") + "</b>.</p>";
+    out += '<div class="pz-wrap"><div class="pz-left">' +
+      '<label class="pz-lab" for="proseName">' + (to ? "Adding to" : "Its name") + "</label>" +
+      (to ? '<p class="pz-to">' + esc(to.name) + ' <button class="w-inlink" data-act="prose-new">make a new one instead</button></p>'
+        : '<input class="g-q pz-namein" id="proseName" type="text" autocomplete="off" value="' + esc(proseName) + '" placeholder="' +
+          esc(guess || "Name it — or start the text with a line ending in a colon") + '" />') +
+      '<label class="pz-lab" for="proseIn">The steps</label>' +
+      '<textarea id="proseIn" class="pz-in" rows="14" spellcheck="true" placeholder="Gather the photos from Nada\n' +
+      'Design the brochure, then send it to Rita\nWait for her notes (3 days)\nApproved? yes → print, no → back to design">' +
+      esc(proseText) + "</textarea>" +
+      '<p class="fx-acts"><button class="w-dark" data-act="prose-make">' + (to ? "Add these steps" : "Make the workflow") + "</button>" +
+      '<button class="w-pbtn" data-act="prose-example">Try an example</button>' +
+      (proseText ? '<button class="w-pbtn" data-act="prose-clear">Clear</button>' : "") + "</p>" +
+      '<p class="pz-err" id="proseErr" role="alert"></p>' +
+      '<details class="pz-legend"><summary>What it understands</summary><table>' +
+      [["A new step", "a new line · 1. or 1) · - or • · → -> => > · then, and then, after that, next, finally"],
+       ["A detail of a step", "indent the line under it, or put it in (brackets), or after a colon or a dash"],
+       ["What kind", "send, email, share → Send · wait, chase, get feedback → Wait · a question → Decide · archive, file, save → File. Or mark it: ✉ ⏳ ❓ 📁, [send], wait:"],
+       ["Who", "@Rita, or a name after to, with, ask, email, from — and anybody already in your book"],
+       ["When to chase", "(3 days), chase after a week, remind me in 5d · a deadline: by Friday, by 12 Oct"],
+       ["Ways out", "Approved? yes → print, no → back to 2 · if it is ready, send it; otherwise redo it"],
+       ["A loop", "back to 2, back to design, repeat, 🔁 2"],
+       ["At the same time", "start the line with + or meanwhile"],
+       ["If needed", "(optional), maybe, if needed"],
+       ["Its name and phases", "a first line ending with a colon, or # A heading; a later heading is a phase"]
+      ].map(function (r) { return "<tr><th>" + esc(r[0]) + "</th><td>" + esc(r[1]) + "</td></tr>"; }).join("") +
+      "</table></details></div>" +
+      '<div class="pz-right"><p class="pz-lab">How it reads <span class="w-mono" id="proseCount">' +
+      (read.steps.length ? wbWords(read.steps.length, "step", "steps").toLowerCase() : "") + "</span></p>" +
+      '<div class="pz-out" id="proseOut" aria-live="polite">' + prosePreview(read) + "</div></div></div>";
+    return out;
+  }
+
+  /* Typing repaints the reading, never the page: a render would take the
+     caret out of the box on every key. */
+  function mountProse() {
+    if (view !== "wfwrite") return;
+    var inp = document.getElementById("proseIn"), nm = document.getElementById("proseName");
+    if (inp && !inp._wired) {
+      inp._wired = true;
+      inp.addEventListener("input", function () {
+        proseText = inp.value;
+        var read = proseRead(proseText), out = document.getElementById("proseOut"), c = document.getElementById("proseCount");
+        if (out) out.innerHTML = prosePreview(read);
+        if (c) c.textContent = read.steps.length ? wbWords(read.steps.length, "step", "steps").toLowerCase() : "";
+        if (nm && !nm.value) nm.placeholder = read.name || "Name it — or start the text with a line ending in a colon";
+      });
+      inp.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); proseMake(); }
+      });
+    }
+    if (nm && !nm._wired) { nm._wired = true; nm.addEventListener("input", function () { proseName = nm.value; }); }
+  }
+
+  /* THE ONE HALF THAT WRITES: what the preview printed, as steps. */
+  function proseMake() {
+    var read = proseRead(proseText), err = document.getElementById("proseErr");
+    var to = proseTo && byId(state.workflows, proseTo);
+    var name = (proseName || "").trim() || read.name;
+    function say(m) { if (err) err.textContent = m; else toast(m); }
+    if (!read.steps.length) { say("There are no steps to keep yet. Write at least one line."); return; }
+    if (!to && !name) { say("It needs a name: type one above, or start the text with a line ending in a colon."); return; }
+    var snap = wbSnap(), ids = read.steps.map(function () { return uid(); });
+    var steps = read.steps.map(function (s, i) {
+      var rec = { id: ids[i], name: s.name, note: s.notes.join("\n") };
+      if (s.act !== "do") rec.act = s.act;
+      if (s.who.length) rec.who = s.who.join(", ");
+      if (s.days) rec.days = s.days;
+      if (s.by) rec.by = s.by;
+      if (s.optional) rec.optional = true;
+      if (s.withPrev && i > 0) rec.withPrev = true;
+      if (s.phase) rec.phase = s.phase;
+      if (s.back && s.backTo >= 0) rec.back = ids[s.backTo];
+      if (s.ways.length) rec.ways = s.ways.map(function (w) {
+        return { when: w.when || "", then: w.then, to: w.to >= 0 ? ids[w.to] : "" };
+      });
+      return rec;
+    });
+    var w = to;
+    if (w) { w.steps = (w.steps || []).concat(steps); stamp(w); }
+    else w = put("workflow", { id: uid(), name: name, kind: "", note: "", steps: steps });
+    commit();
+    proseText = ""; proseName = ""; proseTo = "";
+    goRec(ref("workflow", w.id));
+    wbSay((to ? "Added " : "Made “" + w.name + "” · ") + wbWords(steps.length, "step", "steps").toLowerCase() +
+      (to ? " to “" + w.name + "”" : ""), snap);
+  }
+
+  /* How a step written out reads on its workflow's page, in the preview's
+     words, so the two cannot describe one step two ways. */
+  function stepMetaWords(w, s) {
+    var steps = w.steps || [], at = function (id) {
+      var k = -1; steps.forEach(function (x, j) { if (x.id === id) k = j; }); return k;
+    };
+    var bits = [];
+    if (s.who) bits.push("with " + s.who);
+    if (s.days) bits.push((s.act === "wait" || s.act === "send" ? "chase after " : "") + wbWords(s.days, "day", "days").toLowerCase());
+    if (s.by) bits.push("by " + s.by);
+    if (s.optional) bits.push("if needed");
+    var me = at(s.id);
+    if (s.withPrev && me > 0) bits.push("alongside step " + me);
+    if (s.back && at(s.back) >= 0) bits.push("↺ back to step " + (at(s.back) + 1));
+    (s.ways || []).forEach(function (x) {
+      var k = x.to ? at(x.to) : -1;
+      bits.push(cap(x.when || "way out") + " → " + (k >= 0 ? "step " + (k + 1) : x.then));
+    });
+    return bits.join(" · ");
+  }
 
   /* ============================================================
      THE EXAMPLE: Maya Saad's book, from the handoff.
@@ -14171,6 +14788,12 @@
     },
     "wb-topic": function (idv) { wbLibTopic = idv || ""; render(); },
     /* ---- select many (30-wb-select.js) ---- */
+    /* ---- write a workflow out (31-wb-prose.js) ---- */
+    "wf-prose": function (idv) { proseOpen("", idv || ""); },
+    "prose-make": function () { proseMake(); },
+    "prose-example": function () { proseText = PROSE_EXAMPLE; proseName = ""; render(); },
+    "prose-clear": function () { proseText = ""; proseName = ""; render(); },
+    "prose-new": function () { proseTo = ""; render(); },
     "sel-mode": function () { if (SEL.on) selClear(); else selStart(); },
     "sel-all": function () {
       selOnScreen().forEach(function (id) { if (SEL.ids.indexOf(id) < 0) SEL.ids.push(id); });
@@ -14898,6 +15521,7 @@
       if (v === "settings") return renderSettings();
       if (v === "dir") return wbFilesView();
       if (v === "synchow") return renderSyncHow();
+      if (v === "wfwrite") return proseView();
       if (v === "guide") return renderGuide();
       if (openRec && recOf(openRec) && (TAB_OF[parseRef(openRec).kind] === v)) {
         return recPage(openRec);
@@ -14921,6 +15545,7 @@
       mountNoteEditor();
       mountFilesTab();
       selAfterRender();
+      mountProse();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
