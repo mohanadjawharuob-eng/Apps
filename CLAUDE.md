@@ -4359,3 +4359,102 @@ deleted; the example refused; an erased synced book comes back without touching
 the other; a wrong passphrase; the original's gist; a snapshot put back travels
 past the tombstone; wipe clears every sync key and the database with no request;
 a borrowed machine keeps its secrets in `sessionStorage` only.
+
+## mashghal2 becomes the Workbench (w9)
+
+The owner handed over a design package — `design_handoff_mashghal_workbench/`,
+a README spec, `Workbench plan.md`, `reference/workbench-logic.js` and a
+desktop and a phone prototype — and said *"take these, do them"*. It replaces
+the tab-per-record-type layout with **one capture line**, **benches** (a
+project as a live stream of notes, meetings, files, hours and actions), a
+**record pane** with its connections drawn as a map, a Library of shelves, a
+Map, a live CV and a four-step weekly review. The handoff's own plan asked for
+it to become `mashghal2` without breaking a book, and the owner chose that,
+keeping w8's sync, and light only for now (the dark palette is their ship).
+
+**A PROJECTION, NOT A SECOND STORE.** The prototype runs over a flat `items[]`
+and undirected pairs; this book already holds all of it in typed lists, and
+the owner's CV is in them. `wbBuild()` (`m5/22-wb-model.js`) derives the
+prototype's items from `state` on every render — each item's id is the
+record's own ref — and every change is written back onto the list that owns
+it. The prototype's rules (`parse`, `ask`, `stand`, `meta`, the shelves, the
+map) are ported over that projection close to verbatim, so their words are the
+spec's. What the model gained is additive and nothing is renamed: a `notes`
+list (note · meeting · idea), `link` and `file` library kinds, `rstat` on a
+reference (want · reading · read), `inbox` and `focusAt` on a record, `key` and
+`role` on a project, status `idea`, and a `with` link (two records that belong
+together, no direction). Every typed link that existed still counts as a
+connection.
+
+- **Undo writes back into the same `state` object.** `wbSnap()` clones the
+  lists and the undo assigns them back in place, then `stampRecords()` —
+  so an undone capture is tombstoned and an undone discard is revived, on
+  every device. Replacing `state` would skip both. `m5sync.js` asserts it.
+- **Focus is `focusAt` on the action, newest three win,** not the
+  prototype's `focus[]` in settings, so it syncs per record like the rest.
+- **The bench's weeks are the real hours**, eight weeks ending this one — the
+  prototype drew a stored `HIST`; the example carries those weeks as real
+  hours entries instead, and says so.
+- **The reference's fixed dates are rules that land on them on 25 Sep**: a
+  week out, the coming Monday, the coming Tuesday, tomorrow. The example book
+  sets `settings.demo` and **the whole app lives on 25 September 2026** while
+  it is loaded. That had to be the WHOLE app: pinned for the Workbench alone,
+  Work called Byblos's action late while Today said it was due today — two
+  readings of one book. The shared runtime's `today()` is wrapped, not edited:
+  it is a function declaration in the same scope, so the binding is replaced
+  and the five md5s stay identical.
+- **A bench's role line is stated or read off its role and that role's
+  employer**, never invented; a new bench says "New bench" because the
+  prototype does.
+- **The line replaced the finder** (`13-find.js` is retired, and the old Home
+  with it). The line searches everything the book holds, including the kinds
+  the prototype never drew (people, employers, education, workflows,
+  equipment) — or a record would exist that nothing could find.
+
+**What is not drawn is still reachable.** The Workbench has no screen for an
+employer, a degree, a person, a workflow or a portfolio item, and the book
+holds them: they sit under *Everything else* in the sidebar, and under **More**
+on a phone, where the reference's four tabs would otherwise have left Map,
+Record and Settings with no route at all — the fault Settings once had behind
+a gear the phone hid. **Benches** on a phone lists every bench, because the
+swipe row only shows the live ones on Today.
+
+Found by driving and looking, each a rule already in this file:
+
+- **A path is still never an href**, in the pane as everywhere: Copy path uses
+  `copyOut()`, which falls back to a dialog, because a bare
+  `navigator.clipboard.writeText` left a rejected promise unhandled.
+- **A map bubble never sits on a bench.** The reference's fan put one on a
+  card; it now walks further out along its own angle until clear.
+- **A bench is said once.** A reference both ON a bench and LINKED to it
+  printed "Thesis Thesis" — the prototype has the same duplicate.
+- **"agisoft.com/forum" is not a URL**, and the Directory said so; the
+  example stores it with its scheme so the link really opens.
+- **An empty book gets an offer, not "No things are late, 0 in the inbox and
+  0m logged"** — a sentence about nothing.
+- **A sync in flight when the device is wiped sends nothing**: the write
+  checks `syncOn()` after sealing, because the secrets are gone by then.
+- **Reading never creates**, again: pinned images live in their own
+  IndexedDB (`mashghal2-pins`, never synced, like photographs in the
+  original), and listing them aborts the upgrade rather than making one.
+- **The map's lines take no pointer events**, and `scroll-padding-top` keeps
+  anything scrolled into view clear of the sticky top bar.
+
+Every colour is a token in `palette.css` — the paper palette, the type and
+bench colours in `oklch`, and every navy-system name aliased onto paper so the
+older screens follow without a line of their CSS changing. IBM Plex Sans
+(variable, 400–600) and Plex Mono 400/500 are embedded as latin woff2, fetched
+once, because the app fetches nothing. The dead rail, finder and Home rules —
+67 of them — were removed by the dead-CSS scan, and the old `.toasts` rule and
+the Workbench's were merged into one.
+
+The tests: `wb-line.js` (62: every parse rule's preview and toast, the
+handoff's meeting example, the six questions verbatim, undo, the keys and that
+none fires while typing, a reload keeps it all) · `wb-views.js` (48: shelves
+and subjects, Read files a reading item as a reference, Link to… and the ×,
+Copy path, the live CV and its undo, all four review steps including focus
+capped at three, the map's bubbles off the benches and inside the canvas and
+the focus fade, a bubble opening its bench on its filter, a pinned picture
+surviving a reload and staying out of the book, and a w8-shaped book opening
+unchanged with every record reachable) · `m5sync.js` now 49, with the undo
+checks · `m5import.js` 116 · `m5dir.js` 89.

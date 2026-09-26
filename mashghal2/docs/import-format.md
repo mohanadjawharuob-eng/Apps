@@ -69,6 +69,7 @@ book**, in that order.
 | `portfolio` | `name` `on`* `note` |
 | `cvs` | `name` `aim` `note` |
 | `hours` | `project`→ `on`** `minutes` `note` |
+| `notes` | `name` `kind` (note · meeting · idea) `project`→ `on`** `body` |
 
 `→` a name or a key · `*` a date · `**` a full day
 
