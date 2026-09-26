@@ -4725,3 +4725,61 @@ preview that changes nothing, the undo, a lost handle offering no write, and
 wipe forgetting the folders and touching no file) · `dlook.js` (18: the card
 and its dialog in contrast at rest, under the pointer and lapsed, at 1400, 390
 and 320px).
+
+## mashghal2 answers "where is my stuff", and a drop reaches Drive by itself (w14)
+
+Its owner linked a file and the Directory stayed empty, and asked for a drop
+to reach the Drive or OneDrive folder on the laptop without being asked,
+calling that the feature that mattered. Both were one fault each.
+
+- **THE DIRECTORY LISTED A RECORD ONLY IF IT CARRIED A `path` OR A `url`**,
+  and a file dropped on the page carries neither — its bytes are in this
+  browser. So the commonest way anything got into the book was the one the
+  screen named for it could never show. **Files** is a main tab now (the view
+  id stays `dir`, so every route that led to the Directory lands on it), and
+  it answers the question three ways over one record: **Kept here** (every
+  file with a `blobId`, grouped where it is filed — the inbox, a folder, a
+  bench — and each row saying where its **bytes** are, because the record
+  travels by sync and the bytes do not), **In your folders** (what is really
+  in each connected folder, read off the handle every time the section opens
+  and never stored — a list kept in the book would be a second record of
+  somebody else's disk), and **Paths and links** (the Directory as it was,
+  its chips still adding up to the walk).
+- **THE DRIVE WRITER SKIPPED THE INBOX, AND A DROP ON TODAY LANDS THERE.**
+  So the file somebody had just dropped was the one file the folder never
+  got. It is written into `Inbox/`, a bench's file into `Benches/<name>/`,
+  and a filed one into its Library folders — and **filing it moves it**: the
+  manifest knows where the app last wrote each record, so the new path is
+  written and the old copy removed, but only while the old copy is still the
+  app's byte for byte in size. One somebody has since edited stays where it
+  is. A move is never reported as gone. Bringing a folder in reads the two
+  words back (`Inbox` is the inbox, `Benches/<name>` that bench) unless the
+  Library really has a folder by that name.
+- **A DROP DOES NOT WAIT OUT THE FIVE SECONDS A KEYSTROKE DOES.**
+  `driveAfterKeep()` writes straight away and says so in a second toast; a
+  folder the browser has not allowed this session gets a toast with an
+  **Allow** button instead, because a permission can only be asked for on a
+  tap and a toast's button is one. `toastWith()` is that toast, built beside
+  the runtime's rather than inside it — the runtime is byte-identical across
+  five apps and a second kind of toast is this app's business.
+- **OneDrive is the same thing**: a folder the operating system keeps in step.
+  The card, the connect dialog and the guide say both names.
+- **"How syncing works" is a page, not a paragraph** (`renderSyncHow`,
+  reached from Files, Settings, More and the guide): the book by the gist and
+  the files by a folder, as numbered steps quoting the real buttons, and what
+  each road does not carry. Two roads with two sets of words were the thing
+  its owner could not work out from the cards.
+
+`wb-filestab.js` (41: the tab and its count, a file dropped on Today listed
+under the inbox — the reported fault — the pane from a row, the link chips
+against the walk, a path never an href, the search keeping its caret, the
+empty folders offer, a drop written to `Inbox/` inside a second with no
+button, a bench drop under `Benches/`, filing moving the copy and not calling
+it gone, the folder read live with a hand-put file named as such and nothing
+of it in the book, Bring in from Files, a lapsed folder's Allow toast writing
+on the tap, the how-to's bold words all real controls, and 390/320px) ·
+`fxlook.js` (66: every run of text on the three sections and the how-to, at
+rest and under the pointer, at 1400, 390 and 320px, with a file whose bytes
+are elsewhere on screen so the amber reading is measured) · `m5dir.js` now
+84, reaching the Directory through Files and testing the shape switch where
+it still lives, on the record lists.

@@ -1778,6 +1778,56 @@
     .w-ftree { position: static; }
     .w-keys { bottom: 120px; right: 12px; }
   }
+
+  /* ---- Files: where your stuff is (w14) ---- */
+  .fx-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .fx-group { margin-top: 22px; }
+  .fx-gh { margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--ink-2); }
+  .fx-gh .w-mono { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--dim); }
+  .fx-dhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
+  .fx-dhead .fx-gh { margin: 0; }
+  .fx-dir { margin: 14px 0 6px; font-family: var(--mono); font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+  .fx-row {
+    display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 6px; padding: 9px 12px; text-align: left;
+    border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); font: inherit; color: inherit; cursor: pointer;
+  }
+  .fx-row:hover { border-color: var(--hover-border); }
+  .fx-row.is-sel { border-color: var(--ink); }
+  .fx-row.is-flat { cursor: default; background: var(--wash); }
+  .fx-row.is-flat:hover { border-color: var(--rule); }
+  .fx-ico {
+    flex: none; width: 38px; padding: 5px 0; border-radius: 6px; background: var(--sidebar); text-align: center;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 500; color: var(--ink-2);
+  }
+  .fx-nm { display: block; font-size: 14.5px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .fx-sub { display: block; margin-top: 2px; font-size: 12.5px; color: var(--dim); overflow-wrap: anywhere; }
+  .fx-where { flex: 0 1 13rem; font-size: 12.5px; color: var(--faint); text-align: right; overflow-wrap: anywhere; }
+  .fx-where.is-warm { color: var(--amber); }
+  .fx-sub2 { margin: 6px 0 0; font-size: 13.5px; color: var(--dim); max-width: 44rem; }
+  .fx-empty { margin-top: 24px; max-width: 40rem; }
+  .fx-e1 { margin: 0; font-size: 15px; color: var(--ink-2); }
+  .fx-e2 { margin: 6px 0 0; font-size: 14px; color: var(--dim); line-height: 1.55; }
+  .fx-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 0; }
+  .fx-acts .w-dark { margin-top: 0; }
+  .fx-foot { margin: 22px 0 0; font-size: 13px; color: var(--dim); }
+
+  /* ---- How syncing works ---- */
+  .hs-part { margin-top: 30px; max-width: 46rem; }
+  .hs-steps { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .hs-step { display: flex; gap: 14px; align-items: flex-start; }
+  .hs-n {
+    flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ink); color: var(--on-ink); font-size: 12.5px;
+  }
+  .hs-step .step p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+  .hs-step .step .hs-t { font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .hs-step b { color: var(--ink); }
+  .hs-note { margin: 16px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--wash); font-size: 13.5px;
+    line-height: 1.55; color: var(--ink-2); }
+  @media (max-width: 559px) {
+    .fx-row { flex-wrap: wrap; }
+    .fx-where { flex-basis: 100%; text-align: left; padding-left: 50px; }
+  }
 </style>
 </head>
 <body>
@@ -1894,7 +1944,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w13 · 26 Sep 2026";
+  var BUILD = "w14 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -5895,8 +5945,10 @@
 
     out.push(sectHead("Your book on other devices", null));
     out.push(syncCard());
+    out.push('<p class="says" style="margin:0.4rem 0 0.2rem"><button class="w-inlink" data-act="sync-how">How syncing works</button>' +
+      " \u2014 the book between devices, and the files between computers, step by step.</p>");
 
-    out.push(sectHead("Your files in Google Drive", null));
+    out.push(sectHead("Your files in a Drive or OneDrive folder", null));
     out.push(driveCard());
 
     out.push(sectHead("Snapshots on this device", null));
@@ -6081,16 +6133,18 @@
         "you make. Drop a PDF or a picture anywhere on the page and it is kept here.") +
       gtab("notes", "Notes", "Anything you write, like a small wiki: tag it with #words, link one note to another " +
         "with [[its title]], and every note shows what links to it. Type note: in the line to start one.") +
+      gtab("dir", "Files", "What you have kept in the app, what is in your Drive and OneDrive folders, and every path and link.") +
       gtab("record", "Record", "Your skills and what backs them, and the live CV.") +
       gtab("review", "Weekly review", "Four steps, about ten minutes.") +
       "</div>" +
       gnote("A record opens in the <b>pane</b> beside the list, with what it is connected " +
         "to drawn as a small map. <b>Link to\u2026</b> joins it to anything else; the " +
         "\u00d7 on a line takes it out.") +
-      gnote("<b>Your files on another computer.</b> Settings \u2192 Your files in Google Drive: install " +
-        "Google Drive for desktop, press <b>Connect a folder</b> and pick one inside the drive, and the app " +
-        "writes your Library there. On the other computer connect the same folder and press <b>Bring in what " +
-        "is here</b>. Chrome or Edge on a computer; a second Google account is a second folder.") +
+      gnote("<b>Your files on another computer.</b> Settings \u2192 Your files in a Drive or OneDrive folder: install " +
+        "Google Drive for desktop or OneDrive, press <b>Connect a folder</b> and pick one inside the drive, and every " +
+        "file you keep is written there straight away. On the other computer connect the same folder and press <b>Bring in what " +
+        "is here</b>. Chrome or Edge on a computer; a second account is a second folder. The whole walk-through is " +
+        "under <b>How syncing works</b>.") +
       gnote("Employers, education, people, workflows and the portfolio have no " +
         "Workbench screen, and are still in the book: they sit under " +
         "<em>Everything else</em> in the sidebar, and under More on a phone.") + "</div>"));
@@ -8683,96 +8737,11 @@
     if (!bits.length) bits.push(KINDS[e.kind].word);
     return bits.join(" \u00b7 ");
   }
-  /* The card form of the same entry, so the shape switch works here too.
-     The open control moves into the footer, because a card cannot be one
-     button and carry its own controls. */
-  function dirCard(e) {
-    var name = recName(e.rec, e.kind);
-    var where = e.rec.url ? e.rec.url.replace(/^https?:\/\//, "") : (e.rec.path || "");
-    var open = e.rec.url
-      ? '<a class="btn tiny" href="' + esc(e.rec.url) + '" target="_blank" ' +
-        'rel="noopener">Open the link</a>'
-      : e.rec.path ? btn("doc-copy", e.r, "Copy the path", "btn tiny") : "";
-    return cardOf(e.kind, e.rec, {
-      says: dirSays(e),
-      facts: where ? [clip(where, 42)] : [],
-      foot: open ? [open] : [],
-      stand: { word: "", tone: "" }
-    });
-  }
-
-  function renderDir() {
-    var all = directory(), by = dirCounts();
-    /* SIX LINES OF BLURB WRAPS AROUND ITS OWN BUTTON ON A PHONE, which put
-       "New entry" vertically centred in the middle of a paragraph. The
-       header is shared by every screen, so the copy gives way rather than
-       the layout. */
-    var out = [pageHeadOf("Directory",
-      "Every link and every path in the book, whatever record carries it, " +
-      "grouped by what tapping it does.",
-      btn("asset-add", "", "New entry", "btn primary"))];
-
-    if (!all.length) {
-      out.push('<div class="panel">' + emptyLines(
-        "Nothing in the Directory yet.",
-        "It fills itself: write a path or a link onto any record — a project, a " +
-        "training, an output, a library entry — and it appears here. Press " +
-        "New entry for something that belongs to no record at all, like a drive or " +
-        "a bookmark.") + "</div>");
-      return out.join("");
-    }
-
-    /* A FIGURE MAY NEVER DISAGREE WITH ITS OWN PARTS, so the chips are one
-       walk and All is their sum, and there is a test that adds them up. */
-    var chips = ['<button class="chip" data-act="dir-facet" data-id="" aria-pressed="' +
-      (!dirFacet) + '">All <span class="n">' + all.length + "</span></button>"];
-    DIR_FACETS.forEach(function (f) {
-      if (!by[f.id]) return;
-      chips.push('<button class="chip" data-act="dir-facet" data-id="' + f.id +
-        '" aria-pressed="' + (dirFacet === f.id) + '">' + esc(f.word) +
-        ' <span class="n">' + by[f.id] + "</span></button>");
-    });
-    out.push('<div class="chips">' + chips.join("") + "</div>");
-
-    var f = DIR_FACETS.filter(function (x) { return x.id === dirFacet; })[0];
-    if (dirFacet && !f) dirFacet = "";   /* a facet this app has no word for */
-    var live1 = f ? all.filter(function (e) { return e.facet === f.id; }) : all;
-    /* THE CHIP SAYS WHAT IT MEANS, once, above its own list rather than on
-       every row: the reason a path is copy-only is twenty words and they
-       were printed four times per screen in the app this replaces. */
-    if (f) {
-      out.push('<div class="panel"><span class="label">' + esc(f.word) + "</span>" +
-        '<p class="says">' + esc(f.says) + "</p></div>");
-    }
-
-    out.push(shapeRow("dir", live1.length, ["entry", "entries"]));
-    var q = String(sift.dir || "").trim().toLowerCase();
-    var shown = !q ? live1 : live1.filter(function (e) {
-      return [recName(e.rec, e.kind), e.rec.path, e.rec.url, e.rec.place, e.rec.kind,
-        e.rec.note, KINDS[e.kind].word].filter(Boolean).join(" ")
-        .toLowerCase().indexOf(q) >= 0;
-    });
-    var says = siftSays("dir", shown.length, live1.length, ["entry", "entries"]);
-    if (!shown.length) { out.push(says); return out.join(""); }
-    if (says) out.push(says);
-
-    /* Grouped by the record it belongs to, in the reader's word for it, so
-       the answer to "where is the Tripoli folder" is under Projects and
-       not in one undifferentiated column of 40 links. */
-    var by2 = {}, order = [];
-    shown.forEach(function (e) {
-      var g = KINDS[e.kind].many;
-      if (!by2[g]) { by2[g] = []; order.push(g); }
-      by2[g].push(e);
-    });
-    order.forEach(function (g) {
-      out.push(sectHead(g, by2[g].length));
-      out.push(shapeNow() === "cards"
-        ? '<div class="cards">' + by2[g].map(dirCard).join("") + "</div>"
-        : by2[g].map(dirRow).join(""));
-    });
-    return out.join("");
-  }
+  /* The screen that drew these rows is Files now (29-wb-filestab.js):
+     the Directory is its Paths and links section, beside the files kept in
+     the app and what is really in each connected folder. `renderDir` and
+     its card form went with the old screen; `directory()` and `dirRow()`
+     are still the one walk and the one row. */
 
   /* ============================================================
      THE BOOK ON EVERY DEVICE, AND A HISTORY OF IT ON THIS ONE.
@@ -10159,7 +10128,7 @@
   var wbKeysOn = false;
   var wbOrder = [];        // what j/k walk through on this screen
 
-  var WB_VIEWS = { today: 1, bench: 1, map: 1, shelves: 1, notes: 1, note: 1, record: 1, review: 1, benches: 1, more: 1 };
+  var WB_VIEWS = { today: 1, bench: 1, map: 1, shelves: 1, notes: 1, note: 1, record: 1, review: 1, benches: 1, more: 1, dir: 1 };
 
   function wbCtxBench() { return view === "bench" && wbGet(wbBench) ? wbBench : null; }
 
@@ -10205,6 +10174,7 @@
     var libN = WB.items.filter(function (x) { return WB_LIB.indexOf(x.type) >= 0 && !x.inbox; }).length;
     var counts = { today: late.length ? late.length + " late" : "", shelves: String(libN),
       notes: state.notes.length ? String(state.notes.length) : "",
+      dir: keptFiles().length ? String(keptFiles().length) : "",
       review: inbox.length ? inbox.length + " to sort" : "" };
     var tone = { today: "late", review: "blue" };
     var tabs = document.querySelectorAll("#nav .tab");
@@ -10238,7 +10208,7 @@
            reachable", so they are here, quietly, under the benches. */
         '<div class="w-sgroup"><p class="w-slabel">Everything else</p>' +
         [["career", "Career"], ["work", "Work"], ["library", "Library pages"],
-         ["dir", "Directory"], ["show", "Portfolio and CVs"]].map(function (x) {
+         ["show", "Portfolio and CVs"]].map(function (x) {
           var on = view === x[0];
           return '<button class="w-srow is-quiet' + (on ? " is-on" : "") + '" data-act="wb-else" data-id="' +
             x[0] + '"' + (on ? ' aria-current="page"' : "") + '><span class="w-stitle">' + x[1] +
@@ -10260,7 +10230,7 @@
     }
     var pt = document.getElementById("ptabs");
     if (pt) {
-      var MORE = { map: 1, notes: 1, note: 1, record: 1, career: 1, work: 1, library: 1, dir: 1, show: 1, settings: 1, guide: 1, more: 1 };
+      var MORE = { map: 1, notes: 1, note: 1, record: 1, career: 1, work: 1, library: 1, dir: 1, show: 1, settings: 1, guide: 1, more: 1, synchow: 1 };
       pt.innerHTML = [["today", "Today"], ["benches", "Benches"], ["shelves", "Library"],
         ["review", "Review"], ["more", "More"]].map(function (x) {
           var on = x[0] === "benches" ? (view === "bench" || view === "benches")
@@ -11096,14 +11066,15 @@
   }
   function wbMoreView() {
     var rows = [["wb-go", "notes", "Notes", "Write anything, tag it, link it like a wiki"],
+      ["wb-go", "dir", "Files", "What you kept, what is in your Drive folders, every path"],
       ["wb-go", "map", "Map", "Everything, and how it is joined"],
       ["wb-go", "record", "Record", "Your skills and the live CV"],
       ["wb-else", "career", "Career", "Roles, education, training, skills"],
       ["wb-else", "work", "Work", "Projects, workflows, people, equipment, hours"],
       ["wb-else", "library", "Library pages", "Citations, bibliographies, templates"],
-      ["wb-else", "dir", "Directory", "Every link and every path in the book"],
       ["wb-else", "show", "Portfolio and CVs", "What you show people"],
       ["settings", "", "Settings", "Sync, snapshots, feeding it a file, erasing"],
+      ["sync-how", "", "How syncing works", "The book between devices, the files between computers"],
       ["guide", "", "How to use it", "The guide"]];
     wbOrder = [];
     return wEyebrow("More") + '<h1 class="w-h1">Everything else</h1><div class="w-stream is-more">' + rows.map(function (r) {
@@ -12078,7 +12049,8 @@
       }).catch(function () { bad.push(f); });
     })).then(function () {
       if (!made.length) { toast("This browser would not keep the file."); return made; }
-      commit(); render();
+      commit(); filesForget(); render();
+      driveAfterKeep(made.map(function (m) { return m.rec; }));
       var msg = (made.length === 1 ? "Kept “" + made[0].rec.name + "”" : "Kept " + numWord(made.length) + " files") +
         " " + ctx.kept +
         (bad.length ? ". " + (bad.length === 1 ? bad[0].name + " is not a PDF or a picture." :
@@ -12928,13 +12900,13 @@
     window.showDirectoryPicker({ mode: "readwrite", id: "mashghal2-drive" }).then(function (handle) {
       openModal({
         title: "What goes into “" + handle.name + "”?",
-        message: "Pick the folder inside Google Drive on this computer, then say what it carries. The app writes " +
-          "files there; Drive for desktop moves them to your account.",
+        message: "Say what this folder carries. The app writes files into it the moment they are kept, in the same " +
+          "folders as the Library; Drive or OneDrive moves them to your account.",
         fields: [
           { key: "label", label: "Call it", value: handle.name, span: true,
             hint: "A word you will know it by — the account's, say: Personal, AUB." },
           { key: "carries", label: "It carries", type: "select", value: "all", options: [
-            { value: "all", label: "The whole Library: every file, in its folders" },
+            { value: "all", label: "Everything: every file, in its folders, and the inbox" },
             { value: "some", label: "Only the folders I pick" }] },
           { key: "folders", label: "Which folders", type: "select", value: state.folders[0] ? state.folders[0].id : "",
             showWhen: { key: "carries", is: "some" },
@@ -13009,6 +12981,23 @@
   function drivePathOf(folderId) {
     return folderTrail(folderId).map(function (t) { return safeName(t.name); });
   }
+  /* WHERE A FILE GOES IN THE FOLDER is where it is in the app: its
+     Library folders, or Inbox until it is filed, or the bench it was
+     dropped on. The inbox is the commonest place a drop lands, and the
+     first draft skipped it — so the file somebody had just dropped was
+     the one file the folder did not get. */
+  function drivePathFor(e) {
+    if (e.inbox) return ["Inbox"];
+    if (e.folderId && byId(state.folders, e.folderId)) return drivePathOf(e.folderId);
+    var p = e.projectId && byId(state.projects, e.projectId);
+    return p ? ["Benches", safeName(p.name)] : [];
+  }
+  /* A folder carrying only chosen Library folders carries nothing that is
+     in none of them — the inbox and a bench included. */
+  function driveCarriesRec(f, e) {
+    if (f.carries === "some" && (e.inbox || !e.folderId)) return false;
+    return driveCarries(f, e.inbox ? "" : e.folderId || "");
+  }
   /* Everything this folder should hold, as {path, id, stamp, kind, blobId?,
      text?}. Two records wanting one name get " (2)" — decided in a stable
      order so the same book always writes the same names. */
@@ -13023,8 +13012,8 @@
       return p;
     }
     state.lib.slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); }).forEach(function (e) {
-      if (!e.blobId || e.inbox || !driveCarries(f, e.folderId || "")) return;
-      out.push({ path: claim(drivePathOf(e.folderId), safeName(e.fname || e.name)), id: "lib:" + e.id,
+      if (!e.blobId || !driveCarriesRec(f, e)) return;
+      out.push({ path: claim(drivePathFor(e), safeName(e.fname || e.name)), id: "lib:" + e.id,
         stamp: e.blobId, kind: "file", blobId: e.blobId, type: e.mime || "" });
     });
     if (f.notes) {
@@ -13100,18 +13089,34 @@
     var root = f.handle, wrote = 0;
     return readManifest(root).then(function (man) {
       var wants = driveWants(f), next = { app: "mashghal2", written: new Date().toISOString(), files: {} };
+      /* A FILE THAT WAS FILED HAS MOVED, NOT GONE. Where the app last wrote
+         each record, so a file taken out of the inbox and into a folder is
+         written at its new path and its old copy removed — but only if the
+         old copy is still the app's, byte for byte in size; one somebody
+         has since edited is left where it is and listed on the card. */
+      var wasAt = {}, wanted = {}, moved = {};
+      Object.keys(man.files).forEach(function (p) { if (man.files[p].kind === "file") wasAt[man.files[p].id] = p; });
+      wants.forEach(function (w) { wanted[w.path] = 1; });
       return wants.reduce(function (p, w) {
         return p.then(function () {
           var had = man.files[w.path];
           next.files[w.path] = { id: w.id, stamp: w.stamp, kind: w.kind, blobId: w.blobId || "" };
           if (had && had.id === w.id && had.stamp === w.stamp) return;
           if (w.kind === "note") return writeAt(root, w.path, new Blob([w.text], { type: "text/markdown" })).then(function () { wrote++; });
+          var old = wasAt[w.id];
           return fileGet(w.blobId).then(function (row) {
             /* The bytes of a file dropped on ANOTHER computer are not
                here, so they are not written from here; the manifest keeps
                what the other computer said about them. */
             if (!row || !row.blob) { if (had) next.files[w.path] = had; else delete next.files[w.path]; return; }
-            return writeAt(root, w.path, row.blob).then(function () { wrote++; });
+            return writeAt(root, w.path, row.blob).then(function () {
+              wrote++;
+              if (!old || old === w.path || wanted[old]) return;
+              return readAt(root, old).then(function (file) {
+                if (file.size !== row.blob.size) return;
+                return removeAt(root, old).then(function () { moved[old] = 1; });
+              }).catch(function () { moved[old] = 1; });
+            });
           });
         });
       }, Promise.resolve()).then(function () {
@@ -13123,7 +13128,7 @@
            file. Only a record deleted here (a tombstone), or one still here
            and no longer carried, is gone. */
         Object.keys(man.files).forEach(function (p) {
-          if (next.files[p]) return;
+          if (next.files[p] || moved[p]) return;
           var e = man.files[p], rid = parseRef(e.id).id;
           if (!recOf(e.id) && !state.tombstones[rid]) { next.files[p] = e; return; }
           next.gone = next.gone || {}; next.gone[p] = e;
@@ -13160,6 +13165,53 @@
       driveList.reduce(function (p, f) { return p.then(function () { return driveWrite(f); }); }, Promise.resolve())
         .then(function () { driveBusy = false; if (view === "settings") render(); });
     }, 5000);
+  }
+  /* A DROP REACHES THE FOLDER STRAIGHT AWAY, and says so. Its owner called
+     this the feature that mattered, so it does not wait out the five
+     seconds a keystroke does, and the answer is a second toast rather than
+     a line on a card in Settings: written, or — when the browser has not
+     allowed the folder this session — not yet, with the one button that
+     can fix it. A permission can only be asked for on a tap, and a toast's
+     button is a tap. */
+  function driveAfterKeep(recs) {
+    var fs = driveList.filter(function (f) {
+      return recs.some(function (e) { return driveCarriesRec(f, e); });
+    });
+    if (!fs.length) return;
+    if (driveTimer) { clearTimeout(driveTimer); driveTimer = null; }
+    fs.reduce(function (p, f) {
+      return p.then(function () { return drivePerm(f); }).then(function (perm) {
+        if (perm === "gone") return;
+        if (perm !== "granted") {
+          toastWith("Not in “" + f.label + "” yet: the browser has to be allowed to write there again.", "Allow",
+            function () { driveAllow(f.id); });
+          return;
+        }
+        return driveWriteNow(f).then(function (n) {
+          filesDrive = {};
+          if (f.error) toast("“" + f.label + "” refused the file: " + f.error);
+          else if (n) toast("Also written to “" + f.label + "”.");
+          if (view === "dir" || view === "settings") render();
+        });
+      });
+    }, Promise.resolve());
+  }
+  /* A toast carrying one button that is not Undo. Built beside the
+     runtime's, never inside it: the runtime is byte-identical across five
+     apps and a second kind of toast is this app's business. */
+  function toastWith(msg, label, fn) {
+    var box = document.getElementById("toasts");
+    if (!box) return;
+    var el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = "<span>" + esc(msg) + (bookTrouble.unsaved ? " \u00b7 <b>not saved</b>" : "") + "</span>";
+    var b = document.createElement("button");
+    b.textContent = label;
+    b.addEventListener("click", function () { if (el.parentNode) el.parentNode.removeChild(el); fn(); });
+    el.appendChild(b);
+    box.appendChild(el);
+    while (box.children.length > 3) box.removeChild(box.firstChild);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 12000);
   }
   function driveNow(id) {
     var f = driveList.filter(function (x) { return x.id === id; })[0];
@@ -13266,6 +13318,20 @@
     });
     return parent;
   }
+  /* The writer's two words read back: Inbox is the inbox and Benches/<name>
+     is that bench — unless the Library really has a folder by that name,
+     which is then the one meant. */
+  function placeForPath(parts) {
+    var top = parts[0] && state.folders.some(function (x) {
+      return !x.folderId && safeName(x.name).toLowerCase() === parts[0].toLowerCase();
+    });
+    if (!top && parts.length === 1 && parts[0] === "Inbox") return { inbox: true, folderId: "", projectId: "" };
+    if (!top && parts.length === 2 && parts[0] === "Benches") {
+      var p = live(state.projects).filter(function (x) { return safeName(x.name).toLowerCase() === parts[1].toLowerCase(); })[0];
+      if (p) return { folderId: "", projectId: p.id };
+    }
+    return { folderId: folderForPath(parts), projectId: "" };
+  }
   function driveApply(f, attach, fresh, notesNew) {
     var snap = wbSnap(), root = f.handle, added = [], got = 0;
     attach.reduce(function (p, a) {
@@ -13281,14 +13347,14 @@
       return fresh.concat(notesNew).reduce(function (p, path) {
         return p.then(function () {
           return readAt(root, path).then(function (file) {
-            var parts = path.split("/"), name = parts.pop(), folderId = folderForPath(parts);
+            var parts = path.split("/"), name = parts.pop(), at = placeForPath(parts), folderId = at.folderId;
             if (/\.md$/i.test(name)) {
               return file.text().then(function (t) {
                 var title = name.replace(/\.md$/i, ""), body = String(t).replace(/\r/g, "");
                 var h = body.match(/^#\s+(.+)\n+/);
                 if (h) { title = h[1].trim(); body = body.slice(h[0].length); }
                 if (noteTitleClash(title)) title = title + " (from " + f.label + ")";
-                state.notes.push({ id: uid(), kind: "note", name: title, on: wbToday(), projectId: "", folderId: folderId,
+                state.notes.push({ id: uid(), kind: "note", name: title, on: wbToday(), projectId: at.projectId, folderId: folderId,
                   body: body.replace(/\s+$/, ""), tags: [] });
                 added.push(title);
               });
@@ -13297,8 +13363,10 @@
             return fileTx("readwrite", function (st) {
               st.put({ id: blobId, blob: file, name: name, type: file.type || "", size: file.size, at: new Date().toISOString() });
             }).then(function () {
-              state.lib.push({ id: uid(), kind: "file", name: name.replace(/\.[A-Za-z0-9]{1,5}$/, ""), fname: name,
-                mime: file.type || "", size: file.size || 0, blobId: blobId, on: wbToday(), projectId: "", folderId: folderId });
+              var rec = { id: uid(), kind: "file", name: name.replace(/\.[A-Za-z0-9]{1,5}$/, ""), fname: name,
+                mime: file.type || "", size: file.size || 0, blobId: blobId, on: wbToday(), projectId: at.projectId, folderId: folderId };
+              if (at.inbox) rec.inbox = true;
+              state.lib.push(rec);
               added.push(name);
             });
           }).catch(function () {});
@@ -13320,17 +13388,19 @@
   function driveHolding(blobId) {
     var e = state.lib.filter(function (x) { return x.blobId === blobId; })[0];
     if (!e) return "";
-    var names = driveList.filter(function (f) { return driveCarries(f, e.folderId || ""); }).map(function (f) { return "“" + f.label + "”"; });
+    var names = driveList.filter(function (f) { return driveCarriesRec(f, e); }).map(function (f) { return "“" + f.label + "”"; });
     return names.join(" and ");
   }
 
   /* ---------------- the card ---------------- */
 
   function driveCard() {
-    var out = '<div class="panel"><p class="says">Install <b>Google Drive for desktop</b> on each computer — it ' +
-      "puts every account you sign it into on the computer as a folder, and keeps it in step by itself. Connect a " +
-      "folder inside it here and the app writes your files there; on your other computer, connect the same folder " +
-      "and bring them in. The app never talks to Google, holds no key, and a second account is a second folder.</p>";
+    var out = '<div class="panel"><p class="says">Install <b>Google Drive for desktop</b> or <b>OneDrive</b> on each ' +
+      "computer — each puts the accounts you sign into on the computer as a folder, and keeps it in step by itself. " +
+      "Connect a folder inside it here and every file you keep is written there straight away; on your other " +
+      "computer, connect the same folder and bring them in. The app never talks to Google or Microsoft, holds no " +
+      "key, and a second account is a second folder. " +
+      '<button class="w-inlink" data-act="sync-how">How syncing works</button></p>';
     if (!driveApi()) {
       return out + '<p class="says"><b>This browser cannot write to a folder</b> — that needs Chrome or Edge on a ' +
         "computer. A phone or another browser still has the book through sync.</p></div>";
@@ -13354,6 +13424,318 @@
     }).join("") + "</div>" : '<p class="says">No folder connected on this computer.</p>';
     return out + '<div class="page-acts" style="margin-top:0.6rem">' + btn("drive-add", "", "Connect a folder", "btn primary") +
       "</div></div>";
+  }
+  /* ============================================================
+     FILES: WHERE YOUR STUFF IS.
+
+     Its owner linked a file and the Directory stayed empty, and they were
+     right to call that broken: the Directory listed a record only when it
+     carried a `path` or a `url`, and a file dropped on the page carries
+     neither — its bytes are in this browser, and in any Drive folder that
+     carries it. So the one question "where is my stuff" had three answers
+     on three screens and the screen named for it showed none of the
+     commonest one.
+
+     Files is that question, as a main tab, answered three ways over the
+     one record and the folders this computer can reach:
+
+       Kept here          every file kept in the app, grouped where it is
+                          filed: the inbox, a folder, a bench
+       In your folders    what is really in each connected Drive or OneDrive
+                          folder, read off the folder itself and never
+                          stored, with the app's own files told apart from
+                          the ones somebody put there by hand
+       Paths and links    the Directory as it was: every record carrying a
+                          path or a link, grouped by what tapping it does
+
+     The three are one strip and their counts are the sections, so nothing
+     is listed under two of them. The view id stays `dir`, so every route
+     that led to the Directory lands here.
+     ============================================================ */
+
+  var filesSect = "kept", filesQ = "";
+  var filesDrive = {};          /* folder id → {at, list:[{path, id}], err} */
+  var filesHere = null;         /* blob ids whose bytes are in this browser */
+
+  function filesMatch(s) {
+    var q = filesQ.trim().toLowerCase();
+    return !q || String(s || "").toLowerCase().indexOf(q) >= 0;
+  }
+  function keptFiles() {
+    return live(state.lib).filter(function (e) { return !!e.blobId; });
+  }
+  /* Which connected folders carry this file, by the same rule the writer
+     uses, so the row cannot promise a folder the writer skips. */
+  function driveFor(e) {
+    return driveList.filter(function (f) { return driveCarriesRec(f, e); });
+  }
+  function keptWhere(e) {
+    if (e.inbox) return { key: "0", word: "In the inbox, to sort" };
+    var f = e.folderId && byId(state.folders, e.folderId);
+    if (f) return { key: "1" + folderTrail(f.id).map(function (t) { return t.name; }).join(" › "),
+      word: folderTrail(f.id).map(function (t) { return t.name; }).join(" › ") };
+    var p = e.projectId && byId(state.projects, e.projectId);
+    if (p) return { key: "2" + p.name, word: "On " + p.name };
+    return { key: "3", word: "Filed in no folder" };
+  }
+  /* WHERE THE BYTES ARE, in words. The record travels with sync and the
+     bytes do not, so a row may be here as a name while its file is on the
+     other computer — and saying so is the whole point of the column. */
+  function bytesWords(e) {
+    var here = filesHere ? !!filesHere[e.blobId] : true;
+    var fs = driveFor(e).map(function (f) { return f.label; });
+    if (here) return fs.length ? "Here and in " + fs.join(", ") : "On this computer only";
+    return fs.length ? "In " + fs.join(", ") + ", not here" : "On another device";
+  }
+
+  function keptRow(e) {
+    var r = ref("lib", e.id), bits = [fileKind(e), e.size ? fileSize(e.size) : "", e.on ? wbFmt(e.on) : ""].filter(Boolean);
+    var bw = bytesWords(e), warm = /another device|not here/.test(bw);
+    return '<button class="fx-row' + (wbSel === r ? " is-sel" : "") + '" data-act="wb-open" data-id="' + esc(r) +
+      '" data-dragref="' + esc(r) + '" title="' + esc(e.fname || e.name) + '"><span class="fx-ico" aria-hidden="true">' +
+      (fileKind(e) === "PDF" ? "PDF" : fileKind(e) === "Picture" ? "IMG" : "FILE") + '</span><span class="w-grow">' +
+      '<span class="fx-nm">' + esc(e.name || e.fname) + '</span><span class="fx-sub">' + esc(bits.join(" · ")) +
+      '</span></span><span class="fx-where' + (warm ? " is-warm" : "") + '">' + esc(bw) + "</span></button>";
+  }
+
+  function filesKeptSect() {
+    var all = keptFiles().filter(function (e) { return filesMatch(e.name + " " + e.fname + " " + keptWhere(e).word); });
+    if (!keptFiles().length) {
+      return emptyLinesW("Nothing kept in the app yet.",
+        "Drop a PDF or a picture anywhere on the page. It lands in the inbox, or in the folder or bench that is open.");
+    }
+    if (!all.length) return '<p class="w-empty">Nothing kept here matches “' + esc(filesQ.trim()) + "”.</p>";
+    var groups = {}, keys = [];
+    all.forEach(function (e) {
+      var w = keptWhere(e);
+      if (!groups[w.key]) { groups[w.key] = { word: w.word, list: [] }; keys.push(w.key); }
+      groups[w.key].list.push(e);
+    });
+    keys.sort();
+    return keys.map(function (k) {
+      var g = groups[k];
+      g.list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      return '<section class="fx-group"><h2 class="fx-gh">' + esc(g.word) + ' <span class="w-mono">' + g.list.length +
+        "</span></h2>" + g.list.map(keptRow).join("") + "</section>";
+    }).join("");
+  }
+  function emptyLinesW(a, b) {
+    return '<div class="fx-empty"><p class="fx-e1">' + esc(a) + '</p><p class="fx-e2">' + esc(b) + "</p></div>";
+  }
+
+  /* ---------------- what is really in a connected folder ---------------- */
+
+  /* Read off the folder itself, every time the tab asks, and never stored:
+     a list kept in the book would be a second record of somebody else's
+     disk, stale the moment Drive moved a file. */
+  function filesLook(f) {
+    if (!f || driveLive[f.id] !== "granted") return Promise.resolve();
+    filesDrive[f.id] = filesDrive[f.id] || { list: null };
+    filesDrive[f.id].busy = true;
+    return Promise.all([walkDir(f.handle), readManifest(f.handle)]).then(function (r) {
+      var man = r[1].files || {};
+      filesDrive[f.id] = { at: Date.now(), list: r[0].filter(function (p) {
+        return p !== DRIVE_MANIFEST && p !== DRIVE_BOOK;
+      }).sort().map(function (p) { return { path: p, id: man[p] ? man[p].id : "" }; }) };
+    }).catch(function (e) {
+      filesDrive[f.id] = { at: Date.now(), list: [], err: (e && e.message) || "the folder could not be read" };
+    });
+  }
+  function filesDriveCount() {
+    return driveList.reduce(function (n, f) {
+      var d = filesDrive[f.id];
+      return n + (d && d.list ? d.list.length : 0);
+    }, 0);
+  }
+  function filesDriveSect() {
+    var how = '<button class="w-inlink" data-act="sync-how">How syncing works</button>';
+    if (!driveApi()) {
+      return emptyLinesW("This browser cannot reach a folder on the computer.",
+        "That needs Chrome or Edge on a computer. A phone still has the book through sync.") +
+        '<p class="fx-foot">' + how + "</p>";
+    }
+    if (!driveList.length) {
+      return '<div class="fx-empty"><p class="fx-e1">No folder connected on this computer.</p><p class="fx-e2">Install ' +
+        "Google Drive for desktop or OneDrive, then connect a folder inside it. Every file you keep here is written " +
+        "into it by itself, in the same folders as the Library, and the other computer reads it back.</p>" +
+        '<p class="fx-acts"><button class="w-dark" data-act="drive-add">Connect a folder</button> ' + how + "</p></div>";
+    }
+    return driveList.map(function (f) {
+      var p = driveLive[f.id], d = filesDrive[f.id];
+      var head = '<div class="fx-dhead"><h2 class="fx-gh">' + esc(f.label) + (d && d.list ? ' <span class="w-mono">' +
+        d.list.length + "</span>" : "") + '</h2><span class="w-grow"></span>' +
+        (p === "granted" ? '<button class="w-pbtn" data-act="files-look" data-id="' + esc(f.id) + '">Look again</button>' +
+          '<button class="w-pbtn" data-act="drive-in" data-id="' + esc(f.id) + '">Bring in what is here</button>' : "") + "</div>";
+      if (p === "gone") return '<section class="fx-group">' + head + '<p class="fx-sub2">This computer has lost the ' +
+        "folder. Connect it again from Settings.</p></section>";
+      if (p !== "granted") {
+        return '<section class="fx-group">' + head + '<p class="fx-sub2">The browser asks again each time the app is ' +
+          "opened, and nothing is written to the folder until it is allowed.</p>" +
+          '<p class="fx-acts"><button class="w-dark" data-act="drive-allow" data-id="' + esc(f.id) + '">Allow again</button></p></section>';
+      }
+      if (!d || !d.list) return '<section class="fx-group">' + head + '<p class="fx-sub2">Reading the folder…</p></section>';
+      if (d.err) return '<section class="fx-group">' + head + '<p class="fx-sub2">It could not be read: ' + esc(d.err) + "</p></section>";
+      var list = d.list.filter(function (x) { return filesMatch(x.path); });
+      if (!d.list.length) return '<section class="fx-group">' + head + '<p class="fx-sub2">The folder is empty. Anything ' +
+        "you keep in the app is written here by itself.</p></section>";
+      if (!list.length) return '<section class="fx-group">' + head + '<p class="fx-sub2">Nothing in it matches “' +
+        esc(filesQ.trim()) + "”.</p></section>";
+      var dirs = {}, order = [];
+      list.forEach(function (x) {
+        var parts = x.path.split("/"), name = parts.pop(), dir = parts.join(" › ");
+        if (!dirs[dir]) { dirs[dir] = []; order.push(dir); }
+        dirs[dir].push({ name: name, x: x });
+      });
+      order.sort();
+      return '<section class="fx-group">' + head + order.map(function (dir) {
+        return '<p class="fx-dir">' + esc(dir || "Top of the folder") + "</p>" + dirs[dir].map(function (y) {
+          var rec = y.x.id && recOf(y.x.id);
+          var sub = rec ? "The app’s copy of “" + esc(recName(rec, parseRef(y.x.id).kind)) + "”"
+            : y.x.id ? "The app wrote it; its record has not reached this computer yet" : "Put there by hand";
+          var inner = '<span class="fx-ico" aria-hidden="true">' + esc((y.name.match(/\.([A-Za-z0-9]{1,5})$/) || ["", "·"])[1].toUpperCase()) +
+            '</span><span class="w-grow"><span class="fx-nm">' + esc(y.name) + '</span><span class="fx-sub">' + sub + "</span></span>";
+          return rec ? '<button class="fx-row" data-act="wb-open" data-id="' + esc(y.x.id) + '">' + inner + "</button>"
+            : '<div class="fx-row is-flat">' + inner + "</div>";
+        }).join("");
+      }).join("") + "</section>";
+    }).join("") + '<p class="fx-foot">Only what is in a folder is listed; nothing here is kept in the book. ' + how + "</p>";
+  }
+
+  /* ---------------- paths and links (the Directory as it was) ---------------- */
+
+  function filesLinksSect() {
+    var all = directory(), by = dirCounts();
+    var head = '<p class="fx-acts"><button class="w-pbtn" data-act="asset-add">New entry</button></p>';
+    if (!all.length) {
+      return emptyLinesW("No paths or links in the book yet.",
+        "Write a path or a link onto any record — a project, a training, a library entry — and it appears here. " +
+        "New entry is for something that belongs to no record, like a drive or a bookmark.") + head;
+    }
+    var f = DIR_FACETS.filter(function (x) { return x.id === dirFacet; })[0];
+    if (dirFacet && !f) dirFacet = "";
+    var chips = '<div class="w-ntags" role="group" aria-label="What tapping it does"><button class="w-ntag' + (!f ? " is-on" : "") +
+      '" aria-pressed="' + !f + '" data-act="dir-facet" data-id="">All <span class="w-mono">' + all.length + "</span></button>" +
+      DIR_FACETS.filter(function (x) { return by[x.id]; }).map(function (x) {
+        return '<button class="w-ntag' + (f === x ? " is-on" : "") + '" aria-pressed="' + (f === x) + '" data-act="dir-facet" data-id="' +
+          x.id + '">' + esc(x.word) + ' <span class="w-mono">' + by[x.id] + "</span></button>";
+      }).join("") + "</div>";
+    var shown = all.filter(function (e) {
+      return (!f || e.facet === f.id) && filesMatch([recName(e.rec, e.kind), e.rec.path, e.rec.url, e.rec.place,
+        e.rec.kind, e.rec.note, KINDS[e.kind].word].filter(Boolean).join(" "));
+    });
+    var out = chips + (f ? '<p class="fx-sub2">' + esc(f.says) + "</p>" : "") + head;
+    if (!shown.length) return out + '<p class="w-empty">Nothing here matches.</p>';
+    var groups = {}, order = [];
+    shown.forEach(function (e) {
+      var g = KINDS[e.kind].many;
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      groups[g].push(e);
+    });
+    return out + order.map(function (g) {
+      return '<section class="fx-group"><h2 class="fx-gh">' + esc(g) + ' <span class="w-mono">' + groups[g].length +
+        "</span></h2>" + groups[g].map(dirRow).join("") + "</section>";
+    }).join("");
+  }
+
+  /* ---------------- the screen ---------------- */
+
+  var FILES_SECTS = [["kept", "Kept here"], ["drive", "In your folders"], ["links", "Paths and links"]];
+  function wbFilesView() {
+    if (!FILES_SECTS.some(function (s) { return s[0] === filesSect; })) filesSect = "kept";
+    var n = { kept: keptFiles().length, drive: filesDriveCount(), links: directory().length };
+    var out = wEyebrow("Files") + '<div class="w-nhead"><h1 class="w-h1">Where your stuff is</h1>' +
+      '<button class="w-pbtn" data-act="sync-how">How syncing works</button></div>' +
+      '<p class="w-lead is-62">What you have kept in the app, what is really in your Drive and OneDrive folders, and every ' +
+      "path and link the book holds. A file you drop anywhere on the page is written to your connected folders by itself.</p>";
+    out += '<div class="w-seg fx-seg" role="group" aria-label="Which files">' + FILES_SECTS.map(function (s) {
+      var on = filesSect === s[0];
+      return '<button class="w-segb' + (on ? " is-on" : "") + '" aria-pressed="' + on + '" data-act="files-sect" data-id="' +
+        s[0] + '">' + s[1] + (s[0] === "drive" && !driveList.length ? "" : ' <span class="w-mono">' + n[s[0]] + "</span>") + "</button>";
+    }).join("") + "</div>";
+    out += '<div class="w-nbar"><input class="g-q" id="filesQ" type="search" placeholder="Find by name, folder or path…" ' +
+      'aria-label="Find a file" value="' + esc(filesQ) + '" /></div>';
+    wbOrder = [];
+    out += filesSect === "drive" ? filesDriveSect() : filesSect === "links" ? filesLinksSect() : filesKeptSect();
+    return out;
+  }
+
+  /* After the screen is drawn: wire the search box, learn which bytes are
+     here, and read any granted folder that has not been read — each of
+     which may draw the screen once more, and never twice for one fact. */
+  function mountFilesTab() {
+    if (view !== "dir") return;
+    var q = document.getElementById("filesQ");
+    if (q && !q._wired) {
+      q._wired = true;
+      q.addEventListener("input", function () {
+        var at = q.selectionStart;
+        filesQ = q.value; render();
+        var again = document.getElementById("filesQ");
+        if (again) { again.focus(); try { again.setSelectionRange(at, at); } catch (e) {} }
+      });
+    }
+    if (!filesHere) {
+      filesHere = {};
+      fileTx("readonly", function (st) { return st.getAllKeys(); }).then(function (keys) {
+        var h = {};
+        (keys || []).forEach(function (k) { h[k] = 1; });
+        filesHere = h;
+        if (view === "dir") render();
+      }).catch(function () {});
+    }
+    if (filesSect === "drive") {
+      driveList.forEach(function (f) {
+        if (driveLive[f.id] === "granted" && !filesDrive[f.id]) {
+          filesLook(f).then(function () { if (view === "dir") render(); });
+        }
+      });
+    }
+  }
+  /* The list of bytes here is re-learnt after anything that adds or
+     removes them. */
+  function filesForget() { filesHere = null; filesDrive = {}; }
+
+  /* ---------------- how syncing works ---------------- */
+
+  function renderSyncHow() {
+    function step(n, title, body) {
+      return '<li class="hs-step"><span class="hs-n w-mono">' + n + '</span><div class="step"><p class="hs-t">' + title +
+        "</p><p>" + body + "</p></div></li>";
+    }
+    var out = wEyebrow("Help") + '<h1 class="w-h1">How syncing works</h1>' +
+      '<p class="w-lead is-62">Two different things travel, by two different roads. The <b>book</b> — every record, note, ' +
+      "link and folder — goes through a sealed GitHub gist. The <b>files themselves</b> — the PDFs and pictures — go " +
+      "through a Google Drive or OneDrive folder on each computer. Set up one, the other, or both.</p>";
+    out += '<section class="hs-part"><h2 class="w-h2">1. The book, on every device</h2><ol class="hs-steps">' +
+      step(1, "Make a token", "On github.com, open Settings → Developer settings → Personal access tokens, and make a " +
+        "token that can do one thing: reach gists. Copy it.") +
+      step(2, "Turn it on here", "Open Settings and press <b>Set up sync</b>. Paste the token, choose a passphrase you " +
+        "will remember, leave the gist id blank, and press <b>Turn it on</b>. The card then shows the gist id.") +
+      step(3, "Join the other device", "On the phone or the other computer, open Settings, press <b>Set up sync</b>, and " +
+        "paste the same token, the same passphrase and that gist id.") +
+      step(4, "Nothing else to press", "It syncs a few seconds after a change, every minute and a half while open, and " +
+        "when you come back. <b>Sync now</b> is there when you want to watch it happen.") + "</ol>" +
+      '<p class="hs-note">The book is sealed before it leaves, so the gist is unreadable without the passphrase — and ' +
+      "lost with it. The token and the passphrase never go into the book, a snapshot or the gist. On a borrowed " +
+      "machine, answer “No” to “Is this your own machine?”, and use <b>Wipe this device</b> before you leave.</p></section>";
+    out += '<section class="hs-part"><h2 class="w-h2">2. Your files, on every computer</h2><ol class="hs-steps">' +
+      step(1, "Install the drive", "Install Google Drive for desktop or OneDrive on each computer and sign in. Each " +
+        "account appears as a folder on the computer, and it keeps that folder in step by itself.") +
+      step(2, "Connect a folder", "In Settings, press <b>Connect a folder</b> and pick a folder inside the drive — make one " +
+        "called Mashghal, say. Name it, choose whether it carries the whole Library or some folders, and press " +
+        "<b>Connect it</b>.") +
+      step(3, "Drop files", "From now on a PDF or a picture you drop anywhere on the page is written into that folder " +
+        "straight away, in the same folders as the Library; what lands in the inbox goes into its Inbox folder until " +
+        "you file it, and then moves.") +
+      step(4, "On the other computer", "Connect the same folder there and press <b>Bring in what is here</b>. Nothing " +
+        "changes until you have seen the list; then the files attach to the records the book already brought.") + "</ol>" +
+      '<p class="hs-note">It needs Chrome or Edge on a computer. The browser asks again each time the app is opened — ' +
+      "press <b>Allow again</b> when it does, and Chrome may offer to allow it on every visit. The app never talks to " +
+      "Google or Microsoft and holds no key; a second account is a second folder. The gist never carries the files " +
+      "themselves, only their names.</p></section>";
+    out += '<p class="fx-acts"><button class="w-dark" data-act="settings">Open Settings</button> ' +
+      '<button class="w-pbtn" data-act="tab-dir">Open Files</button></p>';
+    return out;
   }
 
   /* ============================================================
@@ -13578,7 +13960,7 @@
       var p = String(idv || "").split("|");
       pageAt[p[0]] = p[1]; openRec = ""; render();
     },
-    "tab-dir": function () { goPage("dir", ""); },
+    "tab-dir": function () { wbSel = null; openRec = ""; back = []; view = "dir"; render(); window.scrollTo({ top: 0, behavior: "auto" }); },
     "settings": function () { goPage("settings", ""); },
     "guide": function () { goPage("guide", ""); },
 
@@ -13677,6 +14059,15 @@
     },
     /* ---- Drive folders ---- */
     "drive-add": function () { driveConnect(); },
+    /* Opening the folders' section reads them again: they are somebody
+       else's disk, and a list from ten minutes ago is a guess. */
+    "files-sect": function (idv) { filesSect = idv || "kept"; if (filesSect === "drive") filesDrive = {}; render(); },
+    "files-look": function (idv) {
+      var f = driveList.filter(function (x) { return x.id === idv; })[0];
+      if (!f) return;
+      drivePerm(f).then(function () { return filesLook(f); }).then(function () { render(); });
+    },
+    "sync-how": function () { wbSel = null; openRec = ""; back = []; view = "synchow"; render(); window.scrollTo({ top: 0, behavior: "auto" }); },
     "drive-allow": function (idv) { driveAllow(idv); },
     "drive-now": function (idv) { driveNow(idv); },
     "drive-in": function (idv) { driveBringIn(idv); },
@@ -14234,6 +14625,7 @@
     { id: "map", label: "Map", ico: "" },
     { id: "shelves", label: "Library", ico: "" },
     { id: "notes", label: "Notes", ico: "" },
+    { id: "dir", label: "Files", ico: "" },
     { id: "record", label: "Record", ico: "" },
     { id: "review", label: "Weekly review", ico: "" }
   ];
@@ -14257,6 +14649,7 @@
          search; what you were narrowed to is a navigation, and resets. */
       wbLibFolder = "";
       wbNote = ""; wbNoteEdit = false; wbNoteTag = ""; wbNoteQ = ""; wbNoteFolder = "";
+      filesSect = "kept"; filesQ = ""; filesDrive = {};
       GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
       grMenuClose();
       /* A SIFT BOX IS A NARROWING, NOT A SETTING. */
@@ -14274,6 +14667,8 @@
       if (v === "benches") return wbBenchesView();
       if (v === "more") return wbMoreView();
       if (v === "settings") return renderSettings();
+      if (v === "dir") return wbFilesView();
+      if (v === "synchow") return renderSyncHow();
       if (v === "guide") return renderGuide();
       if (openRec && recOf(openRec) && (TAB_OF[parseRef(openRec).kind] === v)) {
         return recPage(openRec);
@@ -14281,7 +14676,6 @@
       if (v === "career") return renderCareer();
       if (v === "work") return renderWork();
       if (v === "library") return renderLibrary();
-      if (v === "dir") return renderDir();
       if (v === "show") return renderShow();
       view = "today";
       return wbTodayView();
@@ -14298,6 +14692,7 @@
       wireFolderDrags();
       mountNotesIndex();
       mountNoteEditor();
+      mountFilesTab();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
