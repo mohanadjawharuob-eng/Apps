@@ -4602,3 +4602,62 @@ them back, the reading surviving a reload, bytes elsewhere said in words, the
 boot sweep, wipe deleting both databases, a JSON file bringing nested folders
 in, and 390px) · `flook.js` (33: the tree, the drop card and the file pane in
 contrast, at rest and under the pointer, at 1400, 390 and 320px).
+
+## mashghal2 writes notes like a small wiki (w12)
+
+Asked for *"a space to write notes in general … then tag them … like how
+Obsidian works but with simple features like a Wikipedia"*. The `notes` list
+already held a note, a meeting and an idea; a wiki note is the same record
+with no bench and no `inbox` flag, so there is no second list. Notes is a tab
+(and a More row on a phone), `m5/27-wb-notes.js`.
+
+- **A TAG IS A WORD YOU WROTE, in either of two places.** The note's own tag
+  field and any `#word` in its text both count, because that is how anybody
+  who has used Obsidian writes them; `noteTags(n)` is the one union, each word
+  once whatever its case. Nothing is a taxonomy to maintain — a tag exists
+  because something carries it.
+- **`[[Title]]` IS A LINK BY TITLE, and a backlink is walked, never stored**,
+  so what the page says links here cannot disagree with the text that makes
+  it. A link to a title nobody has written is drawn dashed in the late colour
+  and pressing it starts that note — which is how a wiki grows. *Mentioned,
+  not linked* lists the notes that name the title without the brackets.
+- **A TITLE IS AN ADDRESS, so two notes may not share one.** A link to a title
+  two notes carry would be a guess about which one you meant; the new-note
+  dialog, the page editor and the pane's dialog all refuse a taken title (one
+  rule, three doors). **And a rename carries its links**: every `[[Old]]`
+  becomes `[[New]]` in the same act under the same undo, and the toast says how
+  many — or every rename would break the wiki behind your back.
+- **Everything is escaped first, then marked up.** The renderer knows a stated
+  subset — headings, lists, bold, italic, code, quotes, links, wiki links,
+  tags — and lifts code spans out before the other rules, so a `*` in code
+  stays a star. `<script>` in a note is shown as text; there is a test that
+  checks it never ran. **A note's `#` is an `<h2>`**, because the page's own
+  title is the `<h1>`; the first draft started at `<h3>`.
+- **THE LINE MAY NOT EAT A WORD.** `#anfeh` still puts a capture on the bench
+  with that key; any other `#word` is a tag on a note, a meeting or an idea,
+  and stays in the **title** of anything else — the first draft stripped it
+  from an action and threw it away. `note: a title` makes a wiki note rather
+  than an inbox one, and the preview and the toast both say *in your notes,
+  tagged #…*. The line's search reads tags, so `#coast` finds what carries it.
+- **The editor's conveniences are keys on its own fields.** `[[` offers the
+  titles that match what follows it; Ctrl+S saves and Esc cancels without
+  reaching the Workbench's own key handler. On a phone the Save row sits
+  **above** the text (a CSS `order`), because below it Save was under the
+  fixed capture line.
+- **The map draws a wiki link dotted** (`grWikiEdges()`), a third kind of line
+  beside a link and a bench, because it is written in text and is changed by
+  editing the text — cutting one on the map says so rather than doing nothing.
+- The example book carries a small wiki: two notes of its own, tagged, in a
+  folder, linking each other and a bench's note, so the page, the backlinks
+  and the dotted lines all have something to show.
+
+`wb-notes.js` (51: the tab and its count, tag chips from field and text, a tag
+and a search narrowing and saying so, the renderer, a wiki link each way, the
+folder crumb, a taken title refused, `[[` suggestions, Ctrl+S, tags
+de-duplicated, HTML shown as text and never run, a missing link starting its
+note, Esc, a clash on save, a rename carrying three links and its undo, the
+line's `note:` and `#tag`, an action keeping its `#word`, the line finding by
+tag, the pane dialog's tags and title rule, Open as a page, the dotted lines,
+removal, import de-duplicating tags, and the phone) · `nlook.js` (66: the
+index, a tag, a page, a missing link and the editor in contrast at 1400, 390
+and 320px, at rest and under the pointer).

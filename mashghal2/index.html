@@ -1593,6 +1593,77 @@
   .w-fmain .w-lgrid { margin-top: 14px; }
   .w-fmain > .w-fnote:first-child { margin-top: 0; }
 
+  /* ---- notes: a small wiki ---- */
+  .w-nhead { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; }
+  .w-nhead .w-h1 { flex: 1 1 18rem; min-width: 0; overflow-wrap: anywhere; }
+  .w-nbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .w-nsel {
+    height: 32px; padding: 0 8px; border: 1px solid var(--rule-mid); border-radius: 9px; background: var(--sheet);
+    font: inherit; font-size: 14px; color: var(--ink); max-width: 100%;
+  }
+  .w-ntags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .w-ntag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--sheet); font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer;
+  }
+  .w-ntag .w-mono { font-size: 11px; color: var(--dim); }
+  .w-ntag.is-on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .w-ntag.is-on .w-mono { color: var(--on-ink); }
+  .w-ntag.is-small { padding: 1px 8px; font-size: 12px; cursor: inherit; background: var(--sidebar); border-color: transparent; }
+  .w-ntag.is-inline { padding: 0 7px; font-size: 0.92em; vertical-align: baseline; }
+  .w-nsays { margin: 12px 0 0; font-size: 13.5px; color: var(--dim); }
+  .w-nlist { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .w-nrow {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 16px; text-align: left;
+    border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); font: inherit; color: inherit; cursor: pointer;
+  }
+  .w-nrow:hover { border-color: var(--hover-border); }
+  .w-nrow.is-small { padding: 9px 12px; }
+  .w-ntitle { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+  .w-nmeta, .w-nmeta2 { font-size: 13px; color: var(--dim); }
+  .w-nmeta2 { margin: 8px 0 0; }
+  .w-nmeta2 b { color: var(--ink-2); font-weight: 600; }
+  .w-nsnip { font-size: 14px; line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+  .w-ntagrow { display: flex; flex-wrap: wrap; gap: 4px; }
+  .w-nbody {
+    max-width: 44rem; margin-top: 22px; font-size: 16px; line-height: 1.65; color: var(--ink); overflow-wrap: anywhere;
+  }
+  .w-nbody p, .w-nbody ul, .w-nbody ol { margin: 0 0 14px; }
+  .w-nbody ul, .w-nbody ol { padding-left: 1.4em; }
+  .w-nbody .w-nh { margin: 22px 0 8px; font-family: var(--display); font-weight: 500; letter-spacing: -0.01em; }
+  .w-nbody h2.w-nh { font-size: 24px; } .w-nbody h3.w-nh { font-size: 20px; } .w-nbody h4.w-nh { font-size: 17px; }
+  .w-nbody code { font-family: var(--mono); font-size: 0.88em; padding: 1px 5px; border-radius: 5px; background: var(--code-bg); }
+  .w-ncode {
+    margin: 0 0 14px; padding: 12px 14px; border-radius: 10px; background: var(--code-bg); color: var(--code-ink);
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.5; overflow-x: auto; white-space: pre;
+  }
+  .w-nq { margin: 0 0 14px; padding: 2px 0 2px 14px; border-left: 3px solid var(--rule-mid); color: var(--ink-2); }
+  .w-nbody a { color: var(--blue-deep); }
+  .w-wl {
+    display: inline; padding: 0; border: 0; background: none; font: inherit; color: var(--blue-deep); cursor: pointer;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .w-wl.is-missing { color: var(--late); text-decoration-style: dashed; }
+  .w-nback { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 18px; margin-top: 30px; }
+  .w-nback section { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .w-nfoot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .w-light.is-danger { color: var(--dim); }
+  .w-light.is-danger:hover { color: var(--late); border-color: var(--late); }
+  .w-nedit { display: flex; flex-direction: column; gap: 6px; max-width: 48rem; margin-top: 14px; }
+  .w-nlab { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .w-nlab span { font-weight: 400; color: var(--dim); margin-left: 6px; }
+  .w-ninput {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--rule-mid); border-radius: 10px; background: var(--sheet);
+    font: inherit; font-size: 15px; color: var(--ink);
+  }
+  .w-ninput.is-title { font-family: var(--display); font-size: 24px; font-weight: 500; }
+  .w-ninput.is-body { min-height: 22rem; line-height: 1.6; resize: vertical; }
+  .w-nsug { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .w-nsug[hidden] { display: none; }
+  .w-nerr { margin: 4px 0 0; min-height: 1.2em; font-size: 14px; color: var(--late); }
+  .w-nacts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .w-nacts .w-dark { margin-top: 0; }
+
   .w-ptabs { display: none; }
 
   /* ---- the older screens, inside the new shell ---- */
@@ -1699,6 +1770,11 @@
     .g-keys { display: none; }
     /* The tree goes above the list on a phone, as a row of folders. */
     .w-fwrap { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    /* Save has to be reachable above the capture line on a phone. */
+    .w-ninput.is-body { min-height: 13rem; }
+    .w-nedit .w-nacts, .w-nedit .w-nerr { order: -1; }
+    .w-nedit .w-nerr:empty { display: none; }
+    .w-ninput.is-title { font-size: 20px; }
     .w-ftree { position: static; }
     .w-keys { bottom: 120px; right: 12px; }
   }
@@ -1818,7 +1894,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w11 · 26 Sep 2026";
+  var BUILD = "w12 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -5999,6 +6075,8 @@
       gtab("shelves", "Library", "What you know, kept to reuse: scripts, formulas, methods, " +
         "references, the reading list, places, links and files \u2014 by kind, or By folder in a tree " +
         "you make. Drop a PDF or a picture anywhere on the page and it is kept here.") +
+      gtab("notes", "Notes", "Anything you write, like a small wiki: tag it with #words, link one note to another " +
+        "with [[its title]], and every note shows what links to it. Type note: in the line to start one.") +
       gtab("record", "Record", "Your skills and what backs them, and the live CV.") +
       gtab("review", "Weekly review", "Four steps, about ten minutes.") +
       "</div>" +
@@ -6233,10 +6311,11 @@
        ["2h, 1.5h, 45m", "time, logged on the bench"],
        ["read:", "your reading list; mark it read and it becomes a reference"],
        ["idea:", "an idea, not yet started"],
+       ["note:", "a note in your notes, not in the inbox; any #word in it becomes a tag"],
        ["met, call, meeting", "a meeting; each part after a ; that needs doing becomes its own action"],
        ["https://", "a link"],
        ["bench:", "a new bench"],
-       ["#anfeh", "put it on that bench, from anywhere"]
+       ["#anfeh", "put it on that bench, from anywhere; a #word that is no bench is a tag on a note"]
       ].map(function (r) {
         return '<tr><td style="width:10rem" class="lit">' + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>";
       }).join("") + "</tbody></table>" +
@@ -7716,7 +7795,7 @@
     { kind: "hours", word: "Hours", key: "hours", fields: ["project", "on", "minutes", "note"],
       refs: { project: "project" }, dates: [["on", "day"]], noName: true },
     /* The Workbench's notes: a note, a meeting written up, or an idea. */
-    { kind: "note", word: "Notes", key: "notes", fields: ["name", "kind", "project", "on", "body", "folder"],
+    { kind: "note", word: "Notes", key: "notes", fields: ["name", "kind", "project", "on", "body", "folder", "tags"],
       refs: { project: "project", folder: "folder" }, dates: [["on", "day"]], words: { kind: "NOTE_KINDS" } }
   ];
   function impKind(k) {
@@ -8084,6 +8163,7 @@
         grp.K.fields.forEach(function (f) {
           if (grp.K.refs && grp.K.refs[f]) return;
           if (f === "topics") { rec.topics = topicList((m.row.topics || []).join(", ")); return; }
+          if (f === "tags") { rec.tags = topicList([].concat(m.row.tags || []).join(", ").replace(/#/g, "")); return; }
           if (f === "steps") {
             rec.steps = (m.row.steps || []).map(function (s) {
               return { id: uid(),
@@ -8389,7 +8469,7 @@
         });
         if (K.words && K.words[f]) note = "one of: " +
           IMP_WORDS[K.words[f]]().filter(Boolean).join(" / ");
-        if (f === "topics") note = "a list of words";
+        if (f === "topics" || f === "tags") note = "a list of words";
         if (f === "steps") note = "a list of names";
         if (f === "cite") note = "the citation, as its own object";
         return "<code>" + f + "</code>" + (note ? " <span class=\"faint\">" +
@@ -9629,7 +9709,7 @@
     state.notes.forEach(function (n) {
       put({ id: ref("note", n.id), type: n.kind === "idea" ? "draft" : n.kind === "meeting"
           ? "meeting" : "note", rec: n, title: n.name || "", body: n.body || "",
-        date: n.on || "", bench: pj(n.projectId), inbox: !!n.inbox });
+        date: n.on || "", bench: pj(n.projectId), inbox: !!n.inbox, tags: noteTags(n) });
     });
     state.lib.forEach(function (e) {
       var t = e.kind === "reference"
@@ -9875,13 +9955,21 @@
 
   function wbParse(q) {
     var t = String(q || "").trim(), type = "note", mins = 0, due = null, m;
-    var bench = wbCtxBench();
-    var tag = t.match(/#([\w؀-ۿ]+)/);
-    if (tag) {
-      var b = wbBenches().filter(function (x) { return x.key === tag[1].toLowerCase(); })[0];
-      if (b) bench = b.id;
-      t = t.replace(tag[0], "").replace(/\s+/g, " ").trim();
+    var bench = wbCtxBench(), tags = [];
+    /* A #word naming a bench's key puts it on that bench. Any other #word
+       is a TAG on a note, a meeting or an idea — and stays part of the
+       title of anything else. The line may not eat a word somebody wrote
+       on purpose. */
+    t = t.replace(/(^|\s)#([\w\u0600-\u06ff-]+)/g, function (all, pre, w) {
+      var b = wbBenches().filter(function (x) { return x.key === w.toLowerCase(); })[0];
+      if (b) { bench = b.id; return pre; }
+      tags.push(w);
+      return all;
+    }).replace(/\s+/g, " ").trim();
+    function untag(s) {
+      return tags.length ? s.replace(/(^|\s)#[\w\u0600-\u06ff-]+/g, "$1").replace(/\s+/g, " ").trim() : s;
     }
+    if ((m = t.match(/^note:\s*(.+)/i))) return { type: "note", title: untag(m[1]) || "Untitled", bench: null, wiki: true, tags: tags };
     if ((m = t.match(/^bench:\s*(.+)/i))) return { type: "bench", title: m[1].trim(), bench: null };
     if ((m = t.match(/^(\d+(?:\.\d+)?)\s*h\b\s*(?:(\d+)\s*m\b)?/i))) {
       mins = Math.round(parseFloat(m[1]) * 60) + (m[2] ? +m[2] : 0);
@@ -9903,7 +9991,7 @@
         var bn = wbGet(bench);
         t = t.replace(new RegExp("\\s*#?" + (bn ? bn.key.replace(/[^\w]/g, "") : "~~") + "\\b", "i"), "").trim();
       }
-      return { type: "meeting", title: t, bench: bench,
+      return { type: "meeting", title: untag(t), bench: bench, tags: tags,
         body: [head.slice(1).join(":").trim()].concat(parts.slice(1)).filter(Boolean).join("\n"),
         spawn: parts.slice(1).filter(function (x) {
           return /\b(needs?|send|by|book|do|chase|ask)\b/i.test(x);
@@ -9913,14 +10001,16 @@
       var first = wbLiveBenches()[0];
       bench = first ? first.id : null;
     }
-    return { type: type, title: t || "Untitled", bench: bench, mins: mins, due: due };
+    var noteish = type === "note" || type === "draft";
+    return { type: type, title: (noteish ? untag(t) : t) || "Untitled", bench: bench, mins: mins, due: due,
+      tags: noteish ? tags : [] };
   }
 
   /* KEEP. Each parsed type lands on the list that owns it. */
   function wbCapture(q) {
     var p = wbParse(q), on = wbToday(), snap = wbSnap();
     var pid = p.bench ? parseRef(p.bench).id : "";
-    var inbox = !p.bench && p.type !== "reading" && p.type !== "bench";
+    var inbox = !p.bench && !p.wiki && p.type !== "reading" && p.type !== "bench";
     var made;
     if (p.type === "bench") {
       var key = (p.title.toLowerCase().match(/[a-z0-9؀-ۿ]+/) || [""])[0];
@@ -9945,7 +10035,7 @@
       made = ref("lib", made.id);
     } else {
       state.notes.push(made = { id: uid(), kind: p.type === "draft" ? "idea" : p.type,
-        name: p.title, on: on, projectId: pid, body: p.body || "" });
+        name: p.title, on: on, projectId: pid, body: p.body || "", tags: topicList((p.tags || []).join(", ")) });
       if (inbox) made.inbox = true;
       made = ref("note", made.id);
     }
@@ -9964,7 +10054,8 @@
       return;
     }
     wbSay("Kept as " + tWord(p.type).toLowerCase() + (p.bench ? " on " + wbBenchName(p.bench)
-      : p.type === "reading" ? " in your reading list" : p.type === "bench" ? "" : " in the inbox"),
+      : p.wiki ? " in your notes" : p.type === "reading" ? " in your reading list" : p.type === "bench" ? "" : " in the inbox") +
+      (p.tags && p.tags.length ? ", tagged " + p.tags.map(function (x) { return "#" + x; }).join(" ") : ""),
       snap);
   }
 
@@ -9974,7 +10065,8 @@
     return /\?\s*$/.test(q) || /^(what|where|which|who|how|when)\b/i.test(String(q).trim());
   }
   function wbMatches(it, s) {
-    var hay = (it.title + " " + (it.body || "") + " " + (it.path || "") + " " + (it.code || "")).toLowerCase();
+    var hay = (it.title + " " + (it.body || "") + " " + (it.path || "") + " " + (it.code || "") + " " +
+      (it.tags || []).map(function (t) { return "#" + t + " " + t; }).join(" ")).toLowerCase();
     var w = String(s).toLowerCase().replace(/[?]/g, "").split(/\s+/).filter(function (x) {
       return x && !/^(the|a|an|of|for|workflow|folder)$/.test(x);
     });
@@ -10053,7 +10145,7 @@
   var wbKeysOn = false;
   var wbOrder = [];        // what j/k walk through on this screen
 
-  var WB_VIEWS = { today: 1, bench: 1, map: 1, shelves: 1, record: 1, review: 1, benches: 1, more: 1 };
+  var WB_VIEWS = { today: 1, bench: 1, map: 1, shelves: 1, notes: 1, note: 1, record: 1, review: 1, benches: 1, more: 1 };
 
   function wbCtxBench() { return view === "bench" && wbGet(wbBench) ? wbBench : null; }
 
@@ -10098,6 +10190,7 @@
     var inbox = WB.items.filter(function (x) { return x.inbox; });
     var libN = WB.items.filter(function (x) { return WB_LIB.indexOf(x.type) >= 0 && !x.inbox; }).length;
     var counts = { today: late.length ? late.length + " late" : "", shelves: String(libN),
+      notes: state.notes.length ? String(state.notes.length) : "",
       review: inbox.length ? inbox.length + " to sort" : "" };
     var tone = { today: "late", review: "blue" };
     var tabs = document.querySelectorAll("#nav .tab");
@@ -10153,7 +10246,7 @@
     }
     var pt = document.getElementById("ptabs");
     if (pt) {
-      var MORE = { map: 1, record: 1, career: 1, work: 1, library: 1, dir: 1, show: 1, settings: 1, guide: 1, more: 1 };
+      var MORE = { map: 1, notes: 1, note: 1, record: 1, career: 1, work: 1, library: 1, dir: 1, show: 1, settings: 1, guide: 1, more: 1 };
       pt.innerHTML = [["today", "Today"], ["benches", "Benches"], ["shelves", "Library"],
         ["review", "Review"], ["more", "More"]].map(function (x) {
           var on = x[0] === "benches" ? (view === "bench" || view === "benches")
@@ -10197,8 +10290,9 @@
       var word = tWord(p.type) + (p.spawn && p.spawn.length ? " + " +
         wbWords(p.spawn.length, "action", "actions").toLowerCase() : "") +
         (p.type === "hours" ? " · " + wbHm(p.mins) : "") + (p.due ? " · due " + wbFmt(p.due) : "");
-      var where = p.type === "bench" ? "a new bench" : p.bench ? "on " + wbBenchName(p.bench)
-        : p.type === "reading" ? "in your reading list" : "in the inbox, to sort later";
+      var where = (p.type === "bench" ? "a new bench" : p.bench ? "on " + wbBenchName(p.bench)
+        : p.wiki ? "in your notes" : p.type === "reading" ? "in your reading list" : "in the inbox, to sort later") +
+        (p.tags && p.tags.length ? ", tagged " + p.tags.map(function (x) { return "#" + x; }).join(" ") : "");
       var found = WB.items.filter(function (x) { return x.type !== "hours" && wbMatches(x, q); }).slice(0, 7);
       html = '<div class="w-keepbar"><span class="w-kbd">Enter</span><span>keeps it as</span>' +
         '<span class="w-pillt" style="background:' + tCol(p.type) + '">' + esc(word) + "</span>" +
@@ -10206,7 +10300,7 @@
         '<p class="w-dlabel">' + (found.length ? "Already kept" : "Nothing kept matches yet") + "</p>" +
         found.map(function (it) { return wRow(it, "is-find"); }).join("") +
         '<p class="w-dhelp">Start with <b>!</b> for an action, <b>2h</b> to log time, <b>read:</b> for your ' +
-        "reading list, <b>idea:</b> for a draft, <b>#" + esc((wbLiveBenches()[0] || { key: "anfeh" }).key) +
+        "reading list, <b>idea:</b> for a draft, <b>note:</b> for a note in your notes, <b>#" + esc((wbLiveBenches()[0] || { key: "anfeh" }).key) +
         "</b> to put it on a bench. End with <b>?</b> to ask.</p>";
     }
     drop.innerHTML = html;
@@ -10472,6 +10566,9 @@
         '<button class="w-pbtn" data-act="wb-copy" data-id="' + esc(it.id) + '">Copy path</button></div>';
     }
     if (it.rec && it.rec.blobId) out += filePaneHtml(it);
+    if (parseRef(it.id).kind === "note") {
+      out += '<button class="w-dark" data-act="note-open" data-id="' + esc(parseRef(it.id).id) + '">Open as a page →</button>';
+    }
     var pk = parseRef(it.id).kind;
     if (pk === "lib" || pk === "note") {
       var fo = it.rec.folderId && byId(state.folders, it.rec.folderId);
@@ -10629,14 +10726,25 @@
         { key: "projectId", label: "Bench", type: "select", value: n.projectId || "",
           options: optsOf("project", "— the inbox") },
         dateField("on", "Its day", n.on || "", "The day it was kept."),
+        { key: "tags", label: "Tags", value: (n.tags || []).join(", "), span: true,
+          hint: "Separated by commas. A #word in the text counts too." },
+        { key: "folderId", label: "Folder", type: "select", value: n.folderId || "",
+          options: [{ value: "", label: "— no folder" }].concat(state.folders.map(function (f) {
+            return { value: f.id, label: folderTrail(f.id).map(function (t) { return t.name; }).join(" › ") };
+          })) },
         { key: "body", label: "What it says", type: "textarea", rows: 6, value: n.body || "", span: true }
       ],
       validate: function (v) {
         if (!v.name.trim()) return "It needs a title.";
+        /* The same address rule the note's own page keeps. */
+        var c = noteTitleClash(v.name, n);
+        if (c) return "Another note is already called “" + c.name + "”.";
         return badDates(v, [["on", "Its day"]]);
       },
       onConfirm: function (v) {
         n.name = v.name.trim(); n.kind = v.kind; n.projectId = v.projectId; n.on = v.on;
+        n.tags = topicList(String(v.tags || "").replace(/#/g, ""));
+        n.folderId = v.folderId && byId(state.folders, v.folderId) ? v.folderId : "";
         n.body = v.body.replace(/\s+$/, "");
         if (n.projectId) delete n.inbox;
         saveGo("Saved");
@@ -10973,7 +11081,8 @@
     }).join("") + "</div>";
   }
   function wbMoreView() {
-    var rows = [["wb-go", "map", "Map", "Everything, and how it is joined"],
+    var rows = [["wb-go", "notes", "Notes", "Write anything, tag it, link it like a wiki"],
+      ["wb-go", "map", "Map", "Everything, and how it is joined"],
       ["wb-go", "record", "Record", "Your skills and the live CV"],
       ["wb-else", "career", "Career", "Roles, education, training, skills"],
       ["wb-else", "work", "Work", "Projects, workflows, people, equipment, hours"],
@@ -12273,6 +12382,452 @@
   }
 
   /* ============================================================
+     NOTES, WRITTEN LIKE A SMALL WIKI.
+
+     Asked for "a space to write notes in general from the outside and
+     then tag them … like how Obsidian works, but with simple features
+     like a Wikipedia". The `notes` list already held a note, a meeting
+     and an idea; a wiki note is the same record with no bench, and three
+     things make it a wiki rather than a list:
+
+       · TAGS are words you write, either in the note's own tag field or
+         inline as `#word` in the body — both count, because that is how
+         anybody who has used Obsidian will write them. Nothing is a
+         taxonomy to maintain; a tag exists because something carries it.
+       · `[[Title]]` IS A LINK TO ANOTHER NOTE BY ITS TITLE, and what links
+         to a note is WALKED, never stored — so a backlink cannot disagree
+         with the text that makes it. A link to a title nobody has written
+         yet is drawn as one, and pressing it starts that note, as a wiki
+         does.
+       · A TITLE IS AN ADDRESS, so two notes may not share one: a
+         `[[link]]` to a title two notes carry would be a guess about
+         which one you meant. And renaming a note rewrites the links that
+         named it, in the same act and under the same undo, or every
+         rename would break the wiki behind your back.
+
+     The body is rendered from a small, stated subset — headings, lists,
+     bold, italic, code, links, wiki links, tags — and EVERYTHING IS
+     ESCAPED FIRST. No HTML a note contains ever reaches the page as
+     HTML.
+     ============================================================ */
+
+  var wbNote = "", wbNoteEdit = false, wbNoteTag = "", wbNoteQ = "", wbNoteFolder = "";
+  var NOTE_KIND_WORDS = { note: "Note", meeting: "Meeting", idea: "Idea" };
+
+  /* ---------------- reading a note ---------------- */
+
+  var TAG_RE = /(^|[\s(])#([A-Za-zÀ-ɏ؀-ۿ][\wÀ-ɏ؀-ۿ-]*)/g;
+  function inlineTags(body) {
+    var out = [], m;
+    String(body || "").replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "").split("\n").forEach(function (ln) {
+      TAG_RE.lastIndex = 0;
+      while ((m = TAG_RE.exec(ln))) out.push(m[2]);
+    });
+    return out;
+  }
+  /* A note's tags: its own field and its body's #words, one list, each
+     word once whatever its case. */
+  function noteTags(n) {
+    return topicList((n.tags || []).concat(inlineTags(n.body)).join(", "));
+  }
+  function tagKey(t) { return String(t).toLowerCase(); }
+  function allTags() {
+    var by = {};
+    state.notes.forEach(function (n) {
+      noteTags(n).forEach(function (t) {
+        var k = tagKey(t);
+        (by[k] = by[k] || { word: t, n: 0 }).n++;
+      });
+    });
+    return Object.keys(by).map(function (k) { return by[k]; })
+      .sort(function (a, b) { return b.n - a.n || a.word.localeCompare(b.word); });
+  }
+  function wikiTargets(body) {
+    var out = [], m, re = /\[\[([^\]\n|]+)(?:\|[^\]\n]*)?\]\]/g;
+    String(body || "").replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "").replace(re, function (_, t) {
+      out.push(t.trim()); return _;
+    });
+    void m;
+    return out;
+  }
+  function noteByTitle(title) {
+    var k = String(title || "").trim().toLowerCase();
+    if (!k) return null;
+    return state.notes.filter(function (n) { return String(n.name || "").trim().toLowerCase() === k; })[0] || null;
+  }
+  function noteTitleClash(title, self) {
+    var k = String(title || "").trim().toLowerCase();
+    return state.notes.filter(function (n) { return n !== self && String(n.name || "").trim().toLowerCase() === k; })[0] || null;
+  }
+  function backlinks(n) {
+    var k = String(n.name || "").trim().toLowerCase();
+    return state.notes.filter(function (o) {
+      return o !== n && wikiTargets(o.body).some(function (t) { return t.toLowerCase() === k; });
+    });
+  }
+  /* Mentions: the title written in another note's text without the
+     brackets — the list Obsidian calls unlinked mentions, which is how a
+     wiki finds the links nobody made yet. */
+  function mentions(n) {
+    var k = String(n.name || "").trim().toLowerCase();
+    if (k.length < 3) return [];
+    return state.notes.filter(function (o) {
+      if (o === n) return false;
+      var plain = String(o.body || "").replace(/\[\[[^\]\n]*\]\]/g, "").toLowerCase();
+      var i = plain.indexOf(k);
+      while (i >= 0) {
+        var before = plain.charAt(i - 1), after = plain.charAt(i + k.length);
+        if (!/[\w]/.test(before) && !/[\w]/.test(after)) return true;
+        i = plain.indexOf(k, i + 1);
+      }
+      return false;
+    });
+  }
+  /* The map's dotted lines: one per note that names another. */
+  function grWikiEdges() {
+    var out = [], seen = {};
+    state.notes.forEach(function (n) {
+      wikiTargets(n.body).forEach(function (t) {
+        var o = noteByTitle(t);
+        if (!o || o === n) return;
+        var a = ref("note", n.id), b = ref("note", o.id), k = a < b ? a + ">" + b : b + ">" + a;
+        if (seen[k]) return;
+        seen[k] = 1;
+        out.push({ id: "w:" + k, a: a, b: b, kind: "wiki" });
+      });
+    });
+    return out;
+  }
+
+  /* ---------------- the renderer ---------------- */
+
+  function noteInline(s) {
+    /* Escaped first; every rule below writes markup into text that can no
+       longer carry any of its own. Code spans are lifted out before the
+       other rules run, so a `*` inside code stays a star. */
+    var code = [];
+    s = esc(s).replace(/`([^`\n]+)`/g, function (_, c) { code.push(c); return "\u0000" + (code.length - 1) + "\u0000"; });
+    s = s.replace(/\[\[([^\]\n|]+)(?:\|([^\]\n]*))?\]\]/g, function (_, t, label) {
+      var title = t.trim(), hit = noteByTitle(title.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+      return '<button class="w-wl' + (hit ? "" : " is-missing") + '" data-act="note-go" data-id="' + title + '" title="' +
+        (hit ? "Open " + title : "Not written yet — press to start it") + '">' + (label ? label.trim() : title) + "</button>";
+    });
+    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, function (_, pre, u) {
+      return pre + '<a href="' + u + '" target="_blank" rel="noopener">' + u + "</a>";
+    });
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<i>$2</i>");
+    s = s.replace(TAG_RE, function (_, pre, t) {
+      return pre + '<button class="w-ntag is-inline" data-act="note-tag" data-id="' + t + '">#' + t + "</button>";
+    });
+    return s.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; });
+  }
+  function noteRender(body) {
+    var lines = String(body || "").replace(/\r/g, "").split("\n"), out = [], para = [], list = null, i = 0;
+    function flush() {
+      if (para.length) { out.push("<p>" + para.map(noteInline).join("<br>") + "</p>"); para = []; }
+      if (list) { out.push("<" + list.t + ">" + list.items.map(function (x) { return "<li>" + noteInline(x) + "</li>"; }).join("") + "</" + list.t + ">"); list = null; }
+    }
+    while (i < lines.length) {
+      var ln = lines[i], m;
+      if (/^```/.test(ln)) {
+        flush();
+        var buf = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+        out.push('<pre class="w-ncode">' + esc(buf.join("\n")) + "</pre>");
+        i++; continue;
+      }
+      if ((m = ln.match(/^(#{1,3})\s+(.+)/))) {
+        flush();
+        /* The page's title is the h1, so a note's # is an h2. */
+        out.push("<h" + (m[1].length + 1) + ' class="w-nh">' + noteInline(m[2]) + "</h" + (m[1].length + 1) + ">");
+      } else if ((m = ln.match(/^\s*[-*]\s+(.*)/))) {
+        if (para.length) flush();
+        if (!list || list.t !== "ul") { flush(); list = { t: "ul", items: [] }; }
+        list.items.push(m[1]);
+      } else if ((m = ln.match(/^\s*\d+[.)]\s+(.*)/))) {
+        if (para.length) flush();
+        if (!list || list.t !== "ol") { flush(); list = { t: "ol", items: [] }; }
+        list.items.push(m[1]);
+      } else if (/^\s*>\s?/.test(ln)) {
+        flush();
+        out.push('<blockquote class="w-nq">' + noteInline(ln.replace(/^\s*>\s?/, "")) + "</blockquote>");
+      } else if (!ln.trim()) {
+        flush();
+      } else {
+        if (list) flush();
+        para.push(ln);
+      }
+      i++;
+    }
+    flush();
+    return out.join("");
+  }
+  /* The first line a row shows is the TEXT, not the markup. */
+  function noteSnippet(n) {
+    var t = String(n.body || "").replace(/```[\s\S]*?```/g, " ").replace(/\[\[([^\]|\n]+)(?:\|([^\]\n]*))?\]\]/g, function (_, a, b) { return b || a; })
+      .replace(/[#*`>]/g, "").replace(/^\s*[-\d.)]+\s+/gm, "").replace(/\s+/g, " ").trim();
+    return clip(t, 140);
+  }
+
+  /* ---------------- the index ---------------- */
+
+  function noteList() {
+    var q = wbNoteQ.trim().toLowerCase(), tag = tagKey(wbNoteTag);
+    return state.notes.filter(function (n) {
+      if (wbNoteFolder && n.folderId !== wbNoteFolder) return false;
+      if (tag && !noteTags(n).some(function (t) { return tagKey(t) === tag; })) return false;
+      if (!q) return true;
+      var hay = (n.name + " " + (n.body || "") + " " + noteTags(n).join(" ")).toLowerCase();
+      return q.split(/\s+/).every(function (w) { return hay.indexOf(w) >= 0; });
+    }).sort(function (a, b) {
+      /* Newest touched first, then newest dated: a book loaded at once
+         carries one stamp on every note, and a tie must not read as
+         random. */
+      return String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) ||
+        String(b.on || "").localeCompare(String(a.on || "")) || String(a.name).localeCompare(String(b.name));
+    });
+  }
+  function wbNotesView() {
+    if (wbNoteFolder && !byId(state.folders, wbNoteFolder)) wbNoteFolder = "";
+    var list = noteList(), tags = allTags();
+    var out = wEyebrow("Notes") + '<div class="w-nhead"><h1 class="w-h1">Your notes</h1>' +
+      '<button class="w-dark" data-act="note-new">New note</button></div>' +
+      '<p class="w-lead is-62">Write anything. Tag it with <span class="w-mono">#words</span>, and link one note to another ' +
+      "by writing its title in double brackets, <span class=\"w-mono\">[[like this]]</span>.</p>";
+    if (!state.notes.length) {
+      return out + '<p class="w-empty">No notes yet. Press <b>New note</b>, or type <span class="w-mono">note: a title</span> ' +
+        "in the line.</p>";
+    }
+    out += '<div class="w-nbar"><input class="g-q" id="noteQ" type="search" placeholder="Find in titles, text and tags…" ' +
+      'aria-label="Find in your notes" value="' + esc(wbNoteQ) + '" />';
+    var folders = state.folders.filter(function (f) { return state.notes.some(function (n) { return n.folderId === f.id; }); });
+    if (folders.length) {
+      out += '<select class="w-nsel" id="noteFolder" aria-label="Only one folder"><option value="">Every folder</option>' +
+        folders.map(function (f) {
+          return '<option value="' + esc(f.id) + '"' + (wbNoteFolder === f.id ? " selected" : "") + ">" +
+            esc(folderTrail(f.id).map(function (t) { return t.name; }).join(" › ")) + "</option>";
+        }).join("") + "</select>";
+    }
+    out += "</div>";
+    if (tags.length) {
+      out += '<div class="w-ntags" role="group" aria-label="Tags">' + tags.map(function (t) {
+        var on = tagKey(t.word) === tagKey(wbNoteTag);
+        return '<button class="w-ntag' + (on ? " is-on" : "") + '" aria-pressed="' + on + '" data-act="note-tag" data-id="' +
+          esc(t.word) + '">#' + esc(t.word) + ' <span class="w-mono">' + t.n + "</span></button>";
+      }).join("") + "</div>";
+    }
+    var narrowed = wbNoteQ.trim() || wbNoteTag || wbNoteFolder;
+    if (narrowed) {
+      out += '<p class="w-nsays">' + (list.length ? "Showing " + list.length + " of " + state.notes.length + " notes"
+        : "Nothing matches") + (wbNoteTag ? " tagged #" + esc(wbNoteTag) : "") + '. <button class="w-inlink" data-act="note-clear">Show them all</button></p>';
+    }
+    wbOrder = [];
+    out += '<div class="w-nlist">' + list.map(function (n) {
+      var r = ref("note", n.id), bl = backlinks(n).length, b = n.projectId && byId(state.projects, n.projectId);
+      var f = n.folderId && byId(state.folders, n.folderId);
+      var meta = [NOTE_KIND_WORDS[n.kind] || "Note", b ? "on " + b.name : n.inbox ? "in the inbox" : "", f ? "in " + f.name : "",
+        n.on ? wbFmt(n.on) : "", bl ? wbWords(bl, "note links here", "notes link here").toLowerCase() : ""].filter(Boolean).join(" · ");
+      return '<button class="w-nrow" data-act="note-open" data-id="' + esc(n.id) + '" data-dragref="' + esc(r) + '">' +
+        '<span class="w-ntitle">' + esc(n.name || "Untitled") + '</span><span class="w-nmeta">' + esc(meta) + "</span>" +
+        (n.body ? '<span class="w-nsnip">' + esc(noteSnippet(n)) + "</span>" : "") +
+        (noteTags(n).length ? '<span class="w-ntagrow">' + noteTags(n).map(function (t) {
+          return '<span class="w-ntag is-small">#' + esc(t) + "</span>";
+        }).join("") + "</span>" : "") + "</button>";
+    }).join("") + "</div>";
+    return out;
+  }
+
+  /* ---------------- one note ---------------- */
+
+  function wbNoteView() {
+    var n = byId(state.notes, wbNote);
+    if (!n) { view = "notes"; wbNote = ""; wbNoteEdit = false; return wbNotesView(); }
+    var f = n.folderId && byId(state.folders, n.folderId), b = n.projectId && byId(state.projects, n.projectId);
+    var out = '<p class="w-crumbs"><button class="w-inlink" data-act="wb-go" data-id="notes">Notes</button>' +
+      (f ? folderTrail(f.id).map(function (t) {
+        return ' <span aria-hidden="true">›</span> <button class="w-inlink" data-act="note-folder" data-id="' + esc(t.id) +
+          '" title="Notes in this folder">' + esc(t.name) + "</button>";
+      }).join("") : "") + "</p>";
+    if (wbNoteEdit) {
+      out += '<div class="w-nedit">' +
+        '<label class="w-nlab" for="neTitle">Title</label><input id="neTitle" class="w-ninput is-title" type="text" value="' +
+        esc(n.name || "") + '" />' +
+        '<label class="w-nlab" for="neTags">Tags <span>separated by commas, or write #word in the text</span></label>' +
+        '<input id="neTags" class="w-ninput" type="text" value="' + esc((n.tags || []).join(", ")) + '" />' +
+        '<label class="w-nlab" for="neBody">Text <span>## heading · - list · **bold** · *italic* · `code` · [[another note]] · #tag</span></label>' +
+        '<textarea id="neBody" class="w-ninput is-body" rows="16" spellcheck="true">' + esc(n.body || "") + "</textarea>" +
+        '<div class="w-nsug" id="neSug" hidden></div>' +
+        '<p class="w-nerr" id="neErr" role="alert"></p>' +
+        '<div class="w-nacts"><button class="w-dark" data-act="note-save" data-id="' + esc(n.id) + '">Save</button>' +
+        '<button class="w-light" data-act="note-cancel">Cancel</button><span class="w-phelp">Ctrl S saves · Esc cancels</span></div></div>';
+      return out;
+    }
+    out += '<div class="w-nhead"><h1 class="w-h1">' + esc(n.name || "Untitled") + "</h1>" +
+      '<button class="w-light" data-act="note-edit">Edit</button></div>';
+    var meta = [NOTE_KIND_WORDS[n.kind] || "Note", n.on ? wbFmt(n.on) : ""].filter(Boolean).join(" · ");
+    out += '<p class="w-nmeta2">' + esc(meta) + (b ? ' · on <button class="w-inlink" data-act="wb-bench" data-id="' +
+      esc(ref("project", b.id)) + '">' + esc(b.name) + "</button>" : "") +
+      ' · ' + (f ? "in the folder <b>" + esc(f.name) + "</b>" : "in no folder") +
+      ' <button class="w-inlink" data-act="wb-movef" data-id="' + esc(ref("note", n.id)) + '">Move to folder…</button></p>';
+    var tg = noteTags(n);
+    if (tg.length) {
+      out += '<div class="w-ntags">' + tg.map(function (t) {
+        return '<button class="w-ntag" data-act="note-tag" data-id="' + esc(t) + '">#' + esc(t) + "</button>";
+      }).join("") + "</div>";
+    }
+    out += '<article class="w-nbody">' + (n.body ? noteRender(n.body)
+      : '<p class="w-empty">Nothing written yet. Press <b>Edit</b>.</p>') + "</article>";
+    var bl = backlinks(n), mn = mentions(n).filter(function (o) { return bl.indexOf(o) < 0; });
+    var linked = wbNbrs(ref("note", n.id)).filter(function (x) { return x.type !== "note" && x.type !== "meeting" && x.type !== "draft"; });
+    out += '<div class="w-nback"><section><h2 class="w-h2s">Linked from</h2>' + (bl.length ? bl.map(function (o) {
+      return '<button class="w-nrow is-small" data-act="note-open" data-id="' + esc(o.id) + '"><span class="w-ntitle">' +
+        esc(o.name) + '</span><span class="w-nsnip">' + esc(noteSnippet(o)) + "</span></button>";
+    }).join("") : '<p class="w-phelp">No note links here yet. Write <span class="w-mono">[[' + esc(n.name) +
+      "]]</span> in another one.</p>") + "</section>";
+    if (mn.length) {
+      out += '<section><h2 class="w-h2s">Mentioned, not linked</h2>' + mn.map(function (o) {
+        return '<button class="w-nrow is-small" data-act="note-open" data-id="' + esc(o.id) + '"><span class="w-ntitle">' +
+          esc(o.name) + '</span><span class="w-nsnip">Names “' + esc(n.name) + "” without the brackets</span></button>";
+      }).join("") + "</section>";
+    }
+    if (linked.length) {
+      out += '<section><h2 class="w-h2s">Connected records</h2>' + linked.map(function (x) {
+        return '<button class="w-nrow is-small" data-act="wb-open" data-id="' + esc(x.id) + '"><span class="w-ntitle">' +
+          esc(wbTitle(x)) + '</span><span class="w-nsnip">' + esc(tWord(x.type)) + "</span></button>";
+      }).join("") + "</section>";
+    }
+    out += "</div>";
+    out += '<div class="w-nfoot"><button class="w-light" data-act="gr-link" data-id="' + esc(ref("note", n.id)) + '">Link to a record…</button>' +
+      '<button class="w-light" data-act="wb-tomap" data-id="' + esc(ref("note", n.id)) + '">See it on the map</button>' +
+      '<button class="w-light is-danger" data-act="wb-remove" data-id="' + esc(ref("note", n.id)) + '">Remove</button></div>';
+    return out;
+  }
+
+  /* The editor's small conveniences: [[ offers the titles that match what
+     follows it, Ctrl S saves, Esc cancels. Wired after every paint of an
+     edit, because the paint made a fresh textarea. */
+  function mountNoteEditor() {
+    var ta = document.getElementById("neBody");
+    if (!ta || ta._wired) return;
+    ta._wired = true;
+    var sug = document.getElementById("neSug");
+    function offer() {
+      var before = ta.value.slice(0, ta.selectionStart), m = before.match(/\[\[([^\]\n|]*)$/);
+      if (!m) { sug.hidden = true; return; }
+      var q = m[1].toLowerCase(), self = byId(state.notes, wbNote);
+      var hits = state.notes.filter(function (n) { return n !== self && n.name && n.name.toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+      if (!hits.length) { sug.hidden = true; return; }
+      sug.innerHTML = '<span class="w-phelp">Link to</span>' + hits.map(function (n) {
+        return '<button type="button" class="w-ntag" data-title="' + esc(n.name) + '">' + esc(n.name) + "</button>";
+      }).join("");
+      sug.hidden = false;
+    }
+    ta.addEventListener("input", offer);
+    ta.addEventListener("keyup", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") offer(); });
+    sug.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    sug.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-title]");
+      if (!b) return;
+      var at = ta.selectionStart, before = ta.value.slice(0, at).replace(/\[\[([^\]\n|]*)$/, ""), after = ta.value.slice(at);
+      var ins = "[[" + b.getAttribute("data-title") + "]]";
+      ta.value = before + ins + after.replace(/^[^\]\n]*\]\]/, "");
+      var c = (before + ins).length;
+      ta.focus(); ta.setSelectionRange(c, c);
+      sug.hidden = true;
+    });
+    [ta, document.getElementById("neTitle"), document.getElementById("neTags")].forEach(function (el) {
+      el.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) { e.preventDefault(); e.stopPropagation(); ACTIONS["note-save"](wbNote); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); ACTIONS["note-cancel"](); }
+        else if (e.key === "Enter" && el.tagName === "INPUT") { e.preventDefault(); ta.focus(); }
+      });
+    });
+  }
+  function mountNotesIndex() {
+    var q = document.getElementById("noteQ");
+    if (q && !q._wired) {
+      q._wired = true;
+      q.addEventListener("input", function () {
+        var at = q.selectionStart;
+        wbNoteQ = q.value; render();
+        var again = document.getElementById("noteQ");
+        if (again) { again.focus(); try { again.setSelectionRange(at, at); } catch (e) {} }
+      });
+    }
+    var f = document.getElementById("noteFolder");
+    if (f && !f._wired) {
+      f._wired = true;
+      f.addEventListener("change", function () { wbNoteFolder = f.value; render(); });
+    }
+  }
+
+  /* SAVING. A title is an address: empty is refused, and so is one another
+     note already carries. A rename rewrites every [[link]] that named the
+     old title, in the same act, and the toast says how many. */
+  function noteSave(id) {
+    var n = byId(state.notes, id), err = document.getElementById("neErr");
+    if (!n) return;
+    var title = document.getElementById("neTitle").value.trim();
+    var tags = topicList(document.getElementById("neTags").value.replace(/#/g, ""));
+    var body = document.getElementById("neBody").value.replace(/\s+$/, "");
+    if (!title) { err.textContent = "It needs a title: a note is linked to by its title."; return; }
+    var clash = noteTitleClash(title, n);
+    if (clash) {
+      err.textContent = "Another note is already called “" + clash.name + "”. A [[link]] to that title would not know " +
+        "which of the two you meant, so give this one a different title.";
+      return;
+    }
+    var snap = wbSnap(), was = String(n.name || "").trim(), moved = 0;
+    if (was && was.toLowerCase() !== title.toLowerCase()) {
+      var re = new RegExp("\\[\\[\\s*" + was.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*(\\|[^\\]\\n]*)?\\]\\]", "gi");
+      state.notes.forEach(function (o) {
+        if (o === n || !o.body) return;
+        var nb = o.body.replace(re, function (_, label) { moved++; return "[[" + title + (label || "") + "]]"; });
+        if (nb !== o.body) o.body = nb;
+      });
+    }
+    n.name = title; n.tags = tags; n.body = body;
+    if (!n.on) n.on = wbToday();
+    delete n.inbox;
+    wbNoteEdit = false;
+    wbDone("Saved" + (moved ? ", and " + wbWords(moved, "link", "links").toLowerCase() + " to it renamed" : ""), snap);
+  }
+  /* A new note asks only its title and goes straight to the editor. */
+  function noteNew(title, then) {
+    var nm = String(title || "").trim();
+    function make(name) {
+      var snap = wbSnap(), n = { id: uid(), kind: "note", name: name, on: wbToday(), projectId: "", body: "", tags: [],
+        folderId: wbNoteFolder || "" };
+      state.notes.push(n);
+      view = "note"; wbNote = n.id; wbNoteEdit = true; wbSel = null;
+      wbDone("Started “" + name + "”", snap);
+      if (then) then(n);
+      var ta = document.getElementById("neBody");
+      if (ta) ta.focus();
+    }
+    if (nm) { if (noteTitleClash(nm)) { noteOpen(noteByTitle(nm).id); return; } make(nm); return; }
+    openModal({
+      title: "A new note",
+      fields: [{ key: "name", label: "Its title", value: "", span: true, hint: "Other notes link to it by this, as [[its title]]." }],
+      confirmLabel: "Start writing",
+      validate: function (v) {
+        if (!v.name.trim()) return "It needs a title.";
+        var c = noteTitleClash(v.name);
+        return c ? "There is already a note called “" + c.name + "”." : "";
+      },
+      onConfirm: function (v) { make(v.name.trim()); }
+    });
+  }
+  function noteOpen(id) {
+    if (!byId(state.notes, id)) { toast("That note is gone"); return; }
+    view = "note"; wbNote = id; wbNoteEdit = false; wbSel = null;
+    render();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  /* ============================================================
      THE EXAMPLE: Maya Saad's book, from the handoff.
 
      The handoff's `SEED` and `LINKS`, record for record, written onto this
@@ -12377,6 +12932,19 @@
     put("folders", "fd3", { name: "Photogrammetry toolkit", folderId: "" });
     [["r1", "fd1"], ["r2", "fd1"], ["p1", "fd2"], ["me1", "fd3"], ["s1", "fd3"], ["fo1", "fd3"]].forEach(function (p) {
       out.lib.forEach(function (e) { if (e.id === id(p[0])) e.folderId = id(p[1]); });
+    });
+    /* A small wiki: two notes written on their own, tagged, linking each
+       other and a bench's note, so the Notes page, backlinks and the map's
+       dotted lines all have something to show. */
+    put("notes", "w1", { kind: "note", name: "Harbour typology", projectId: "", on: "2026-09-22",
+      folderId: id("fd1"), tags: ["harbours"],
+      body: "## Three kinds of work\n- **Mole**: a free-standing breakwater\n- **Quay**: a face you moor against\n" +
+        "- **Slipway**: a ramp into the water\n\nAnfeh has all three. The mole is the one in " +
+        "[[The mole shows two building phases]]. #archaeology" });
+    put("notes", "w2", { kind: "note", name: "Reading plan", projectId: "", on: "2026-09-21", tags: ["thesis"],
+      body: "Blackman first, then Morhange & Marriner. Keep [[Harbour typology]] open while reading." });
+    out.notes.forEach(function (n) {
+      if (n.id === id("n1")) n.body += " See [[Harbour typology]].";
     });
 
     put("outputs", "o1", { name: "Anfeh mole: DEM and phase map (A3)", projectId: id("b1"), on: "2026-09-24", note: "" });
@@ -12578,6 +13146,28 @@
       var q = document.getElementById("linkQ");
       if (q) q.focus();
     },
+    /* ---- notes ---- */
+    "note-new": function () { noteNew(""); },
+    "note-open": function (idv) { noteOpen(idv); },
+    /* A wiki link goes to the note of that title, or starts it — a link
+       to a page nobody has written yet is how a wiki grows. */
+    "note-go": function (idv) {
+      var n = noteByTitle(idv);
+      if (n) noteOpen(n.id); else noteNew(idv);
+    },
+    "note-tag": function (idv) {
+      wbNoteTag = view === "notes" && tagKey(wbNoteTag) === tagKey(idv) ? "" : String(idv || "");
+      view = "notes"; wbNote = ""; wbNoteEdit = false; wbSel = null;
+      render(); window.scrollTo({ top: 0, behavior: "auto" });
+    },
+    "note-folder": function (idv) {
+      wbNoteFolder = idv && byId(state.folders, idv) ? idv : "";
+      view = "notes"; wbNote = ""; wbNoteEdit = false; wbNoteTag = ""; render();
+    },
+    "note-clear": function () { wbNoteTag = ""; wbNoteQ = ""; wbNoteFolder = ""; render(); },
+    "note-edit": function () { wbNoteEdit = true; render(); var t = document.getElementById("neBody"); if (t) t.focus(); },
+    "note-save": function (idv) { noteSave(idv || wbNote); },
+    "note-cancel": function () { wbNoteEdit = false; render(); },
     "wb-libby": function (idv) {
       state.settings.libBy = idv === "folder" ? "folder" : "kind";
       commit(); render();
@@ -13107,6 +13697,7 @@
     { id: "today", label: "Today", ico: "" },
     { id: "map", label: "Map", ico: "" },
     { id: "shelves", label: "Library", ico: "" },
+    { id: "notes", label: "Notes", ico: "" },
     { id: "record", label: "Record", ico: "" },
     { id: "review", label: "Weekly review", ico: "" }
   ];
@@ -13129,6 +13720,7 @@
       /* The map keeps where you had panned it, which kinds are on and the
          search; what you were narrowed to is a navigation, and resets. */
       wbLibFolder = "";
+      wbNote = ""; wbNoteEdit = false; wbNoteTag = ""; wbNoteQ = ""; wbNoteFolder = "";
       GR.local = ""; GR.edge = ""; if (GR.max) { GR.max = false; GR.fitted = false; }
       grMenuClose();
       /* A SIFT BOX IS A NARROWING, NOT A SETTING. */
@@ -13139,6 +13731,8 @@
       if (v === "bench") return wbBenchView();
       if (v === "map") return wbMapView();
       if (v === "shelves") return wbLibraryView();
+      if (v === "notes") return wbNotesView();
+      if (v === "note") return wbNoteView();
       if (v === "record") return wbRecordView();
       if (v === "review") return wbReviewView();
       if (v === "benches") return wbBenchesView();
@@ -13166,6 +13760,8 @@
       wbMountGraph();
       mountFiles();
       wireFolderDrags();
+      mountNotesIndex();
+      mountNoteEditor();
       mountBackups();
       /* THE SIFT BOX KEEPS WHAT WAS TYPED AND THE CARET WHERE IT WAS. */
       var boxes = document.querySelectorAll("[data-sift]");
