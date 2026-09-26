@@ -1894,7 +1894,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w12 · 26 Sep 2026";
+  var BUILD = "w13 · 26 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -5896,6 +5896,9 @@
     out.push(sectHead("Your book on other devices", null));
     out.push(syncCard());
 
+    out.push(sectHead("Your files in Google Drive", null));
+    out.push(driveCard());
+
     out.push(sectHead("Snapshots on this device", null));
     out.push('<div class="panel"><p class="says" id="bkSub">Reading them\u2026</p>' +
       '<p class="says">Sync carries the book as it is NOW \u2014 so a mistake travels ' +
@@ -5967,7 +5970,8 @@
       "libraries, no service. Which is why it opens on a plane, and why the " +
       "bibliography is formatted here rather than by asking a service to do it. The " +
       "one thing it ever sends is your sealed book, to your own gist, and only once " +
-      "you turn sync on.</li></ul></div>");
+      "you turn sync on. A Drive folder is a folder on this computer: the app writes to it, and " +
+      "Google\u2019s own app does the sending.</li></ul></div>");
 
     out.push(sectHead("This build", null));
     out.push('<div class="panel"><p class="says" style="font-family:var(--mono)">' +
@@ -6083,6 +6087,10 @@
       gnote("A record opens in the <b>pane</b> beside the list, with what it is connected " +
         "to drawn as a small map. <b>Link to\u2026</b> joins it to anything else; the " +
         "\u00d7 on a line takes it out.") +
+      gnote("<b>Your files on another computer.</b> Settings \u2192 Your files in Google Drive: install " +
+        "Google Drive for desktop, press <b>Connect a folder</b> and pick one inside the drive, and the app " +
+        "writes your Library there. On the other computer connect the same folder and press <b>Bring in what " +
+        "is here</b>. Chrome or Edge on a computer; a second Google account is a second folder.") +
       gnote("Employers, education, people, workflows and the portfolio have no " +
         "Workbench screen, and are still in the book: they sit under " +
         "<em>Everything else</em> in the sidebar, and under More on a phone.") + "</div>"));
@@ -8935,6 +8943,7 @@
     save();
     syncSoon();
     bkMaybe();
+    driveSoon();
   }
 
   function mergeList(mine, theirs, tomb) {
@@ -9365,7 +9374,8 @@
       message: "This removes the book, the token, the passphrase and the snapshots " +
         "from this browser, and nothing else. <b>Your book in the gist is not " +
         "touched</b> — no request is sent to GitHub — and your other devices " +
-        "keep theirs. Wiping does not revoke the token: if anyone could have copied " +
+        "keep theirs. Files already written to a Drive folder stay in the Drive; this " +
+        "computer only forgets the folder. Wiping does not revoke the token: if anyone could have copied " +
         "it, revoke it at github.com/settings/tokens.",
       confirmLabel: "Wipe this device", danger: true
     }, function () {
@@ -9378,6 +9388,10 @@
          them would leave the one thing nobody would think to look for. */
       try { if (window.indexedDB) indexedDB.deleteDatabase(PIN_DB); } catch (e) {}
       try { if (window.indexedDB) indexedDB.deleteDatabase(FILE_DB); } catch (e) {}
+      /* Which Drive folders this computer writes to is forgotten too; the
+         files already in them stay in the Drive, the same as the gist. */
+      try { if (window.indexedDB) indexedDB.deleteDatabase(DRIVE_DB); } catch (e) {}
+      driveList = []; driveLive = {};
       state = APP.blank();
       grReset();
       ensureStamps();
@@ -11946,7 +11960,12 @@
       };
       r.onerror = function () { rej(r.error || new Error("could not open")); };
       r.onsuccess = function () {
-        var db = r.result, tx = db.transaction(store, mode), out = fn(tx.objectStore(store));
+        /* A throw inside the transaction (a value the browser cannot
+           clone, say) must reject the promise, or everything waiting on it
+           waits for ever and nothing says why. */
+        var db = r.result, tx, out;
+        try { tx = db.transaction(store, mode); out = fn(tx.objectStore(store)); }
+        catch (e) { try { tx && tx.abort(); } catch (x) {} db.close(); rej(e); return; }
         tx.oncomplete = function () { db.close(); res(out && out.result !== undefined ? out.result : null); };
         tx.onerror = function () { db.close(); rej(tx.error); };
       };
@@ -12828,6 +12847,516 @@
   }
 
   /* ============================================================
+     DRIVE FOLDERS: THE APP WRITES TO A FOLDER, AND GOOGLE MOVES IT.
+
+     Asked for "a way to sync everything to a Google Drive account, maybe
+     multiple ones, just to have access to certain docs on different PCs".
+     Drive's own API needs Google's sign-in script and an OAuth client, and
+     this app fetches nothing and holds no key — so it is not used. What is
+     used is the thing Google already ships for exactly this: DRIVE FOR
+     DESKTOP, which puts each account on the computer as a folder and keeps
+     it in step by itself. The app writes into a folder you pick inside one
+     (the File System Access API), and reads it back on the other computer.
+     No request ever leaves the app for Google; several accounts are several
+     folders.
+
+     Five rules hold it:
+
+       · THE HANDLE IS NOT THE BOOK. What folder this computer writes to is
+         a fact about the computer, like the sync token: it lives in its own
+         IndexedDB (`mashghal2-drive`), never in `state`, so no backup, sync
+         or import can carry it — and Wipe forgets it.
+       · A FOLDER IS WRITTEN ONLY WHILE THE BROWSER SAYS YES. Permission
+         lapses between sessions and can only be asked for on a tap, so a
+         folder that has lapsed is marked "Allow again" and nothing is
+         written to it in the meantime. Nothing is written silently to a
+         folder the app cannot reach.
+       · WHAT GOES IS CHOSEN. A folder carries the whole Library tree or
+         chosen folders of it; notes as .md and a copy of the book are each
+         their own switch, both off to begin with, because a plain-text copy
+         of the book on a shared drive is a decision, not a default.
+       · A MANIFEST SAYS WHAT THE APP WROTE, AND NOTHING ELSE IS TOUCHED.
+         `mashghal2-manifest.json` maps each written path to its record. A
+         file whose record has since gone is LISTED on the card, never
+         deleted behind your back; the one button that removes them says
+         how many. Files somebody put there by hand are never deleted.
+       · BRINGING IN CHANGES NOTHING UNTIL YOU HAVE SEEN IT. On the other
+         computer, a file the manifest names attaches its bytes to the record
+         the gist already brought; anything else is offered in a preview, the
+         importer's discipline, and comes in only on the button.
+     ============================================================ */
+
+  var DRIVE_DB = "mashghal2-drive", DRIVE_STORE = "folders", DRIVE_MANIFEST = "mashghal2-manifest.json",
+    DRIVE_BOOK = "mashghal2-book.json";
+  var driveList = [], driveLive = {}, driveTimer = null, driveBusy = false;
+  function driveApi() { return typeof window.showDirectoryPicker === "function"; }
+  function driveTx(mode, fn) { return idbTx(DRIVE_DB, DRIVE_STORE, mode, fn); }
+
+  /* Read once at boot; the list in memory is what the card draws. */
+  function driveLoad() {
+    return driveTx("readonly", function (st) { return st.getAll(); }).then(function (rows) {
+      driveList = rows || [];
+      return Promise.all(driveList.map(drivePerm));
+    }).catch(function () { driveList = []; }).then(function () {
+      if (view === "settings") render();
+    });
+  }
+  function driveSave(f) {
+    var copy = {};
+    Object.keys(f).forEach(function (k) { copy[k] = f[k]; });
+    return driveTx("readwrite", function (st) { st.put(copy); }).catch(function () {});
+  }
+  /* The permission is asked of the handle, never assumed. A handle that
+     does not answer (one stored by a browser that could not keep it) reads
+     as needing to be connected again. */
+  function drivePerm(f) {
+    if (!f.handle || typeof f.handle.queryPermission !== "function") { driveLive[f.id] = "gone"; return Promise.resolve("gone"); }
+    return f.handle.queryPermission({ mode: "readwrite" }).then(function (p) {
+      driveLive[f.id] = p; return p;
+    }).catch(function () { driveLive[f.id] = "gone"; return "gone"; });
+  }
+
+  /* ---------------- connecting ---------------- */
+
+  function driveConnect() {
+    if (!driveApi()) {
+      toast("This browser cannot write to a folder. Use Chrome or Edge on a computer.");
+      return;
+    }
+    /* The picker is called straight from the press: a browser asks for a
+       gesture, and an await before it would spend the gesture. */
+    window.showDirectoryPicker({ mode: "readwrite", id: "mashghal2-drive" }).then(function (handle) {
+      openModal({
+        title: "What goes into “" + handle.name + "”?",
+        message: "Pick the folder inside Google Drive on this computer, then say what it carries. The app writes " +
+          "files there; Drive for desktop moves them to your account.",
+        fields: [
+          { key: "label", label: "Call it", value: handle.name, span: true,
+            hint: "A word you will know it by — the account's, say: Personal, AUB." },
+          { key: "carries", label: "It carries", type: "select", value: "all", options: [
+            { value: "all", label: "The whole Library: every file, in its folders" },
+            { value: "some", label: "Only the folders I pick" }] },
+          { key: "folders", label: "Which folders", type: "select", value: state.folders[0] ? state.folders[0].id : "",
+            showWhen: { key: "carries", is: "some" },
+            options: state.folders.map(function (f) {
+              return { value: f.id, label: folderTrail(f.id).map(function (t) { return t.name; }).join(" › ") };
+            }), hint: "One folder here and what is under it. Change it later from the card." },
+          { key: "notes", label: "Notes as .md files", type: "select", value: "no", options: [
+            { value: "no", label: "No" }, { value: "yes", label: "Yes, as text you can open anywhere" }] },
+          { key: "book", label: "A copy of the whole book", type: "select", value: "no", options: [
+            { value: "no", label: "No" }, { value: "yes", label: "Yes — plain text, readable by anyone with the drive" }] }
+        ],
+        confirmLabel: "Connect it",
+        validate: function (v) {
+          if (!v.label.trim()) return "It needs a name you will know it by.";
+          if (v.carries === "some" && !v.folders) return "There are no folders to pick yet. Make one in the Library, or carry the whole Library.";
+          return "";
+        },
+        onConfirm: function (v) {
+          var f = { id: uid(), label: v.label.trim(), handle: handle, carries: v.carries,
+            folderIds: v.carries === "some" && v.folders ? [v.folders] : [], notes: v.notes === "yes",
+            book: v.book === "yes", at: new Date().toISOString(), wrote: "", error: "" };
+          driveList.push(f);
+          driveLive[f.id] = "granted";
+          driveSave(f).then(function () { return driveWrite(f); }).then(function (n) {
+            render();
+            toast("Connected “" + f.label + "”" + (n ? ". " + cap(wbWords(n, "file", "files").toLowerCase()) + " written." : "."));
+          });
+        }
+      });
+    }).catch(function (e) {
+      if (e && e.name === "AbortError") return;
+      toast("The folder could not be opened: " + (e && e.message || "the browser refused"));
+    });
+  }
+  function driveAllow(id) {
+    var f = driveList.filter(function (x) { return x.id === id; })[0];
+    if (!f || !f.handle || typeof f.handle.requestPermission !== "function") {
+      toast("This folder has to be connected again."); return;
+    }
+    f.handle.requestPermission({ mode: "readwrite" }).then(function (p) {
+      driveLive[f.id] = p;
+      render();
+      if (p === "granted") driveWrite(f).then(function (n) { render(); toast("Allowed. " + (n ? cap(wbWords(n, "file", "files").toLowerCase()) + " written." : "Nothing new to write.")); });
+      else toast("The browser did not allow it. Nothing was written.");
+    }).catch(function () { toast("The browser did not allow it. Nothing was written."); });
+  }
+  function driveForget(id) {
+    var f = driveList.filter(function (x) { return x.id === id; })[0];
+    if (!f) return;
+    confirmAction({ title: "Stop writing to “" + f.label + "”?",
+      message: "This computer forgets the folder. <b>Nothing in it is deleted</b>, and the files already there " +
+        "stay in your Drive.", confirmLabel: "Stop writing to it" }, function () {
+      driveList = driveList.filter(function (x) { return x !== f; });
+      delete driveLive[f.id];
+      driveTx("readwrite", function (st) { st.delete(f.id); }).catch(function () {}).then(function () {
+        render(); toast("“" + f.label + "” forgotten. Its files are where they were.");
+      });
+    });
+  }
+
+  /* ---------------- what a folder carries ---------------- */
+
+  function driveCarries(f, folderId) {
+    if (f.carries !== "some") return true;
+    return folderTrail(folderId).some(function (t) { return f.folderIds.indexOf(t.id) >= 0; });
+  }
+  /* A name a file system will take on Windows, macOS and Drive alike. */
+  function safeName(s) {
+    return String(s || "Untitled").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").replace(/\s+/g, " ").trim()
+      .replace(/^\.+/, "").slice(0, 120) || "Untitled";
+  }
+  function drivePathOf(folderId) {
+    return folderTrail(folderId).map(function (t) { return safeName(t.name); });
+  }
+  /* Everything this folder should hold, as {path, id, stamp, kind, blobId?,
+     text?}. Two records wanting one name get " (2)" — decided in a stable
+     order so the same book always writes the same names. */
+  function driveWants(f) {
+    var out = [], taken = {};
+    function claim(dir, name) {
+      var base = name, ext = "", m = name.match(/^(.*?)(\.[A-Za-z0-9]{1,5})$/);
+      if (m) { base = m[1]; ext = m[2]; }
+      var p = dir.concat([name]).join("/"), n = 2;
+      while (taken[p.toLowerCase()]) { p = dir.concat([base + " (" + n + ")" + ext]).join("/"); n++; }
+      taken[p.toLowerCase()] = 1;
+      return p;
+    }
+    state.lib.slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); }).forEach(function (e) {
+      if (!e.blobId || e.inbox || !driveCarries(f, e.folderId || "")) return;
+      out.push({ path: claim(drivePathOf(e.folderId), safeName(e.fname || e.name)), id: "lib:" + e.id,
+        stamp: e.blobId, kind: "file", blobId: e.blobId, type: e.mime || "" });
+    });
+    if (f.notes) {
+      state.notes.slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); }).forEach(function (n) {
+        if (n.inbox || !driveCarries(f, n.folderId || "")) return;
+        var tg = noteTags(n);
+        out.push({ path: claim(drivePathOf(n.folderId), safeName(n.name) + ".md"), id: "note:" + n.id,
+          stamp: n.updatedAt || n.on || "", kind: "note", type: "text/markdown",
+          text: "# " + (n.name || "Untitled") + "\n\n" + (tg.length ? tg.map(function (t) { return "#" + t; }).join(" ") + "\n\n" : "") +
+            (n.body || "") + "\n" });
+      });
+    }
+    return out;
+  }
+
+  /* ---------------- walking a directory handle ---------------- */
+
+  function dirAt(root, parts, create) {
+    return parts.reduce(function (p, name) {
+      return p.then(function (d) { return d && d.getDirectoryHandle(name, { create: !!create }); });
+    }, Promise.resolve(root));
+  }
+  function writeAt(root, path, data) {
+    var parts = path.split("/"), name = parts.pop();
+    return dirAt(root, parts, true).then(function (d) { return d.getFileHandle(name, { create: true }); })
+      .then(function (fh) { return fh.createWritable(); })
+      .then(function (w) { return Promise.resolve(w.write(data)).then(function () { return w.close(); }); });
+  }
+  function readAt(root, path) {
+    var parts = path.split("/"), name = parts.pop();
+    return dirAt(root, parts, false).then(function (d) { return d.getFileHandle(name); })
+      .then(function (fh) { return fh.getFile(); });
+  }
+  function removeAt(root, path) {
+    var parts = path.split("/"), name = parts.pop();
+    return dirAt(root, parts, false).then(function (d) { return d.removeEntry(name); });
+  }
+  /* Every file under a directory, as "a/b/name". */
+  function walkDir(dir, prefix) {
+    var out = [];
+    function one(d, pre) {
+      var it = d.entries(), acc = [];
+      function step() {
+        return it.next().then(function (r) {
+          if (r.done) return Promise.all(acc);
+          var name = r.value[0], h = r.value[1];
+          if (h.kind === "directory") acc.push(one(h, pre.concat([name])));
+          else out.push(pre.concat([name]).join("/"));
+          return step();
+        });
+      }
+      return step();
+    }
+    return one(dir, prefix || []).then(function () { return out; });
+  }
+  function readManifest(root) {
+    return readAt(root, DRIVE_MANIFEST).then(function (file) { return file.text(); })
+      .then(function (t) { var j = JSON.parse(t); return j && j.files ? j : { files: {} }; })
+      .catch(function () { return { files: {} }; });
+  }
+
+  /* ---------------- writing ---------------- */
+
+  /* Writes what changed and returns how many files it wrote. A record's
+     stamp decides: a file whose manifest entry carries the same stamp is
+     already there. Never while the browser says no. */
+  function driveWrite(f) {
+    /* Asked every time: a permission can lapse in the middle of a session,
+       and a write the browser would refuse is not attempted. */
+    return drivePerm(f).then(function (p) { return p === "granted" ? driveWriteNow(f) : 0; });
+  }
+  function driveWriteNow(f) {
+    var root = f.handle, wrote = 0;
+    return readManifest(root).then(function (man) {
+      var wants = driveWants(f), next = { app: "mashghal2", written: new Date().toISOString(), files: {} };
+      return wants.reduce(function (p, w) {
+        return p.then(function () {
+          var had = man.files[w.path];
+          next.files[w.path] = { id: w.id, stamp: w.stamp, kind: w.kind, blobId: w.blobId || "" };
+          if (had && had.id === w.id && had.stamp === w.stamp) return;
+          if (w.kind === "note") return writeAt(root, w.path, new Blob([w.text], { type: "text/markdown" })).then(function () { wrote++; });
+          return fileGet(w.blobId).then(function (row) {
+            /* The bytes of a file dropped on ANOTHER computer are not
+               here, so they are not written from here; the manifest keeps
+               what the other computer said about them. */
+            if (!row || !row.blob) { if (had) next.files[w.path] = had; else delete next.files[w.path]; return; }
+            return writeAt(root, w.path, row.blob).then(function () { wrote++; });
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        /* What the app wrote before and no longer wants is KEPT in the
+           manifest as gone, so the card can say so; it is not deleted.
+           But A RECORD THIS BOOK HAS NEVER HEARD OF IS NOT GONE: another
+           computer wrote it and the sync has not brought it here yet, and
+           calling it gone would offer to remove the other computer's newest
+           file. Only a record deleted here (a tombstone), or one still here
+           and no longer carried, is gone. */
+        Object.keys(man.files).forEach(function (p) {
+          if (next.files[p]) return;
+          var e = man.files[p], rid = parseRef(e.id).id;
+          if (!recOf(e.id) && !state.tombstones[rid]) { next.files[p] = e; return; }
+          next.gone = next.gone || {}; next.gone[p] = e;
+        });
+        Object.keys(man.gone || {}).forEach(function (p) {
+          if (!next.files[p]) { next.gone = next.gone || {}; next.gone[p] = man.gone[p]; }
+        });
+        if (f.book) {
+          return writeAt(root, DRIVE_BOOK, new Blob([JSON.stringify(adoptState(JSON.parse(JSON.stringify(state))), null, 1)],
+            { type: "application/json" })).then(function () { wrote++; });
+        }
+      }).then(function () {
+        return writeAt(root, DRIVE_MANIFEST, new Blob([JSON.stringify(next, null, 1)], { type: "application/json" }));
+      }).then(function () {
+        f.wrote = next.written; f.error = ""; f.gone = Object.keys(next.gone || {}).length;
+        return driveSave(f);
+      });
+    }).then(function () { return wrote; }).catch(function (e) {
+      f.error = (e && e.message) || "the folder refused the write";
+      driveSave(f);
+      return 0;
+    });
+  }
+  /* After a change, a few seconds later, every folder the browser still
+     allows. Quiet: the card says when each was last written, and a toast
+     for every keystroke would be noise. */
+  function driveSoon() {
+    if (!driveList.length) return;
+    if (driveTimer) clearTimeout(driveTimer);
+    driveTimer = setTimeout(function () {
+      driveTimer = null;
+      if (driveBusy) { driveSoon(); return; }
+      driveBusy = true;
+      driveList.reduce(function (p, f) { return p.then(function () { return driveWrite(f); }); }, Promise.resolve())
+        .then(function () { driveBusy = false; if (view === "settings") render(); });
+    }, 5000);
+  }
+  function driveNow(id) {
+    var f = driveList.filter(function (x) { return x.id === id; })[0];
+    if (!f) return;
+    driveWrite(f).then(function (n) {
+      render();
+      if (driveLive[f.id] !== "granted") { toast("The browser has not allowed “" + f.label + "” this time. Nothing was written; press Allow again."); return; }
+      toast(f.error ? "“" + f.label + "” refused: " + f.error : n ? cap(wbWords(n, "file", "files").toLowerCase()) + " written to “" + f.label + "”."
+        : "“" + f.label + "” already holds everything.");
+    });
+  }
+  function driveClearGone(id) {
+    var f = driveList.filter(function (x) { return x.id === id; })[0];
+    if (!f) return;
+    drivePerm(f).then(function (p) { if (p === "granted") driveGoneAsk(f); else { render(); toast("The browser has not allowed “" + f.label + "” this time. Press Allow again."); } });
+  }
+  function driveGoneAsk(f) {
+    readManifest(f.handle).then(function (man) {
+      var gone = Object.keys(man.gone || {});
+      if (!gone.length) { toast("Nothing to remove."); return; }
+      confirmAction({ title: "Remove " + wbWords(gone.length, "file", "files").toLowerCase() + " from “" + f.label + "”?",
+        message: "The app wrote these and their records have since gone from the book: " +
+          gone.slice(0, 6).map(esc).join(", ") + (gone.length > 6 ? " and " + (gone.length - 6) + " more" : "") +
+          ". Nothing else in the folder is touched. Drive keeps what it removes in its own bin.",
+        confirmLabel: "Remove them" }, function () {
+        gone.reduce(function (p, path) {
+          return p.then(function () { return removeAt(f.handle, path).catch(function () {}); });
+        }, Promise.resolve()).then(function () {
+          man.gone = {};
+          return writeAt(f.handle, DRIVE_MANIFEST, new Blob([JSON.stringify(man, null, 1)], { type: "application/json" }));
+        }).then(function () { f.gone = 0; return driveSave(f); }).then(function () {
+          render(); toast("Removed. Nothing else in the folder was touched.");
+        });
+      });
+    });
+  }
+
+  /* ---------------- bringing in, on the other computer ---------------- */
+
+  function driveBringIn(id) {
+    var f = driveList.filter(function (x) { return x.id === id; })[0];
+    if (!f) return;
+    var root = f.handle;
+    drivePerm(f).then(function (p) {
+      if (p !== "granted") { render(); toast("The browser has not allowed “" + f.label + "” this time. Press Allow again."); return; }
+      driveReadIn(f, root);
+    });
+  }
+  function driveReadIn(f, root) {
+    Promise.all([readManifest(root), walkDir(root)]).then(function (res) {
+      var man = res[0], paths = res[1].filter(function (p) { return p !== DRIVE_MANIFEST && p !== DRIVE_BOOK; });
+      var attach = [], waiting = [], fresh = [], notesNew = [];
+      return paths.reduce(function (p, path) {
+        return p.then(function () {
+          var m = man.files[path];
+          /* A file whose record was deleted is not a new file: bringing it
+             back in would undo the delete through the back door. */
+          if ((man.gone || {})[path]) return;
+          if (m && m.kind === "file") {
+            var rec = recOf(m.id);
+            if (!rec) { waiting.push(path); return; }
+            return fileGet(rec.blobId).then(function (row) { if (!row || !row.blob) attach.push({ path: path, rec: rec }); });
+          }
+          if (m) return;   /* a note the app wrote: the book already carries it */
+          if (/\.md$/i.test(path)) { notesNew.push(path); return; }
+          if (fileOk({ name: path.split("/").pop(), type: "" })) fresh.push(path);
+        });
+      }, Promise.resolve()).then(function () {
+        if (!attach.length && !fresh.length && !notesNew.length) {
+          toast(waiting.length ? cap(wbWords(waiting.length, "file waits", "files wait").toLowerCase()) +
+            " for its record, which has not reached this computer yet. Sync, then bring it in again."
+            : "“" + f.label + "” holds nothing this computer does not already have.");
+          return;
+        }
+        openModal({
+          title: "Bring in from “" + f.label + "”?",
+          message: [
+            attach.length ? "<b>" + cap(wbWords(attach.length, "file", "files").toLowerCase()) + "</b> this book already knows about " +
+              "will get " + (attach.length === 1 ? "its bytes" : "their bytes") + " on this computer: " +
+              attach.slice(0, 5).map(function (a) { return esc(a.path); }).join(", ") + "." : "",
+            fresh.length ? "<b>" + cap(wbWords(fresh.length, "new file", "new files").toLowerCase()) + "</b> put there by hand will be kept " +
+              "in the Library, " + (fresh.length === 1 ? "in a folder named like the one it is in: " : "in folders named like the ones they are in: ") + fresh.slice(0, 5).map(esc).join(", ") +
+              (fresh.length > 5 ? " and " + (fresh.length - 5) + " more" : "") + "." : "",
+            notesNew.length ? "<b>" + cap(wbWords(notesNew.length, "text file", "text files").toLowerCase()) + "</b> will become " + (notesNew.length === 1 ? "a note: " : "notes: ") +
+              notesNew.slice(0, 5).map(esc).join(", ") + "." : "",
+            waiting.length ? cap(wbWords(waiting.length, "file waits", "files wait").toLowerCase()) + " for its record, which the sync has not brought yet." : "",
+            "Nothing in the folder is changed."].filter(Boolean).join("<br><br>"),
+          confirmLabel: "Bring them in",
+          onConfirm: function () { driveApply(f, attach, fresh, notesNew); }
+        });
+      });
+    }).catch(function (e) { toast("“" + f.label + "” could not be read: " + (e && e.message || "the browser refused")); });
+  }
+  /* A path's folders become the Library's folders, by name, made where
+     missing — the same way the importer resolves a folder by its name. */
+  function folderForPath(parts) {
+    var parent = "";
+    parts.forEach(function (name) {
+      var hit = state.folders.filter(function (x) {
+        return (x.folderId || "") === parent && safeName(x.name).toLowerCase() === name.toLowerCase();
+      })[0];
+      if (!hit) { hit = { id: uid(), name: name, folderId: parent }; state.folders.push(hit); }
+      parent = hit.id;
+    });
+    return parent;
+  }
+  function driveApply(f, attach, fresh, notesNew) {
+    var snap = wbSnap(), root = f.handle, added = [], got = 0;
+    attach.reduce(function (p, a) {
+      return p.then(function () {
+        return readAt(root, a.path).then(function (file) {
+          return fileTx("readwrite", function (st) {
+            st.put({ id: a.rec.blobId, blob: file, name: a.rec.fname || file.name, type: a.rec.mime || file.type || "",
+              size: file.size, at: new Date().toISOString() });
+          }).then(function () { got++; });
+        }).catch(function () {});
+      });
+    }, Promise.resolve()).then(function () {
+      return fresh.concat(notesNew).reduce(function (p, path) {
+        return p.then(function () {
+          return readAt(root, path).then(function (file) {
+            var parts = path.split("/"), name = parts.pop(), folderId = folderForPath(parts);
+            if (/\.md$/i.test(name)) {
+              return file.text().then(function (t) {
+                var title = name.replace(/\.md$/i, ""), body = String(t).replace(/\r/g, "");
+                var h = body.match(/^#\s+(.+)\n+/);
+                if (h) { title = h[1].trim(); body = body.slice(h[0].length); }
+                if (noteTitleClash(title)) title = title + " (from " + f.label + ")";
+                state.notes.push({ id: uid(), kind: "note", name: title, on: wbToday(), projectId: "", folderId: folderId,
+                  body: body.replace(/\s+$/, ""), tags: [] });
+                added.push(title);
+              });
+            }
+            var blobId = uid();
+            return fileTx("readwrite", function (st) {
+              st.put({ id: blobId, blob: file, name: name, type: file.type || "", size: file.size, at: new Date().toISOString() });
+            }).then(function () {
+              state.lib.push({ id: uid(), kind: "file", name: name.replace(/\.[A-Za-z0-9]{1,5}$/, ""), fname: name,
+                mime: file.type || "", size: file.size || 0, blobId: blobId, on: wbToday(), projectId: "", folderId: folderId });
+              added.push(name);
+            });
+          }).catch(function () {});
+        });
+      }, Promise.resolve());
+    }).then(function () {
+      if (added.length) commit();
+      render();
+      var msg = [got ? cap(wbWords(got, "file", "files").toLowerCase()) + " now here in full" : "",
+        added.length ? wbWords(added.length, "new record", "new records").toLowerCase() + " kept" : ""].filter(Boolean).join(", ");
+      if (added.length) wbSay(cap(msg || "Nothing") + ".", snap); else toast(cap(msg || "Nothing came in") + ".");
+    });
+  }
+
+  /* Which connected folder says it holds the bytes of a file — for the
+     pane's "the file itself is on another device" line. Read off the last
+     manifest each folder wrote, which this computer does not keep, so the
+     honest answer is the folders that carry that record at all. */
+  function driveHolding(blobId) {
+    var e = state.lib.filter(function (x) { return x.blobId === blobId; })[0];
+    if (!e) return "";
+    var names = driveList.filter(function (f) { return driveCarries(f, e.folderId || ""); }).map(function (f) { return "“" + f.label + "”"; });
+    return names.join(" and ");
+  }
+
+  /* ---------------- the card ---------------- */
+
+  function driveCard() {
+    var out = '<div class="panel"><p class="says">Install <b>Google Drive for desktop</b> on each computer — it ' +
+      "puts every account you sign it into on the computer as a folder, and keeps it in step by itself. Connect a " +
+      "folder inside it here and the app writes your files there; on your other computer, connect the same folder " +
+      "and bring them in. The app never talks to Google, holds no key, and a second account is a second folder.</p>";
+    if (!driveApi()) {
+      return out + '<p class="says"><b>This browser cannot write to a folder</b> — that needs Chrome or Edge on a ' +
+        "computer. A phone or another browser still has the book through sync.</p></div>";
+    }
+    out += driveList.length ? '<div class="rows" style="margin-top:0.6rem">' + driveList.map(function (f) {
+      var p = driveLive[f.id], ok2 = p === "granted";
+      var what = (f.carries === "some" ? "Carries " + f.folderIds.map(function (id) {
+        var x = byId(state.folders, id); return x ? "“" + x.name + "”" : "a removed folder";
+      }).join(", ") : "Carries the whole Library") + (f.notes ? ", notes as .md" : "") + (f.book ? ", a copy of the book" : "") + ".";
+      var stand = p === "gone" ? "This computer has lost the folder. Connect it again."
+        : !ok2 ? "The browser has not allowed it this time, so nothing is written to it."
+        : f.error ? "The last write was refused: " + f.error
+        : f.wrote ? "Last written " + stampWhen(f.wrote) + "." : "Not written yet.";
+      return '<div class="row flat"><span class="grow"><span class="nm">' + esc(f.label) + '</span><span class="sub">' +
+        esc(what + " " + stand) + (f.gone ? " " + esc(cap(wbWords(f.gone, "file the app wrote has", "files the app wrote have").toLowerCase()) +
+          " lost " + (f.gone === 1 ? "its record" : "their records") + ".") : "") + '</span></span><span class="right">' +
+        (p === "gone" ? "" : !ok2 ? btn("drive-allow", f.id, "Allow again", "btn tiny primary")
+          : btn("drive-now", f.id, "Write now", "btn tiny") + btn("drive-in", f.id, "Bring in what is here", "btn tiny") +
+            (f.gone ? btn("drive-gone", f.id, "Remove them", "btn tiny") : "")) +
+        btn("drive-forget", f.id, "Stop writing", "btn tiny danger") + "</span></div>";
+    }).join("") + "</div>" : '<p class="says">No folder connected on this computer.</p>';
+    return out + '<div class="page-acts" style="margin-top:0.6rem">' + btn("drive-add", "", "Connect a folder", "btn primary") +
+      "</div></div>";
+  }
+
+  /* ============================================================
      THE EXAMPLE: Maya Saad's book, from the handoff.
 
      The handoff's `SEED` and `LINKS`, record for record, written onto this
@@ -13146,6 +13675,13 @@
       var q = document.getElementById("linkQ");
       if (q) q.focus();
     },
+    /* ---- Drive folders ---- */
+    "drive-add": function () { driveConnect(); },
+    "drive-allow": function (idv) { driveAllow(idv); },
+    "drive-now": function (idv) { driveNow(idv); },
+    "drive-in": function (idv) { driveBringIn(idv); },
+    "drive-gone": function (idv) { driveClearGone(idv); },
+    "drive-forget": function (idv) { driveForget(idv); },
     /* ---- notes ---- */
     "note-new": function () { noteNew(""); },
     "note-open": function (idv) { noteOpen(idv); },
@@ -13795,6 +14331,7 @@
       wbWireLine();
       grWireDoc();
       wbWireDrop();
+      driveLoad();
       setTimeout(sweepFiles, 3000);
       var scrim = document.getElementById("paneScrim");
       if (scrim) scrim.addEventListener("click", function () { wbSel = null; render(); });

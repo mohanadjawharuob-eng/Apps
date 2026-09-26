@@ -4661,3 +4661,67 @@ tag, the pane dialog's tags and title rule, Open as a page, the dotted lines,
 removal, import de-duplicating tags, and the phone) · `nlook.js` (66: the
 index, a tag, a page, a missing link and the editor in contrast at 1400, 390
 and 320px, at rest and under the pointer).
+
+## mashghal2 writes to a Google Drive folder (w13)
+
+Asked for *"a way to sync everything to a google drive account, maybe
+multiple ones, just to have access to certain docs on different PCs"*.
+Drive's own API is still not used and still will not be — it needs Google's
+sign-in script from a CDN and an OAuth client, and this app fetches nothing
+and holds no key. The owner chose the thing Google already ships for exactly
+this: **Drive for desktop**, which puts each signed-in account on the
+computer as a folder and keeps it in step by itself. `m5/28-drive.js` writes
+into a folder picked inside one (the File System Access API, Chrome and Edge
+on a computer) and reads it back on the other computer. **No request ever
+leaves the app for Google; a second account is a second folder.**
+
+- **THE HANDLE IS NOT THE BOOK.** Which folder this computer writes to is a
+  fact about the computer, like the sync token: `mashghal2-drive` in
+  IndexedDB, never `state`, so no backup, sync or import carries it, and Wipe
+  forgets it — while the files already written stay in the Drive, the same
+  rule as never touching the gist, and the wipe dialog says so.
+- **A FOLDER IS WRITTEN ONLY WHILE THE BROWSER SAYS YES, and it is asked every
+  time.** Permission lapses between sessions and even inside one, and can only
+  be asked for on a tap, so `driveWrite` queries the handle before each write
+  and a lapsed folder reads *Allow again* with nothing written in the meantime.
+  A handle the browser could not keep reads as lost, never as allowed.
+- **WHAT GOES IS CHOSEN**: the whole Library or one folder of it, notes as
+  `.md` (with their tags as the second line) and a copy of the book as JSON —
+  both off to begin with, because a plain-text book on a shared drive is a
+  decision, not a default. Paths follow the folder tree; two records wanting
+  one name get " (2)", decided in a stable order.
+- **A MANIFEST SAYS WHAT THE APP WROTE, AND NOTHING ELSE IS TOUCHED.**
+  `mashghal2-manifest.json` maps each path to its record and a stamp, so an
+  unchanged file is not rewritten. A file whose record has gone is **listed**
+  on the card, never deleted by a write; *Remove them* names each one first,
+  and a file somebody put there by hand is never removed.
+- **A RECORD THIS BOOK HAS NEVER HEARD OF IS NOT GONE.** The first draft let
+  computer B, whose book lagged, move A's newest file into the manifest's
+  `gone` list — and then offer to remove it. An entry is gone only if its
+  record is tombstoned here or is here and no longer carried; an unknown one
+  is kept as written. And a gone path is never brought back in as a new file,
+  or a delete would be undone through the back door.
+- **BRINGING IN CHANGES NOTHING UNTIL YOU HAVE SEEN IT.** A file the manifest
+  names attaches its bytes to the record the gist already brought; a file put
+  there by hand becomes a Library entry in folders made by name (the
+  importer's rule); a `.md` becomes a note titled by its heading; a file whose
+  record has not arrived yet is said to be waiting. All of it is listed in one
+  preview, with one undo after.
+- **A THROW INSIDE AN IndexedDB TRANSACTION MUST REJECT.** `idbTx` called the
+  caller's function inside `onsuccess` with nothing around it, so a value the
+  browser cannot clone threw there and the promise never settled — the card
+  just never finished connecting, with nothing said. It rejects now; the pins,
+  the files and the Drive list all go through it.
+
+`wb-drive.js` (41, two browser contexts over one fake Drive held in the test:
+no API said in one line, files landing at their folders' paths with their own
+bytes, a note as `.md` with its tags, no book copy unless asked, the manifest,
+no secret in any file, nothing rewritten that has not changed, a change
+written by itself seconds later, a lapsed folder not written and Allow again,
+a gone file listed and never deleted by a write, Remove them touching nothing
+else, a second account carrying one folder and a book copy with no secret,
+computer B getting the bytes, a new file, a note and a waiting file from one
+preview that changes nothing, the undo, a lost handle offering no write, and
+wipe forgetting the folders and touching no file) · `dlook.js` (18: the card
+and its dialog in contrast at rest, under the pointer and lapsed, at 1400, 390
+and 320px).
