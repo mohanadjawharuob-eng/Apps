@@ -5037,3 +5037,57 @@ screens, the hours question with Escape and with a choice, `#key` and a
 bench deciding without asking, ↓ + Enter opening and keeping nothing, the
 exact title and Shift+Enter, the walk wrapping and clearing on a keystroke,
 and the guide on the empty book.
+
+## mashghal2: Today breathes, and the line reads ordinary phrasing (w20)
+
+The second ship from the user experiment.
+
+- **FILE IT… — ONE BUTTON, ONE QUESTION.** Every inbox row on Today carried
+  seven chips (the Library, one per bench, Make it an action, Discard), and
+  twelve quick captures stood Today 2,713px tall. A row now has one button;
+  `fileItAsk()` (`m5/26-wb-files.js`) puts the same four answers in one
+  grouped picker — *Onto a bench* · *Into the Library* (with "+ A new
+  folder…") · *Or* — and each runs through the write its chip always used
+  (`wbFile`, `fileInto`, `wbToAction`, `wbDiscard`), so the Undo is the same
+  one. An action is not offered "Make it an action", and only what a folder
+  can hold is offered a folder. Today shows the **newest three**, then "N
+  more in the weekly review →". **The review keeps the full chips**: that is
+  where an inbox is sorted at length.
+- **A TO-DO WITH A DAY ON IT IS AN ACTION.** "Call the lab about the battery
+  tomorrow" was kept as a *meeting* with no date, because a leading "call"
+  meant a meeting. `wbDateWords(t)` reads today, tonight, tomorrow, next
+  week, "in N days/weeks" and a weekday (a full name anywhere; a short one
+  only after on/by/this/next or at the very end, because "sun" in "check the
+  sun angle" is not a Sunday) and hands back the sentence without it. A
+  verb that asks something of you (`WB_TODO`) plus a day is an action;
+  "call with Nada: …" and "met Nada: …" are still meetings, and a to-do
+  with no day is left as it was — **no day found is no day**. `!` uses the
+  same reader, so "! send it by wed" is titled "send it". **"remind me
+  to …"** is an action with the asking words dropped.
+- **A PASTED PATH IS A PLACE**, as a pasted URL is a link (`WB_PATH`: a
+  drive letter, a `\\share`, `~/`, `/Users/…`). The place is named by its
+  last segment and keeps the whole path.
+- **FIVE MORE QUESTIONS**, each read off the walk the screen answering it
+  uses: hours this week / month / today / on a bench (the same minutes
+  Today's headline, a bench card and Work → Hours print — the test compares
+  them), what is late, what did I do this week, what is due this week, and
+  what is on a bench. `WB_ASKS` is the table, and **a question it cannot
+  shape prints the table** and still searches — by the words that carry
+  meaning (`wbLooseFind`), because "where did I put the GCP notes" matched
+  nothing while "where", "did" and "put" had to be on a record.
+
+**A SWEEP READ FROM A STALE FILE IS NO SWEEP.** `sweep.sh` prints to its own
+output; w19's run was sent to `/dev/null` and then `sweep.out` — left over
+from w18 — was read and reported green. Two suites were in fact failing on
+expectations w19 had deliberately changed (the CV's "(7 records)" and
+`45min` asking for a bench). Delete the file, write the run into it, and
+check the first line names the first suite you ran.
+
+`wb-today.js` (32: three rows of one button, the picker's three groups, a
+bench, a new folder inside another and one Undo taking both, a taken name
+refused, Escape changing nothing, an existing folder, an action, a discard,
+an action offered neither, twelve captures keeping Today under 1,300px, the
+review's chips, 390px) · `wb-parse2.js` (50: thirteen phrasings in the
+preview and in the stored record, the questions against the screens'
+figures, the unread table and its search) · `tlook.js` (177: the inbox, the
+button hovered, the dialog and the help line at 1400, 390 and 320px).

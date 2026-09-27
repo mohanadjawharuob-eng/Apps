@@ -1101,6 +1101,10 @@
   .w-wst { font-size: 12px; color: var(--dim); white-space: nowrap; }
   .w-irow { padding: 10px 16px 12px; border-top: 1px solid var(--rule-soft); }
   .w-irow.is-sel { background: var(--selected); }
+  /* Today's inbox row: the title, and one button at its right-hand end. */
+  .w-irow.is-one { display: flex; align-items: center; gap: 10px; padding: 8px 16px; }
+  .w-irow.is-one .w-ihead { flex: 1 1 0; min-width: 0; }
+  .w-irow.is-one .w-chip.is-fileit { flex: 0 0 auto; }
   .w-ihead {
     display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 0;
     font: inherit; color: inherit; text-align: left; cursor: pointer;
@@ -2044,7 +2048,7 @@
      foot of the app's own code. */
   var APP;
 
-  var BUILD = "w19 · 26 Sep 2026";
+  var BUILD = "w20 · 27 Sep 2026";
 
   /* Its own storage, and this is not cosmetic. `localStorage` is scoped to
      the SITE and not the folder — which is exactly how Coffer's two paths
@@ -9919,7 +9923,7 @@
   /* ---------------- the line: parse (the prototype's rules, in order) ---- */
 
   function wbParse(q) {
-    var t = String(q || "").trim(), type = "note", mins = 0, due = null, m;
+    var t = String(q || "").trim(), type = "note", mins = 0, due = null, m, dw;
     var bench = wbCtxBench(), tags = [];
     /* A #word naming a bench's key puts it on that bench. Any other #word
        is a TAG on a note, a meeting or an idea — and stays part of the
@@ -9943,9 +9947,24 @@
       mins = +m[1]; type = "hours"; t = t.slice(m[0].length).trim();
     } else if (/^(!|todo:?\s)/i.test(t)) {
       type = "action"; t = t.replace(/^(!|todo:?)\s*/i, "");
-      due = /\btoday\b/i.test(t) ? wbToday() : /\btomorrow\b/i.test(t) ? addDays(wbToday(), 1)
-        : /\bmon(day)?\b/i.test(t) ? wbComing(1) : wbWeekOut();
+      dw = wbDateWords(t);
+      due = dw.due || wbWeekOut(); t = dw.rest || t;
+    } else if ((m = t.match(/^(?:please\s+)?remind me (?:to|about)\s+(.+)$/i))) {
+      /* "remind me to call Karim next week" is a to-do said the way a
+         person says one. The words that only ask are dropped; the day, if
+         there is one, is read — and with none it lands where "!" does. */
+      type = "action"; dw = wbDateWords(m[1]);
+      due = dw.due || wbWeekOut(); t = dw.rest || m[1];
     } else if (/^https?:\/\//i.test(t)) type = "link";
+    else if (WB_PATH.test(t)) type = "place";
+    else if ((dw = wbDateWords(t)).due && WB_TODO.test(t) && !/^(call|meeting)\s+with\b/i.test(t) && t.indexOf(":") < 0) {
+      /* A TO-DO WITH A DAY ON IT IS AN ACTION. "Call the lab about the
+         battery tomorrow" was kept as a MEETING with no date, because a
+         leading "call" meant a meeting. A verb that asks something of you,
+         and a day to do it by, is an action; "call with Nada: …" and
+         "met Nada: …" are still meetings, which is what they say. */
+      type = "action"; due = dw.due; t = dw.rest || t;
+    }
     else if (/^read:?\s+/i.test(t)) { type = "reading"; t = t.replace(/^read:?\s+/i, ""); bench = null; }
     else if (/^idea:?\s+/i.test(t)) { type = "draft"; t = t.replace(/^idea:?\s+/i, ""); }
     else if (/^(met|call|meeting)\b/i.test(t)) {
@@ -9970,6 +9989,45 @@
     var noteish = type === "note" || type === "draft";
     return { type: type, title: (noteish ? untag(t) : t) || "Untitled", bench: bench, mins: mins, due: due,
       tags: noteish ? tags : [] };
+  }
+
+  /* A pasted path is a PLACE, the way a pasted URL is a link: a drive
+     letter, a network share, or a home folder on a Mac or Linux box. */
+  var WB_PATH = /^(?:[a-z]:[\\/]|\\\\[^\\\s]|~\/|\/(?:users|home|volumes|mnt|media)\/)/i;
+  var WB_TODO = /^(?:call|ring|phone|text|email|e-mail|mail|ask|send|book|order|buy|pay|chase|submit|reply|write|print|pick up|renew|finish|check)\b/i;
+  var WB_DOW = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+  /* THE DAY IN A SENTENCE, and the sentence without it. Only what is
+     plainly a day is read: today, tonight, tomorrow, next week, in N
+     days or weeks, and a weekday — named in full anywhere, or shortened
+     only after "on", "by", "this", "next" or at the very end, because
+     "sun" in "check the sun angle" is not a Sunday. Nothing is guessed:
+     no day found is no day. */
+  function wbDateWords(t) {
+    var T = wbToday(), due = null, hit = null, m;
+    var tries = [
+      [/\b(today|tonight)\b/i, function () { return T; }],
+      [/\btomorrow\b/i, function () { return addDays(T, 1); }],
+      [/\bnext week\b/i, function () { return wbComing(1); }],
+      [/\bin (\d+|a|one|two|three|four|five|six|seven) (day|days|week|weeks)\b/i, function (mm) {
+        var n = { a: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 }[mm[1].toLowerCase()] || +mm[1];
+        return addDays(T, /week/i.test(mm[2]) ? n * 7 : n);
+      }],
+      [/\b(?:next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i, function (mm) {
+        return wbComing(WB_DOW[mm[1].slice(0, 3).toLowerCase()]);
+      }],
+      [/\b(?:on|by|this|next)\s+(sun|mon|tues?|wed|thu(?:rs?)?|fri|sat)\b|\b(sun|mon|tues?|wed|thu(?:rs?)?|fri|sat)\s*$/i, function (mm) {
+        return wbComing(WB_DOW[(mm[1] || mm[2]).slice(0, 3).toLowerCase()]);
+      }]
+    ];
+    for (var i = 0; i < tries.length && !due; i++) {
+      if ((m = t.match(tries[i][0]))) { due = tries[i][1](m); hit = m; }
+    }
+    if (!due) return { due: null, rest: t };
+    var at = hit.index, before = t.slice(0, at), after = t.slice(at + hit[0].length);
+    before = before.replace(/\s*,?\s*\b(?:due|by|on|for|this|before|until|till|til)\s*$/i, "");
+    var rest = (before + " " + after).replace(/\s+([,.;!?])/g, "$1").replace(/\s+/g, " ")
+      .replace(/^[\s,;.:–—-]+|[\s,;:–—-]+$/g, "").trim();
+    return { due: due, rest: rest };
   }
 
   /* KEEP. Each parsed type lands on the list that owns it. */
@@ -9997,6 +10055,11 @@
     } else if (p.type === "link") {
       state.lib.push(made = { id: uid(), kind: "link", name: p.title, url: p.title, on: on,
         projectId: pid });
+      if (inbox) made.inbox = true;
+      made = ref("lib", made.id);
+    } else if (p.type === "place") {
+      var seg = p.title.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p.title;
+      state.lib.push(made = { id: uid(), kind: "place", name: seg, path: p.title, on: on, projectId: pid });
       if (inbox) made.inbox = true;
       made = ref("lib", made.id);
     } else if (p.type === "reading") {
@@ -10065,6 +10128,27 @@
     });
     return w.length > 0 && w.every(function (x) { return hay.indexOf(x) >= 0; });
   }
+  /* A QUESTION IT CANNOT SHAPE IS STILL A SEARCH, but not for every word
+     in it: "where did I put the GCP notes" matched nothing because
+     "where", "did" and "put" are on no record. The words that only ask
+     are dropped, and what is left is ranked by how many of its words a
+     record carries — the ones carrying all of them first. */
+  var WB_ASKWORDS = /^(what|whats|what's|where|when|who|whom|how|why|which|did|do|does|is|are|was|were|i|me|my|mine|put|keep|kept|find|about|the|a|an|of|for|to|in|on|at|it|its|any|anything|there|have|has|had|with|from|and|or|that|this)$/i;
+  function wbLooseFind(q) {
+    var words = String(q).toLowerCase().replace(/[?!.,;:]/g, " ").split(/\s+/).filter(function (w) {
+      return w.length > 1 && !WB_ASKWORDS.test(w);
+    });
+    if (!words.length) return [];
+    return WB.items.filter(function (x) { return x.type !== "hours"; }).map(function (x) {
+      var n = words.filter(function (w) { return wbMatches(x, w); }).length;
+      return { x: x, n: n };
+    }).filter(function (h) { return h.n; }).sort(function (a, b) { return b.n - a.n; })
+      .map(function (h) { return h.x; });
+  }
+  var WB_ASKS = ["what needs me?", "what's late?", "what's due this week?", "what's on anfeh?",
+    "how many hours this month?", "what did I do this week?", "who am I waiting on?",
+    "where is the anfeh folder?", "what evidence do I have for photogrammetry?",
+    "which benches used GDAL?", "how long did the thesis take?"];
   function wbAsk(q) {
     var s = String(q).trim().replace(/\?+$/, ""), items = WB.items, m, T = wbToday();
     var rows = function (l) { return l.slice(0, 8); };
@@ -10111,13 +10195,69 @@
           rows: rows(hs) };
       }
     }
+    /* FIVE MORE SHAPES, each read off the walk the screen answering it in
+       full already uses — Today's late rows and headline minutes, a
+       bench's own open actions — so an answer cannot disagree with that
+       screen. The question a person asks is "how many hours this month",
+       and it was answered "I couldn't shape that". */
+    if (/\b(hours?|time)\b/i.test(s) && /\b(how (much|many)|logged|spent|this (week|month)|today)\b/i.test(s)) {
+      var span = /\bmonth\b/i.test(s) ? "month" : /\btoday\b/i.test(s) ? "today" : /\bweek\b/i.test(s) ? "week" : "";
+      var from = span === "month" ? T.slice(0, 8) + "01" : span === "today" ? T : span === "week" ? wbWeek() : "";
+      var onB = (s.match(/\bon (?:the )?(.+?)(?: bench| project)?(?: this (?:week|month)| today)?$/i) || [])[1];
+      var bb = onB ? wbBenches().filter(function (x) { return wbMatches(x, onB); })[0] : null;
+      var hs2 = items.filter(function (x) {
+        return x.type === "hours" && (!from || x.date >= from) && x.date <= T && (!bb || x.bench === bb.id);
+      });
+      var tot = hs2.reduce(function (a, x) { return a + x.mins; }, 0);
+      var when = span === "month" ? " this month" : span === "today" ? " today" : span === "week" ? " this week" : " in all";
+      return { text: (tot ? wbHm(tot) : "Nothing") + " logged" + (bb ? " on " + bb.title : "") + when + ".",
+        readAs: "how many hours", rows: rows(hs2.sort(function (a, b) { return a.date < b.date ? 1 : -1; })) };
+    }
+    if (/^(what'?s|what is|what are|anything|is anything|which things are)?\s*(late|overdue)\b/i.test(s)) {
+      var ll = items.filter(function (x) { return x.type === "action" && !x.done && !x.waiting && x.due && x.due < T; });
+      return { text: ll.length ? wbWords(ll.length, "thing is", "things are") + " late." : "Nothing is late.",
+        readAs: "what is late", rows: rows(ll) };
+    }
+    if (/what did i (do|get done|finish|make)/i.test(s)) {
+      var W2 = wbWeek();
+      var did = items.filter(function (x) {
+        return (x.type === "action" && x.done && String(x.rec.doneAt || "").slice(0, 10) >= W2) ||
+          (x.type !== "action" && x.type !== "hours" && x.type !== "bench" && x.date >= W2 && x.date <= T);
+      });
+      var mins2 = items.filter(function (x) { return x.type === "hours" && x.date >= W2 && x.date <= T; })
+        .reduce(function (a, x) { return a + x.mins; }, 0);
+      var doneN = did.filter(function (x) { return x.type === "action"; }).length;
+      return { text: (doneN ? wbWords(doneN, "action", "actions") + " done" : "No action done") + ", " +
+          wbWords(did.length - doneN, "thing", "things").toLowerCase() + " kept and " +
+          (mins2 ? wbHm(mins2) : "no time") + " logged since Monday.",
+        readAs: "what did I do this week", rows: rows(did) };
+    }
+    if (/\bdue\b.*\b(this|next) week\b|\bthis week'?s? (actions|things)|what'?s coming up/i.test(s)) {
+      var nextW = /next week/i.test(s), a0 = nextW ? addDays(wbWeek(), 7) : T, a1 = addDays(wbWeek(), nextW ? 13 : 6);
+      var dl = items.filter(function (x) { return x.type === "action" && !x.done && x.due && x.due >= a0 && x.due <= a1; })
+        .sort(function (a, b) { return a.due < b.due ? -1 : 1; });
+      return { text: dl.length ? wbWords(dl.length, "thing is", "things are") + " due " + (nextW ? "next" : "this") + " week."
+          : "Nothing is due " + (nextW ? "next" : "the rest of this") + " week.",
+        readAs: "what is due this week", rows: rows(dl) };
+    }
+    if ((m = s.match(/^what'?s? (?:is )?(?:on|open on|left on|happening on) (?:the )?(.+?)(?: bench| project)?$/i))) {
+      var ob = wbBenches().filter(function (x) { return wbMatches(x, m[1]); })[0];
+      if (ob) {
+        var oa = items.filter(function (x) { return x.type === "action" && !x.done && x.bench === ob.id; });
+        return { text: oa.length ? wbWords(oa.length, "open action", "open actions") + " on " + ob.title + "."
+            : "Nothing is open on " + ob.title + ".", readAs: "what is on a bench", rows: rows(oa) };
+      }
+    }
     if (/who am i (waiting|chasing)/i.test(s)) {
       var lw = items.filter(function (x) { return x.waiting && !x.done; });
       return { text: wbWords(lw.length, "thing is", "things are") + " waiting on somebody.",
         readAs: "who am I waiting on", rows: rows(lw) };
     }
+    /* IT NEVER HALF-ANSWERS, AND IT SAYS WHAT IT CAN BE ASKED. A box
+       that answers sentences and only says "no" is a box nobody asks
+       twice; the list is the help, and the search runs underneath. */
     return { text: "I couldn’t shape that into a question I know.",
-      readAs: "not one of the six question shapes", rows: [] };
+      readAs: "not one of the " + numWord(WB_ASKS.length) + " question shapes", rows: [], unread: true };
   }
 
   /* ============================================================
@@ -10303,6 +10443,15 @@
       var a = wbAsk(q);
       html = '<div class="w-ans"><p class="w-anst">' + esc(a.text) + '</p><p class="w-ansr">read as: ' +
         esc(a.readAs) + "</p></div>" + a.rows.map(function (it) { return wRow(it, "is-ans"); }).join("");
+      if (a.unread) {
+        var keys = (wbLiveBenches()[0] || { key: "anfeh" }).key;
+        var hits = wbLooseFind(q).slice(0, 5);
+        html += '<p class="w-dhelp">It can be asked: ' + WB_ASKS.map(function (x) {
+            return "<b>" + esc(x.replace(/anfeh/g, keys)) + "</b>";
+          }).join(" \u00b7 ") + "</p>" +
+          (hits.length ? '<p class="w-dlabel">Kept, and matching the words</p>' +
+            hits.map(function (it) { return wRow(it, "is-find"); }).join("") : "");
+      }
     } else {
       var p = wbParse(q);
       if (p.spawn && p.spawn.length) p.due = null;
@@ -10437,7 +10586,9 @@
     var waitRows = acts.filter(function (x) { return x.waiting && !x.done; });
     var weekMins = items.filter(function (x) { return x.type === "hours" && x.date >= W; })
       .reduce(function (a, x) { return a + x.mins; }, 0);
-    wbOrder = needRows.map(function (x) { return x.id; }).concat(inbox.map(function (x) { return x.id; }));
+    wbOrder = needRows.map(function (x) { return x.id; }).concat(inbox.slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
+    }).slice(0, 3).map(function (x) { return x.id; }));
 
     var out = wEyebrow(wbLongDate(T)) + '<h1 class="w-h1 is-today">' + esc(wbGreeting()) + "</h1>" +
       (emptyBook() ? "" : '<p class="w-lead">' + esc(wbHeadline(late.length, inbox.length, weekMins)) + "</p>");
@@ -10470,16 +10621,24 @@
           '"><span class="w-grow">' + esc(it.title) + '</span><span class="w-wst">' + esc(wbStand(it).w) +
           "</span></button>";
       }).join("") : "") + "</section>";
+    /* TODAY SHOWS THE NEWEST THREE, each with one button. The review is
+       where an inbox is sorted at length; Today only has to say what came
+       in and offer the one act. */
+    var shown = inbox.slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
+    }).slice(0, 3), more = inbox.length - shown.length;
     out += '<section class="w-card"><header class="w-chead"><h2>Inbox</h2><span class="w-mono w-cnum">' +
       inbox.length + "</span></header>" +
       (inbox.length ? "" : '<p class="w-cempty">Empty. Anything you type in the line above without a # lands here.</p>') +
-      inbox.map(function (it) {
-        return '<div class="w-irow' + wSelBg(it.id) + '"><button class="w-ihead" data-act="wb-open" data-id="' +
+      shown.map(function (it) {
+        return '<div class="w-irow is-one' + wSelBg(it.id) + '"><button class="w-ihead" data-act="wb-open" data-id="' +
           esc(it.id) + '">' + wDot(it.type) + '<span class="w-grow w-rt">' + esc(it.title) + "</span>" +
-          wTw(it.type) + '</button><div class="w-chips">' + wFileChips(it) + "</div></div>";
+          wTw(it.type) + "</button>" + wChip("wb-fileit", it.id, "File it…", "is-fileit") + "</div>";
       }).join("") +
-      (APP.tabs.some(function (t) { return t.id === "review"; })
-        ? '<button class="w-cfoot" data-act="wb-go" data-id="review">Sort the rest in the weekly review →</button>' : "") +
+      (inbox.length && APP.tabs.some(function (t) { return t.id === "review"; })
+        ? '<button class="w-cfoot" data-act="wb-go" data-id="review">' + (more
+          ? esc(wbWords(more, "more", "more")) + " in the weekly review →"
+          : "Sort them in the weekly review →") + "</button>" : "") +
       "</section></div>";
 
     var cards = wbLiveBenches().filter(function (b) { return !b.draft; });
@@ -12531,6 +12690,60 @@
         if (v.to !== FOLDER_NEW) { onPick({ to: v.to || "" }); return; }
         var nm = String(v.nm).trim(), parent = v.in || "";
         onPick({ name: nm, make: function () {
+          var made = { id: uid(), name: nm, folderId: parent };
+          state.folders.push(made);
+          return made.id;
+        } });
+      }
+    });
+  }
+  /* FILE IT… — ONE BUTTON, ONE QUESTION. An inbox row on Today carried a
+     chip for the Library, one per bench, "Make it an action" and Discard:
+     seven buttons a row, and twelve quick captures stood Today 2,700px
+     tall. The same four answers sit in one picker here, grouped the way
+     they are different (a bench, a Library folder, or neither), and each
+     runs through the write its chip always used, so the undo is the same
+     one. The weekly review keeps the full chips — that is where sorting at
+     length happens. */
+  function fileItAsk(id) {
+    var rec = recOf(id), k = parseRef(id).kind;
+    if (!rec) return toast("That record is gone.");
+    var bs = wbLiveBenches(), foldered = k === "lib" || k === "note";
+    var groups = [];
+    if (bs.length) groups.push({ group: "Onto a bench", options: bs.map(function (b) {
+      return { value: "b|" + b.id, label: b.title };
+    }) });
+    if (foldered) groups.push({ group: "Into the Library", options: folderOptions({}).map(function (o) {
+      return { value: "f|" + o.value, label: o.label };
+    }).concat([{ value: "f|" + FOLDER_NEW, label: "+ A new folder…" }]) });
+    groups.push({ group: "Or", options: (k === "action" ? [] : [{ value: "act", label: "Make it an action" }])
+      .concat([{ value: "del", label: "Discard it" }]) });
+    var first = groups[0].options[0].value;
+    openModal({
+      title: "File “" + clip(rec.name || "it", 60) + "”",
+      message: "<p>Where does it belong? It leaves the inbox either way, and the message after has an Undo.</p>",
+      fields: [
+        { key: "to", label: "Where", type: "select", value: first, options: groups },
+        { key: "nm", label: "The new folder's name", value: "", span: true, showWhen: { key: "to", is: "f|" + FOLDER_NEW } },
+        { key: "in", label: "Inside", type: "select", value: "", options: folderOptions({}), showWhen: { key: "to", is: "f|" + FOLDER_NEW } }
+      ],
+      confirmLabel: "File it",
+      validate: function (v) {
+        if (v.to !== "f|" + FOLDER_NEW) return "";
+        var nm = String(v.nm || "").trim();
+        if (!nm) return "The new folder needs a name.";
+        return folderClash(nm, v.in || "") ? "There is already a folder called “" + nm + "” there." : "";
+      },
+      onConfirm: function (v) {
+        if (!recOf(id)) return toast("That record is gone.");
+        var to = String(v.to || "");
+        if (to.indexOf("b|") === 0) return wbFile(id, to.slice(2));
+        if (to === "act") return wbToAction(id);
+        if (to === "del") return wbDiscard(id);
+        var f = to.slice(2);
+        if (f !== FOLDER_NEW) return fileInto(id, { to: f });
+        var nm = String(v.nm).trim(), parent = v.in || "";
+        fileInto(id, { name: nm, make: function () {
           var made = { id: uid(), name: nm, folderId: parent };
           state.folders.push(made);
           return made.id;
@@ -15040,6 +15253,7 @@
       wbFile(p[0], p[1]);
     },
     "wb-toact": function (idv) { wbToAction(idv); },
+    "wb-fileit": function (idv) { fileItAsk(idv); },
     "wb-discard": function (idv) { wbDiscard(idv); },
     "wb-filter": function (idv) { wbFilter = idv || "all"; render(); },
     "wb-rstat": function (idv) {
