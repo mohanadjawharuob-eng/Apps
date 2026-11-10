@@ -1,0 +1,1620 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Village | A Spatial Story</title>
+
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper: #f6f5f0;
+  --white: #fff;
+  --ink: #292e29;
+  --muted: #858a81;
+  --green: #536c52;
+  --clay: #f54f08;
+  --line: #e6e5de;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* TOP NAVIGATION */
+
+.topbar {
+  height: 65px;
+  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+  position: relative;
+  z-index: 10;
+}
+
+.logo {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--green);
+}
+
+.top-label {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* READING PROGRESS */
+
+.progress {
+  height: 3px;
+  position: fixed;
+  top: 65px;
+  left: 0;
+  width: 0%;
+  background: var(--clay);
+  z-index: 20;
+}
+
+/* MAIN LAYOUT */
+
+.layout {
+  display: grid;
+  grid-template-columns: 48% 52%;
+  align-items: start;
+}
+
+/* STORY SIDE */
+
+.story {
+  min-width: 0;
+  background: var(--paper);
+}
+
+.chapter {
+  min-height: 100vh;
+  padding: 85px 11% 75px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.chapter.hero {
+  min-height: calc(100vh - 65px);
+}
+
+.chapter-number {
+  font-size: 10px;
+  color: var(--clay);
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 22px;
+  text-transform: uppercase;
+}
+
+h1, h2 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 500;
+}
+
+h1 {
+  font-size: clamp(44px, 5vw, 69px);
+  line-height: 1.05;
+  margin: 0 0 22px;
+}
+
+h2 {
+  font-size: clamp(32px, 3.5vw, 45px);
+  line-height: 1.15;
+  margin: 0 0 22px;
+}
+
+.lead {
+  color: #6f766d;
+  font-size: 15px;
+  line-height: 1.9;
+  max-width: 500px;
+}
+
+.body-text {
+  font-size: 13px;
+  line-height: 2;
+  color: #666e65;
+  margin-top: 20px;
+}
+
+.chapter-image {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  margin-top: 30px;
+  border-radius: 3px;
+  display: block;
+}
+
+.caption {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.quote {
+  border-left: 2px solid var(--clay);
+  padding: 5px 0 5px 20px;
+  margin: 28px 0;
+  color: var(--green);
+  font-family: 'Playfair Display', serif;
+  font-size: 21px;
+  line-height: 1.5;
+}
+
+.chapter-meta {
+  display: flex;
+  gap: 25px;
+  border-top: 1px solid var(--line);
+  margin-top: 30px;
+  padding-top: 18px;
+}
+
+.meta-label {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.meta-value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scroll-hint {
+  margin-top: 55px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* MAP SIDE */
+
+.map-panel {
+  height: calc(100vh - 65px);
+  position: sticky;
+  top: 0;
+  background: #e8e9e4;
+  overflow: hidden;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay {
+  position: absolute;
+  z-index: 2;
+  top: 22px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.map-badge {
+  background: rgba(255,255,255,.95);
+  padding: 12px 15px;
+  border-radius: 3px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+
+.map-badge strong {
+  font-size: 10px;
+  letter-spacing: 1px;
+  display: block;
+}
+
+.map-badge span {
+  color: var(--muted);
+  font-size: 9px;
+  display: block;
+  margin-top: 4px;
+}
+
+.map-bottom {
+  position: absolute;
+  z-index: 2;
+  bottom: 25px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  pointer-events: none;
+}
+
+.legend {
+  background: rgba(255,255,255,.96);
+  padding: 15px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 2;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+
+.legend-title {
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.map-status {
+  background: rgba(255,255,255,.96);
+  padding: 11px 14px;
+  color: var(--green);
+  font-size: 10px;
+  letter-spacing: .5px;
+  border-radius: 3px;
+}
+
+/* NAVIGATION */
+
+.chapter-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.chapter-nav a {
+  text-decoration: none;
+  color: var(--green);
+  border: 1px solid #d9ded5;
+  padding: 9px 12px;
+  font-size: 10px;
+  border-radius: 2px;
+  transition: .2s;
+}
+
+.chapter-nav a:hover {
+  background: var(--green);
+  color: white;
+}
+
+/* FOOTER */
+
+.end-section {
+  background: #344538;
+  color: white;
+  padding: 65px 11%;
+}
+
+.end-section h2 {
+  font-size: 38px;
+}
+
+.end-section p {
+  color: #d0d9cf;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+/* MOBILE */
+
+@media(max-width: 850px) {
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map-panel {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 38vh;
+    min-height: 250px;
+    order: 0;
+    z-index: 5;
+  }
+
+  .story {
+    order: 1;
+    position: relative;
+    z-index: 6;
+  }
+
+  .chapter {
+    min-height: auto;
+    padding: 75px 8%;
+  }
+
+  .chapter.hero {
+    min-height: 75vh;
+  }
+
+  h1 { font-size: 48px; }
+
+  h2 { font-size: 36px; }
+
+  .chapter-image {
+    height: 230px;
+  }
+
+  .top-label { display: none; }
+}
+
+
+/* ======================================
+   MOBILE REFINEMENTS
+   ====================================== */
+
+@media (max-width: 850px) {
+  html {
+    scroll-padding-top: 76px;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    height: 58px;
+    min-height: 58px;
+    padding: 0 18px;
+    z-index: 30;
+  }
+
+  .logo {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+  }
+
+  .progress {
+    top: 58px;
+    z-index: 40;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /*
+    The map is visually placed before the story and stays at the
+    top of the screen while the reader moves through the chapters.
+  */
+  .map-panel {
+    order: 0;
+    position: sticky;
+    top: 58px;
+    width: 100%;
+    height: clamp(215px, 33svh, 300px);
+    min-height: 215px;
+    max-height: 300px;
+    flex: 0 0 auto;
+    z-index: 20;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    touch-action: pan-x pan-y;
+  }
+
+  .story {
+    order: 1;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chapter {
+    min-height: auto;
+    padding: clamp(42px, 8vw, 64px) 7vw;
+    justify-content: flex-start;
+    scroll-margin-top: 370px;
+  }
+
+  .chapter.hero {
+    min-height: auto;
+    padding-top: 52px;
+    padding-bottom: 52px;
+  }
+
+  h1 {
+    font-size: clamp(42px, 11vw, 58px);
+    line-height: 1.04;
+    margin-bottom: 18px;
+  }
+
+  h2 {
+    font-size: clamp(32px, 8vw, 42px);
+    line-height: 1.12;
+    margin-bottom: 18px;
+  }
+
+  .chapter-number {
+    font-size: 9px;
+    letter-spacing: 1.6px;
+    margin-bottom: 17px;
+  }
+
+  .lead {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .body-text {
+    font-size: 13px;
+    line-height: 1.85;
+    margin-top: 17px;
+  }
+
+  .chapter-image {
+    height: auto;
+    aspect-ratio: 16 / 10;
+    max-height: 250px;
+    margin-top: 23px;
+  }
+
+  .caption {
+    font-size: 10px;
+  }
+
+  .quote {
+    font-size: 19px;
+    line-height: 1.45;
+    margin: 23px 0;
+    padding-left: 16px;
+  }
+
+  .chapter-meta {
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 15px;
+  }
+
+  .meta-label {
+    font-size: 8px;
+  }
+
+  .meta-value {
+    font-size: 11px;
+  }
+
+  .scroll-hint {
+    margin-top: 32px;
+  }
+
+  .chapter-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 7px;
+    overflow-x: auto;
+    max-width: calc(100vw - 14vw);
+    padding: 2px 0 8px;
+    margin-top: 24px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chapter-nav a {
+    flex: 0 0 auto;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 12px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .map-overlay {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 8px;
+  }
+
+  .map-badge {
+    padding: 9px 11px;
+    max-width: 72%;
+    box-shadow: 0 1px 8px rgba(0,0,0,.08);
+  }
+
+  .map-badge strong {
+    font-size: 9px;
+    letter-spacing: .8px;
+  }
+
+  .map-badge span {
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  /* The second badge repeats the project identity on small screens. */
+  .map-overlay > .map-badge:last-child {
+    display: none;
+  }
+
+  .map-bottom {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    align-items: flex-end;
+  }
+
+  .legend {
+    display: none;
+  }
+
+  .map-status {
+    padding: 8px 10px;
+    font-size: 9px;
+    letter-spacing: .3px;
+    box-shadow: 0 1px 8px rgba(0,0,0,.08);
+  }
+
+  .mapboxgl-ctrl-bottom-right {
+    right: 5px;
+    bottom: 7px;
+  }
+
+  .mapboxgl-ctrl-bottom-left {
+    left: 5px;
+    bottom: 7px;
+  }
+
+  .mapboxgl-ctrl-group button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .mapboxgl-ctrl-scale {
+    font-size: 9px;
+  }
+
+  .mapboxgl-popup {
+    max-width: min(260px, calc(100vw - 36px)) !important;
+  }
+
+  .mapboxgl-popup-content {
+    padding: 12px;
+  }
+
+  .end-section {
+    padding: 48px 7vw;
+  }
+
+  .end-section h2 {
+    font-size: clamp(30px, 8vw, 38px);
+  }
+
+  .end-section p {
+    font-size: 13px;
+    line-height: 1.85;
+  }
+}
+
+/* Very narrow phones */
+@media (max-width: 380px) {
+  .map-panel {
+    height: 225px;
+    min-height: 225px;
+  }
+
+  .chapter {
+    padding-left: 6vw;
+    padding-right: 6vw;
+  }
+
+  h1 {
+    font-size: 41px;
+  }
+
+  .chapter-meta {
+    gap: 14px;
+  }
+}
+
+/* Landscape phones: preserve enough room for the map and controls. */
+@media (max-width: 850px) and (orientation: landscape) {
+  .map-panel {
+    height: 48svh;
+    min-height: 180px;
+    max-height: 250px;
+  }
+
+  .chapter {
+    padding-top: 38px;
+    padding-bottom: 38px;
+  }
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="logo">FIELDNOTES / GIS</div>
+  <div class="top-label">A digital exploration of village heritage · 2026</div>
+</header>
+
+<div class="progress" id="progress"></div>
+
+<div class="layout">
+
+<!-- ===================================
+     STORY / EDITORIAL CONTENT
+=================================== -->
+
+<main class="story">
+
+  <!-- CHAPTER 01 -->
+  <section class="chapter hero" id="chapter-1"
+           data-chapter="1">
+
+    <div class="chapter-number">01 / Introduction</div>
+
+    <h1>A Village.<br>A Landscape.<br>A Story.</h1>
+
+    <p class="lead">
+      Every village tells a story through its landscape,
+      architecture, archaeological remains and the people
+      who have shaped it through generations.
+    </p>
+
+    <p class="body-text">
+      This digital atlas explores the spatial and cultural
+      character of a Lebanese village. Through historical
+      documentation, spatial analysis and field observations,
+      we examine how its landscape has evolved and how its
+      heritage continues to shape its identity.
+    </p>
+
+    <div class="chapter-meta">
+      <div>
+        <div class="meta-label">Project</div>
+        <div class="meta-value">Village Atlas</div>
+      </div>
+      <div>
+        <div class="meta-label">Region</div>
+        <div class="meta-value">Lebanon</div>
+      </div>
+      <div>
+        <div class="meta-label">Approach</div>
+        <div class="meta-value">Spatial Heritage</div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">↓ Scroll to explore the village</div>
+
+    <div class="chapter-nav">
+      <a href="#chapter-2">Settlement</a>
+      <a href="#chapter-3">Architecture</a>
+      <a href="#chapter-4">Landscape</a>
+      <a href="#chapter-5">Connections</a>
+    </div>
+
+  </section>
+
+
+  <!-- CHAPTER 02 -->
+  <section class="chapter" id="chapter-2"
+           data-chapter="2">
+
+    <div class="chapter-number">02 / Archaeology & Settlement</div>
+
+    <h2>Where the village began</h2>
+
+    <p class="lead">
+      The settlement core is more than a collection of buildings.
+      It represents layers of occupation, adaptation and
+      historical continuity.
+    </p>
+
+    <img class="chapter-image"
+      src="https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=1000"
+      alt="Historic Mediterranean village">
+
+    <div class="caption">
+      Illustrative photograph · Replace with an actual village photograph.
+    </div>
+
+    <p class="body-text">
+      Archaeological evidence, historical cartography and
+      architectural remains can help reconstruct the development
+      of the settlement. Spatial relationships between buildings,
+      roads and topographic features provide important clues
+      about the organization of the historic village.
+    </p>
+
+    <div class="quote">
+      The landscape is an archive of human activity,
+      recording change through space and time.
+    </div>
+
+    <p class="body-text">
+      Explore the highlighted settlement area on the map.
+      The polygon represents a hypothetical historic settlement
+      boundary and can be replaced with a surveyed GIS layer.
+    </p>
+
+    <div class="chapter-meta">
+      <div>
+        <div class="meta-label">Feature</div>
+        <div class="meta-value">Historic Core</div>
+      </div>
+      <div>
+        <div class="meta-label">Geometry</div>
+        <div class="meta-value">Polygon</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- CHAPTER 03 -->
+  <section class="chapter" id="chapter-3"
+           data-chapter="3">
+
+    <div class="chapter-number">03 / Architectural Heritage</div>
+
+    <h2>Architecture and memory</h2>
+
+    <p class="lead">
+      Buildings are physical records of cultural identity,
+      construction traditions and the everyday lives of
+      their inhabitants.
+    </p>
+
+    <img class="chapter-image"
+      src="https://images.unsplash.com/photo-1603565816030-6b389eeb23cb?w=1000"
+      alt="Traditional stone architecture">
+
+    <div class="caption">
+      Illustrative photograph · Traditional architectural reference.
+    </div>
+
+    <p class="body-text">
+      Historic houses, religious structures and communal
+      buildings form an architectural network that reflects
+      the village's social and historical development.
+    </p>
+
+    <p class="body-text">
+      Field documentation can record construction materials,
+      building typologies, architectural elements, condition
+      and transformations. These observations can be linked
+      directly to individual mapped structures.
+    </p>
+
+    <div class="quote">
+      Architecture preserves the memory of a place
+      through its material fabric.
+    </div>
+
+    <div class="chapter-meta">
+      <div>
+        <div class="meta-label">Feature</div>
+        <div class="meta-value">Historic Church</div>
+      </div>
+      <div>
+        <div class="meta-label">Geometry</div>
+        <div class="meta-value">Point</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- CHAPTER 04 -->
+  <section class="chapter" id="chapter-4"
+           data-chapter="4">
+
+    <div class="chapter-number">04 / Natural & Agricultural Landscape</div>
+
+    <h2>The village and its environment</h2>
+
+    <p class="lead">
+      Human settlements are closely connected to their
+      natural surroundings. Terrain, water, vegetation
+      and agricultural practices all contribute to
+      the character of a landscape.
+    </p>
+
+    <img class="chapter-image"
+      src="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1000"
+      alt="Agricultural landscape">
+
+    <div class="caption">
+      Illustrative photograph · Replace with local landscape imagery.
+    </div>
+
+    <p class="body-text">
+      Olive groves, agricultural terraces and cultivated
+      fields are not simply environmental features.
+      They also represent historical land use and
+      traditional relationships between communities
+      and their surroundings.
+    </p>
+
+    <p class="body-text">
+      Combining elevation models, land-use mapping and
+      field observations allows us to investigate how
+      the natural landscape influenced settlement patterns.
+    </p>
+
+    <div class="chapter-meta">
+      <div>
+        <div class="meta-label">Feature</div>
+        <div class="meta-value">Agricultural Area</div>
+      </div>
+      <div>
+        <div class="meta-label">Geometry</div>
+        <div class="meta-value">Polygon</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- CHAPTER 05 -->
+  <section class="chapter" id="chapter-5"
+           data-chapter="5">
+
+    <div class="chapter-number">05 / Routes & Connectivity</div>
+
+    <h2>Paths that connect places</h2>
+
+    <p class="lead">
+      Roads and paths establish relationships between
+      different parts of a settlement. They connect
+      homes, public spaces, religious buildings and
+      agricultural areas.
+    </p>
+
+    <img class="chapter-image"
+      src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1000"
+      alt="Historic rural pathway">
+
+    <div class="caption">
+      Illustrative photograph · Rural landscape and pathway.
+    </div>
+
+    <p class="body-text">
+      The spatial analysis of historic routes can reveal
+      how movement, accessibility and topography shaped
+      the development of the village.
+    </p>
+
+    <p class="body-text">
+      Mapping these connections allows us to investigate
+      the relationships between settlement density,
+      public spaces and surrounding landscapes.
+    </p>
+
+    <div class="chapter-meta">
+      <div>
+        <div class="meta-label">Feature</div>
+        <div class="meta-value">Historic Path</div>
+      </div>
+      <div>
+        <div class="meta-label">Geometry</div>
+        <div class="meta-value">Line</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- END -->
+  <section class="end-section">
+    <div class="chapter-number">06 / Conclusion</div>
+
+    <h2>Understanding place through space</h2>
+
+    <p>
+      The village is a complex cultural landscape shaped
+      by history, environment, architecture and human activity.
+      Integrating these dimensions through GIS creates a
+      dynamic framework for documenting, interpreting and
+      communicating heritage.
+    </p>
+
+    <p>
+      This atlas is an evolving documentation project.
+      Each mapped feature contributes another element
+      to the wider story of the village.
+    </p>
+  </section>
+
+</main>
+
+
+<!-- ===================================
+     STICKY MAP
+=================================== -->
+
+<aside class="map-panel">
+
+  <div class="map-overlay">
+    <div class="map-badge">
+      <strong>SPATIAL EXPLORER</strong>
+      <span id="mapChapter">Chapter 01 · Introduction</span>
+    </div>
+
+    <div class="map-badge">
+      <strong>VILLAGE ATLAS</strong>
+      <span>Interactive GIS</span>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="map-bottom">
+
+    <div class="legend">
+      <div class="legend-title">MAP LEGEND</div>
+
+      <div class="legend-item">
+        <span class="dot" style="background:#bd795b"></span>
+        Archaeological
+      </div>
+
+      <div class="legend-item">
+        <span class="dot" style="background:#697c91"></span>
+        Architecture
+      </div>
+
+      <div class="legend-item">
+        <span class="dot" style="background:#78946b"></span>
+        Landscape
+      </div>
+
+      <div class="legend-item">
+        <span style="width:14px;height:3px;background:#b49a61"></span>
+        Historic routes
+      </div>
+    </div>
+
+    <div class="map-status" id="mapStatus">
+      EXPLORING VILLAGE
+    </div>
+
+  </div>
+
+</aside>
+
+</div>
+
+
+<script>
+
+// ======================================
+// MAP INITIALIZATION
+// ======================================
+
+mapboxgl.accessToken =
+'pk.eyJ1IjoiZ2lzd29yazEyMyIsImEiOiJjbXc1NmcyenkwMWI3MnhyeHdydm8zbGJ1In0.gLtdCWBYIND4zU5LaKoDzA';
+
+const isMobileLayout = window.matchMedia('(max-width: 850px)').matches;
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/light-v11',
+  center: [35.8500, 34.4400],
+  zoom: 14,
+  pitch: isMobileLayout ? 0 : 20,
+  bearing: isMobileLayout ? 0 : -15,
+  attributionControl: true,
+  cooperativeGestures: isMobileLayout
+});
+
+map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+map.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+
+window.addEventListener('resize', () => map.resize());
+window.addEventListener('orientationchange', () => {
+  window.setTimeout(() => map.resize(), 250);
+});
+
+
+// ======================================
+// GEOJSON DATA
+// Replace these illustrative features
+// with actual QGIS-exported GeoJSON.
+// ======================================
+
+const points = {
+  type: 'FeatureCollection',
+  features: [
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'church',
+        name: 'Historic Church',
+        category: 'Architecture',
+        description: 'A historic religious structure representing the architectural and cultural identity of the village.'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [35.8520, 34.4415]
+      }
+    },
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'square',
+        name: 'Village Square',
+        category: 'Community',
+        description: 'A communal gathering space at the heart of the village.'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [35.8480, 34.4390]
+      }
+    },
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'house',
+        name: 'Traditional House',
+        category: 'Architecture',
+        description: 'A traditional residential building. Survey its materials, architectural features and condition.'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [35.8540, 34.4385]
+      }
+    }
+
+  ]
+};
+
+
+const areas = {
+  type: 'FeatureCollection',
+  features: [
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'settlement',
+        name: 'Historic Settlement',
+        category: 'Archaeology',
+        description: 'Illustrative boundary of the historic settlement core.'
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [35.8460, 34.4370],
+          [35.8540, 34.4370],
+          [35.8560, 34.4420],
+          [35.8510, 34.4450],
+          [35.8460, 34.4430],
+          [35.8460, 34.4370]
+        ]]
+      }
+    },
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'groves',
+        name: 'Olive Groves',
+        category: 'Landscape',
+        description: 'Illustrative agricultural area surrounding the village.'
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [35.8540, 34.4390],
+          [35.8600, 34.4400],
+          [35.8590, 34.4450],
+          [35.8550, 34.4450],
+          [35.8540, 34.4390]
+        ]]
+      }
+    }
+
+  ]
+};
+
+
+const routes = {
+  type: 'FeatureCollection',
+  features: [
+
+    {
+      type: 'Feature',
+      properties: {
+        id: 'historic-route',
+        name: 'Historic Village Path',
+        category: 'Route',
+        description: 'An illustrative route connecting the historic settlement to the surrounding landscape.'
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [35.8470, 34.4380],
+          [35.8500, 34.4400],
+          [35.8520, 34.4415],
+          [35.8560, 34.4420]
+        ]
+      }
+    }
+
+  ]
+};
+
+
+// ======================================
+// ADD GEOJSON SOURCES AND VECTOR LAYERS
+// Native Mapbox rendering = stable points.
+// ======================================
+
+map.on('load', () => {
+
+  map.addSource('points', {
+    type: 'geojson',
+    data: points
+  });
+
+  map.addSource('areas', {
+    type: 'geojson',
+    data: areas
+  });
+
+  map.addSource('routes', {
+    type: 'geojson',
+    data: routes
+  });
+
+
+  // POLYGONS
+
+  map.addLayer({
+    id: 'areas-fill',
+    type: 'fill',
+    source: 'areas',
+    paint: {
+      'fill-color': [
+        'match',
+        ['get', 'id'],
+        'settlement', '#bd795b',
+        'groves', '#78946b',
+        '#888888'
+      ],
+      'fill-opacity': 0.22
+    }
+  });
+
+  map.addLayer({
+    id: 'areas-outline',
+    type: 'line',
+    source: 'areas',
+    paint: {
+      'line-color': '#64715e',
+      'line-width': 1.5,
+      'line-opacity': 0.8
+    }
+  });
+
+
+  // ROUTES
+
+  map.addLayer({
+    id: 'routes-line',
+    type: 'line',
+    source: 'routes',
+    layout: {
+      'line-cap': 'round',
+      'line-join': 'round'
+    },
+    paint: {
+      'line-color': '#b49a61',
+      'line-width': 3,
+      'line-opacity': 0.9
+    }
+  });
+
+
+  // POINTS
+
+  map.addLayer({
+    id: 'points-circle',
+    type: 'circle',
+    source: 'points',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 4,
+        16, 8
+      ],
+      'circle-color': [
+        'match',
+        ['get', 'id'],
+        'church', '#697c91',
+        'square', '#b49a61',
+        'house', '#697c91',
+        '#536c52'
+      ],
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff'
+    }
+  });
+
+
+  // POINT LABELS
+
+  map.addLayer({
+    id: 'points-labels',
+    type: 'symbol',
+    source: 'points',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': ['Open Sans Regular'],
+      'text-size': 10,
+      'text-offset': [0, 1.5],
+      'text-anchor': 'top'
+    },
+    paint: {
+      'text-color': '#333a34',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1.5
+    }
+  });
+
+
+  // ======================================
+  // ACTIVE FEATURE HIGHLIGHT LAYERS
+  // ======================================
+
+  map.addLayer({
+    id: 'active-area',
+    type: 'line',
+    source: 'areas',
+    filter: ['==', ['get', 'id'], ''],
+    paint: {
+      'line-color': '#bd795b',
+      'line-width': 4
+    }
+  });
+
+  map.addLayer({
+    id: 'active-point',
+    type: 'circle',
+    source: 'points',
+    filter: ['==', ['get', 'id'], ''],
+    paint: {
+      'circle-radius': 12,
+      'circle-color': '#bd795b',
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#ffffff'
+    }
+  });
+
+  map.addLayer({
+    id: 'active-route',
+    type: 'line',
+    source: 'routes',
+    filter: ['==', ['get', 'id'], ''],
+    paint: {
+      'line-color': '#bd795b',
+      'line-width': 6
+    }
+  });
+
+
+  // ======================================
+  // INTERACTIVE POPUPS
+  // ======================================
+
+  const interactiveLayers = [
+    'points-circle',
+    'areas-fill',
+    'routes-line'
+  ];
+
+  interactiveLayers.forEach(layer => {
+
+    map.on('click', layer, event => {
+
+      const feature = event.features[0];
+      const props = feature.properties;
+
+      new mapboxgl.Popup()
+        .setLngLat(event.lngLat)
+        .setHTML(`
+          <div style="font-family:'DM Sans',sans-serif;padding:5px">
+            <div style="font-size:9px;color:#bd795b;text-transform:uppercase;letter-spacing:1px">
+              ${props.category}
+            </div>
+            <h3 style="font-family:'Playfair Display',serif;margin:8px 0">
+              ${props.name}
+            </h3>
+            <p style="font-size:11px;line-height:1.6;color:#777">
+              ${props.description}
+            </p>
+          </div>
+        `)
+        .addTo(map);
+
+    });
+
+    map.on('mouseenter', layer, () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', layer, () => {
+      map.getCanvas().style.cursor = '';
+    });
+
+  });
+
+
+  // STARTING VIEW
+
+  map.easeTo({
+    center: [35.8500, 34.4400],
+    zoom: 14,
+    duration: 1000
+  });
+
+});
+
+
+// ======================================
+// CHAPTER CONFIGURATION
+// Each chapter controls the map.
+// ======================================
+
+const chapters = {
+
+  1: {
+    title: 'Chapter 01 · Introduction',
+    status: 'VILLAGE OVERVIEW',
+    center: [35.8500, 34.4400],
+    zoom: 14,
+    pitch: 20,
+    bearing: -15,
+    type: 'none',
+    id: ''
+  },
+
+  2: {
+    title: 'Chapter 02 · Settlement',
+    status: 'HISTORIC SETTLEMENT',
+    center: [35.8510, 34.4410],
+    zoom: 16,
+    pitch: 40,
+    bearing: -25,
+    type: 'area',
+    id: 'settlement'
+  },
+
+  3: {
+    title: 'Chapter 03 · Architecture',
+    status: 'ARCHITECTURAL HERITAGE',
+    center: [35.8520, 34.4415],
+    zoom: 17,
+    pitch: 50,
+    bearing: -15,
+    type: 'point',
+    id: 'church'
+  },
+
+  4: {
+    title: 'Chapter 04 · Landscape',
+    status: 'AGRICULTURAL LANDSCAPE',
+    center: [35.8570, 34.4420],
+    zoom: 15,
+    pitch: 35,
+    bearing: 0,
+    type: 'area',
+    id: 'groves'
+  },
+
+  5: {
+    title: 'Chapter 05 · Connectivity',
+    status: 'HISTORIC ROUTES',
+    center: [35.8510, 34.4400],
+    zoom: 16,
+    pitch: 45,
+    bearing: -20,
+    type: 'route',
+    id: 'historic-route'
+  }
+
+};
+
+
+// ======================================
+// UPDATE MAP FOR CURRENT CHAPTER
+// ======================================
+
+function updateChapter(number) {
+
+  const chapter = chapters[number];
+
+  if (!chapter || !map.isStyleLoaded()) return;
+
+  document.getElementById('mapChapter').textContent =
+    chapter.title;
+
+  document.getElementById('mapStatus').textContent =
+    chapter.status;
+
+
+  // Reset all active highlights
+
+  map.setFilter('active-area', [
+    '==', ['get', 'id'], ''
+  ]);
+
+  map.setFilter('active-point', [
+    '==', ['get', 'id'], ''
+  ]);
+
+  map.setFilter('active-route', [
+    '==', ['get', 'id'], ''
+  ]);
+
+
+  // Activate relevant feature
+
+  if (chapter.type === 'area') {
+    map.setFilter('active-area', [
+      '==', ['get', 'id'], chapter.id
+    ]);
+  }
+
+  if (chapter.type === 'point') {
+    map.setFilter('active-point', [
+      '==', ['get', 'id'], chapter.id
+    ]);
+  }
+
+  if (chapter.type === 'route') {
+    map.setFilter('active-route', [
+      '==', ['get', 'id'], chapter.id
+    ]);
+  }
+
+
+  // Fly to the chapter's geographical focus
+
+  const useMobileCamera = window.matchMedia('(max-width: 850px)').matches;
+
+  map.flyTo({
+    center: chapter.center,
+    zoom: chapter.zoom,
+    pitch: useMobileCamera ? 0 : chapter.pitch,
+    bearing: useMobileCamera ? 0 : chapter.bearing,
+    duration: useMobileCamera ? 1100 : 1600,
+    essential: true
+  });
+
+}
+
+
+// ======================================
+// SCROLL-BASED STORYTELLING
+// ======================================
+
+const sections = document.querySelectorAll('[data-chapter]');
+
+let currentChapter = 0;
+
+const observer = new IntersectionObserver(entries => {
+
+  entries.forEach(entry => {
+
+    if (entry.isIntersecting) {
+
+      const number = Number(entry.target.dataset.chapter);
+
+      if (number !== currentChapter) {
+        currentChapter = number;
+        updateChapter(number);
+      }
+
+    }
+
+  });
+
+}, {
+  threshold: 0,
+  rootMargin: '-35% 0px -35% 0px'
+});
+
+sections.forEach(section => {
+  observer.observe(section);
+});
+
+
+// ======================================
+// READING PROGRESS
+// ======================================
+
+window.addEventListener('scroll', () => {
+
+  const scrollable =
+    document.documentElement.scrollHeight - window.innerHeight;
+
+  const progress =
+    scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+
+  document.getElementById('progress').style.width =
+    progress + '%';
+
+});
+
+</script>
+
+</body>
+</html>
